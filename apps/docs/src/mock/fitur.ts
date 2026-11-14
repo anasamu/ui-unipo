@@ -149,7 +149,7 @@ tambahRute(/\/v1\/kalender\/terpadu$/, (u) => {
 // ---------------------------------------------------------------- Portal
 // Gambar: gradasi SVG polos (tanpa foto orang), supaya contoh tidak memuat data pribadi.
 const gambar = (hue: number, label: string) =>
-  `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${hue} 55% 42%)"/><stop offset="1" stop-color="hsl(${hue + 30} 60% 26%)"/></linearGradient><pattern id="p" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.4" fill="white" fill-opacity=".14"/></pattern></defs><rect width="800" height="450" fill="url(#g)"/><rect width="800" height="450" fill="url(#p)"/><text x="48" y="400" font-family="Arial" font-size="30" font-weight="700" fill="white" fill-opacity=".55">${label}</text></svg>`)}`;
+  `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${hue} 55% 42%)"/><stop offset="1" stop-color="hsl(${hue + 30} 60% 26%)"/></linearGradient><pattern id="p" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.4" fill="white" fill-opacity=".14"/></pattern></defs><rect width="800" height="450" fill="url(#g)"/><rect width="800" height="450" fill="url(#p)"/></svg>`)}`;
 const KATEGORI = [
   { id: 1, slug: "akademik", nama: "Akademik", warna: "#1d4ed8" },
   { id: 2, slug: "prestasi", nama: "Prestasi", warna: "#b45309" },
@@ -254,8 +254,8 @@ const PENGUMUMAN = [
   terbit_pada: d(-i, 8 + i),
   dilihat: 120 + i * 40,
 }));
-tambahRute(/\/v1\/portal\/pengumuman$/, () => ({
-  data: PENGUMUMAN,
+tambahRute(/\/v1\/portal\/pengumuman$/, (u) => ({
+  data: PENGUMUMAN.slice(0, Number(u.searchParams.get('per_page') ?? 12)),
   meta: { page: 1, per_page: 12, total: PENGUMUMAN.length, total_pages: 1 },
 }));
 const AGENDA = [
@@ -295,8 +295,8 @@ const AGENDA = [
   pendaftaran: i % 2 === 0,
   gambar: { url: gambar(160 + i * 50, "Agenda") },
 }));
-tambahRute(/\/v1\/portal\/agenda$/, () => ({
-  data: [...AGENDA].sort((a, b) => a.mulai.localeCompare(b.mulai)),
+tambahRute(/\/v1\/portal\/agenda$/, (u) => ({
+  data: [...AGENDA].sort((a, b) => a.mulai.localeCompare(b.mulai)).slice(0, Number(u.searchParams.get('per_page') ?? 12)),
   meta: { page: 1, per_page: 12, total: AGENDA.length, total_pages: 1 },
 }));
 
