@@ -79,3 +79,17 @@ export function formatBytes(bytes: number): string {
   }
   return `${formatNumber(v, { maximumFractionDigits: 1 })} ${u[i]}`;
 }
+
+/** Rupiah ringkas untuk kartu dan sumbu: "Rp 1,2 M", "Rp 350 jt", "Rp 12 rb". */
+export function formatRupiahRingkas(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '–';
+  const a = Math.abs(n);
+  const [d, s] = a >= 1e12 ? [1e12, 'T'] : a >= 1e9 ? [1e9, 'M'] : a >= 1e6 ? [1e6, 'jt'] : a >= 1e3 ? [1e3, 'rb'] : [1, ''];
+  return `Rp ${formatNumber(n / d, { maximumFractionDigits: n / d >= 100 ? 0 : 1 })}${s ? ' ' + s : ''}`;
+}
+
+/** Persen dengan satu desimal: 92,4%. */
+export function formatPersen(n: number | null | undefined, digits = 1): string {
+  if (n == null || Number.isNaN(n)) return '–';
+  return `${formatNumber(n, { maximumFractionDigits: digits })}%`;
+}

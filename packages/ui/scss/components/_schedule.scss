@@ -1,0 +1,560 @@
+@use '../mixins' as *;
+
+// ================================================================ Tile tanggal
+.u-date-tile {
+  --tone: var(--u-primary);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 3.25rem;
+  height: 3.5rem;
+  border-radius: calc(var(--u-radius) + 2px);
+  background: color-mix(in oklab, var(--tone) 9%, var(--u-card));
+  border: 1px solid color-mix(in oklab, var(--tone) 18%, var(--u-border));
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  .u-date-tile-month {
+    font-size: 0.6875rem;
+    font-weight: var(--u-weight-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: color-mix(in oklab, var(--tone) 85%, var(--u-foreground));
+  }
+  .u-date-tile-day {
+    margin-top: 0.25rem;
+    font-size: 1.25rem;
+    font-weight: var(--u-weight-bold);
+    color: var(--u-foreground);
+    letter-spacing: -0.02em;
+  }
+  &[data-size='sm'] {
+    width: 2.625rem;
+    height: 2.75rem;
+    .u-date-tile-month {
+      font-size: 0.625rem;
+    }
+    .u-date-tile-day {
+      font-size: 1rem;
+      margin-top: 0.125rem;
+    }
+  }
+  &[data-size='lg'] {
+    width: 4rem;
+    height: 4.375rem;
+    .u-date-tile-day {
+      font-size: 1.625rem;
+    }
+  }
+}
+
+// ================================================================ Kalender acara
+.u-evcal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+}
+.u-evcal-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+}
+.u-evcal-title {
+  margin: 0;
+  font-family: var(--u-font-heading);
+  font-size: 1.25rem;
+  font-weight: var(--u-weight-semibold);
+  letter-spacing: -0.015em;
+  min-width: 10ch;
+  span {
+    color: var(--u-muted-foreground);
+    font-weight: var(--u-weight-regular);
+  }
+}
+.u-evcal-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  order: -1;
+}
+.u-evcal-toolbar {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.u-evcal-grid {
+  border: 1px solid var(--u-border);
+  border-radius: calc(var(--u-radius) + 4px);
+  background: var(--u-card);
+  overflow: hidden;
+}
+.u-evcal-weekdays,
+.u-evcal-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.u-evcal-weekdays {
+  border-bottom: 1px solid var(--u-border);
+  background: color-mix(in oklab, var(--u-muted) 60%, var(--u-card));
+  span {
+    padding: 0.5rem 0.625rem;
+    font-size: var(--u-text-xs);
+    font-weight: var(--u-weight-medium);
+    color: var(--u-muted-foreground);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+}
+.u-evcal-week {
+  --lanes: 3;
+  position: relative;
+  grid-template-rows: 2.25rem repeat(var(--lanes), 1.375rem) minmax(1.5rem, 1fr);
+  row-gap: 2px;
+  min-height: 7.25rem;
+}
+.u-evcal-week + .u-evcal-week {
+  border-top: 1px solid var(--u-border);
+}
+.u-evcal-day {
+  grid-row: 1 / -1;
+  position: relative;
+  padding: 0.375rem;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  &:not(:first-child) {
+    border-left: 1px solid var(--u-border);
+  }
+  &[data-outside] {
+    background: color-mix(in oklab, var(--u-muted) 45%, var(--u-card));
+    .u-evcal-date {
+      color: color-mix(in oklab, var(--u-muted-foreground) 70%, transparent);
+    }
+  }
+  &[data-weekend] .u-evcal-date,
+  &[data-holiday] .u-evcal-date {
+    color: var(--u-danger);
+  }
+  &[data-holiday] {
+    background: color-mix(in oklab, var(--u-danger) 5%, var(--u-card));
+  }
+  &[data-selected] {
+    box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--u-primary) 70%, transparent);
+  }
+}
+.u-evcal-date {
+  all: unset;
+  box-sizing: border-box;
+  align-self: flex-start;
+  min-width: 1.625rem;
+  height: 1.625rem;
+  padding-inline: 0.375rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-medium);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color var(--u-duration-fast) var(--u-ease-out);
+  &:hover {
+    background: var(--u-muted);
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+  [data-today] > & {
+    background: var(--u-primary);
+    color: var(--u-primary-foreground) !important;
+  }
+}
+.u-evcal-chip {
+  all: unset;
+  box-sizing: border-box;
+  --tone: var(--u-primary);
+  position: relative;
+  z-index: 1;
+  align-self: stretch;
+  margin-inline: 0.3125rem;
+  padding: 0 0.4375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3125rem;
+  min-width: 0;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  line-height: 1;
+  font-weight: var(--u-weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: color-mix(in oklab, var(--tone) 70%, var(--u-foreground));
+  background: color-mix(in oklab, var(--tone) 13%, var(--u-card));
+  cursor: pointer;
+  transition: filter var(--u-duration-fast) var(--u-ease-out);
+  &::before {
+    content: '';
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--tone);
+  }
+  &[data-span] {
+    background: color-mix(in oklab, var(--tone) 88%, black);
+    color: #fff;
+    &::before {
+      display: none;
+    }
+    &:not([data-head]) {
+      margin-inline-start: 0;
+      border-start-start-radius: 0;
+      border-end-start-radius: 0;
+    }
+    &:not([data-tail]) {
+      margin-inline-end: 0;
+      border-start-end-radius: 0;
+      border-end-end-radius: 0;
+    }
+  }
+  &:hover {
+    filter: brightness(0.95);
+  }
+  &:focus-visible {
+    @include focus-ring(1px);
+  }
+}
+.u-evcal-chip-time {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+.u-evcal-more {
+  all: unset;
+  margin-top: auto;
+  font-size: 0.6875rem;
+  font-weight: var(--u-weight-semibold);
+  color: var(--u-muted-foreground);
+  padding: 0 0.125rem;
+  cursor: pointer;
+  &:hover {
+    color: var(--u-foreground);
+    text-decoration: underline;
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+.u-evcal-dots {
+  display: none;
+}
+.u-evcal-skel {
+  height: 1.125rem;
+  width: 85%;
+  margin-top: 0.375rem;
+}
+
+// Sempit (ponsel, atau wadah < 560px): bilah acara diganti titik warna.
+.u-evcal {
+  container-type: inline-size;
+}
+@container (max-width: 560px) {
+  .u-evcal-week {
+    grid-template-rows: auto;
+    min-height: 3.25rem;
+  }
+  .u-evcal-chip,
+  .u-evcal-more {
+    display: none;
+  }
+  .u-evcal-day {
+    align-items: center;
+    padding: 0.3125rem 0.125rem;
+    gap: 0.25rem;
+  }
+  .u-evcal-date {
+    align-self: center;
+  }
+  .u-evcal-dots {
+    display: flex;
+    gap: 3px;
+    i {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+    }
+  }
+  .u-evcal-weekdays span {
+    padding: 0.375rem 0;
+    text-align: center;
+  }
+  .u-evcal-title {
+    font-size: 1.0625rem;
+  }
+}
+
+// ================================================================ Daftar agenda
+.u-agenda {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.u-agenda-item {
+  --tone: var(--u-primary);
+  display: flex;
+  gap: 0.75rem;
+}
+.u-agenda-link {
+  all: unset;
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.625rem;
+  border-radius: calc(var(--u-radius) + 2px);
+  color: inherit;
+  text-decoration: none;
+  &:is(a, button) {
+    cursor: pointer;
+    transition: background-color var(--u-duration-fast) var(--u-ease-out);
+    &:hover {
+      background: var(--u-muted);
+    }
+    &:focus-visible {
+      @include focus-ring;
+    }
+  }
+}
+.u-agenda-bar {
+  flex: none;
+  align-self: stretch;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--tone);
+}
+.u-agenda-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1;
+}
+.u-agenda-title {
+  font-weight: var(--u-weight-semibold);
+  font-size: var(--u-text-sm);
+  line-height: 1.35;
+  color: var(--u-foreground);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.u-agenda-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem 0.75rem;
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  svg {
+    width: 0.8125rem;
+    height: 0.8125rem;
+  }
+}
+.u-agenda-desc {
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+  line-height: 1.5;
+}
+.u-agenda-kind {
+  flex: none;
+  font-size: 0.6875rem;
+  font-weight: var(--u-weight-medium);
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  color: color-mix(in oklab, var(--tone) 75%, var(--u-foreground));
+  background: color-mix(in oklab, var(--tone) 11%, var(--u-card));
+}
+.u-agenda[data-compact] {
+  gap: 0;
+  .u-agenda-link {
+    padding: 0.5rem;
+    gap: 0.625rem;
+  }
+  .u-agenda-title {
+    font-weight: var(--u-weight-medium);
+  }
+}
+.u-agenda-skel-tile {
+  width: 2.75rem;
+  height: 2.875rem;
+  border-radius: var(--u-radius);
+}
+.u-agenda-item:has(.u-agenda-skel-tile) {
+  padding: 0.625rem;
+}
+.u-agenda-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.u-agenda-day {
+  margin: 0 0 0.25rem;
+  padding-inline: 0.625rem;
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-semibold);
+  color: var(--u-muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.u-agenda-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1rem;
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+  border: 1px dashed var(--u-border);
+  border-radius: calc(var(--u-radius) + 2px);
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+// ================================================================ Legenda
+.u-ev-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.u-ev-legend-item {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 1.75rem;
+  padding: 0 0.625rem;
+  border-radius: 999px;
+  border: 1px solid var(--u-border);
+  background: var(--u-card);
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-medium);
+  color: var(--u-foreground);
+  i {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+  }
+  &:is(button) {
+    cursor: pointer;
+    &:hover {
+      background: var(--u-muted);
+    }
+    &:focus-visible {
+      @include focus-ring;
+    }
+  }
+  &[data-off] {
+    color: var(--u-muted-foreground);
+    text-decoration: line-through;
+    i {
+      background: var(--u-border) !important;
+    }
+  }
+}
+
+// ================================================================ Kalender akademik (SDK)
+.u-kalender-wrap {
+  container-type: inline-size;
+}
+.u-kalender {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+@container (min-width: 960px) {
+  .u-kalender {
+    grid-template-columns: minmax(0, 1fr) 18.5rem;
+  }
+}
+.u-kalender-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border: 1px solid var(--u-border);
+  border-radius: calc(var(--u-radius) + 4px);
+  background: var(--u-card);
+  padding: 1rem 0.5rem 0.5rem;
+  h4 {
+    margin: 0;
+    padding-inline: 0.625rem;
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-semibold);
+  }
+  p {
+    margin: -0.5rem 0 0;
+    padding-inline: 0.625rem;
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-kalender-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  .u-calendar {
+    margin-inline: auto;
+  }
+}
+.u-kalender-mini-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-inline: 0.5rem;
+  h4 {
+    margin: 0;
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-semibold);
+  }
+  a,
+  button {
+    font-size: var(--u-text-xs);
+  }
+}
+.u-kalender-link {
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-medium);
+  color: var(--u-primary);
+  text-decoration: none;
+  &:hover {
+    text-decoration: underline;
+  }
+}
+.u-kalender-side .u-kalender-sub {
+  margin-top: 0.25rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--u-border);
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

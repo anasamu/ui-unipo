@@ -1,0 +1,964 @@
+@use '../mixins' as *;
+
+// ================================================================ Tooltip grafik
+.u-chart-tip {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, calc(-100% - 8px));
+  pointer-events: none;
+  display: grid;
+  gap: 0.125rem;
+  min-width: 6rem;
+  padding: 0.4375rem 0.625rem;
+  border-radius: var(--u-radius);
+  background: var(--u-foreground);
+  color: var(--u-background);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  white-space: nowrap;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+  b {
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+    &[data-long] {
+      font-size: 1rem;
+    }
+  }
+}
+.u-chart-tip-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  opacity: 0.8;
+  i {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 2px;
+  }
+}
+.u-chart-tip-extra {
+  opacity: 0.7;
+}
+.u-chart-empty {
+  padding: 1.5rem;
+  text-align: center;
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+}
+
+// ================================================================ Sparkline & kartu statistik
+.u-spark {
+  flex: 0 1 auto;
+  min-width: 2.5rem;
+  max-width: 45%;
+  overflow: visible;
+}
+.u-stat-grid {
+  --min: 200px;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--min)), 1fr));
+}
+.u-stat {
+  --tone: var(--u-primary);
+  &[data-tone='success'] {
+    --tone: var(--u-success);
+  }
+  &[data-tone='warning'] {
+    --tone: var(--u-warning);
+  }
+  &[data-tone='danger'] {
+    --tone: var(--u-danger);
+  }
+  &[data-tone='info'] {
+    --tone: var(--u-info);
+  }
+  &[data-tone='neutral'] {
+    --tone: var(--u-muted-foreground);
+  }
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--u-border);
+  border-radius: calc(var(--u-radius) + 4px);
+  background: var(--u-card);
+  color: inherit;
+  text-decoration: none;
+  box-shadow: var(--u-shadow-xs);
+  &:is(a) {
+    transition: border-color var(--u-duration-fast) var(--u-ease-out);
+    &:hover {
+      border-color: color-mix(in oklab, var(--tone) 45%, var(--u-border));
+    }
+    &:focus-visible {
+      @include focus-ring;
+    }
+  }
+}
+.u-stat-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.u-stat-label {
+  font-size: 0.8125rem;
+  font-weight: var(--u-weight-medium);
+  color: var(--u-muted-foreground);
+}
+.u-stat-icon {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9px;
+  color: var(--tone);
+  background: color-mix(in oklab, var(--tone) 11%, var(--u-card));
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+.u-stat-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.u-stat-value {
+  font-family: var(--u-font-heading);
+  font-size: 1.75rem;
+  font-weight: var(--u-weight-bold);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.u-stat-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--u-muted-foreground);
+}
+.u-stat-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.0625rem 0.375rem 0.0625rem 0.25rem;
+  border-radius: 999px;
+  font-weight: var(--u-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  background: var(--u-muted);
+  color: var(--u-foreground);
+  svg {
+    width: 0.8125rem;
+    height: 0.8125rem;
+  }
+  &[data-good='true'] {
+    color: color-mix(in oklab, var(--u-success) 80%, var(--u-foreground));
+    background: color-mix(in oklab, var(--u-success) 12%, var(--u-card));
+  }
+  &[data-good='false'] {
+    color: color-mix(in oklab, var(--u-danger) 80%, var(--u-foreground));
+    background: color-mix(in oklab, var(--u-danger) 11%, var(--u-card));
+  }
+}
+
+// ================================================================ Batang vertikal
+.u-bars {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-left: 2.25rem;
+}
+.u-bars-plot {
+  position: relative;
+}
+.u-bars-grid {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed color-mix(in oklab, var(--u-border) 80%, transparent);
+  span {
+    position: absolute;
+    right: calc(100% + 0.5rem);
+    top: -0.5rem;
+    font-size: 0.6875rem;
+    color: var(--u-muted-foreground);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  &:first-child {
+    border-top-style: solid;
+    border-color: var(--u-border);
+  }
+}
+.u-bars-cols {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+.u-bars-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  outline: none;
+  cursor: default;
+  border-radius: 4px 4px 0 0;
+  &:hover,
+  &:focus-visible {
+    background: color-mix(in oklab, var(--u-muted) 70%, transparent);
+  }
+  &:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--u-primary);
+  }
+}
+.u-bars-bar {
+  position: relative;
+  width: min(70%, 2.5rem);
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  opacity: 0.55;
+  transition: opacity var(--u-duration-fast) var(--u-ease-out);
+  .u-bars-col:hover &,
+  &[data-last] {
+    opacity: 1;
+  }
+  .u-bars:not(:has([data-last])) & {
+    opacity: 0.9;
+  }
+}
+.u-bars-val {
+  position: absolute;
+  bottom: calc(100% + 0.25rem);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6875rem;
+  font-weight: var(--u-weight-semibold);
+  color: var(--u-foreground);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.u-bars-x {
+  display: flex;
+  gap: 2px;
+  span {
+    flex: 1;
+    text-align: center;
+    font-size: 0.6875rem;
+    color: var(--u-muted-foreground);
+    white-space: nowrap;
+    overflow: visible;
+  }
+}
+
+// ================================================================ Daftar batang
+.u-barlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
+.u-barlist-row {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  padding-inline: 0.625rem;
+  color: inherit;
+  text-decoration: none;
+  &:is(a):hover .u-barlist-label {
+    text-decoration: underline;
+  }
+}
+.u-barlist-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--u-primary) 16%, var(--u-card));
+}
+.u-barlist-label {
+  position: relative;
+  font-size: var(--u-text-sm);
+  @include truncate;
+}
+.u-barlist-value {
+  flex: none;
+  min-width: 3rem;
+  text-align: right;
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  span {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: var(--u-weight-regular);
+    color: var(--u-muted-foreground);
+  }
+}
+
+// ================================================================ Donat & legenda
+.u-donut {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.25rem 1.5rem;
+}
+.u-donut-ring {
+  position: relative;
+  flex: none;
+  svg {
+    display: block;
+  }
+}
+.u-donut-seg {
+  transition: opacity var(--u-duration-fast) var(--u-ease-out);
+  .u-donut-ring:hover &:not(:hover) {
+    opacity: 0.45;
+  }
+}
+.u-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  b {
+    font-family: var(--u-font-heading);
+    font-size: 1.375rem;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  span {
+    font-size: 0.6875rem;
+    color: var(--u-muted-foreground);
+  }
+}
+.u-legend {
+  flex: 1 1 10rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--u-text-sm);
+  }
+  i {
+    flex: none;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 3px;
+  }
+  &[data-inline] {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.375rem 1rem;
+    li {
+      font-size: 0.8125rem;
+    }
+  }
+}
+.u-legend-label {
+  min-width: 0;
+  @include truncate;
+  color: var(--u-foreground);
+}
+.u-legend-value {
+  margin-inline-start: auto;
+  font-weight: var(--u-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  span {
+    margin-inline-start: 0.375rem;
+    font-weight: var(--u-weight-regular);
+    color: var(--u-muted-foreground);
+  }
+  [data-inline] & {
+    margin-inline-start: 0.125rem;
+  }
+}
+
+// ================================================================ Bilah komposisi
+.u-segbar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.u-segbar-track {
+  display: flex;
+  gap: 2px;
+  height: 0.75rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--u-muted);
+  span {
+    min-width: 3px;
+    transition: opacity var(--u-duration-fast) var(--u-ease-out);
+  }
+  &:hover span:not(:hover) {
+    opacity: 0.45;
+  }
+}
+
+// ================================================================ Corong
+.u-funnel {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  li {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 2.5rem;
+  }
+}
+.u-funnel-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 8px;
+  background: linear-gradient(90deg, color-mix(in oklab, var(--u-primary) 22%, var(--u-card)), color-mix(in oklab, var(--u-primary) 12%, var(--u-card)));
+  li:first-child & {
+    background: linear-gradient(90deg, color-mix(in oklab, var(--u-primary) 30%, var(--u-card)), color-mix(in oklab, var(--u-primary) 16%, var(--u-card)));
+  }
+}
+.u-funnel-text {
+  position: relative;
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-inline: 0.75rem;
+  font-size: var(--u-text-sm);
+}
+.u-funnel-label {
+  @include truncate;
+}
+.u-funnel-value {
+  font-weight: var(--u-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+.u-funnel-conv {
+  position: relative;
+  flex: none;
+  width: 3.25rem;
+  text-align: right;
+  font-size: 0.75rem;
+  font-weight: var(--u-weight-medium);
+  color: var(--u-muted-foreground);
+  font-variant-numeric: tabular-nums;
+  &::before {
+    content: '↓ ';
+    opacity: 0.6;
+  }
+}
+
+// ================================================================ Anggaran
+.u-budget {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+.u-budget-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  b {
+    font-family: var(--u-font-heading);
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+}
+.u-budget-label {
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+}
+.u-budget-track {
+  display: flex;
+  gap: 2px;
+  height: 0.75rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--u-muted);
+}
+.u-budget-used {
+  background: var(--u-primary);
+}
+.u-budget-pending {
+  background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--u-primary) 45%, var(--u-card)) 0 4px, color-mix(in oklab, var(--u-primary) 25%, var(--u-card)) 4px 8px);
+}
+.u-budget-legend {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+  dt {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--u-muted-foreground);
+  }
+  dd {
+    margin: 0;
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-semibold);
+    font-variant-numeric: tabular-nums;
+  }
+  i {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 3px;
+    &[data-k='used'] {
+      background: var(--u-primary);
+    }
+    &[data-k='pending'] {
+      background: color-mix(in oklab, var(--u-primary) 40%, var(--u-card));
+    }
+    &[data-k='sisa'] {
+      background: var(--u-muted);
+      box-shadow: inset 0 0 0 1px var(--u-border);
+    }
+  }
+}
+
+// ================================================================ Siklus
+.u-cycle {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr));
+  gap: 0.5rem;
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding: 0.75rem;
+    border-radius: calc(var(--u-radius) + 2px);
+    border: 1px solid var(--u-border);
+    background: var(--u-card);
+    &[data-done] {
+      border-color: color-mix(in oklab, var(--u-success) 40%, var(--u-border));
+      background: color-mix(in oklab, var(--u-success) 5%, var(--u-card));
+    }
+  }
+}
+.u-cycle-mark {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: var(--u-weight-semibold);
+  background: var(--u-muted);
+  color: var(--u-muted-foreground);
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  [data-done] > & {
+    background: var(--u-success);
+    color: #fff;
+  }
+}
+.u-cycle-label {
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-semibold);
+}
+.u-cycle-detail {
+  font-size: 0.75rem;
+  color: var(--u-muted-foreground);
+  line-height: 1.4;
+}
+
+// ================================================================ Panel & grid dasbor
+.u-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--u-border);
+  border-radius: calc(var(--u-radius) + 4px);
+  background: var(--u-card);
+  box-shadow: var(--u-shadow-xs);
+}
+.u-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.125rem 0;
+}
+.u-panel-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: var(--u-weight-semibold);
+}
+.u-panel-desc {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--u-muted-foreground);
+}
+.u-panel-actions {
+  display: flex;
+  gap: 0.375rem;
+}
+.u-panel-body {
+  padding: 1rem 1.125rem 1.125rem;
+  min-width: 0;
+  container-type: inline-size;
+}
+// Label sumbu x dijarangkan saat panel sempit.
+@container (max-width: 460px) {
+  .u-bars-x[data-many] span:nth-last-child(even) {
+    visibility: hidden;
+  }
+}
+.u-dash-wrap {
+  container-type: inline-size;
+}
+.u-dash {
+  display: grid;
+  gap: 1rem;
+  grid-auto-flow: row dense;
+  grid-template-columns: minmax(0, 1fr);
+  > [data-span='full'] {
+    grid-column: 1 / -1;
+  }
+}
+@container (min-width: 640px) {
+  .u-dash {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    > [data-span='2'],
+    > [data-span='3'] {
+      grid-column: 1 / -1;
+    }
+  }
+}
+@container (min-width: 840px) {
+  .u-dash {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    > [data-span='2'] {
+      grid-column: span 2;
+    }
+    > [data-span='3'] {
+      grid-column: 1 / -1;
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .u-bars-bar,
+  .u-donut-seg,
+  .u-segbar-track span {
+    transition: none;
+  }
+}
+
+// ================================================================ Batang berkelompok & garis
+.u-bars-col[data-group] {
+  gap: 2px;
+  .u-bars-bar {
+    width: min(32%, 0.875rem);
+    opacity: 0.92;
+  }
+}
+.u-chart-tip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  i {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 2px;
+  }
+  b {
+    margin-inline-start: auto;
+    padding-inline-start: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+}
+.u-bars > .u-legend,
+.u-line > .u-legend,
+.u-segbar > .u-legend {
+  flex: none;
+}
+.u-line {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-left: 2.25rem;
+  .u-bars-plot {
+    cursor: crosshair;
+  }
+}
+.u-line-svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+.u-line-cross {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px solid var(--u-border-strong, var(--u-border));
+  pointer-events: none;
+}
+.u-line-dot {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--u-card);
+  pointer-events: none;
+}
+.u-line-x {
+  position: relative;
+  height: 1rem;
+  span {
+    position: absolute;
+    transform: translateX(-50%);
+    font-size: 0.6875rem;
+    color: var(--u-muted-foreground);
+    white-space: nowrap;
+    &[data-edge='start'] {
+      transform: none;
+    }
+    &[data-edge='end'] {
+      transform: translateX(-100%);
+    }
+  }
+}
+
+// ================================================================ Daftar tindakan
+.u-actions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  li + li {
+    border-top: 1px solid var(--u-border);
+  }
+  li[data-zero] {
+    .u-actions-label,
+    .u-actions-icon {
+      color: var(--u-muted-foreground);
+    }
+  }
+}
+.u-actions-row {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.625rem 0.25rem;
+  font-size: var(--u-text-sm);
+  &:is(a, button) {
+    cursor: pointer;
+    border-radius: var(--u-radius-sm, 6px);
+    &:hover {
+      background: var(--u-muted);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--u-ring, var(--u-primary));
+      outline-offset: -2px;
+    }
+  }
+}
+.u-actions-icon {
+  display: inline-flex;
+  color: var(--u-foreground);
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+.u-actions-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.u-actions-label {
+  color: var(--u-foreground);
+  font-weight: var(--u-weight-medium);
+}
+.u-actions-desc {
+  font-size: 0.75rem;
+  color: var(--u-muted-foreground);
+}
+.u-actions-count {
+  min-width: 2rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  text-align: center;
+  font-weight: var(--u-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  background: var(--u-muted);
+  color: var(--u-muted-foreground);
+  @each $t in warning, danger, info {
+    &[data-tone='#{$t}'] {
+      background: color-mix(in oklab, var(--u-#{$t}) 14%, var(--u-card));
+      color: color-mix(in oklab, var(--u-#{$t}) 75%, var(--u-foreground));
+    }
+  }
+}
+
+// ================================================================ Linimasa
+.u-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  li {
+    position: relative;
+    display: flex;
+    gap: 0.75rem;
+    &:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: 0.6875rem;
+      top: 1.625rem;
+      bottom: -0.75rem;
+      width: 1px;
+      background: var(--u-border);
+    }
+  }
+}
+.u-feed-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 999px;
+  background: var(--u-muted);
+  color: var(--u-muted-foreground);
+  svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+}
+.u-feed-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+.u-feed-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.u-feed-title {
+  font-size: var(--u-text-sm);
+  color: var(--u-foreground);
+  font-weight: var(--u-weight-medium);
+  @include truncate;
+  text-decoration: none;
+  &:is(a):hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}
+.u-feed-meta {
+  font-size: 0.75rem;
+  color: var(--u-muted-foreground);
+}
+
+// ================================================================ Kepala dasbor
+.u-dasbor {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.u-dasbor-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  h2 {
+    margin: 0;
+    font-size: var(--u-text-xl, 1.25rem);
+    font-weight: var(--u-weight-semibold);
+    letter-spacing: -0.01em;
+    color: var(--u-foreground);
+  }
+  p {
+    margin: 0.25rem 0 0;
+    font-size: var(--u-text-sm);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-dasbor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.u-dasbor-note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--u-muted-foreground);
+}
+
+.u-widget-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--u-radius);
+  font-size: var(--u-text-sm);
+  color: color-mix(in oklab, var(--u-danger) 80%, var(--u-foreground));
+  background: color-mix(in oklab, var(--u-danger) 8%, var(--u-card));
+}

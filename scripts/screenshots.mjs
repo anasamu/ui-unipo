@@ -17,7 +17,7 @@ mkdirSync(out, { recursive: true });
 const executablePath = process.env.CHROMIUM_PATH || undefined;
 const browser = await chromium.launch({ executablePath });
 const page = await browser.newPage({
-  viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 },
+  viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1400 },
   deviceScaleFactor: Number(process.env.DPR ?? 2),
 });
 await page.goto(base + theme);
@@ -26,11 +26,13 @@ const slugs = only.length ? only : await page.$$eval('.u-docs-link', (as) => as.
 for (const slug of slugs) {
   await page.goto(base + theme + `#/${slug}`);
   await page.waitForTimeout(600);
+  // Bilah atas yang menempel menutupi contoh panjang saat Playwright menggulir.
+  await page.addStyleTag({ content: '.docs-topbar{position:static!important}' });
   const demos = await page.$$('[data-demo]');
   for (const d of demos) {
     const id = await d.getAttribute('data-demo');
     await d.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(700);
     await d.screenshot({ path: `${out}/${id}${suffix}.png`, animations: 'disabled' });
   }
   console.log(`${slug}: ${demos.length}`);

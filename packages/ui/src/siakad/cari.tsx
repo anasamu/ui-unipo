@@ -280,19 +280,14 @@ export interface PerguruanTinggiOption {
   [k: string]: unknown;
 }
 /**
- * Cari perguruan tinggi (asal mahasiswa pindahan, mitra kerja sama, studi lanjut dosen).
- * API SIAKAD belum punya daftar PT nasional: bawaan memakai mitra kerja sama (kerjasama.getMitra) dan nama lain bisa
- * diketik manual seperti isian `nama_asal_pt` di formulir PMB. Isi `load` bila punya sumber lain (mis. data PDDikti).
+ * Cari perguruan tinggi asal (mahasiswa pindahan/alih jenjang, studi lanjut dosen) dari referensi SIAKAD
+ * `r_perguruan_tinggi` lewat `GET /v1/pmb/info/perguruan-tinggi` (publik, minimal 3 huruf; SDK 1.1:
+ * pmb.getInfoPerguruanTinggi). Nama yang tidak ada di daftar bisa diketik manual, seperti formulir PMB.
  */
 export function CariPerguruanTinggi({ load, limit, allowManual = true, placeholder = 'Cari atau ketik nama perguruan tinggi', ...props }: CariProps<PerguruanTinggiOption> & { allowManual?: boolean }) {
   const base = useLoader<PerguruanTinggiOption>(
-    async (s, q, signal, per_page) =>
-      ((await s.kerjasama.getMitra({ q: q || undefined, per_page }, { signal })).data as Array<Record<string, unknown>>).map((m) => ({
-        kode: String(m.id ?? m.kode ?? m.nama),
-        nama: String(m.nama ?? ''),
-        kota: (m.kota as string) ?? null,
-        logo: (m.logo_url as string) ?? null,
-      })),
+    // Lewat request() agar juga jalan dengan SDK 1.0 yang belum punya metode getInfoPerguruanTinggi.
+    async (s, q, signal) => (await s.request<PerguruanTinggiOption[]>({ method: 'GET', path: '/v1/pmb/info/perguruan-tinggi', query: { q }, public: true }, { signal })).data,
     load,
     limit,
   );
@@ -305,7 +300,9 @@ export function CariPerguruanTinggi({ load, limit, allowManual = true, placehold
       loadItems={loader}
       itemToString={(p) => p.nama}
       itemKey={(p) => (p.manual ? `manual:${p.nama}` : p.kode)}
-      emptyText="Perguruan tinggi tidak ditemukan. Ketik minimal 3 huruf untuk mengisi manual."
+      minQueryLength={3}
+      hintText="Ketik minimal 3 huruf nama, singkatan, atau kode PT."
+      emptyText="Perguruan tinggi tidak ditemukan."
       renderItem={(p) =>
         p.manual ? (
           <ManualItem nama={p.nama} />

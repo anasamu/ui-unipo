@@ -46,6 +46,13 @@ function cacheFor(s: object) {
   return c;
 }
 const listeners = new Set<(prefix: string) => void>();
+// Permintaan yang sedang berjalan per kunci: beberapa widget dengan kunci sama berbagi satu panggilan API.
+const inflight = new WeakMap<object, Map<string, Promise<unknown>>>();
+function inflightFor(s: object) {
+  let m = inflight.get(s);
+  if (!m) inflight.set(s, (m = new Map()));
+  return m;
+}
 
 /** Buang cache yang kuncinya diawali `prefix` (mis. setelah menyimpan data) dan muat ulang komponen yang memakainya. */
 export function invalidateSiakad(prefix = '') {
@@ -104,10 +111,20 @@ export function useSiakadQuery<T>(key: ReadonlyArray<unknown>, fn: (siakad: Siak
     }
     const ctrl = new AbortController();
     setState((s) => ({ ...s, loading: true, error: null }));
-    fnRef
-      .current(siakad, ctrl.signal)
-      .then((result) => {
+    const jalan = inflightFor(siakad);
+    let p = jalan.get(k) as Promise<ApiResult<T>> | undefined;
+    if (!p) {
+      // Dibagi ke beberapa pemakai, jadi tidak dibatalkan saat satu pemakai dilepas.
+      p = fnRef.current(siakad, new AbortController().signal).then((result) => {
         cache.set(k, { at: Date.now(), result });
+        return result;
+      });
+      jalan.set(k, p);
+      const lepas = () => jalan.delete(k);
+      p.then(lepas, lepas);
+    }
+    p
+      .then((result) => {
         if (!ctrl.signal.aborted) setState({ result, loading: false, error: null });
       })
       .catch((e: Error) => {
