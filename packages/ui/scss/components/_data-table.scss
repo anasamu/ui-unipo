@@ -68,21 +68,29 @@
   height: 2px !important;
   padding: 0 !important;
   border: 0 !important;
-  background: linear-gradient(90deg, transparent, var(--u-primary), transparent) 0 0 / 40% 100% no-repeat, color-mix(in oklab, var(--u-primary) 12%, transparent) !important;
+  background:
+    linear-gradient(90deg, transparent, var(--u-primary), transparent) 0 0 / 40% 100% no-repeat,
+    color-mix(in oklab, var(--u-primary) 12%, transparent) !important;
   animation: u-dt-slide 1.1s var(--u-ease-in-out) infinite;
 }
 .u-dt-progress-bar {
   height: 2px;
   border-radius: 2px;
-  background: linear-gradient(90deg, transparent, var(--u-primary), transparent) 0 0 / 40% 100% no-repeat, color-mix(in oklab, var(--u-primary) 12%, transparent);
+  background:
+    linear-gradient(90deg, transparent, var(--u-primary), transparent) 0 0 / 40% 100% no-repeat,
+    color-mix(in oklab, var(--u-primary) 12%, transparent);
   animation: u-dt-slide 1.1s var(--u-ease-in-out) infinite;
 }
 @keyframes u-dt-slide {
   from {
-    background-position: -40% 0, 0 0;
+    background-position:
+      -40% 0,
+      0 0;
   }
   to {
-    background-position: 140% 0, 0 0;
+    background-position:
+      140% 0,
+      0 0;
   }
 }
 .u-data-table[data-loading] tbody,
@@ -186,6 +194,57 @@
     font-size: var(--u-text-sm);
     @include truncate;
   }
+}
+.u-dt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--u-dt-grid-min, 15rem)), 1fr));
+  gap: 0.75rem;
+}
+.u-data-table[data-loading] .u-dt-grid {
+  opacity: 0.6;
+  transition: opacity var(--u-duration-base);
+}
+.u-dt-grid > .u-dt-state {
+  grid-column: 1 / -1;
+}
+.u-dt-grid-skeleton {
+  height: 9.5rem;
+  border-radius: var(--u-radius-lg);
+}
+.u-dt-grid-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card);
+  transition:
+    border-color var(--u-duration-fast) var(--u-ease-out),
+    box-shadow var(--u-duration-fast) var(--u-ease-out);
+  &[data-clickable] {
+    cursor: pointer;
+    &:hover {
+      border-color: color-mix(in oklab, var(--u-primary) 40%, var(--u-border));
+      box-shadow: var(--u-shadow-sm);
+    }
+  }
+  &:focus-visible {
+    outline: 2px solid var(--u-primary);
+    outline-offset: 2px;
+  }
+  &[data-selected] {
+    border-color: var(--u-primary);
+    box-shadow: 0 0 0 1px var(--u-primary);
+  }
+}
+.u-dt-grid-tools {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 .u-dt-state {
   padding: 2rem 1rem;

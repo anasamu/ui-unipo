@@ -1,11 +1,12 @@
 'use client';
 import * as React from 'react';
-import { BookOpen, Check, CircleAlert, ClipboardList, FileText, GraduationCap, Info, Layers, ListChecks, Network, RefreshCw, Target, TriangleAlert } from 'lucide-react';
+import { BookOpen, Check, ChevronRight, Maximize2, CircleAlert, ClipboardList, FileText, GraduationCap, Info, Layers, ListChecks, Network, RefreshCw, Target, TriangleAlert } from 'lucide-react';
 import { cn, dataFlag } from '../lib/cn';
 import { formatDate, formatNumber, formatPersen } from '../lib/format';
 import { Badge, Button, Skeleton, type BadgeVariant } from '../components/actions';
 import { Alert, Empty, Progress, ProgressRing, Table, TableContainer } from '../components/display';
 import { ActivityFeed, Panel, SegmentBar, StatCard, StatGrid } from '../components/charts';
+import { Sheet } from '../components/overlays';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakadQuery, type QueryState } from './provider';
 
 /*
@@ -1162,4 +1163,237 @@ export function PeninjauanKurikulum({ kurikulumId, className }: { kurikulumId: n
       }))}
     />
   );
+}
+
+// ================================================================ Tabel struktur per semester
+/** Detail satu MK kurikulum: ringkasan, prasyarat, CPL, lalu CPMK & sub-CPMK. Dipakai di baris terbuka dan popup. */
+export function DetailMkKurikulum({ mk, judul, className }: { mk: MkKurikulum; judul?: boolean; className?: string }) {
+  const cpl = daftar(mk.cpl);
+  const prasyarat = daftar(mk.prasyarat);
+  return (
+    <div className={cn('u-tsk-detail', className)}>
+      {judul && (
+        <header className="u-tsk-detail-head">
+          <span className="u-kur-code">{mk.kode_mk}</span>
+          <h3>{mk.nama}</h3>
+          <p>{[`${formatNumber(n(mk.sks))} SKS`, mk.semester ? `Semester ${mk.semester}` : 'Pilihan bebas'].join(' · ')}</p>
+          {mk.deskripsi && <p className="u-tsk-detail-desc">{mk.deskripsi}</p>}
+        </header>
+      )}
+      {!judul && mk.deskripsi && <p className="u-tsk-detail-desc">{mk.deskripsi}</p>}
+      <dl className="u-tsk-detail-info">
+        <div>
+          <dt>Jenis</dt>
+          <dd>{JENIS_MK[mk.jenis] ?? mk.jenis}</dd>
+        </div>
+        <div>
+          <dt>Modalitas</dt>
+          <dd>{mk.modalitas ?? '–'}</dd>
+        </div>
+        <div>
+          <dt>Prasyarat</dt>
+          <dd>
+            {prasyarat.length
+              ? prasyarat.map((p) => (
+                  <span key={p} className="u-kur-code">
+                    {p}
+                  </span>
+                ))
+              : 'Tidak ada'}
+          </dd>
+        </div>
+        <div>
+          <dt>CPL didukung</dt>
+          <dd>
+            {cpl.length ? (
+              cpl.map((c) => (
+                <Badge key={c} variant="secondary">
+                  {c}
+                </Badge>
+              ))
+            ) : (
+              <span data-warn="">Belum dipetakan</span>
+            )}
+          </dd>
+        </div>
+      </dl>
+      <CpmkMataKuliah mkId={mk.id} />
+    </div>
+  );
+}
+
+/** DetailMkKurikulum dalam panel samping. */
+export function SheetMkKurikulum({ mk, onOpenChange }: { mk: MkKurikulum | null | undefined; onOpenChange: (open: boolean) => void }) {
+  return (
+    <Sheet open={!!mk} onOpenChange={onOpenChange} title="Detail mata kuliah" size="lg" className="u-sheet-detail">
+      {mk && <DetailMkKurikulum mk={mk} judul />}
+    </Sheet>
+  );
+}
+
+export interface TabelStrukturKurikulumProps {
+  kurikulumId: number | string;
+  /** Cara membuka detail MK: 'baris' (lipat di dalam tabel, bawaan), 'popup' (panel samping), atau 'keduanya'. */
+  detail?: 'baris' | 'popup' | 'keduanya';
+  /** Ganti perilaku klik MK sepenuhnya, mis. pindah ke halaman MK. */
+  onPilihMk?: (mk: MkKurikulum) => void;
+  /** Semester yang terbuka di awal (bawaan semua). */
+  semesterTerbuka?: number[];
+  /** ID MK yang detailnya terbuka di awal (mode baris). */
+  mkTerbuka?: number[];
+  /** Kotak cari kode/nama MK (bawaan true). */
+  cari?: boolean;
+  className?: string;
+}
+
+/**
+ * Struktur kurikulum sebagai tabel dikelompokkan per semester: kepala semester bisa dilipat, total SKS terhadap batas,
+ * dan detail tiap MK (CPMK, sub-CPMK, CPL, prasyarat) dibuka di baris atau di panel samping.
+ */
+export function TabelStrukturKurikulum({ kurikulumId, detail = 'baris', onPilihMk, semesterTerbuka, mkTerbuka, cari = true, className }: TabelStrukturKurikulumProps) {
+  const q = useMkKurikulum(kurikulumId);
+  const [tutup, setTutup] = React.useState<Set<number>>(new Set());
+  const [buka, setBuka] = React.useState<Set<number>>(() => new Set(mkTerbuka));
+  const [popup, setPopup] = React.useState<MkKurikulum | null>(null);
+  const [kata, setKata] = React.useState('');
+  const awal = React.useRef(false);
+  const mk = q.data ?? [];
+  const semester = [...new Set(mk.map((m) => m.semester ?? 0))].sort((a, b) => (a || 99) - (b || 99));
+  React.useEffect(() => {
+    if (awal.current || !semesterTerbuka || !semester.length) return;
+    awal.current = true;
+    setTutup(new Set(semester.filter((s) => !semesterTerbuka.includes(s))));
+  }, [semester.join(','), semesterTerbuka]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (q.error) return <Galat q={q} />;
+  if (muatDari(q)) return <Skeleton className={className} style={{ height: 420 }} />;
+  if (!mk.length) return <Empty icon={<BookOpen />} title="Belum ada mata kuliah" bordered />;
+
+  const k = kata.trim().toLowerCase();
+  const cocok = (m: MkKurikulum) => !k || m.kode_mk.toLowerCase().includes(k) || m.nama.toLowerCase().includes(k);
+  const wajib = (m: MkKurikulum) => !(m.jenis === 'B' || m.jenis === 'D');
+  const totalWajib = mk.filter(wajib).reduce((a, m) => a + n(m.sks), 0);
+  const totalPilihan = mk.filter((m) => !wajib(m)).reduce((a, m) => a + n(m.sks), 0);
+  const baris = detail === 'baris' || detail === 'keduanya';
+  const pakaiPopup = detail === 'popup' || detail === 'keduanya';
+  const klik = (m: MkKurikulum) => (onPilihMk ? onPilihMk(m) : baris ? setBuka((s) => toggle(s, m.id)) : setPopup(m));
+  const semuaTutup = tutup.size === semester.length;
+
+  return (
+    <div className={cn('u-tsk', className)}>
+      <div className="u-tsk-toolbar">
+        {cari && <input className="u-input" data-size="sm" type="search" placeholder="Cari kode atau nama MK" value={kata} onChange={(e) => setKata(e.target.value)} aria-label="Cari mata kuliah" />}
+        <span className="u-tsk-total">
+          {mk.length} MK · <b>{formatNumber(totalWajib)}</b> SKS wajib{totalPilihan ? ` · ${formatNumber(totalPilihan)} SKS pilihan` : ''}
+        </span>
+        <Button variant="ghost" size="sm" onClick={() => setTutup(semuaTutup ? new Set() : new Set(semester))}>
+          <Layers /> {semuaTutup ? 'Buka semua' : 'Lipat semua'}
+        </Button>
+      </div>
+      <div className="u-tabel-nilai-wrap">
+        <table className="u-tabel-nilai u-tsk-table">
+          <thead>
+            <tr>
+              <th aria-label="Buka" />
+              <th>Kode</th>
+              <th>Mata kuliah</th>
+              <th data-angka>SKS</th>
+              <th>Jenis</th>
+              <th>CPL</th>
+              <th>RPS</th>
+              {pakaiPopup && baris && <th aria-label="Aksi" />}
+            </tr>
+          </thead>
+          {semester.map((s) => {
+            const isi = mk.filter((m) => (m.semester ?? 0) === s);
+            const tampil = isi.filter(cocok);
+            if (k && !tampil.length) return null;
+            const sks = isi.filter(wajib).reduce((a, m) => a + n(m.sks), 0);
+            const pilihan = isi.filter((m) => !wajib(m)).reduce((a, m) => a + n(m.sks), 0);
+            const maks = s ? maksSksSemester(s) : 0;
+            const terlipat = tutup.has(s) && !k;
+            const kolom = pakaiPopup && baris ? 8 : 7;
+            return (
+              <tbody key={s} className="u-tsk-group" data-terlipat={dataFlag(terlipat)}>
+                <tr className="u-tsk-head" data-lebih={dataFlag(!!maks && sks > maks)}>
+                  <td colSpan={kolom}>
+                    <button type="button" aria-expanded={!terlipat} onClick={() => setTutup((t) => toggle(t, s))}>
+                      <ChevronRight className="u-tsk-chevron" aria-hidden />
+                      <b>{s ? `Semester ${s}` : 'Pilihan bebas'}</b>
+                      <span className="u-tsk-head-meta">
+                        {isi.length} MK · {formatNumber(sks)}
+                        {maks ? `/${maks}` : ''} SKS{pilihan ? ` + ${formatNumber(pilihan)} pilihan` : ''}
+                      </span>
+                      {!!maks && <Progress value={Math.min(100, (sks / maks) * 100)} size="sm" tone={sks > maks ? 'danger' : 'primary'} className="u-tsk-progress" />}
+                    </button>
+                  </td>
+                </tr>
+                {!terlipat &&
+                  tampil.map((m) => {
+                    const cpl = daftar(m.cpl);
+                    const terbuka = buka.has(m.id);
+                    return (
+                      <React.Fragment key={m.id}>
+                        <tr
+                          className="u-tsk-row"
+                          data-terbuka={dataFlag(terbuka)}
+                          data-jenis={m.jenis}
+                          tabIndex={0}
+                          onClick={() => klik(m)}
+                          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget && (e.preventDefault(), klik(m))}
+                          aria-expanded={baris && !onPilihMk ? terbuka : undefined}
+                        >
+                          <td data-tengah>{baris && !onPilihMk ? <ChevronRight className="u-tsk-chevron" aria-hidden /> : null}</td>
+                          <td>
+                            <span className="u-kur-code">{m.kode_mk}</span>
+                          </td>
+                          <td>
+                            <span className="u-tsk-nama">{m.nama}</span>
+                          </td>
+                          <td data-angka>{formatNumber(n(m.sks))}</td>
+                          <td>
+                            <span className="u-mk-jenis" data-jenis={m.jenis}>
+                              {JENIS_MK[m.jenis] ?? m.jenis}
+                            </span>
+                          </td>
+                          <td>{cpl.length ? <span title={cpl.join(', ')}>{cpl.length} CPL</span> : <span className="u-tsk-warn">belum</span>}</td>
+                          <td>
+                            {m.status_rps === 'disahkan' ? (
+                              <Badge variant="success">Disahkan</Badge>
+                            ) : (
+                              <Badge variant="warning">{m.status_rps ? m.status_rps[0]!.toUpperCase() + m.status_rps.slice(1) : 'Belum'}</Badge>
+                            )}
+                          </td>
+                          {pakaiPopup && baris && (
+                            <td data-tengah onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="sm" iconOnly aria-label={`Detail ${m.nama}`} onClick={() => setPopup(m)}>
+                                <Maximize2 />
+                              </Button>
+                            </td>
+                          )}
+                        </tr>
+                        {baris && terbuka && !onPilihMk && (
+                          <tr className="u-tsk-expand">
+                            <td colSpan={kolom}>
+                              <DetailMkKurikulum mk={m} />
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+              </tbody>
+            );
+          })}
+        </table>
+      </div>
+      {pakaiPopup && <SheetMkKurikulum mk={popup} onOpenChange={(o) => !o && setPopup(null)} />}
+    </div>
+  );
+}
+function toggle<T>(s: Set<T>, v: T): Set<T> {
+  const x = new Set(s);
+  if (x.has(v)) x.delete(v);
+  else x.add(v);
+  return x;
 }

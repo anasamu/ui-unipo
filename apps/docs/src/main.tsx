@@ -9,6 +9,7 @@ import './mock/fitur';
 import './mock/dasbor';
 import './mock/kurikulum';
 import './mock/lms';
+import './mock/akademik';
 import { App } from './App';
 
 // Bendera dari paket country-flag-icons (tanpa CDN), dibundel Vite.

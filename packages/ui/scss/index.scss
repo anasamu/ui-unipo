@@ -9,6 +9,8 @@
 @use 'components/display';
 @use 'components/code';
 @use 'components/layout';
+@use 'components/navbar';
+@use 'components/faq';
 @use 'components/identity';
 @use 'components/filter';
 @use 'components/data-table';
@@ -20,4 +22,5 @@
 @use 'components/kurikulum';
 @use 'components/lms';
 @use 'components/cbt';
+@use 'components/akademik';
 @use 'components/siakad';

@@ -89,6 +89,10 @@ export interface DataTableProps<T> {
   className?: string;
   /** Simpan pilihan kolom dan kerapatan di localStorage dengan kunci ini. */
   storageKey?: string;
+  /** Ganti tabel dengan kisi kartu: fungsi penggambar satu kartu per baris. Halaman, saringan, dan keadaan kosong tetap sama. */
+  grid?: (row: T, index: number) => React.ReactNode;
+  /** Lebar minimum kartu di kisi (bawaan 15rem). */
+  gridMin?: string;
 }
 
 // ================================================================ Utilitas
@@ -189,6 +193,8 @@ export function DataTable<T>(props: DataTableProps<T>) {
     caption,
     className,
     storageKey,
+    grid,
+    gridMin,
   } = props;
 
   // ---- urutan
@@ -209,7 +215,10 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const perPage = perPageProp ?? innerPer;
 
   // ---- kolom & kerapatan
-  const [hidden, setHidden] = useStored<string[]>(storageKey && `${storageKey}:kolom`, columns.filter((c) => c.defaultHidden).map((c) => c.key));
+  const [hidden, setHidden] = useStored<string[]>(
+    storageKey && `${storageKey}:kolom`,
+    columns.filter((c) => c.defaultHidden).map((c) => c.key),
+  );
   const [density, setDensity] = useStored<'comfortable' | 'compact'>(storageKey && `${storageKey}:rapat`, defaultDensity);
   const visible = columns.filter((c) => !hidden.includes(c.key));
 
@@ -243,7 +252,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const toggleRow = (k: string) => setSelected(selected.includes(k) ? selected.filter((x) => x !== k) : [...selected, k]);
 
   const isMobile = useMedia('(max-width: 639px)');
-  const cards = mobile === 'cards' && isMobile;
+  const cards = Boolean(grid) || (mobile === 'cards' && isMobile);
   const firstLoad = loading && !rows;
   const hasError = Boolean(error) && !loading;
   const isEmpty = !firstLoad && !hasError && shown.length === 0;
@@ -265,7 +274,14 @@ export function DataTable<T>(props: DataTableProps<T>) {
       {actions}
       {densityToggle && !cards && (
         <Tooltip content={density === 'compact' ? 'Baris lega' : 'Baris rapat'}>
-          <Button variant="outline" size="sm" iconOnly aria-label="Ubah kerapatan baris" aria-pressed={density === 'compact'} onClick={() => setDensity(density === 'compact' ? 'comfortable' : 'compact')}>
+          <Button
+            variant="outline"
+            size="sm"
+            iconOnly
+            aria-label="Ubah kerapatan baris"
+            aria-pressed={density === 'compact'}
+            onClick={() => setDensity(density === 'compact' ? 'comfortable' : 'compact')}
+          >
             <Rows3 />
           </Button>
         </Tooltip>
@@ -285,7 +301,11 @@ export function DataTable<T>(props: DataTableProps<T>) {
               .filter((c) => c.hideable !== false)
               .map((c) => (
                 <label key={c.key} className="u-dt-column-option">
-                  <Checkbox checked={!hidden.includes(c.key)} onCheckedChange={(on) => setHidden(on ? hidden.filter((k) => k !== c.key) : [...hidden, c.key])} disabled={!hidden.includes(c.key) && visible.length === 1} />
+                  <Checkbox
+                    checked={!hidden.includes(c.key)}
+                    onCheckedChange={(on) => setHidden(on ? hidden.filter((k) => k !== c.key) : [...hidden, c.key])}
+                    disabled={!hidden.includes(c.key) && visible.length === 1}
+                  />
                   {labelOf(c)}
                 </label>
               ))}
@@ -332,7 +352,13 @@ export function DataTable<T>(props: DataTableProps<T>) {
         icon={<AlertTriangle />}
         title="Data tidak bisa dimuat"
         description={error instanceof Error ? error.message : typeof error === 'string' ? error : 'Periksa koneksi, lalu coba lagi.'}
-        actions={onRetry && <Button variant="outline" size="sm" onClick={onRetry}>Coba lagi</Button>}
+        actions={
+          onRetry && (
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              Coba lagi
+            </Button>
+          )
+        }
       />,
     );
   else if (isEmpty && filtered)
@@ -341,7 +367,13 @@ export function DataTable<T>(props: DataTableProps<T>) {
         icon={<SearchX />}
         title={emptyFiltered?.title ?? 'Tidak ada yang cocok'}
         description={emptyFiltered?.description ?? 'Ubah kata kunci atau saringan untuk melihat data lain.'}
-        actions={emptyFiltered?.onReset && <Button variant="outline" size="sm" onClick={emptyFiltered.onReset}>Atur ulang saringan</Button>}
+        actions={
+          emptyFiltered?.onReset && (
+            <Button variant="outline" size="sm" onClick={emptyFiltered.onReset}>
+              Atur ulang saringan
+            </Button>
+          )
+        }
       />,
     );
   else if (isEmpty) state = stateRow(<Empty icon={empty?.icon} title={empty?.title ?? 'Belum ada data'} description={empty?.description} actions={empty?.action} />);
@@ -359,7 +391,49 @@ export function DataTable<T>(props: DataTableProps<T>) {
       />
     );
 
-  const body = cards ? (
+  const gridBody = grid && (
+    <div className="u-dt-grid" role="list" aria-busy={loading || undefined} style={gridMin ? ({ '--u-dt-grid-min': gridMin } as React.CSSProperties) : undefined}>
+      {firstLoad
+        ? Array.from({ length: skeletonCount }, (_, i) => <Skeleton key={i} className="u-dt-grid-skeleton" />)
+        : (state ??
+          shown.map((row, i) => {
+            const k = rowKey(row);
+            return (
+              <div
+                key={k}
+                role="listitem"
+                className="u-dt-grid-item"
+                data-selected={dataFlag(selected.includes(k))}
+                data-clickable={dataFlag(Boolean(onRowClick))}
+                tabIndex={onRowClick ? 0 : undefined}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault();
+                          onRowClick(row);
+                        }
+                      }
+                    : undefined
+                }
+              >
+                {grid(row, i)}
+                {(selectable || rowActions) && (
+                  <span className="u-dt-grid-tools" onClick={(e) => e.stopPropagation()}>
+                    {selectable && <Checkbox checked={selected.includes(k)} onCheckedChange={() => toggleRow(k)} aria-label="Pilih baris" />}
+                    {menuCell(row)}
+                  </span>
+                )}
+              </div>
+            );
+          }))}
+    </div>
+  );
+
+  const body = gridBody ? (
+    gridBody
+  ) : cards ? (
     <div className="u-dt-cards" role="list" aria-busy={loading || undefined}>
       {firstLoad
         ? Array.from({ length: skeletonCount }, (_, i) => (
@@ -368,13 +442,20 @@ export function DataTable<T>(props: DataTableProps<T>) {
               <Skeleton style={{ height: 12, width: '40%', marginTop: 8 }} />
             </div>
           ))
-        : state ??
+        : (state ??
           shown.map((row, i) => {
             const k = rowKey(row);
             const role = (c: DataColumn<T>, idx: number) => c.mobile ?? (idx === 0 ? 'title' : 'meta');
             const by = (r: string) => visible.filter((c, idx) => role(c, idx) === r);
             return (
-              <div key={k} role="listitem" className="u-dt-card" data-selected={dataFlag(selected.includes(k))} data-clickable={dataFlag(Boolean(onRowClick))} onClick={onRowClick ? () => onRowClick(row) : undefined}>
+              <div
+                key={k}
+                role="listitem"
+                className="u-dt-card"
+                data-selected={dataFlag(selected.includes(k))}
+                data-clickable={dataFlag(Boolean(onRowClick))}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+              >
                 <div className="u-dt-card-head">
                   {selectable && (
                     <span onClick={(e) => e.stopPropagation()}>
@@ -408,7 +489,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                 )}
               </div>
             );
-          })}
+          }))}
     </div>
   ) : (
     <div className="u-table-wrap u-dt-scroll" style={maxHeight ? { maxHeight, overflowY: 'auto' } : undefined}>
@@ -422,7 +503,13 @@ export function DataTable<T>(props: DataTableProps<T>) {
               </th>
             )}
             {visible.map((c) => (
-              <th key={c.key} data-align={c.align} data-shrink={c.shrink ? '' : undefined} style={c.width ? { width: c.width } : undefined} aria-sort={sort?.key === c.key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}>
+              <th
+                key={c.key}
+                data-align={c.align}
+                data-shrink={c.shrink ? '' : undefined}
+                style={c.width ? { width: c.width } : undefined}
+                aria-sort={sort?.key === c.key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
+              >
                 {c.sortable ? (
                   <SortButton direction={sort?.key === c.key ? sort.dir : null} onClick={() => toggleSort(c.key)}>
                     {c.header}
@@ -457,7 +544,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                   {rowActions && <td />}
                 </tr>
               ))
-            : state ??
+            : (state ??
               shown.map((row, i) => {
                 const k = rowKey(row);
                 const sel = selected.includes(k);
@@ -480,7 +567,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                     )}
                   </tr>
                 );
-              })}
+              }))}
         </tbody>
       </table>
     </div>
