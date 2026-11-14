@@ -11,3 +11,4 @@ export * from './portal';
 export * from './pmb';
 export * from './kelengkapan';
 export * from './dasbor';
+export * from './kurikulum';

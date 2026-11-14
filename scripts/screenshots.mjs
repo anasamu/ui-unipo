@@ -17,7 +17,7 @@ mkdirSync(out, { recursive: true });
 const executablePath = process.env.CHROMIUM_PATH || undefined;
 const browser = await chromium.launch({ executablePath });
 const page = await browser.newPage({
-  viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 },
+  viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1400 },
   deviceScaleFactor: Number(process.env.DPR ?? 2),
 });
 await page.goto(base + theme);
@@ -32,7 +32,7 @@ for (const slug of slugs) {
   for (const d of demos) {
     const id = await d.getAttribute('data-demo');
     await d.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(700);
     await d.screenshot({ path: `${out}/${id}${suffix}.png`, animations: 'disabled' });
   }
   console.log(`${slug}: ${demos.length}`);
