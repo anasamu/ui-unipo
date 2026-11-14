@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import type { PlaygroundSpec } from './Playground';
 
 export interface DemoMeta {
   title: string;
@@ -18,6 +19,8 @@ export interface DemoMeta {
   /** Halaman prosa: contoh dirender tanpa bingkai dan tanpa kode. */
   prose?: boolean;
   badge?: string;
+  /** Pratinjau dengan panel props dan kode yang ikut berubah, tampil paling atas. */
+  playground?: PlaygroundSpec;
 }
 
 export interface DocPage {

@@ -5,7 +5,7 @@ import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
   title: 'Portal & landing page',
-  category: 'Widget fitur',
+  category: 'Portal & landing',
   layout: 'full',
   order: 2,
   description:

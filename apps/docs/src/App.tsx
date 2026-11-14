@@ -9,9 +9,13 @@ const Github = () => (
 import { AppLogo, Badge, Button, CodeBlock, DocsSidebar, TableOfContents, Toaster, Tooltip, TooltipProvider, cn } from 'unipo-ui';
 import { CATEGORIES, PAGES, type DocPage } from './registry';
 import { ThemeControls } from './ThemeControls';
+import { Playground } from './Playground';
+import { Galeri } from './Galeri';
+
+const EMBED = new URLSearchParams(location.search).has('embed');
 
 function useHashRoute(): [string, (s: string) => void] {
-  const read = () => decodeURIComponent(location.hash.replace(/^#\/?/, '')) || PAGES[0]?.slug;
+  const read = () => decodeURIComponent(location.hash.replace(/^#\/?/, '')) || (EMBED ? 'galeri' : PAGES[0]?.slug);
   const [slug, setSlug] = React.useState(read);
   React.useEffect(() => {
     const on = () => {
@@ -26,7 +30,10 @@ function useHashRoute(): [string, (s: string) => void] {
 
 function Page({ page }: { page: DocPage }) {
   const { meta } = page;
-  const toc = page.demos.map((d) => ({ id: `${page.slug}--${d.name}`, label: d.title }));
+  const toc = [
+    ...(meta.playground ? [{ id: `${page.slug}--playground`, label: meta.playground.title ?? 'Playground' }] : []),
+    ...page.demos.map((d) => ({ id: `${page.slug}--${d.name}`, label: d.title })),
+  ];
   return (
     <div className="docs-page-grid">
       <article className="docs-article" data-layout={meta.layout ?? 'normal'}>
@@ -36,6 +43,7 @@ function Page({ page }: { page: DocPage }) {
           <p className="docs-lead">{meta.description}</p>
           {meta.importLine && <CodeBlock code={meta.importLine} language="tsx" lineNumbers={false} windowControls={false} theme="auto" />}
         </header>
+        {meta.playground && <Playground spec={meta.playground} slug={page.slug} />}
         {page.demos.map((d) =>
           meta.prose ? (
             <section key={d.name} id={`${page.slug}--${d.name}`} className="docs-prose">
@@ -72,8 +80,12 @@ function Page({ page }: { page: DocPage }) {
                 <tbody>
                   {meta.props.map(([n, t, k]) => (
                     <tr key={n}>
-                      <td><code className="u-inline-code">{n}</code></td>
-                      <td className="u-mono" style={{ color: 'var(--u-muted-foreground)' }}>{t}</td>
+                      <td>
+                        <code className="u-inline-code">{n}</code>
+                      </td>
+                      <td className="u-mono" style={{ color: 'var(--u-muted-foreground)' }}>
+                        {t}
+                      </td>
                       <td>{k}</td>
                     </tr>
                   ))}
@@ -104,25 +116,41 @@ export function App() {
     const p = new URLSearchParams(location.search);
     if (p.get('theme') === 'dark') setDark(true);
     if (p.get('theme') === 'light') setDark(false);
+    // Saat disematkan (iframe), halaman induk dari origin yang sama boleh mengganti tema tanpa memuat ulang.
+    const on = (e: MessageEvent) => {
+      if (e.origin === location.origin && e.data?.type === 'unipo-ui:tema') setDark(!!e.data.gelap);
+    };
+    window.addEventListener('message', on);
+    return () => window.removeEventListener('message', on);
   }, []);
   React.useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
   }, [dark]);
+  const galeri = slug === 'galeri';
   const page = PAGES.find((p) => p.slug === slug) ?? PAGES[0];
   const sections = CATEGORIES.map((c) => ({
     title: c,
-    items: PAGES.filter((p) => p.meta.category === c).map((p) => ({ key: p.slug, label: p.meta.title, href: `#/${p.slug}`, badge: p.meta.badge })),
+    items: [
+      ...(c === 'Mulai' ? [{ key: 'galeri', label: 'Galeri komponen', href: '#/galeri' }] : []),
+      ...PAGES.filter((p) => p.meta.category === c).map((p) => ({ key: p.slug, label: p.meta.title, href: `#/${p.slug}`, badge: p.meta.badge })),
+    ],
   })).filter((s) => s.items.length);
 
   return (
     <TooltipProvider>
       <Toaster>
-        <div className={cn('u-root', 'docs')}>
+        <div className={cn('u-root', 'docs')} data-embed={EMBED ? '' : undefined}>
           <header className="docs-topbar">
-            <a href="#/" className="docs-brand" onClick={(e) => (e.preventDefault(), go(PAGES[0].slug))}>
-              <AppLogo name="UNIPO UI" tagline="Sistem desain Universitas Pohuwato" />
-            </a>
-            <Badge variant="outline" shape="square">v0.1.0</Badge>
+            {!EMBED && (
+              <>
+                <a href="#/" className="docs-brand" onClick={(e) => (e.preventDefault(), go(PAGES[0].slug))}>
+                  <AppLogo name="UNIPO UI" tagline="Sistem desain Universitas Pohuwato" />
+                </a>
+                <Badge variant="outline" shape="square">
+                  v0.1.0
+                </Badge>
+              </>
+            )}
             <div className="docs-topbar-actions">
               <ThemeControls />
               <Tooltip content={dark ? 'Mode terang' : 'Mode gelap'}>
@@ -130,18 +158,20 @@ export function App() {
                   {dark ? <Sun /> : <Moon />}
                 </Button>
               </Tooltip>
-              <Tooltip content="Repositori">
-                <Button variant="ghost" size="sm" iconOnly aria-label="Repositori GitHub" render={<a href="https://github.com/anasamu/ui-unipo" target="_blank" rel="noreferrer" />}>
-                  <Github />
-                </Button>
-              </Tooltip>
+              {!EMBED && (
+                <Tooltip content="Repositori">
+                  <Button variant="ghost" size="sm" iconOnly aria-label="Repositori GitHub" render={<a href="https://github.com/anasamu/ui-unipo" target="_blank" rel="noreferrer" />}>
+                    <Github />
+                  </Button>
+                </Tooltip>
+              )}
             </div>
           </header>
           <div className="docs-body">
             <div className="docs-sidebar">
-              <DocsSidebar sections={sections} activeKey={page?.slug} />
+              <DocsSidebar sections={sections} activeKey={galeri ? 'galeri' : page?.slug} />
             </div>
-            <main className="docs-main">{page && <Page key={page.slug} page={page} />}</main>
+            <main className="docs-main">{galeri ? <Galeri go={go} /> : page && <Page key={page.slug} page={page} />}</main>
           </div>
         </div>
       </Toaster>

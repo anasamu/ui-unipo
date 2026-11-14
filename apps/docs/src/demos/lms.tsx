@@ -4,7 +4,7 @@ import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
   title: 'LMS e-learning',
-  category: 'Widget fitur',
+  category: 'LMS',
   layout: 'full',
   order: 7,
   description:

@@ -2,6 +2,7 @@ import { AtSign, Eye, EyeOff, Mail, Search } from 'lucide-react';
 import * as React from 'react';
 import { Button, Field, Fieldset, Input, InputGroup, Textarea } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
+import { jsxProps } from '../Playground';
 
 export const meta: DemoMeta = {
   title: 'Input & Field',
@@ -16,6 +17,26 @@ export const meta: DemoMeta = {
     ['error', 'ReactNode', 'Pesan galat; menandai field tidak valid.'],
     ['required / optional', 'boolean', 'Tanda * atau "(opsional)" pada label.'],
   ],
+  playground: {
+    controls: [
+      { name: 'label', type: 'text', default: 'Email kampus' },
+      { name: 'placeholder', type: 'text', default: 'nama@unipo.ac.id' },
+      { name: 'description', type: 'text', default: 'Dipakai untuk notifikasi nilai dan tagihan.' },
+      { name: 'error', type: 'text', default: '' },
+      { name: 'size', type: 'select', options: ['sm', 'md', 'lg'], default: 'md' },
+      { name: 'required', type: 'boolean', default: true },
+      { name: 'disabled', type: 'boolean', default: false },
+    ],
+    render: ({ label, description, error, required, placeholder, size, disabled }) => (
+      <div style={{ width: '100%', maxWidth: 360 }}>
+        <Field label={label} description={description || undefined} error={error || undefined} required={required}>
+          <Input placeholder={placeholder} size={size} disabled={disabled} />
+        </Field>
+      </div>
+    ),
+    code: ({ label, description, error, required, placeholder, size, disabled }) =>
+      `<Field${jsxProps({ label, description, error, required }, { required: false })}>\n  <Input${jsxProps({ placeholder, size, disabled }, { size: 'md', disabled: false })} />\n</Field>`,
+  },
 };
 
 export function Dasar() {
@@ -91,10 +112,16 @@ export function Area() {
 export function Kelompok() {
   return (
     <Fieldset legend="Alamat domisili">
-      <Field label="Jalan / dusun"><Input /></Field>
+      <Field label="Jalan / dusun">
+        <Input />
+      </Field>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field label="RT"><Input inputMode="numeric" /></Field>
-        <Field label="RW"><Input inputMode="numeric" /></Field>
+        <Field label="RT">
+          <Input inputMode="numeric" />
+        </Field>
+        <Field label="RW">
+          <Input inputMode="numeric" />
+        </Field>
       </div>
     </Fieldset>
   );

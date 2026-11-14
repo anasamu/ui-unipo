@@ -22,7 +22,7 @@ import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
   title: 'Kurikulum OBE',
-  category: 'Widget fitur',
+  category: 'Akademik',
   layout: 'full',
   order: 6,
   description:

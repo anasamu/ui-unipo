@@ -4,7 +4,7 @@ import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
   title: 'Kalender akademik',
-  category: 'Widget fitur',
+  category: 'Kalender akademik',
   layout: 'full',
   order: 1,
   description:

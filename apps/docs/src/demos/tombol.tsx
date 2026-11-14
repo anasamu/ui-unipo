@@ -1,6 +1,7 @@
 import { ArrowRight, Download, Plus, Printer, Save, Trash2 } from 'lucide-react';
 import { Button, ButtonGroup, Tooltip } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
+import { jsxProps } from '../Playground';
 
 export const meta: DemoMeta = {
   title: 'Button',
@@ -16,6 +17,26 @@ export const meta: DemoMeta = {
     ['fullWidth', 'boolean', 'Lebar penuh.'],
     ['render', 'ReactElement', 'Render sebagai elemen lain, mis. <a href>.'],
   ],
+  playground: {
+    controls: [
+      { name: 'children', label: 'Label', type: 'text', default: 'Simpan KRS' },
+      { name: 'variant', type: 'select', options: ['primary', 'secondary', 'outline', 'soft', 'ghost', 'destructive', 'destructive-soft', 'link'], default: 'primary' },
+      { name: 'size', type: 'select', options: ['xs', 'sm', 'md', 'lg', 'xl'], default: 'md' },
+      { name: 'ikon', label: 'Ikon', type: 'select', options: ['tanpa', 'kiri', 'kanan'], default: 'tanpa' },
+      { name: 'loading', type: 'boolean', default: false },
+      { name: 'disabled', type: 'boolean', default: false },
+      { name: 'fullWidth', type: 'boolean', default: false },
+    ],
+    render: ({ children, ikon, ...p }) => (
+      <Button {...p}>
+        {ikon === 'kiri' && <Save />}
+        {children}
+        {ikon === 'kanan' && <ArrowRight />}
+      </Button>
+    ),
+    code: ({ children, ikon, ...p }) =>
+      `<Button${jsxProps(p, { variant: 'primary', size: 'md', loading: false, disabled: false, fullWidth: false })}>\n  ${ikon === 'kiri' ? '<Save />\n  ' : ''}${children}${ikon === 'kanan' ? '\n  <ArrowRight />' : ''}\n</Button>`,
+  },
 };
 
 export function Varian() {
@@ -48,14 +69,24 @@ export function Ukuran() {
 export function Ikon() {
   return (
     <>
-      <Button><Plus /> Tambah mahasiswa</Button>
-      <Button variant="outline"><Download /> Unduh KHS</Button>
-      <Button variant="secondary">Lanjutkan <ArrowRight /></Button>
+      <Button>
+        <Plus /> Tambah mahasiswa
+      </Button>
+      <Button variant="outline">
+        <Download /> Unduh KHS
+      </Button>
+      <Button variant="secondary">
+        Lanjutkan <ArrowRight />
+      </Button>
       <Tooltip content="Cetak transkrip" shortcut="⌘P">
-        <Button variant="outline" iconOnly aria-label="Cetak transkrip"><Printer /></Button>
+        <Button variant="outline" iconOnly aria-label="Cetak transkrip">
+          <Printer />
+        </Button>
       </Tooltip>
       <Tooltip content="Hapus">
-        <Button variant="ghost" iconOnly aria-label="Hapus"><Trash2 /></Button>
+        <Button variant="ghost" iconOnly aria-label="Hapus">
+          <Trash2 />
+        </Button>
       </Tooltip>
     </>
   );
@@ -64,10 +95,16 @@ export function Ikon() {
 export function Memuat() {
   return (
     <>
-      <Button loading><Save /> Menyimpan</Button>
-      <Button variant="outline" loading>Memuat</Button>
+      <Button loading>
+        <Save /> Menyimpan
+      </Button>
+      <Button variant="outline" loading>
+        Memuat
+      </Button>
       <Button disabled>Nonaktif</Button>
-      <Button variant="outline" disabled>Nonaktif</Button>
+      <Button variant="outline" disabled>
+        Nonaktif
+      </Button>
     </>
   );
 }
