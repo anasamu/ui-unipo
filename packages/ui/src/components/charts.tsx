@@ -324,6 +324,8 @@ export function LineChart({
   format,
   area = true,
   loading,
+  legendValue = 'total',
+  max,
   className,
 }: {
   labels: string[];
@@ -333,6 +335,10 @@ export function LineChart({
   format?: (n: number) => string;
   area?: boolean;
   loading?: boolean;
+  /** Angka di legenda: jumlah seluruh titik (bawaan), nilai titik terakhir, atau tanpa angka. */
+  legendValue?: 'total' | 'akhir' | 'tidak';
+  /** Batas atas sumbu Y (mis. 4 untuk IPK). Bawaan dibulatkan dari data. */
+  max?: number;
   className?: string;
 }) {
   const tip = useTip();
@@ -340,7 +346,7 @@ export function LineChart({
   const plot = React.useRef<HTMLDivElement>(null);
   if (loading) return <Skeleton className={className} style={{ height, width: '100%' }} />;
   const n = labels.length;
-  const nice = niceMax(Math.max(1, ...series.flatMap((s) => s.values)));
+  const nice = max ?? niceMax(Math.max(1, ...series.flatMap((s) => s.values)));
   const W = 1000;
   const x = (i: number) => (n <= 1 ? W / 2 : (i / (n - 1)) * W);
   const y = (v: number) => height - (v / nice) * (height - 4) - 2;
@@ -385,12 +391,7 @@ export function LineChart({
             <li key={j}>
               <i style={{ background: s.color ?? chartColor(j) }} />
               <span className="u-legend-label">{s.label}</span>
-              <span className="u-legend-value">
-                {fmt(
-                  s.values.reduce((a, b) => a + b, 0),
-                  format,
-                )}
-              </span>
+              {legendValue !== 'tidak' && <span className="u-legend-value">{fmt(legendValue === 'akhir' ? (s.values[s.values.length - 1] ?? 0) : s.values.reduce((a, b) => a + b, 0), format)}</span>}
             </li>
           ))}
         </ul>

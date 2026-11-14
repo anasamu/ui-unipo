@@ -84,6 +84,7 @@ const daftarMk = () =>
     jumlah_cpmk: RPS_DISAHKAN.has(i) ? 3 : i % 3,
     cpl: cplMk.filter((x) => x.mk_id === mkId(i)).map((x) => CPL[x.cpl_id - 101]![0]),
     prasyarat: i === 6 ? ['IF101'] : [],
+    deskripsi: i === 12 ? 'Mata kuliah ini membahas perancangan basis data relasional, normalisasi, SQL, transaksi, dan pengenalan basis data NoSQL.' : null,
     status_rps: RPS_DISAHKAN.has(i) ? 'disahkan' : i % 4 === 0 ? 'draf' : null,
   }));
 
@@ -285,11 +286,10 @@ tambahRute(new RegExp(`${K}/capaian/mahasiswa/[^/]+$`), (u) => ({
     }),
   },
 }));
-tambahRute(new RegExp(`${K}/mk/\\d+$`), () => ({
+tambahRute(new RegExp(`${K}/mk/\\d+$`), (u) => ({
   data: {
-    ...daftarMk()[12],
+    ...(daftarMk().find((m) => String(m.id) === u.pathname.split('/').pop()) ?? daftarMk()[12]),
     modalitas: 'bauran',
-    deskripsi: 'Mata kuliah ini membahas perancangan basis data relasional, normalisasi, SQL, transaksi, dan pengenalan basis data NoSQL.',
     cpmk: [
       {
         id: 301,

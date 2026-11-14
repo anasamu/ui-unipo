@@ -14,3 +14,5 @@ export * from './dasbor';
 export * from './kurikulum';
 export * from './lms';
 export * from './cbt';
+export * from './akademik';
+export * from './navigasi';

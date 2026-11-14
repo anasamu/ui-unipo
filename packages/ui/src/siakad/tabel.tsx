@@ -1,14 +1,16 @@
 'use client';
 import * as React from 'react';
-import { BadgeCheck, Clock, Folder, Paperclip } from 'lucide-react';
+import { BadgeCheck, BookOpen, Clock, Folder, LayoutGrid, Paperclip, Rows3 } from 'lucide-react';
 import type { ApiResult, Siakad } from 'unipo-siakad-sdk';
 import { Badge } from '../components/actions';
 import { Avatar, CellPrimary } from '../components/display';
 import { DataTable, type DataColumn, type DataTableProps } from '../components/data-table';
+import { SegmentedControl } from '../components/forms';
 import { filterToQuery, useFilterParams, type FilterField, type FilterValues } from '../components/filter';
 import type { MenuEntry } from '../components/overlays';
 import { formatDate } from '../lib/format';
 import { useSiakadQuery } from './provider';
+import { SheetDetailDosen, SheetDetailMahasiswa, SheetDetailMataKuliah } from './akademik';
 import {
   AKSES_ARSIP,
   FilterBerkas,
@@ -105,8 +107,48 @@ const Mono = ({ children }: { children: React.ReactNode }) => <span className="u
 const Muted = ({ children }: { children: React.ReactNode }) => <span style={{ color: 'var(--u-muted-foreground)' }}>{children}</span>;
 const tanggal = (v: unknown) => (v ? formatDate(String(v), 'medium') : '–');
 
+// ================================================================ Kartu untuk tampilan kisi
+/** Isi kartu standar untuk tampilan kisi tabel: media, judul, subjudul, lencana, dan beberapa angka. */
+export function KartuData({
+  media,
+  title,
+  subtitle,
+  badge,
+  meta,
+}: {
+  media?: React.ReactNode;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  badge?: React.ReactNode;
+  meta?: Array<{ label: string; value: React.ReactNode }>;
+}) {
+  return (
+    <div className="u-kartu-data">
+      <div className="u-kartu-data-head">
+        {media}
+        <div className="u-kartu-data-id">
+          <b>{title}</b>
+          {subtitle && <small>{subtitle}</small>}
+        </div>
+      </div>
+      {badge && <div className="u-kartu-data-badge">{badge}</div>}
+      {meta && meta.length > 0 && (
+        <dl className="u-kartu-data-meta">
+          {meta.map((m) => (
+            <div key={m.label}>
+              <dt>{m.label}</dt>
+              <dd>{m.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+}
+
 // ================================================================ Props bersama tabel turunan
-export interface TabelSiakadProps<T> extends Omit<Partial<DataTableProps<T>>, 'rows' | 'columns' | 'toolbar'> {
+export type TampilanTabel = 'tabel' | 'kartu';
+export interface TabelSiakadProps<T> extends Omit<Partial<DataTableProps<T>>, 'rows' | 'columns' | 'toolbar' | 'grid'> {
   /** Saringan awal, mis. { prodi: '55201', status: 'A' }. */
   initialFilter?: FilterValues;
   syncUrl?: boolean;
@@ -118,7 +160,21 @@ export interface TabelSiakadProps<T> extends Omit<Partial<DataTableProps<T>>, 'r
   /** Sembunyikan bilah saringan. */
   noFilter?: boolean;
   rowActions?: (row: T) => MenuEntry[];
+  /**
+   * 'lengkap' (bawaan): saringan, pilih kolom, kerapatan, CSV.
+   * 'ringkas': untuk kartu dasbor atau tab detail. Tanpa saringan dan alat, rapat, 5 baris per halaman.
+   */
+  varian?: 'lengkap' | 'ringkas';
+  /** Tampilan awal: tabel atau kisi kartu (tersedia untuk mahasiswa, dosen, pegawai, mata kuliah). */
+  tampilan?: TampilanTabel;
+  onTampilanChange?: (t: TampilanTabel) => void;
+  /** Tombol ganti tabel/kartu di bilah alat. Bawaan: tampil bila tabel punya tampilan kartu dan varian lengkap. */
+  tampilanToggle?: boolean;
+  /** Klik baris membuka panel detail (mahasiswa, dosen, mata kuliah). Diabaikan bila onRowClick diisi. */
+  detail?: boolean;
 }
+
+type DetailSheet<T> = React.ComponentType<{ row: T | null; onClose: () => void }>;
 
 function makeTabel<T extends Row>(cfg: {
   name: string;
@@ -130,27 +186,85 @@ function makeTabel<T extends Row>(cfg: {
   columns: DataColumn<T>[];
   empty: DataTableProps<T>['empty'];
   csv: string;
+  kartu?: (r: T) => React.ReactNode;
+  Detail?: DetailSheet<T>;
 }) {
-  function Tabel({ initialFilter, syncUrl, extraColumns = [], hideColumns = [], filterProps, noFilter, perPage, ...rest }: TabelSiakadProps<T>) {
+  function Tabel({
+    initialFilter,
+    syncUrl,
+    extraColumns = [],
+    hideColumns = [],
+    filterProps,
+    noFilter,
+    perPage,
+    varian = 'lengkap',
+    tampilan: tampilanProp,
+    onTampilanChange,
+    tampilanToggle,
+    detail,
+    onRowClick,
+    actions,
+    ...rest
+  }: TabelSiakadProps<T>) {
+    const ringkas = varian === 'ringkas';
     const fields = useFilterFields(cfg.preset);
-    const t = useSiakadTable<T>({ key: cfg.key, fetch: cfg.fetch, initialFilter, fields, perPage, syncUrl });
+    const t = useSiakadTable<T>({ key: cfg.key, fetch: cfg.fetch, initialFilter, fields, perPage: perPage ?? (ringkas ? 5 : undefined), syncUrl });
     const columns = [...cfg.columns.filter((c) => !hideColumns.includes(c.key) && !extraColumns.some((e) => e.key === c.key)), ...extraColumns];
+    const [tampilanInner, setTampilan] = React.useState<TampilanTabel>(tampilanProp ?? 'tabel');
+    const tampilan = cfg.kartu ? (tampilanProp ?? tampilanInner) : 'tabel';
+    const [dipilih, setDipilih] = React.useState<T | null>(null);
+    const bukaDetail = detail && cfg.Detail && !onRowClick ? setDipilih : undefined;
+    const toggle =
+      cfg.kartu && (tampilanToggle ?? !ringkas) ? (
+        <SegmentedControl<TampilanTabel>
+          aria-label="Tampilan"
+          value={tampilan}
+          onValueChange={(v) => {
+            setTampilan(v);
+            onTampilanChange?.(v);
+          }}
+          options={[
+            { value: 'tabel', label: '', icon: <Rows3 />, 'aria-label': 'Tabel' },
+            { value: 'kartu', label: '', icon: <LayoutGrid />, 'aria-label': 'Kartu' },
+          ]}
+        />
+      ) : null;
+    const kisi = tampilan === 'kartu';
     return (
-      <DataTable<T>
-        columns={columns}
-        rowKey={cfg.rowKey}
-        toolbar={noFilter ? undefined : <cfg.Filter {...t.filterProps} {...filterProps} />}
-        empty={cfg.empty}
-        exportCsv={cfg.csv}
-        storageKey={cfg.key}
-        {...t.tableProps}
-        {...rest}
-      />
+      <>
+        <DataTable<T>
+          columns={columns}
+          rowKey={cfg.rowKey}
+          toolbar={noFilter || ringkas ? undefined : <cfg.Filter {...t.filterProps} {...filterProps} />}
+          empty={cfg.empty}
+          exportCsv={ringkas ? undefined : cfg.csv}
+          storageKey={cfg.key}
+          columnToggle={!ringkas && !kisi}
+          densityToggle={!ringkas && !kisi}
+          defaultDensity={ringkas ? 'compact' : undefined}
+          grid={kisi ? cfg.kartu : undefined}
+          actions={
+            toggle || actions ? (
+              <>
+                {actions}
+                {toggle}
+              </>
+            ) : undefined
+          }
+          {...t.tableProps}
+          onPerPageChange={ringkas ? undefined : t.tableProps.onPerPageChange}
+          onRowClick={onRowClick ?? bukaDetail}
+          {...rest}
+        />
+        {bukaDetail && cfg.Detail && <cfg.Detail row={dipilih} onClose={() => setDipilih(null)} />}
+      </>
     );
   }
   Tabel.displayName = cfg.name;
   return Tabel;
 }
+
+const meta = (label: string, value: React.ReactNode) => ({ label, value: value ?? '–' });
 
 // ================================================================ Mahasiswa
 const TONE_MHS: Record<string, Tone> = { A: 'success', C: 'warning', N: 'neutral', L: 'info', K: 'danger', D: 'danger' };
@@ -166,6 +280,21 @@ export const TabelMahasiswa = makeTabel<Row>({
   rowKey: (r) => String(r.nim),
   csv: 'mahasiswa',
   empty: { title: 'Belum ada mahasiswa', description: 'Data mahasiswa muncul di sini setelah diimpor atau didaftarkan.' },
+  Detail: ({ row, onClose }) => <SheetDetailMahasiswa nim={row ? String(row.nim) : null} onOpenChange={(o) => !o && onClose()} />,
+  kartu: (r) => (
+    <KartuData
+      media={<Avatar name={String(r.nama ?? r.nim)} src={r.foto} size="lg" />}
+      title={r.nama}
+      subtitle={
+        <>
+          <Mono>{r.nim}</Mono> · {r.kode_jenjang ? r.kode_jenjang + ' ' : ''}
+          {r.nama_prodi ?? '–'}
+        </>
+      }
+      badge={<StatusBadge tone={toneOf(TONE_MHS, r.status_aktif)}>{r.status_aktif_label ?? r.status_aktif}</StatusBadge>}
+      meta={[meta('Angkatan', r.tahun_masuk), meta('IPK', r.ipk != null ? Number(r.ipk).toFixed(2) : null), meta('Kelas', KELAS[r.kelas] ?? r.kelas)]}
+    />
+  ),
   columns: [
     {
       key: 'nama',
@@ -180,7 +309,14 @@ export const TabelMahasiswa = makeTabel<Row>({
     { key: 'kelas', header: 'Kelas', shrink: true, cell: (r) => KELAS[r.kelas] ?? r.kelas ?? '–' },
     { key: 'semester', header: 'Smt', align: 'end', shrink: true, defaultHidden: true },
     { key: 'ipk', header: 'IPK', align: 'end', shrink: true, cell: (r) => (r.ipk != null ? Number(r.ipk).toFixed(2) : '–') },
-    { key: 'status_aktif', header: 'Status', shrink: true, mobile: 'badge', value: (r) => r.status_aktif_label ?? r.status_aktif, cell: (r) => <StatusBadge tone={toneOf(TONE_MHS, r.status_aktif)}>{r.status_aktif_label ?? r.status_aktif}</StatusBadge> },
+    {
+      key: 'status_aktif',
+      header: 'Status',
+      shrink: true,
+      mobile: 'badge',
+      value: (r) => r.status_aktif_label ?? r.status_aktif,
+      cell: (r) => <StatusBadge tone={toneOf(TONE_MHS, r.status_aktif)}>{r.status_aktif_label ?? r.status_aktif}</StatusBadge>,
+    },
   ],
 });
 
@@ -195,23 +331,77 @@ export const TabelDosen = makeTabel<Row>({
   rowKey: (r) => String(r.nidn),
   csv: 'dosen',
   empty: { title: 'Belum ada dosen' },
+  Detail: ({ row, onClose }) => <SheetDetailDosen nidn={row ? String(row.nidn) : null} onOpenChange={(o) => !o && onClose()} />,
+  kartu: (r) => {
+    const v = r.status_aktif ?? r.status;
+    return (
+      <KartuData
+        media={<Avatar name={String(r.nama ?? r.nidn)} src={r.foto} size="lg" />}
+        title={r.nama_lengkap ?? r.nama}
+        subtitle={
+          <>
+            NIDN <Mono>{r.nidn}</Mono> · {r.nama_prodi ?? '–'}
+          </>
+        }
+        badge={
+          <StatusBadge tone={v === 'A' || v === 'aktif' ? 'success' : v === 'T' ? 'info' : 'neutral'}>
+            {({ A: 'Aktif', T: 'Tugas belajar', C: 'Cuti', K: 'Keluar' } as Record<string, string>)[v] ?? v}
+          </StatusBadge>
+        }
+        meta={[meta('Jabatan', r.jabatan_akademik ?? 'Belum ada'), meta('Pendidikan', r.pendidikan)]}
+      />
+    );
+  },
   columns: [
     {
       key: 'nama',
       header: 'Dosen',
       mobile: 'title',
       value: (r) => r.nama_lengkap ?? r.nama,
-      cell: (r) => <CellPrimary media={<Avatar name={String(r.nama ?? r.nidn)} src={r.foto} size="sm" />} title={r.nama_lengkap ?? r.nama} subtitle={<>NIDN <Mono>{r.nidn}</Mono></>} />,
+      cell: (r) => (
+        <CellPrimary
+          media={<Avatar name={String(r.nama ?? r.nidn)} src={r.foto} size="sm" />}
+          title={r.nama_lengkap ?? r.nama}
+          subtitle={
+            <>
+              NIDN <Mono>{r.nidn}</Mono>
+            </>
+          }
+        />
+      ),
     },
     { key: 'nama_prodi', header: 'Homebase' },
     { key: 'jabatan_akademik', header: 'Jabatan akademik', cell: (r) => r.jabatan_akademik ?? <Muted>Belum ada</Muted> },
     { key: 'pendidikan', header: 'Pendidikan', shrink: true, defaultHidden: true },
-    { key: 'status', header: 'Status', shrink: true, mobile: 'badge', value: (r) => r.status_aktif ?? r.status, cell: (r) => { const v = r.status_aktif ?? r.status; return <StatusBadge tone={v === 'A' || v === 'aktif' ? 'success' : v === 'T' ? 'info' : 'neutral'}>{({ A: 'Aktif', T: 'Tugas belajar', C: 'Cuti', K: 'Keluar' } as Record<string, string>)[v] ?? v}</StatusBadge>; } },
+    {
+      key: 'status',
+      header: 'Status',
+      shrink: true,
+      mobile: 'badge',
+      value: (r) => r.status_aktif ?? r.status,
+      cell: (r) => {
+        const v = r.status_aktif ?? r.status;
+        return (
+          <StatusBadge tone={v === 'A' || v === 'aktif' ? 'success' : v === 'T' ? 'info' : 'neutral'}>
+            {({ A: 'Aktif', T: 'Tugas belajar', C: 'Cuti', K: 'Keluar' } as Record<string, string>)[v] ?? v}
+          </StatusBadge>
+        );
+      },
+    },
   ],
 });
 
 // ================================================================ Pegawai / tendik
-const TONE_PEGAWAI: Record<string, Tone> = { aktif: 'success', cuti: 'warning', tugas_belajar: 'info', izin_belajar: 'info', diperbantukan: 'info', nonaktif: 'neutral', pensiun: 'neutral', keluar: 'danger' };
+const TONE_PEGAWAI: Record<string, Tone> = {
+  aktif: 'success',
+  cuti: 'warning',
+  tugas_belajar: 'info',
+  izin_belajar: 'info',
+  diperbantukan: 'info',
+  nonaktif: 'neutral',
+  pensiun: 'neutral',
+  keluar: 'danger',
+};
 
 /** Tabel pegawai, dosen, dan tendik dari modul SDM (sdm.getPegawai). Isi initialFilter={{ jenis: 'tendik' }} untuk tendik saja. */
 export const TabelPegawai = makeTabel<Row>({
@@ -223,6 +413,20 @@ export const TabelPegawai = makeTabel<Row>({
   rowKey: (r) => String(r.id ?? r.uuid ?? r.nip ?? r.nidn),
   csv: 'pegawai',
   empty: { title: 'Belum ada pegawai' },
+  kartu: (r) => (
+    <KartuData
+      media={<Avatar name={String(r.nama ?? '')} src={r.foto} size="lg" />}
+      title={r.nama_lengkap ?? r.nama}
+      subtitle={r.unit_nama ?? (r.nip ? `NIP ${r.nip}` : undefined)}
+      badge={
+        <>
+          <Badge variant={r.jenis === 'dosen' ? 'primary' : 'secondary'}>{r.jenis === 'dosen' ? 'Dosen' : 'Tendik'}</Badge>
+          <StatusBadge tone={toneOf(TONE_PEGAWAI, r.status_aktif)}>{labelFrom(STATUS_PEGAWAI, r.status_aktif)}</StatusBadge>
+        </>
+      }
+      meta={[meta('Kategori', r.kategori === 'tidak_tetap' ? 'Tidak tetap' : r.kategori === 'tetap' ? 'Tetap' : null), meta('Golongan', r.golongan)]}
+    />
+  ),
   columns: [
     {
       key: 'nama',
@@ -233,7 +437,17 @@ export const TabelPegawai = makeTabel<Row>({
         <CellPrimary
           media={<Avatar name={String(r.nama ?? '')} src={r.foto} size="sm" badge={r.serdos ? <BadgeCheck aria-label="Bersertifikat dosen" /> : undefined} />}
           title={r.nama_lengkap ?? r.nama}
-          subtitle={r.nip ? <>NIP <Mono>{r.nip}</Mono></> : r.nidn ? <>NIDN <Mono>{r.nidn}</Mono></> : undefined}
+          subtitle={
+            r.nip ? (
+              <>
+                NIP <Mono>{r.nip}</Mono>
+              </>
+            ) : r.nidn ? (
+              <>
+                NIDN <Mono>{r.nidn}</Mono>
+              </>
+            ) : undefined
+          }
         />
       ),
     },
@@ -241,7 +455,13 @@ export const TabelPegawai = makeTabel<Row>({
     { key: 'unit_nama', header: 'Unit kerja' },
     { key: 'kategori', header: 'Kategori', shrink: true, cell: (r) => (r.kategori === 'tidak_tetap' ? 'Tidak tetap' : r.kategori === 'tetap' ? 'Tetap' : '–') },
     { key: 'golongan', header: 'Gol.', shrink: true, defaultHidden: true },
-    { key: 'status_aktif', header: 'Status', shrink: true, mobile: 'badge', cell: (r) => <StatusBadge tone={toneOf(TONE_PEGAWAI, r.status_aktif)}>{labelFrom(STATUS_PEGAWAI, r.status_aktif)}</StatusBadge> },
+    {
+      key: 'status_aktif',
+      header: 'Status',
+      shrink: true,
+      mobile: 'badge',
+      cell: (r) => <StatusBadge tone={toneOf(TONE_PEGAWAI, r.status_aktif)}>{labelFrom(STATUS_PEGAWAI, r.status_aktif)}</StatusBadge>,
+    },
   ],
 });
 
@@ -256,6 +476,25 @@ export const TabelMataKuliah = makeTabel<Row>({
   rowKey: (r) => String(r.id ?? `${r.kode_prodi}-${r.kode_mk}`),
   csv: 'mata-kuliah',
   empty: { title: 'Belum ada mata kuliah', description: 'Tambahkan mata kuliah di kurikulum program studi.' },
+  Detail: ({ row, onClose }) => <SheetDetailMataKuliah mk={row} onOpenChange={(o) => !o && onClose()} />,
+  kartu: (r) => (
+    <KartuData
+      media={
+        <span className="u-kartu-data-ikon" aria-hidden>
+          <BookOpen />
+        </span>
+      }
+      title={r.nama_mk}
+      subtitle={<Mono>{r.kode_mk}</Mono>}
+      badge={
+        <>
+          <Badge variant="outline">{r.sks_mk ?? '–'} SKS</Badge>
+          {r.sifat === 'P' ? <Badge>Pilihan</Badge> : r.sifat === 'W' ? <Badge variant="primary">Wajib</Badge> : null}
+        </>
+      }
+      meta={[meta('Semester', r.semester), meta('Prodi', r.kode_prodi)]}
+    />
+  ),
   columns: [
     { key: 'kode_mk', header: 'Kode', shrink: true, mobile: 'subtitle', cell: (r) => <Mono>{r.kode_mk}</Mono> },
     { key: 'nama_mk', header: 'Mata kuliah', mobile: 'title', cell: (r) => <span style={{ fontWeight: 600 }}>{r.nama_mk}</span> },
@@ -267,7 +506,19 @@ export const TabelMataKuliah = makeTabel<Row>({
 });
 
 // ================================================================ Surat masuk / keluar
-const TONE_SURAT: Record<string, Tone> = { baru: 'primary', didisposisi: 'info', diproses: 'warning', selesai: 'success', diarsipkan: 'neutral', dibatalkan: 'danger', draf: 'neutral', review: 'warning', revisi: 'warning', disetujui: 'info', terkirim: 'success' };
+const TONE_SURAT: Record<string, Tone> = {
+  baru: 'primary',
+  didisposisi: 'info',
+  diproses: 'warning',
+  selesai: 'success',
+  diarsipkan: 'neutral',
+  dibatalkan: 'danger',
+  draf: 'neutral',
+  review: 'warning',
+  revisi: 'warning',
+  disetujui: 'info',
+  terkirim: 'success',
+};
 const TONE_SIFAT: Record<string, Tone> = { biasa: 'neutral', penting: 'info', segera: 'warning', sangat_segera: 'danger' };
 
 function BatasWaktu({ v, selesai }: { v?: string | null; selesai?: boolean }) {
@@ -385,7 +636,13 @@ export const TabelDokumen = makeTabel<Row>({
     { key: 'tanggal_dokumen', header: 'Tanggal', shrink: true, cell: (r) => tanggal(r.tanggal_dokumen) },
     { key: 'berlaku_sampai', header: 'Berlaku', shrink: true, cell: (r) => <Berlaku v={r.berlaku_sampai} /> },
     { key: 'akses', header: 'Akses', shrink: true, defaultHidden: true, cell: (r) => labelFrom(AKSES_ARSIP, r.akses) },
-    { key: 'status_verifikasi', header: 'Verifikasi', shrink: true, mobile: 'badge', cell: (r) => <StatusBadge tone={toneOf(TONE_VERIF, r.status_verifikasi)}>{labelFrom(STATUS_VERIFIKASI, r.status_verifikasi)}</StatusBadge> },
+    {
+      key: 'status_verifikasi',
+      header: 'Verifikasi',
+      shrink: true,
+      mobile: 'badge',
+      cell: (r) => <StatusBadge tone={toneOf(TONE_VERIF, r.status_verifikasi)}>{labelFrom(STATUS_VERIFIKASI, r.status_verifikasi)}</StatusBadge>,
+    },
   ],
 });
 
@@ -405,11 +662,40 @@ export const TabelBerkas = makeTabel<Row>({
       key: 'judul',
       header: 'Berkas',
       mobile: 'title',
-      cell: (r) => <CellPrimary media={<span className="u-dt-file-icon"><Folder /></span>} title={r.judul} subtitle={r.uraian ?? undefined} />,
+      cell: (r) => (
+        <CellPrimary
+          media={
+            <span className="u-dt-file-icon">
+              <Folder />
+            </span>
+          }
+          title={r.judul}
+          subtitle={r.uraian ?? undefined}
+        />
+      ),
     },
-    { key: 'tahun', header: 'Tahun', shrink: true, value: (r) => r.tahun_awal, cell: (r) => (r.tahun_awal ? (r.tahun_akhir && r.tahun_akhir !== r.tahun_awal ? `${r.tahun_awal}–${r.tahun_akhir}` : r.tahun_awal) : '–') },
-    { key: 'isi', header: 'Isi', shrink: true, align: 'end', value: (r) => (r.surat?.length ?? 0) + (r.dokumen?.length ?? 0), cell: (r) => `${(r.surat?.length ?? r.jumlah_surat ?? 0) + (r.dokumen?.length ?? r.jumlah_dokumen ?? 0)} item` },
+    {
+      key: 'tahun',
+      header: 'Tahun',
+      shrink: true,
+      value: (r) => r.tahun_awal,
+      cell: (r) => (r.tahun_awal ? (r.tahun_akhir && r.tahun_akhir !== r.tahun_awal ? `${r.tahun_awal}–${r.tahun_akhir}` : r.tahun_awal) : '–'),
+    },
+    {
+      key: 'isi',
+      header: 'Isi',
+      shrink: true,
+      align: 'end',
+      value: (r) => (r.surat?.length ?? 0) + (r.dokumen?.length ?? 0),
+      cell: (r) => `${(r.surat?.length ?? r.jumlah_surat ?? 0) + (r.dokumen?.length ?? r.jumlah_dokumen ?? 0)} item`,
+    },
     { key: 'status', header: 'Status', shrink: true, cell: (r) => <Badge variant={r.status === 'terbuka' ? 'primary' : 'neutral'}>{r.status === 'terbuka' ? 'Terbuka' : 'Ditutup'}</Badge> },
-    { key: 'status_arsip', header: 'Arsip', shrink: true, mobile: 'badge', cell: (r) => <StatusBadge tone={toneOf(TONE_ARSIP, r.status_arsip)}>{labelFrom(STATUS_ARSIP, r.status_arsip)}</StatusBadge> },
+    {
+      key: 'status_arsip',
+      header: 'Arsip',
+      shrink: true,
+      mobile: 'badge',
+      cell: (r) => <StatusBadge tone={toneOf(TONE_ARSIP, r.status_arsip)}>{labelFrom(STATUS_ARSIP, r.status_arsip)}</StatusBadge>,
+    },
   ],
 });

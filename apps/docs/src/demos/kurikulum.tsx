@@ -14,6 +14,7 @@ import {
   RpsMataKuliah,
   StatusMigrasiKurikulum,
   StrukturKurikulum,
+  TabelStrukturKurikulum,
   ValidasiKurikulum,
   type NamaMatriks,
 } from 'unipo-ui/siakad';
@@ -34,6 +35,8 @@ export const meta: DemoMeta = {
     Capaian: 'DaftarProfilLulusan dan DaftarCpl',
     Matriks: 'MatriksKurikulum (klik sel untuk memetakan)',
     Struktur: 'StrukturKurikulum per semester',
+    StrukturTabel: 'TabelStrukturKurikulum: detail MK dibuka di baris',
+    StrukturPopup: 'TabelStrukturKurikulum: detail MK di panel samping',
     Cpmk: 'CpmkMataKuliah',
     Rps: 'RpsMataKuliah',
     CapaianProdi: 'CapaianCplKurikulum per angkatan',
@@ -46,6 +49,8 @@ export const meta: DemoMeta = {
     ['MatriksKurikulum.jenis', "'profil-cpl' | 'cpl-bk' | 'cpl-mk' | 'bk-mk'", 'Matriks yang ditampilkan. Bawaan cpl-mk.'],
     ['MatriksKurikulum.editable', 'boolean', 'Klik sel menyimpan langsung lewat PUT /matriks/{nama}. Butuh scope kurikulum:write dan kurikulum berstatus draf/diajukan.'],
     ['RingkasanKurikulum.bolehUbahStatus', 'boolean', 'Tampilkan tombol transisi status dari `transisi_status` API.'],
+    ['TabelStrukturKurikulum.detail', "'baris' | 'popup' | 'keduanya'", 'Cara membuka detail MK (CPMK, sub-CPMK, CPL, prasyarat). Bawaan baris.'],
+    ['TabelStrukturKurikulum.semesterTerbuka', 'number[]', 'Semester yang terbuka di awal; sisanya terlipat. Bawaan semua terbuka.'],
     ['StrukturKurikulum.onPilihMk', '(mk) => void', 'Klik kartu MK, mis. membuka CpmkMataKuliah di Sheet.'],
     ['CapaianCplKurikulum.angkatan', 'number', 'Tahun masuk. Bawaan semua angkatan pengguna kurikulum.'],
     ['CapaianCplMahasiswa.nim', 'string', 'Untuk profil mahasiswa, dosen PA, atau lampiran SKPI.'],
@@ -94,6 +99,12 @@ export function Matriks() {
 }
 export function Struktur() {
   return <StrukturKurikulum kurikulumId={12} onPilihMk={() => undefined} />;
+}
+export function StrukturTabel() {
+  return <TabelStrukturKurikulum kurikulumId={12} semesterTerbuka={[2, 3]} mkTerbuka={[1013]} />;
+}
+export function StrukturPopup() {
+  return <TabelStrukturKurikulum kurikulumId={12} detail="keduanya" semesterTerbuka={[4]} />;
 }
 export function Cpmk() {
   return <CpmkMataKuliah mkId={1013} />;

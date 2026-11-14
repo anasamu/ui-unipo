@@ -913,3 +913,206 @@
   min-width: 3.25rem;
   justify-content: center;
 }
+
+// ================================================================ Tabel struktur per semester
+.u-tsk {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.u-tsk-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  > .u-input {
+    flex: 0 1 18rem;
+  }
+  > .u-button {
+    margin-left: auto;
+  }
+}
+.u-tsk-total {
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+  b {
+    color: var(--u-foreground);
+    font-weight: var(--u-weight-semibold);
+  }
+}
+.u-tsk-table {
+  th:first-child,
+  td:first-child {
+    width: 2rem;
+    padding-right: 0;
+  }
+  &.u-tabel-nilai td:nth-child(2) {
+    min-width: 0;
+    width: 1%;
+    white-space: nowrap;
+  }
+  td:nth-child(3) {
+    white-space: normal;
+    min-width: 14rem;
+  }
+}
+.u-tsk-chevron {
+  display: block;
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--u-muted-foreground);
+  transition: transform var(--u-duration-base) var(--u-ease-out);
+}
+.u-tsk-head {
+  > td {
+    padding: 0 !important;
+    background: color-mix(in oklab, var(--u-muted) 70%, transparent);
+    border-top: 1px solid var(--u-border);
+  }
+  button {
+    all: unset;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    width: 100%;
+    padding: 0.5rem 0.875rem;
+    cursor: pointer;
+    &:focus-visible {
+      outline: 2px solid var(--u-primary);
+      outline-offset: -2px;
+    }
+    &[aria-expanded='true'] .u-tsk-chevron {
+      transform: rotate(90deg);
+    }
+    b {
+      font-size: var(--u-text-sm);
+      font-weight: var(--u-weight-semibold);
+    }
+  }
+  &[data-lebih] .u-tsk-head-meta {
+    color: var(--u-danger);
+    font-weight: var(--u-weight-medium);
+  }
+}
+.u-tsk-head-meta {
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.u-tsk-progress {
+  margin-left: auto;
+  width: 7rem;
+  flex-shrink: 0;
+  @media (max-width: 34rem) {
+    display: none;
+  }
+}
+.u-tabel-nilai tbody tr.u-tsk-head:hover td {
+  background: color-mix(in oklab, var(--u-muted) 85%, transparent);
+}
+.u-tsk-group:first-of-type .u-tsk-head > td {
+  border-top: 0;
+}
+.u-tsk-row {
+  cursor: pointer;
+  outline: none;
+  > td:nth-child(2) {
+    box-shadow: none;
+  }
+  &:focus-visible > td {
+    background: color-mix(in oklab, var(--u-primary) 7%, transparent);
+  }
+  &[data-terbuka] {
+    > td {
+      background: color-mix(in oklab, var(--u-primary) 5%, transparent);
+    }
+    .u-tsk-chevron {
+      transform: rotate(90deg);
+      color: var(--u-primary);
+    }
+  }
+  > td:first-child {
+    box-shadow: inset 3px 0 0 var(--_jenis, var(--u-primary));
+  }
+  &[data-jenis='B'],
+  &[data-jenis='D'] {
+    --_jenis: var(--u-chart-2);
+  }
+  &[data-jenis='S'] {
+    --_jenis: var(--u-chart-7);
+  }
+  &[data-jenis='W'] {
+    --_jenis: var(--u-chart-3);
+  }
+}
+.u-tsk-nama {
+  font-weight: var(--u-weight-medium);
+}
+.u-tsk-warn {
+  color: var(--u-warning);
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-medium);
+}
+.u-tabel-nilai tbody tr.u-tsk-expand:hover td,
+.u-tsk-expand > td {
+  padding: 0 !important;
+  background: var(--u-card);
+  white-space: normal;
+}
+.u-tsk-expand .u-tsk-detail {
+  padding: 1rem 1.25rem 1.25rem 2.875rem;
+  border-top: 1px dashed var(--u-border);
+}
+.u-tsk-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  .u-cpmk-head {
+    display: none;
+  }
+}
+.u-tsk-detail-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.375rem;
+  h3 {
+    margin: 0;
+    font-size: var(--u-text-lg);
+    font-weight: var(--u-weight-semibold);
+  }
+  p {
+    margin: 0;
+    font-size: var(--u-text-sm);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-tsk-detail-desc {
+  margin: 0;
+  font-size: var(--u-text-sm);
+  max-width: 70ch;
+  color: var(--u-foreground) !important;
+  line-height: 1.6;
+}
+.u-tsk-detail-info {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem 1.5rem;
+  dt {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+    margin-bottom: 0.25rem;
+  }
+  dd {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    font-size: var(--u-text-sm);
+    [data-warn] {
+      color: var(--u-warning);
+    }
+  }
+}

@@ -1,0 +1,669 @@
+@use '../mixins' as *;
+
+// ================================================================ Panel detail
+.u-sheet.u-sheet-detail {
+  --u-sheet-w: 46rem;
+  &[data-size='lg'] {
+    --u-sheet-w: 38rem;
+  }
+  .u-dialog-body {
+    padding-top: 1rem;
+  }
+}
+.u-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+.u-detail-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-top: 0.25rem;
+}
+.u-detail-h {
+  margin: 0 0 0.625rem;
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-semibold, 600);
+  color: var(--u-foreground);
+}
+
+// ================================================================ Kartu profil
+.u-profil {
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card);
+  overflow: hidden;
+}
+.u-profil-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.125rem 1.25rem;
+}
+.u-profil-id {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+  h3 {
+    margin: 0;
+    font-size: var(--u-text-lg);
+    font-weight: var(--u-weight-semibold, 600);
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+  }
+  p {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.625rem;
+    font-size: var(--u-text-sm);
+    color: var(--u-muted-foreground);
+    > span + span::before,
+    > .u-mono + span::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 3px;
+      margin-right: 0.625rem;
+      border-radius: 50%;
+      background: currentColor;
+      vertical-align: middle;
+      opacity: 0.6;
+    }
+  }
+}
+.u-profil-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.25rem;
+}
+.u-profil-aksi {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.u-profil-angka {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--u-border);
+  background: color-mix(in oklab, var(--u-muted) 55%, transparent);
+  > div {
+    padding: 0.75rem 1.25rem;
+    min-width: 0;
+    + div {
+      border-left: 1px solid var(--u-border);
+    }
+  }
+  dt {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+  dd {
+    margin: 0.125rem 0 0;
+    font-size: var(--u-text-lg);
+    font-weight: var(--u-weight-semibold, 600);
+    font-variant-numeric: tabular-nums;
+    @include truncate;
+  }
+  @media (max-width: 34rem) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    > div:nth-child(3) {
+      border-left: 0;
+    }
+    > div:nth-child(n + 3) {
+      border-top: 1px solid var(--u-border);
+    }
+  }
+}
+.u-mk-ikon {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  flex-shrink: 0;
+  border-radius: var(--u-radius-lg);
+  background: color-mix(in oklab, var(--u-primary) 10%, var(--u-card));
+  color: var(--u-primary);
+  svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+@media (max-width: 34rem) {
+  .u-profil-head {
+    flex-wrap: wrap;
+  }
+  .u-profil-aksi {
+    width: 100%;
+  }
+}
+
+// ================================================================ Biodata
+.u-biodata {
+  display: grid;
+  gap: 1.25rem;
+  padding-top: 0.25rem;
+  > section > h4 {
+    margin: 0 0 0.5rem;
+    font-size: var(--u-text-xs);
+    font-weight: var(--u-weight-semibold, 600);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--u-muted-foreground);
+  }
+  > section > p {
+    margin: 0;
+    font-size: var(--u-text-sm);
+  }
+}
+.u-biodata-kontak {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  > span {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.4375rem;
+  }
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    margin-top: 0.1875rem;
+    flex-shrink: 0;
+    color: var(--u-muted-foreground);
+  }
+}
+
+// ================================================================ Riwayat studi
+.u-riwayat {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.u-riwayat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  overflow: hidden;
+  > li {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 1rem;
+    font-size: var(--u-text-sm);
+    + li {
+      border-top: 1px solid var(--u-border);
+    }
+    &[data-status='C'],
+    &[data-status='N'] {
+      background: color-mix(in oklab, var(--u-muted) 50%, transparent);
+    }
+  }
+  @media (max-width: 34rem) {
+    > li {
+      grid-template-columns: 2rem minmax(0, 1fr) auto;
+    }
+    .u-riwayat-ip {
+      grid-column: 2 / -1;
+      justify-content: flex-start;
+    }
+  }
+}
+.u-riwayat-smt {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--u-muted);
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-semibold, 600);
+  font-variant-numeric: tabular-nums;
+  color: var(--u-muted-foreground);
+}
+.u-riwayat-tahun {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  b {
+    font-weight: var(--u-weight-medium, 500);
+  }
+  small {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-riwayat-ip {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  min-width: 9rem;
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
+  b {
+    margin-left: 0.25rem;
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-semibold, 600);
+    font-variant-numeric: tabular-nums;
+    color: var(--u-foreground);
+  }
+}
+
+// ================================================================ Tabel nilai (KHS, transkrip, KRS)
+.u-tabel-nilai-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+}
+.u-tabel-nilai {
+  width: 100%;
+  &[data-tetap] {
+    table-layout: fixed;
+    min-width: 36rem;
+    td:nth-child(2) {
+      min-width: 0;
+    }
+  }
+  border-collapse: collapse;
+  font-size: var(--u-text-sm);
+  th,
+  td {
+    padding: 0.5625rem 0.875rem;
+    text-align: left;
+    white-space: nowrap;
+    &[data-angka] {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    &[data-tengah] {
+      text-align: center;
+    }
+  }
+  td:nth-child(2) {
+    white-space: normal;
+    min-width: 12rem;
+  }
+  thead th {
+    background: color-mix(in oklab, var(--u-muted) 60%, transparent);
+    font-size: var(--u-text-xs);
+    font-weight: var(--u-weight-medium, 500);
+    color: var(--u-muted-foreground);
+    border-bottom: 1px solid var(--u-border);
+  }
+  tbody tr + tr td {
+    border-top: 1px solid var(--u-border);
+  }
+  tbody tr:hover td {
+    background: color-mix(in oklab, var(--u-muted) 40%, transparent);
+  }
+}
+.u-nilai {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2rem;
+  height: 1.375rem;
+  padding: 0 0.375rem;
+  border-radius: calc(var(--u-radius) - 2px);
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-semibold, 600);
+  font-variant-numeric: tabular-nums;
+  --_c: var(--u-muted-foreground);
+  color: var(--_c);
+  background: color-mix(in oklab, var(--_c) 12%, transparent);
+  &[data-huruf='A'] {
+    --_c: var(--u-success);
+  }
+  &[data-huruf='B'] {
+    --_c: var(--u-primary);
+  }
+  &[data-huruf='C'] {
+    --_c: var(--u-warning);
+  }
+  &[data-huruf='D'] {
+    --_c: color-mix(in oklab, var(--u-danger) 70%, var(--u-warning));
+  }
+  &[data-huruf='E'] {
+    --_c: var(--u-danger);
+  }
+  &[data-kosong] {
+    background: none;
+  }
+}
+
+// ================================================================ KHS / transkrip / KRS
+.u-khs,
+.u-transkrip,
+.u-krs {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 0.25rem;
+}
+.u-khs-periode {
+  display: flex;
+  gap: 0.375rem;
+  overflow-x: auto;
+  padding-bottom: 0.125rem;
+  scrollbar-width: thin;
+  > button {
+    all: unset;
+    flex-shrink: 0;
+    padding: 0.3125rem 0.75rem;
+    border: 1px solid var(--u-border);
+    border-radius: 999px;
+    font-size: var(--u-text-xs);
+    font-weight: var(--u-weight-medium, 500);
+    color: var(--u-muted-foreground);
+    cursor: pointer;
+    transition:
+      background var(--u-duration-fast) var(--u-ease-out),
+      color var(--u-duration-fast) var(--u-ease-out),
+      border-color var(--u-duration-fast) var(--u-ease-out);
+    &:hover {
+      color: var(--u-foreground);
+      border-color: color-mix(in oklab, var(--u-foreground) 25%, var(--u-border));
+    }
+    &[aria-selected='true'] {
+      background: var(--u-foreground);
+      border-color: var(--u-foreground);
+      color: var(--u-background);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--u-primary);
+      outline-offset: 2px;
+    }
+  }
+}
+.u-khs-ringkas {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius);
+    background: var(--u-card);
+  }
+  span {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+  b {
+    font-size: var(--u-text-lg);
+    font-weight: var(--u-weight-semibold, 600);
+    font-variant-numeric: tabular-nums;
+  }
+  @media (max-width: 34rem) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.u-transkrip-smt {
+  > h4 {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin: 0.25rem 0 0.5rem;
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-semibold, 600);
+    span {
+      font-size: var(--u-text-xs);
+      font-weight: var(--u-weight-regular, 400);
+      color: var(--u-muted-foreground);
+    }
+  }
+}
+.u-krs-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+  b {
+    color: var(--u-foreground);
+    font-weight: var(--u-weight-semibold, 600);
+  }
+}
+
+// ================================================================ Dosen: jadwal & bimbingan
+.u-jadwal-hari {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 0.25rem;
+  > section > h4 {
+    margin: 0 0 0.375rem;
+    font-size: var(--u-text-xs);
+    font-weight: var(--u-weight-semibold, 600);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--u-muted-foreground);
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-lg);
+  }
+  li {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.625rem 1rem;
+    + li {
+      border-top: 1px solid var(--u-border);
+    }
+  }
+}
+.u-jadwal-jam {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-semibold, 600);
+  font-variant-numeric: tabular-nums;
+  small {
+    font-size: var(--u-text-xs);
+    font-weight: var(--u-weight-regular, 400);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-jadwal-mk {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.0625rem;
+  b {
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-medium, 500);
+    @include truncate;
+  }
+  small {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-jadwal-ruang {
+  padding: 0.1875rem 0.5rem;
+  border-radius: calc(var(--u-radius) - 2px);
+  background: var(--u-muted);
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-medium, 500);
+  color: var(--u-muted-foreground);
+}
+.u-bimbingan {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  overflow: hidden;
+  > li + li {
+    border-top: 1px solid var(--u-border);
+  }
+}
+.u-bimbingan-row {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.625rem 1rem;
+  &:is(button) {
+    cursor: pointer;
+    &:hover {
+      background: color-mix(in oklab, var(--u-muted) 55%, transparent);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--u-primary);
+      outline-offset: -2px;
+    }
+  }
+}
+.u-bimbingan-nama {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  b {
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-medium, 500);
+    @include truncate;
+  }
+  small {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-bimbingan-ipk {
+  font-size: var(--u-text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--u-muted-foreground);
+}
+
+// ================================================================ Mata kuliah: kelas dibuka
+.u-kelas-mk {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  > li {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius);
+    background: var(--u-card);
+    > .u-jadwal-mk {
+      flex: 1;
+    }
+  }
+}
+.u-kelas-mk-kelas {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: var(--u-radius);
+  background: color-mix(in oklab, var(--u-primary) 10%, var(--u-card));
+  color: var(--u-primary);
+  font-weight: var(--u-weight-semibold, 600);
+}
+.u-kelas-mk-isi {
+  font-size: var(--u-text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--u-muted-foreground);
+}
+
+// ================================================================ Kartu kisi tabel
+.u-kartu-data {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  flex: 1;
+}
+.u-kartu-data-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-right: 2rem;
+  min-width: 0;
+}
+.u-kartu-data-id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.125rem;
+  b {
+    font-size: var(--u-text-md);
+    font-weight: var(--u-weight-semibold);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  small {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+    @include truncate;
+  }
+}
+.u-kartu-data-ikon {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  border-radius: var(--u-radius);
+  background: color-mix(in oklab, var(--u-primary) 10%, var(--u-card));
+  color: var(--u-primary);
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+.u-kartu-data-badge {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.u-kartu-data-meta {
+  margin: auto 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr));
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--u-border);
+  dt {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+  dd {
+    margin: 0.0625rem 0 0;
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-medium);
+    font-variant-numeric: tabular-nums;
+    @include truncate;
+  }
+}
