@@ -27,7 +27,7 @@ export const meta: DemoMeta = {
   ],
   notes: [
     'Semua komponen memakai debounce 250 ms dan membatalkan permintaan lama otomatis, jadi aman untuk API yang dibatasi laju.',
-    'API SIAKAD belum punya daftar perguruan tinggi nasional; CariPerguruanTinggi memakai data mitra kerja sama (kerjasama.getMitra) sampai endpoint PDDikti tersedia, atau isi prop load sendiri.',
+    'CariSekolah dan CariPerguruanTinggi memakai referensi yang sama dengan PMB (r_asalsekolah dan r_perguruan_tinggi, menu PMB > Setup > Sekolah & PT). Nama yang tidak ada di daftar bisa dipakai lewat butir "Pakai …" (manual: true, kode kosong).',
     'Daftar negara tidak memerlukan API: memakai kode ISO 3166 dengan nama bahasa Indonesia dari Intl.DisplayNames. Bendera bawaan dari CDN country-flag-icons; untuk server tanpa internet luar, salin SVG-nya ke folder publik lalu panggil configureFlags((kode) => `/bendera/${kode}.svg`).',
   ],
 };
@@ -68,7 +68,7 @@ export function Sekolah() {
       <Field label="Sekolah asal" description="Minimal 3 huruf, mis. &quot;Marisa&quot;.">
         <CariSekolah />
       </Field>
-      <Field label="Perguruan tinggi asal (pindahan)">
+      <Field label="Perguruan tinggi asal (pindahan)" description="Coba &quot;gorontalo&quot; atau &quot;UNHAS&quot;.">
         <CariPerguruanTinggi />
       </Field>
     </div>
