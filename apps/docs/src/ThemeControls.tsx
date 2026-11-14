@@ -1,95 +1,67 @@
 import * as React from 'react';
-import { Palette, RotateCcw } from 'lucide-react';
+import { ExternalLink, Palette, RotateCcw } from 'lucide-react';
 import { Button, CodeBlock, Popover, SegmentedControl, Select } from 'unipo-ui';
+import { FONT, NETRAL, PRESET_TEMA, TEMA_BAWAAN, buatTema, opsiDariParam, paramTema, urlGoogleFont, type OpsiTema } from 'unipo-ui/tema';
 
-const PRIMARY = [
-  { name: 'Biru UNIPO', value: '' },
-  { name: 'Hijau toska', value: '#0f766e' },
-  { name: 'Marun', value: '#9f1d35' },
-  { name: 'Hijau', value: '#15803d' },
-  { name: 'Ungu', value: '#6d28d9' },
-  { name: 'Grafit', value: '#334155' },
-];
-const SECONDARY = [
-  { name: 'Emas', value: '' },
-  { name: 'Jingga', value: '#f97316' },
-  { name: 'Biru langit', value: '#38bdf8' },
-  { name: 'Hijau limau', value: '#a3e635' },
-];
-const FONT: Record<string, { label: string; css: string }> = {
-  bawaan: { label: 'Plus Jakarta Sans (bawaan)', css: '' },
-  sistem: { label: 'Huruf sistem', css: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' },
-  serif: { label: 'Serif', css: 'Georgia, "Times New Roman", serif' },
-  mono: { label: 'Monospace', css: '"JetBrains Mono Variable", ui-monospace, monospace' },
-};
+const PRIMARY = ['#244ce6', '#0f766e', '#9f1d35', '#15803d', '#6d28d9', '#334155'];
+const SECONDARY = ['#f2b42a', '#f97316', '#38bdf8', '#a3e635', '#ec4899'];
+const KUNCI = 'unipo-ui-docs-tema-v2';
 
-interface Tema {
-  primary: string;
-  secondary: string;
-  radius: string;
-  font: string;
-  teks: string;
-}
-const BAWAAN: Tema = { primary: '', secondary: '', radius: '', font: 'bawaan', teks: '' };
-const KUNCI = 'unipo-ui-docs-tema';
-
-function baca(): Tema {
+function baca(): OpsiTema {
   try {
-    const p = new URLSearchParams(location.search);
-    const dariUrl = { primary: p.get('primary') ?? undefined, secondary: p.get('secondary') ?? undefined };
-    return { ...BAWAAN, ...JSON.parse(localStorage.getItem(KUNCI) ?? '{}'), ...Object.fromEntries(Object.entries(dariUrl).filter(([, v]) => v)) };
+    const simpan = JSON.parse(localStorage.getItem(KUNCI) ?? '{}');
+    const url = opsiDariParam(location.search);
+    const dariUrl = Object.fromEntries(Object.entries(url).filter(([k, v]) => new URLSearchParams(location.search).has(k) && v !== undefined));
+    return { ...TEMA_BAWAAN, ...simpan, ...dariUrl };
   } catch {
-    return BAWAAN;
+    return TEMA_BAWAAN;
   }
 }
 
-/** Variabel CSS yang berubah dari bawaan. */
-function variabel(t: Tema): Array<[string, string]> {
-  return [
-    ['--u-primary', t.primary],
-    ['--u-secondary', t.secondary],
-    ['--u-radius', t.radius],
-    ['--u-font-sans', FONT[t.font]?.css ?? ''],
-    ['--u-text-base', t.teks],
-  ].filter(([, v]) => v) as Array<[string, string]>;
-}
-
-function kodeTema(t: Tema) {
-  const v = variabel(t);
-  const scss: string[] = [];
-  if (t.primary) scss.push(`$u-primary: ${t.primary}`);
-  if (t.secondary) scss.push(`$u-secondary: ${t.secondary}`);
-  if (t.radius) scss.push(`$u-radius-base: ${t.radius}`);
-  if (FONT[t.font]?.css) scss.push(`$u-font-sans: string.unquote('${FONT[t.font]!.css}')`);
-  if (t.teks) scss.push(`$u-text-base: ${t.teks}`);
-  return [
-    { label: 'CSS', language: 'css' as const, code: v.length ? `:root {\n${v.map(([k, x]) => `  ${k}: ${x};`).join('\n')}\n}` : '/* Tema bawaan: belum ada yang diubah. */' },
-    { label: 'SCSS', language: 'scss' as const, code: scss.length ? `@use 'sass:string';\n@use 'unipo-ui/scss' with (\n${scss.map((x) => `  ${x}`).join(',\n')}\n);` : "@use 'unipo-ui/scss';" },
-  ];
+/** Pasang CSS tema ke <style> milik studio; kosongkan bila tema bawaan. */
+function terapkan(t: OpsiTema) {
+  let el = document.getElementById('unipo-tema-studio') as HTMLStyleElement | null;
+  if (!el) {
+    el = document.createElement('style');
+    el.id = 'unipo-tema-studio';
+    // Sebelum CSS kustom dari pembuat tema (bila ada), agar kiriman halaman induk tetap menang.
+    document.head.insertBefore(el, document.getElementById('unipo-tema-kustom'));
+  }
+  const bawaan = !paramTema(t);
+  el.textContent = bawaan ? '' : buatTema({ ...t, muatFont: false });
+  const font = bawaan ? '' : urlGoogleFont(t);
+  let link = document.getElementById('unipo-tema-font') as HTMLLinkElement | null;
+  if (font && !link) {
+    link = document.createElement('link');
+    link.id = 'unipo-tema-font';
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+  }
+  if (link && link.href !== font) font ? (link.href = font) : link.remove();
 }
 
 /**
- * Studio tema: warna primer/sekunder (pilihan atau warna bebas), sudut, huruf, dan ukuran teks. Diterapkan langsung
- * ke seluruh halaman lewat variabel CSS, disimpan di browser, dan kodenya bisa disalin (CSS atau SCSS).
+ * Studio tema ringkas: preset, warna primer/sekunder, netral, sudut, huruf, ukuran teks, bayangan. Berlaku ke seluruh
+ * halaman, tersimpan di browser, dan CSS lengkapnya bisa disalin. Pengaturan lengkap + CSS siap impor ada di
+ * pembuat tema api.unipo.ac.id/docs/tema.
  */
 export function ThemeControls() {
-  const [t, setT] = React.useState<Tema>(baca);
-  const set = (k: keyof Tema, v: string) => setT((x) => ({ ...x, [k]: v }));
+  const [t, setT] = React.useState<OpsiTema>(baca);
+  const set = <K extends keyof OpsiTema>(k: K, v: OpsiTema[K]) => setT((x) => ({ ...x, [k]: v }));
   React.useEffect(() => {
-    const s = document.documentElement.style;
-    for (const k of ['--u-primary', '--u-secondary', '--u-radius', '--u-font-sans', '--u-text-base']) s.removeProperty(k);
-    for (const [k, v] of variabel(t)) s.setProperty(k, v);
+    terapkan(t);
     try {
       localStorage.setItem(KUNCI, JSON.stringify(t));
     } catch {
       /* penyimpanan browser tidak tersedia */
     }
   }, [t]);
-  const ubah = variabel(t).length > 0;
+  const q = paramTema(t);
+  const ubah = q.length > 0;
   return (
     <Popover
       align="end"
-      width={340}
+      width={360}
       title="Atur tema"
       description="Berlaku langsung ke semua contoh di halaman ini."
       trigger={
@@ -99,70 +71,79 @@ export function ThemeControls() {
       }
     >
       <div className="docs-theme">
+        <span className="u-label">Preset</span>
+        <div className="docs-preset">
+          {PRESET_TEMA.map((p) => (
+            <button key={p.nama} type="button" onClick={() => setT({ ...TEMA_BAWAAN, ...p.opsi })} aria-pressed={paramTema({ ...TEMA_BAWAAN, ...p.opsi }) === q}>
+              <span style={{ background: p.opsi.primary ?? TEMA_BAWAAN.primary }} />
+              <span style={{ background: p.opsi.secondary ?? TEMA_BAWAAN.secondary }} />
+              {p.nama}
+            </button>
+          ))}
+        </div>
         <span className="u-label">Warna primer</span>
         <div className="docs-swatches">
           {PRIMARY.map((c) => (
-            <button
-              key={c.name}
-              type="button"
-              title={c.name}
-              aria-label={c.name}
-              aria-pressed={t.primary === c.value}
-              style={{ background: c.value || '#244ce6' }}
-              onClick={() => set('primary', c.value)}
-            />
+            <button key={c} type="button" title={c} aria-label={`Primer ${c}`} aria-pressed={t.primary === c} style={{ background: c }} onClick={() => set('primary', c)} />
           ))}
           <label className="docs-color" title="Warna bebas">
-            <input type="color" value={t.primary || '#244ce6'} onChange={(e) => set('primary', e.target.value)} aria-label="Warna primer bebas" />
+            <input type="color" value={t.primary} onChange={(e) => set('primary', e.target.value)} aria-label="Warna primer bebas" />
           </label>
         </div>
         <span className="u-label">Warna sekunder</span>
         <div className="docs-swatches">
           {SECONDARY.map((c) => (
-            <button
-              key={c.name}
-              type="button"
-              title={c.name}
-              aria-label={c.name}
-              aria-pressed={t.secondary === c.value}
-              style={{ background: c.value || '#f2b42a' }}
-              onClick={() => set('secondary', c.value)}
-            />
+            <button key={c} type="button" title={c} aria-label={`Sekunder ${c}`} aria-pressed={t.secondary === c} style={{ background: c }} onClick={() => set('secondary', c)} />
           ))}
           <label className="docs-color" title="Warna bebas">
-            <input type="color" value={t.secondary || '#f2b42a'} onChange={(e) => set('secondary', e.target.value)} aria-label="Warna sekunder bebas" />
+            <input type="color" value={t.secondary} onChange={(e) => set('secondary', e.target.value)} aria-label="Warna sekunder bebas" />
           </label>
+        </div>
+        <div className="docs-theme-dua">
+          <div>
+            <span className="u-label">Netral</span>
+            <Select size="sm" value={t.netral} onValueChange={(v) => v && set('netral', v)} options={Object.entries(NETRAL).map(([value, n]) => ({ value: value as OpsiTema['netral'], label: n.label }))} aria-label="Netral" />
+          </div>
+          <div>
+            <span className="u-label">Huruf</span>
+            <Select size="sm" value={t.font} onValueChange={(v) => v && set('font', v)} options={Object.entries(FONT).map(([value, f]) => ({ value: value as OpsiTema['font'], label: f.label }))} aria-label="Huruf" />
+          </div>
         </div>
         <span className="u-label">Sudut</span>
         <SegmentedControl
           fullWidth
-          value={t.radius || 'bawaan'}
-          onValueChange={(v) => set('radius', v === 'bawaan' ? '' : v)}
+          value={String(t.radius)}
+          onValueChange={(v) => set('radius', Number(v))}
           options={[
-            { value: '0rem', label: 'Siku' },
-            { value: '0.3rem', label: 'Tegas' },
-            { value: 'bawaan', label: 'Bawaan' },
-            { value: '1rem', label: 'Bulat' },
+            { value: '0', label: 'Siku' },
+            { value: '5', label: 'Tegas' },
+            { value: '10', label: 'Bawaan' },
+            { value: '16', label: 'Bulat' },
           ]}
         />
         <span className="u-label">Ukuran teks isi</span>
+        <SegmentedControl fullWidth value={String(t.teks)} onValueChange={(v) => set('teks', Number(v))} options={[13, 14, 15, 16].map((n) => ({ value: String(n), label: `${n} px` }))} />
+        <span className="u-label">Bayangan</span>
         <SegmentedControl
           fullWidth
-          value={t.teks || 'bawaan'}
-          onValueChange={(v) => set('teks', v === 'bawaan' ? '' : v)}
+          value={t.bayangan}
+          onValueChange={(v) => set('bayangan', v as OpsiTema['bayangan'])}
           options={[
-            { value: '0.8125rem', label: '13 px' },
-            { value: 'bawaan', label: '14 px' },
-            { value: '0.9375rem', label: '15 px' },
-            { value: '1rem', label: '16 px' },
+            { value: 'tanpa', label: 'Tanpa' },
+            { value: 'halus', label: 'Halus' },
+            { value: 'normal', label: 'Normal' },
+            { value: 'tegas', label: 'Tegas' },
           ]}
         />
-        <span className="u-label">Huruf</span>
-        <Select size="sm" value={t.font} onValueChange={(v) => set('font', v ?? 'bawaan')} options={Object.entries(FONT).map(([value, f]) => ({ value, label: f.label }))} aria-label="Huruf" />
-        <CodeBlock tabs={kodeTema(t)} windowControls={false} lineNumbers={false} maxHeight={180} wrap className="docs-theme-code" />
-        <Button variant="outline" size="sm" disabled={!ubah} onClick={() => setT(BAWAAN)}>
-          <RotateCcw /> Kembali ke tema bawaan
-        </Button>
+        <CodeBlock code={buatTema(t)} language="css" filename="unipo-tema.css" windowControls={false} lineNumbers={false} maxHeight={180} className="docs-theme-code" />
+        <div className="docs-theme-aksi">
+          <Button variant="outline" size="sm" disabled={!ubah} onClick={() => setT(TEMA_BAWAAN)}>
+            <RotateCcw /> Bawaan
+          </Button>
+          <Button variant="soft" size="sm" render={<a href={`https://api.unipo.ac.id/docs/tema${q ? `?${q}` : ''}`} target="_blank" rel="noreferrer" />}>
+            <ExternalLink /> Pembuat tema lengkap
+          </Button>
+        </div>
       </div>
     </Popover>
   );

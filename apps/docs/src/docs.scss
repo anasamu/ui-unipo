@@ -486,3 +486,128 @@ body {
     justify-content: flex-end;
   }
 }
+
+/* Pratinjau tema (#/pratinjau-tema) dan mode ?polos untuk iframe pembuat tema */
+.docs[data-polos] .docs-body {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: none;
+}
+.docs-pratinjau {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2rem 2rem 3rem;
+}
+.docs[data-polos] .docs-pratinjau {
+  padding: 1.5rem;
+}
+.docs-pratinjau-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.docs-pratinjau-head h1 {
+  margin: 0.25rem 0;
+  font-family: var(--u-font-heading);
+  font-size: var(--u-text-3xl);
+  letter-spacing: -0.02em;
+}
+.docs-pratinjau-head .docs-lead {
+  margin: 0;
+}
+.docs-pratinjau-aksi {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.docs-pratinjau-stat {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+.docs-pratinjau-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.docs-pratinjau-kolom,
+.docs-pratinjau-form {
+  display: grid;
+  gap: 1rem;
+}
+.docs-pratinjau-cari {
+  margin-bottom: 0.75rem;
+}
+.docs-pratinjau-baris {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: var(--u-text-sm);
+}
+.docs-pratinjau-alert {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1rem;
+}
+@media (max-width: 900px) {
+  .docs-pratinjau-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .docs-pratinjau,
+  .docs[data-polos] .docs-pratinjau {
+    padding: 1rem;
+  }
+}
+
+.docs-preset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.docs-preset button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 1.75rem;
+  padding: 0 0.5rem 0 0.375rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-full);
+  background: var(--u-background);
+  color: var(--u-foreground);
+  font: inherit;
+  font-size: var(--u-text-xs);
+  cursor: pointer;
+}
+.docs-preset button span {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+}
+.docs-preset button span + span {
+  margin-left: -0.375rem;
+  margin-right: 0.125rem;
+  box-shadow: 0 0 0 1.5px var(--u-background);
+}
+.docs-preset button[aria-pressed='true'] {
+  border-color: var(--u-primary);
+  box-shadow: 0 0 0 1px var(--u-primary);
+}
+.docs-theme-dua {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.docs-theme-dua .u-label {
+  display: block;
+  margin-bottom: 0.375rem;
+}
+.docs-theme-aksi {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}

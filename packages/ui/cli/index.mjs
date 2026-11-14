@@ -105,18 +105,26 @@ function defaultDir(fw) {
   if (fw === 'next') return existsSync(join(cwd, 'src')) ? 'src/components/unipo' : 'components/unipo';
   return existsSync(join(cwd, 'src')) ? 'src/components/unipo' : 'components/unipo';
 }
-function themeCss({ primary, secondary, radius }) {
-  return `/* Tema UNIPO untuk proyek ini. Semua warna turunan (hover, soft, ring, grafik) dihitung otomatis dari dua warna ini. */
+// Generator tema lengkap (dist/tema.js, sama dengan pembuat tema di api.unipo.ac.id/docs/tema).
+const temaLib = await import('../dist/tema.js').catch(() => null);
+/** Opsi tema dari flag CLI: --dari "<query atau URL tema.css>" lalu flag satuan (--netral, --font, --teks, ...). */
+function opsiTemaDariFlag(dasar) {
+  const opsi = { ...dasar };
+  if (typeof flags.dari === 'string') Object.assign(opsi, Object.fromEntries(new URLSearchParams(flags.dari.replace(/^[^?]*\?/, '')).entries()));
+  for (const k of ['primary', 'secondary', 'primaryGelap', 'success', 'warning', 'danger', 'info', 'netral', 'latar', 'latarGelap', 'radius', 'font', 'fontJudul', 'fontMono', 'teks', 'bayangan', 'gerak', 'muatFont']) {
+    if (flags[k] !== undefined) opsi[k] = flags[k];
+  }
+  return opsi;
+}
+function themeCss(opsi) {
+  if (temaLib) return temaLib.buatTema(opsi);
+  const { primary, secondary, radius } = opsi;
+  return `/* Tema UNIPO untuk proyek ini. */
 :root {
   --u-primary: ${primary};
   --u-secondary: ${secondary};
   --u-radius: ${radius}px;
 }
-/* Mode gelap ikut kelas .dark atau [data-theme="dark"] di <html>. Timpa di sini bila perlu warna lain:
-.dark, [data-theme='dark'] {
-  --u-primary: ${primary};
-}
-*/
 `;
 }
 function entryFile() {
@@ -298,17 +306,19 @@ async function tema() {
   const radius = Number(flags.radius ?? cfg.radius ?? 10);
   if (!HEX.test(primary) || !HEX.test(secondary)) fail('Warna harus berformat hex, mis. --primary "#0f766e".');
   const out = flags.out ?? cfg.theme ?? 'unipo-tema.css';
+  const opsi = opsiTemaDariFlag({ ...(cfg.tema ?? {}), primary, secondary, radius });
   if (flags.scss) {
     console.log(`@use 'unipo-ui/scss' with ($u-primary: ${primary}, $u-secondary: ${secondary}, $u-radius-base: ${radius});`);
     return;
   }
   if (flags.stdout) {
-    process.stdout.write(themeCss({ primary, secondary, radius }));
+    process.stdout.write(themeCss(opsi));
     return;
   }
   mkdirSync(dirname(join(cwd, out)), { recursive: true });
-  writeFileSync(join(cwd, out), themeCss({ primary, secondary, radius }));
-  if (existsSync(CONFIG)) writeFileSync(CONFIG, JSON.stringify({ ...cfg, primary, secondary, radius, theme: out }, null, 2) + '\n');
+  writeFileSync(join(cwd, out), themeCss(opsi));
+  const tema = temaLib ? Object.fromEntries(new URLSearchParams(temaLib.paramTema(opsi)).entries()) : undefined;
+  if (existsSync(CONFIG)) writeFileSync(CONFIG, JSON.stringify({ ...cfg, primary, secondary, radius, tema, theme: out }, null, 2) + '\n');
   ok(`Tema ditulis ke ${c.b(out)} (primer ${primary}, sekunder ${secondary}, radius ${radius}px)`);
 }
 
@@ -322,7 +332,8 @@ ${c.b('Perintah')}
   add <Komponen...>    Salin sumber komponen dan dependensinya ke proyek (bisa diubah bebas)
                        --dir src/components/unipo --overwrite
   list [kata]          Daftar komponen per kelompok
-  tema                 Tulis ulang berkas tema   --primary --secondary --radius --out --scss --stdout
+  tema                 Tulis ulang berkas tema   --primary --secondary --radius --netral --font --teks
+                       --bayangan --gerak --dari "<tautan tema.css dari api.unipo.ac.id/docs/tema>" --out --stdout
 
 ${c.b('Opsi umum')}
   --pm npm|pnpm|yarn|bun   paksa pengelola paket   --no-install   --no-edit   --no-font

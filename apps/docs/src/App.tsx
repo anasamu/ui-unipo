@@ -11,8 +11,11 @@ import { CATEGORIES, PAGES, type DocPage } from './registry';
 import { ThemeControls } from './ThemeControls';
 import { Playground } from './Playground';
 import { Galeri } from './Galeri';
+import { PratinjauTema } from './PratinjauTema';
 
 const EMBED = new URLSearchParams(location.search).has('embed');
+/** ?polos: hanya isi halaman (tanpa bilah atas dan sidebar), untuk pratinjau di pembuat tema. */
+const POLOS = new URLSearchParams(location.search).has('polos');
 
 function useHashRoute(): [string, (s: string) => void] {
   const read = () => decodeURIComponent(location.hash.replace(/^#\/?/, '')) || (EMBED ? 'galeri' : PAGES[0]?.slug);
@@ -118,7 +121,18 @@ export function App() {
     if (p.get('theme') === 'light') setDark(false);
     // Saat disematkan (iframe), halaman induk dari origin yang sama boleh mengganti tema tanpa memuat ulang.
     const on = (e: MessageEvent) => {
-      if (e.origin === location.origin && e.data?.type === 'unipo-ui:tema') setDark(!!e.data.gelap);
+      if (e.origin !== location.origin) return;
+      if (e.data?.type === 'unipo-ui:tema') setDark(!!e.data.gelap);
+      // CSS tema dari pembuat tema (api.unipo.ac.id/docs/tema): dipasang di <style> paling akhir agar menimpa bawaan.
+      if (e.data?.type === 'unipo-ui:css' && typeof e.data.css === 'string') {
+        let el = document.getElementById('unipo-tema-kustom') as HTMLStyleElement | null;
+        if (!el) {
+          el = document.createElement('style');
+          el.id = 'unipo-tema-kustom';
+          document.head.appendChild(el);
+        }
+        el.textContent = e.data.css;
+      }
     };
     window.addEventListener('message', on);
     return () => window.removeEventListener('message', on);
@@ -127,11 +141,17 @@ export function App() {
     document.documentElement.classList.toggle('dark', dark);
   }, [dark]);
   const galeri = slug === 'galeri';
+  const pratinjau = slug === 'pratinjau-tema';
   const page = PAGES.find((p) => p.slug === slug) ?? PAGES[0];
   const sections = CATEGORIES.map((c) => ({
     title: c,
     items: [
-      ...(c === 'Mulai' ? [{ key: 'galeri', label: 'Galeri komponen', href: '#/galeri' }] : []),
+      ...(c === 'Mulai'
+        ? [
+            { key: 'galeri', label: 'Galeri komponen', href: '#/galeri' },
+            { key: 'pratinjau-tema', label: 'Pratinjau tema', href: '#/pratinjau-tema' },
+          ]
+        : []),
       ...PAGES.filter((p) => p.meta.category === c).map((p) => ({ key: p.slug, label: p.meta.title, href: `#/${p.slug}`, badge: p.meta.badge })),
     ],
   })).filter((s) => s.items.length);
@@ -139,7 +159,8 @@ export function App() {
   return (
     <TooltipProvider>
       <Toaster>
-        <div className={cn('u-root', 'docs')} data-embed={EMBED ? '' : undefined}>
+        <div className={cn('u-root', 'docs')} data-embed={EMBED ? '' : undefined} data-polos={POLOS ? '' : undefined}>
+          {!POLOS && (
           <header className="docs-topbar">
             {!EMBED && (
               <>
@@ -167,11 +188,14 @@ export function App() {
               )}
             </div>
           </header>
+          )}
           <div className="docs-body">
-            <div className="docs-sidebar">
-              <DocsSidebar sections={sections} activeKey={galeri ? 'galeri' : page?.slug} />
-            </div>
-            <main className="docs-main">{galeri ? <Galeri go={go} /> : page && <Page key={page.slug} page={page} />}</main>
+            {!POLOS && (
+              <div className="docs-sidebar">
+                <DocsSidebar sections={sections} activeKey={galeri || pratinjau ? slug : page?.slug} />
+              </div>
+            )}
+            <main className="docs-main">{galeri ? <Galeri go={go} /> : pratinjau ? <PratinjauTema /> : page && <Page key={page.slug} page={page} />}</main>
           </div>
         </div>
       </Toaster>
