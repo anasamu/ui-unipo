@@ -12,3 +12,5 @@ export * from './pmb';
 export * from './kelengkapan';
 export * from './dasbor';
 export * from './kurikulum';
+export * from './lms';
+export * from './cbt';
