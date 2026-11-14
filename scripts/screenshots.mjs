@@ -26,6 +26,8 @@ const slugs = only.length ? only : await page.$$eval('.u-docs-link', (as) => as.
 for (const slug of slugs) {
   await page.goto(base + theme + `#/${slug}`);
   await page.waitForTimeout(600);
+  // Bilah atas yang menempel menutupi contoh panjang saat Playwright menggulir.
+  await page.addStyleTag({ content: '.docs-topbar{position:static!important}' });
   const demos = await page.$$('[data-demo]');
   for (const d of demos) {
     const id = await d.getAttribute('data-demo');

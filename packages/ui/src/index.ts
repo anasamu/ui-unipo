@@ -17,3 +17,4 @@ export * from './components/status';
 export * from './components/schedule';
 export * from './components/content';
 export * from './components/wizard';
+export * from './components/charts';

@@ -10,3 +10,4 @@ export * from './kalender';
 export * from './portal';
 export * from './pmb';
 export * from './kelengkapan';
+export * from './dasbor';

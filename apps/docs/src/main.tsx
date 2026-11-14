@@ -6,6 +6,7 @@ import './docs.scss';
 import { UnipoProvider, configureFlags } from 'unipo-ui/siakad';
 import { siakadDemo } from './mock/siakad';
 import './mock/fitur';
+import './mock/dasbor';
 import { App } from './App';
 
 // Bendera dari paket country-flag-icons (tanpa CDN), dibundel Vite.
