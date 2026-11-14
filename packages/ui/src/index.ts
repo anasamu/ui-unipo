@@ -13,3 +13,4 @@ export * from './components/layout';
 export * from './components/identity';
 export * from './components/filter';
 export * from './components/data-table';
+export * from './components/status';

@@ -120,6 +120,8 @@ const BERKAS = ['Akreditasi Prodi Informatika', 'Kerja sama dengan Pemkab Pohuwa
 const antara = (u: URL, v?: string | null) => (!u.searchParams.get('dari') || (v ?? '') >= u.searchParams.get('dari')!) && (!u.searchParams.get('sampai') || (v ?? '') <= u.searchParams.get('sampai')!);
 
 const ROUTES: Array<[RegExp, (u: URL, init?: RequestInit) => unknown]> = [
+  [/\/v1\/health$/, () => ({ data: { status: 'ok', database: 'ok', waktu_server: new Date().toISOString() } })],
+  [/\/v1\/integrasi\/status$/, () => ({ data: { captcha: { aktif: true, penyedia: 'turnstile', driver: 'turnstile' }, pembayaran: { aktif: true, penyedia: 'midtrans', driver: 'midtrans', mode: 'sandbox' }, penyimpanan: null, cache: { aktif: true, penyedia: 'redis', driver: 'redis' }, email: { aktif: true, penyedia: 'smtp', driver: 'smtp' }, whatsapp: null, rapat: null } })],
   [/\/v1\/referensi\/prodi$/, () => ({ data: PRODI })],
   [/\/v1\/referensi\/tahun-akademik$/, () => ({ data: TAHUN })],
   [/\/v1\/mahasiswa$/, (u) => halaman(MAHASISWA.filter((m) => cocok(u.searchParams.get('q'), m.nim, m.nama) && eq(u, 'prodi', m.kode_prodi) && eq(u, 'angkatan', m.tahun_masuk) && eq(u, 'status', m.status_aktif) && eq(u, 'kelas', m.kelas)), u)],
