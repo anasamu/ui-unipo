@@ -7,6 +7,7 @@ import { Calendar, toISODate } from '../components/calendar';
 import { Alert } from '../components/display';
 import { AgendaList, EVENT_COLORS, EventCalendar, EventLegend, eventsByDay, formatEventRange, type CalendarEvent } from '../components/schedule';
 import { pesanGalat, useSiakadQuery } from './provider';
+import { KodeLaporan } from '../components/galat';
 
 /** Satu baris dari `GET /v1/kalender/terpadu`. */
 export interface KegiatanTerpadu {
@@ -148,7 +149,8 @@ export function KalenderAkademik({ initialMonth, icsUrl, onKegiatanClick, classN
                 </Button>
               }
             >
-              {pesanGalat(error)}
+              {pesanGalat(error, { kode: false })}
+              <KodeLaporan error={error} />
             </Alert>
           )}
           {kinds.length > 0 && <EventLegend kinds={kinds} labels={JENIS_KEGIATAN} hidden={hidden} onToggle={(k) => setHidden((h) => (h.includes(k) ? h.filter((x) => x !== k) : [...h, k]))} />}

@@ -10,6 +10,7 @@ import './mock/dasbor';
 import './mock/kurikulum';
 import './mock/lms';
 import './mock/akademik';
+import './mock/pilih';
 import { ssoDemo } from './mock/aplikasi';
 import { App } from './App';
 

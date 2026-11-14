@@ -13,6 +13,7 @@ import { ConfirmDialog, Dialog, Sheet } from '../components/overlays';
 import { Wizard, WizardReview, FormGrid } from '../components/wizard';
 import { DataTable, type DataColumn } from '../components/data-table';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakadQuery, type QueryState } from './provider';
+import { KodeLaporan } from '../components/galat';
 import { LogAktivitas, LogApi, RingkasanLogApi } from './log';
 
 /*
@@ -513,7 +514,8 @@ export function DaftarAplikasi({ onPilih, href, tampilan: awal = 'kartu', bolehB
             </Button>
           }
         >
-          {pesanGalat(q.error)}
+          {pesanGalat(q.error, { kode: false })}
+          <KodeLaporan error={q.error} />
         </Alert>
       ) : tampilan === 'kartu' ? (
         q.loading && !q.data ? (
@@ -967,7 +969,7 @@ export function PilihScope({ value, onValueChange, katalog: katalogProp, maxHeig
   const pilih = new Set(value);
   const ganti = (s: string, on: boolean) => onValueChange(on ? [...value, s] : value.filter((x) => x !== s));
   if (!katalogProp && q.loading && !q.data) return <Skeleton style={{ height: 160 }} />;
-  if (!katalogProp && q.error) return <Alert variant="danger">{pesanGalat(q.error)}</Alert>;
+  if (!katalogProp && q.error) return <Alert variant="danger">{pesanGalat(q.error, { kode: false })}<KodeLaporan error={q.error} /></Alert>;
   return (
     <div className={cn('u-scope-picker', className)}>
       <div className="u-scope-picker-head">

@@ -158,8 +158,21 @@
     top: 0;
     right: 0;
     bottom: 0;
-    width: min(100vw, var(--u-sheet-w, 26rem));
+    // Lebar ikut `size`: sm 24rem, md (bawaan) 36rem, lg 44rem, xl 56rem, full layar penuh. Atur bebas lewat --u-sheet-w.
+    width: min(100vw, var(--u-sheet-w, 36rem));
     border-width: 0 0 0 1px;
+    &[data-size='sm'] {
+      --u-sheet-w: 24rem;
+    }
+    &[data-size='lg'] {
+      --u-sheet-w: 44rem;
+    }
+    &[data-size='xl'] {
+      --u-sheet-w: 56rem;
+    }
+    &[data-size='full'] {
+      --u-sheet-w: 100vw;
+    }
     &[data-starting-style],
     &[data-ending-style] {
       transform: translateX(100%);

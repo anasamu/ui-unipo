@@ -48,6 +48,7 @@ import {
   StatGrid,
 } from '../components/charts';
 import { pesanGalat, useSiakadQuery, type QueryState } from './provider';
+import { KodeLaporan } from '../components/galat';
 
 /*
  * Widget per fitur untuk tiap unit kerja (BAAK, keuangan, kepegawaian, SPMI, LPPM, arsip, humas, PMB, tracer).
@@ -114,7 +115,8 @@ export function KerangkaDasbor({ title, description, actions, error, onRetry, ch
             )
           }
         >
-          {pesanGalat(error)}
+          {pesanGalat(error, { kode: false })}
+          <KodeLaporan error={error} />
         </Alert>
       ) : (
         children
@@ -143,7 +145,7 @@ export interface WidgetProps {
 function GalatWidget({ error, onRetry }: { error: Error; onRetry: () => void }) {
   return (
     <div className="u-widget-error" role="alert">
-      <span>{pesanGalat(error)}</span>
+      <span>{pesanGalat(error, { kode: false })}<KodeLaporan error={error} /></span>
       <Button size="sm" variant="ghost" onClick={onRetry}>
         <RefreshCw /> Muat ulang
       </Button>

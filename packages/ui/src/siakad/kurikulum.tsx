@@ -8,6 +8,7 @@ import { Alert, Empty, Progress, ProgressRing, Table, TableContainer } from '../
 import { ActivityFeed, Panel, SegmentBar, StatCard, StatGrid } from '../components/charts';
 import { Sheet } from '../components/overlays';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakadQuery, type QueryState } from './provider';
+import { KodeLaporan } from '../components/galat';
 
 /*
  * Widget Kurikulum OBE (/v1/kurikulum-obe, Permendiktisaintek 39/2025): daftar kurikulum, ringkasan & alur status,
@@ -230,7 +231,7 @@ export function StatusKurikulumBadge({ status }: { status: StatusKurikulum | str
 function Galat({ q }: { q: QueryState<unknown> }) {
   return (
     <div className="u-widget-error" role="alert">
-      <span>{pesanGalat(q.error)}</span>
+      <span>{pesanGalat(q.error, { kode: false })}<KodeLaporan error={q.error} /></span>
       <Button size="sm" variant="ghost" onClick={q.refetch}>
         <RefreshCw /> Muat ulang
       </Button>

@@ -49,6 +49,11 @@ export interface SidebarProps {
   onCollapsedChange?: (collapsed: boolean) => void;
   /** Renderer tautan kustom, mis. <Link> Next.js/React Router. */
   renderLink?: (item: NavItem, props: React.AnchorHTMLAttributes<HTMLAnchorElement> & { children: React.ReactNode }) => React.ReactElement;
+  /**
+   * Hanya satu sub-menu terbuka dalam satu waktu: membuka satu menutup yang lain. Bawaan `true`.
+   * Isi `false` agar setiap sub-menu bisa dibuka bersamaan.
+   */
+  accordion?: boolean;
   className?: string;
 }
 
@@ -84,8 +89,25 @@ function NavLink({ item, active, collapsed, renderLink, depth }: { item: NavItem
   );
 }
 
-function NavTree({ item, activeKey, collapsed, renderLink }: { item: NavItem; activeKey?: string; collapsed?: boolean; renderLink?: SidebarProps['renderLink'] }) {
-  const [open, setOpen] = React.useState(() => containsActive(item, activeKey));
+function NavTree({
+  item,
+  activeKey,
+  collapsed,
+  renderLink,
+  open: openProp,
+  onOpenChange,
+}: {
+  item: NavItem;
+  activeKey?: string;
+  collapsed?: boolean;
+  renderLink?: SidebarProps['renderLink'];
+  /** Dikendalikan Sidebar saat mode accordion. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
+  const [openInner, setOpenInner] = React.useState(() => containsActive(item, activeKey));
+  const open = openProp ?? openInner;
+  const setOpen = (o: boolean) => (onOpenChange ? onOpenChange(o) : setOpenInner(o));
   if (!item.children?.length) return <NavLink item={item} active={item.key === activeKey} collapsed={collapsed} renderLink={renderLink} depth={0} />;
   const childActive = containsActive(item, activeKey);
   if (collapsed) {
@@ -122,7 +144,16 @@ function NavTree({ item, activeKey, collapsed, renderLink }: { item: NavItem; ac
 }
 
 /** Sidebar aplikasi dasbor (SIAKAD, Pustikom, LMS, fakultas): grup menu, sub-menu, lencana, profil, mode rail. */
-export function Sidebar({ brand, groups, activeKey, header, footer, user, collapsed, onCollapsedChange, renderLink, className }: SidebarProps) {
+export function Sidebar({ brand, groups, activeKey, header, footer, user, collapsed, onCollapsedChange, renderLink, accordion = true, className }: SidebarProps) {
+  // Mode accordion: simpan satu kunci sub-menu yang terbuka. Awalnya sub-menu yang memuat halaman aktif,
+  // dan ikut berpindah saat halaman aktif pindah ke sub-menu lain.
+  const induk = (key?: string) => groups.flatMap((g) => g.items).find((it) => it.children?.length && containsActive(it, key))?.key ?? null;
+  const [openKey, setOpenKey] = React.useState<string | null>(() => induk(activeKey));
+  React.useEffect(() => {
+    const k = induk(activeKey);
+    if (k) setOpenKey(k);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeKey]);
   return (
     <aside className={cn('u-sidebar', className)} data-collapsed={dataFlag(collapsed)}>
       <div className="u-sidebar-brand">
@@ -141,7 +172,14 @@ export function Sidebar({ brand, groups, activeKey, header, footer, user, collap
           <div key={gi} className="u-nav-group">
             {g.label && !collapsed && <div className="u-nav-group-label">{g.label}</div>}
             {g.items.map((it) => (
-              <NavTree key={it.key} item={it} activeKey={activeKey} collapsed={collapsed} renderLink={renderLink} />
+              <NavTree
+                key={it.key}
+                item={it}
+                activeKey={activeKey}
+                collapsed={collapsed}
+                renderLink={renderLink}
+                {...(accordion && it.children?.length ? { open: openKey === it.key, onOpenChange: (o: boolean) => setOpenKey(o ? it.key : openKey === it.key ? null : openKey) } : {})}
+              />
             ))}
           </div>
         ))}
