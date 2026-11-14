@@ -1,0 +1,15 @@
+{
+  "name": "ui-unipo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Sistem desain dan pustaka komponen UI Universitas Pohuwato (UNIPO)",
+  "workspaces": ["packages/tokens", "packages/ui", "apps/docs"],
+  "scripts": {
+    "build": "npm run build -w @unipo/tokens && npm run build -w @unipo/ui",
+    "dev": "npm run dev -w docs",
+    "docs:build": "npm run build && npm run build -w docs",
+    "typecheck": "npm run typecheck -w @unipo/ui && npm run typecheck -w docs",
+    "screenshots": "node scripts/screenshots.mjs"
+  },
+  "engines": { "node": ">=18.17" }
+}

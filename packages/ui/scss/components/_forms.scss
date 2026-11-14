@@ -1,0 +1,837 @@
+@use '../mixins' as *;
+
+// ---------------------------------------------------------------- Label / Field
+.u-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--u-foreground);
+  font-size: var(--u-text-sm);
+  font-weight: 600;
+  line-height: 1.3;
+  &[data-disabled] {
+    opacity: 0.6;
+  }
+}
+.u-label-required {
+  color: var(--u-danger);
+  font-weight: 600;
+}
+.u-label-optional {
+  color: var(--u-muted-foreground);
+  font-weight: 400;
+}
+.u-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+  &[data-orientation='horizontal'] {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+}
+.u-field-description {
+  margin: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  line-height: 1.45;
+}
+.u-field-error {
+  display: flex;
+  gap: 0.3rem;
+  align-items: flex-start;
+  margin: 0;
+  color: var(--u-danger-text);
+  font-size: var(--u-text-xs);
+  font-weight: 500;
+  line-height: 1.45;
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex: none;
+    margin-top: 0.05rem;
+  }
+}
+.u-fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.u-fieldset-legend {
+  padding: 0;
+  margin-bottom: 0.25rem;
+  font-size: var(--u-text-md);
+  font-weight: 600;
+  color: var(--u-foreground);
+}
+
+// ---------------------------------------------------------------- Input
+.u-input,
+.u-textarea {
+  @include control-surface;
+  width: 100%;
+  min-width: 0;
+  color: var(--u-foreground);
+  font-family: inherit;
+  font-size: var(--u-text-base);
+  &::placeholder {
+    color: color-mix(in oklab, var(--u-muted-foreground) 80%, transparent);
+  }
+  &:hover:not(:disabled, :focus-visible) {
+    border-color: var(--u-border-strong);
+  }
+  &:focus-visible {
+    @include control-focus;
+  }
+  &[aria-invalid='true'],
+  &[data-invalid] {
+    @include control-invalid;
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: var(--u-surface);
+  }
+  &[readonly] {
+    background: var(--u-surface);
+  }
+}
+.u-input {
+  height: 2.25rem;
+  padding-inline: 0.75rem;
+  &[data-size='sm'] {
+    height: 2rem;
+    padding-inline: 0.625rem;
+    font-size: var(--u-text-sm);
+  }
+  &[data-size='lg'] {
+    height: 2.75rem;
+    padding-inline: 0.875rem;
+    font-size: var(--u-text-md);
+  }
+  &[type='file'] {
+    padding: 0.35rem 0.5rem;
+    height: auto;
+  }
+}
+.u-textarea {
+  min-height: 5rem;
+  padding: 0.5rem 0.75rem;
+  line-height: var(--u-leading-normal);
+  resize: vertical;
+  field-sizing: content;
+}
+
+// Input dengan ikon/addon di dalam bingkai yang sama
+.u-input-group {
+  @include control-surface;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  height: 2.25rem;
+  overflow: hidden;
+  &:hover:not(:focus-within) {
+    border-color: var(--u-border-strong);
+  }
+  &:focus-within {
+    @include control-focus;
+  }
+  &[data-invalid] {
+    @include control-invalid;
+  }
+  &[data-size='sm'] {
+    height: 2rem;
+  }
+  &[data-size='lg'] {
+    height: 2.75rem;
+  }
+  > .u-input,
+  > input {
+    flex: 1;
+    height: 100%;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+    padding-inline: 0.625rem;
+    min-width: 0;
+    font: inherit;
+    color: inherit;
+    outline: none;
+    &:focus-visible {
+      box-shadow: none;
+    }
+  }
+}
+.u-input-addon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 100%;
+  padding-inline: 0.625rem;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  white-space: nowrap;
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  &[data-align='start'] {
+    padding-inline-end: 0;
+  }
+  &[data-align='end'] {
+    padding-inline-start: 0;
+  }
+  &[data-boxed] {
+    padding-inline: 0.75rem;
+    background: var(--u-surface);
+    &[data-align='start'] {
+      border-inline-end: 1px solid var(--u-border);
+    }
+    &[data-align='end'] {
+      border-inline-start: 1px solid var(--u-border);
+    }
+  }
+}
+
+// ---------------------------------------------------------------- Checkbox / Radio
+.u-checkbox,
+.u-radio {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--u-input);
+  background: var(--u-background);
+  color: var(--u-primary-foreground);
+  box-shadow: var(--u-shadow-xs);
+  cursor: pointer;
+  transition:
+    background-color var(--u-duration-fast),
+    border-color var(--u-duration-fast),
+    box-shadow var(--u-duration-fast);
+  &:hover:not([data-disabled]) {
+    border-color: var(--u-border-strong);
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+  &[data-checked],
+  &[data-indeterminate] {
+    background: var(--u-primary);
+    border-color: var(--u-primary);
+  }
+  &[data-invalid] {
+    border-color: var(--u-danger);
+  }
+  &[data-disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+.u-checkbox {
+  border-radius: 5px;
+}
+.u-checkbox-indicator {
+  display: grid;
+  place-items: center;
+  svg {
+    width: 0.8rem;
+    height: 0.8rem;
+    stroke-width: 3;
+  }
+  &[data-unchecked] {
+    display: none;
+  }
+}
+.u-radio {
+  border-radius: 50%;
+}
+.u-radio-indicator {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 50%;
+  background: currentColor;
+  &[data-unchecked] {
+    display: none;
+  }
+}
+// Baris pilihan: kotak + label + deskripsi
+.u-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  cursor: pointer;
+  > .u-checkbox,
+  > .u-radio,
+  > .u-switch {
+    margin-top: 0.0625rem;
+  }
+  &[data-disabled] {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+.u-choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  font-size: var(--u-text-base);
+  font-weight: 500;
+  line-height: 1.35;
+}
+.u-choice-description {
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  font-weight: 400;
+}
+.u-choice-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  &[data-orientation='horizontal'] {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+  }
+}
+
+// Kartu pilihan (checkbox/radio berbentuk kartu)
+.u-choice-cards {
+  display: grid;
+  gap: 0.625rem;
+  grid-template-columns: repeat(var(--u-cols, 1), minmax(0, 1fr));
+  @media (max-width: 640px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.u-choice-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--u-border);
+  border-radius: calc(var(--u-radius) + 2px);
+  background: var(--u-card);
+  box-shadow: var(--u-shadow-xs);
+  text-align: start;
+  cursor: pointer;
+  transition:
+    border-color var(--u-duration-fast),
+    background-color var(--u-duration-fast),
+    box-shadow var(--u-duration-fast);
+  &:hover:not([data-disabled]) {
+    border-color: var(--u-border-strong);
+  }
+  &:has(:focus-visible) {
+    @include focus-ring;
+  }
+  &:has([data-checked]),
+  &[data-checked] {
+    border-color: var(--u-primary);
+    background: color-mix(in oklab, var(--u-primary) 4%, var(--u-card));
+    box-shadow: 0 0 0 1px var(--u-primary);
+  }
+  &[data-disabled] {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  > .u-checkbox,
+  > .u-radio {
+    order: 2;
+    margin-inline-start: auto;
+  }
+}
+.u-choice-card-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--u-radius);
+  background: var(--u-muted);
+  color: var(--u-foreground);
+  svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+  .u-choice-card:has([data-checked]) & {
+    background: var(--u-primary-soft);
+    color: var(--u-primary);
+  }
+}
+
+// ---------------------------------------------------------------- Switch
+.u-switch {
+  --u-switch-w: 2.25rem;
+  --u-switch-h: 1.25rem;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  width: var(--u-switch-w);
+  height: var(--u-switch-h);
+  padding: 2px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--u-foreground) 18%, var(--u-background));
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.08);
+  cursor: pointer;
+  transition: background-color var(--u-duration-base) var(--u-ease-out);
+  &:focus-visible {
+    @include focus-ring;
+  }
+  &[data-checked] {
+    background: var(--u-primary);
+  }
+  &[data-disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  &[data-size='sm'] {
+    --u-switch-w: 1.75rem;
+    --u-switch-h: 1rem;
+  }
+}
+.u-switch-thumb {
+  width: calc(var(--u-switch-h) - 4px);
+  height: calc(var(--u-switch-h) - 4px);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.2),
+    0 1px 1px rgb(0 0 0 / 0.06);
+  transition: transform var(--u-duration-base) var(--u-ease-out);
+  &[data-checked] {
+    transform: translateX(calc(var(--u-switch-w) - var(--u-switch-h)));
+  }
+}
+
+// ---------------------------------------------------------------- Select / Combobox
+.u-select-trigger {
+  @include control-surface;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  height: 2.25rem;
+  padding-inline: 0.75rem 0.5rem;
+  color: var(--u-foreground);
+  font-size: var(--u-text-base);
+  text-align: start;
+  cursor: pointer;
+  &:hover:not([data-disabled]) {
+    border-color: var(--u-border-strong);
+  }
+  &:focus-visible,
+  &[data-popup-open] {
+    @include control-focus;
+  }
+  &[data-invalid] {
+    @include control-invalid;
+  }
+  &[data-disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  &[data-size='sm'] {
+    height: 2rem;
+    font-size: var(--u-text-sm);
+  }
+  &[data-size='lg'] {
+    height: 2.75rem;
+  }
+}
+.u-select-value {
+  flex: 1;
+  min-width: 0;
+  @include truncate;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  &[data-placeholder] {
+    color: var(--u-muted-foreground);
+  }
+}
+.u-select-icon {
+  display: grid;
+  color: var(--u-muted-foreground);
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+.u-popup-positioner {
+  z-index: 60;
+  outline: 0;
+}
+.u-listbox {
+  @include popup-surface;
+  @include popup-motion;
+  min-width: var(--anchor-width);
+  max-height: min(var(--available-height), 22rem);
+  padding: 0.25rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 0.25rem;
+  outline: 0;
+}
+.u-listbox-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 2rem;
+  padding: 0.375rem 2rem 0.375rem 0.5rem;
+  border-radius: calc(var(--u-radius) - 3px);
+  font-size: var(--u-text-base);
+  color: var(--u-foreground);
+  cursor: default;
+  user-select: none;
+  outline: 0;
+  scroll-margin-block: 0.25rem;
+  &[data-highlighted] {
+    background: var(--u-hover);
+  }
+  &[data-selected] {
+    font-weight: 600;
+  }
+  &[data-disabled] {
+    opacity: 0.5;
+  }
+  > svg:first-child {
+    width: 1rem;
+    height: 1rem;
+    color: var(--u-muted-foreground);
+  }
+}
+.u-listbox-item-indicator {
+  position: absolute;
+  inset-inline-end: 0.5rem;
+  display: grid;
+  color: var(--u-primary);
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+.u-listbox-group-label {
+  padding: 0.5rem 0.5rem 0.25rem;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.u-listbox-separator {
+  height: 1px;
+  margin: 0.25rem -0.25rem;
+  background: var(--u-border);
+}
+.u-listbox-empty,
+.u-listbox-status {
+  padding: 1rem 0.75rem;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  text-align: center;
+  &:empty {
+    display: none;
+  }
+}
+.u-listbox-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.u-option-media {
+  display: grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--u-muted);
+  color: var(--u-muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  img,
+  svg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  &[data-shape='flag'] {
+    width: 1.375rem;
+    height: 1rem;
+    border-radius: 3px;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08);
+  }
+  &[data-shape='square'] {
+    border-radius: 6px;
+  }
+}
+.u-option-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+  > span:first-child {
+    @include truncate;
+  }
+}
+.u-option-meta {
+  @include truncate;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  font-weight: 400;
+}
+.u-combobox-chips {
+  @include control-surface;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.375rem;
+  &:focus-within {
+    @include control-focus;
+  }
+  > input {
+    flex: 1;
+    min-width: 6rem;
+    height: 1.625rem;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    padding-inline: 0.25rem;
+  }
+}
+.u-combobox-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 1.5rem;
+  padding-inline: 0.5rem 0.25rem;
+  border-radius: 6px;
+  background: var(--u-muted);
+  font-size: var(--u-text-sm);
+  font-weight: 500;
+  outline: 0;
+  &[data-highlighted] {
+    background: var(--u-primary-soft);
+    color: var(--u-primary-soft-foreground);
+  }
+}
+
+// ---------------------------------------------------------------- Number field
+.u-number-field {
+  @include control-surface;
+  display: inline-flex;
+  align-items: stretch;
+  height: 2.25rem;
+  overflow: hidden;
+  &:focus-within {
+    @include control-focus;
+  }
+  input {
+    width: 4.5rem;
+    min-width: 0;
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+}
+.u-number-field-button {
+  display: grid;
+  place-items: center;
+  width: 2.125rem;
+  color: var(--u-muted-foreground);
+  background: var(--u-surface);
+  &:first-child {
+    border-inline-end: 1px solid var(--u-border);
+  }
+  &:last-child {
+    border-inline-start: 1px solid var(--u-border);
+  }
+  &:hover:not([data-disabled]) {
+    color: var(--u-foreground);
+    background: var(--u-muted);
+  }
+  &[data-disabled] {
+    opacity: 0.4;
+  }
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+}
+
+// ---------------------------------------------------------------- OTP
+.u-otp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.u-otp-input {
+  @include control-surface;
+  width: 2.75rem;
+  height: 3rem;
+  padding: 0;
+  text-align: center;
+  font-family: var(--u-font-mono);
+  font-size: var(--u-text-xl);
+  font-weight: 600;
+  color: var(--u-foreground);
+  caret-color: var(--u-primary);
+  &:focus-visible,
+  &:focus {
+    @include control-focus;
+  }
+  &[data-invalid] {
+    @include control-invalid;
+  }
+}
+.u-otp-separator {
+  width: 0.625rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--u-border-strong);
+}
+
+// ---------------------------------------------------------------- Slider
+.u-slider {
+  width: 100%;
+  touch-action: none;
+}
+.u-slider-control {
+  display: flex;
+  align-items: center;
+  height: 1.25rem;
+  width: 100%;
+  cursor: pointer;
+}
+.u-slider-track {
+  position: relative;
+  width: 100%;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: var(--u-muted);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--u-foreground) 5%, transparent);
+}
+.u-slider-indicator {
+  border-radius: 999px;
+  background: var(--u-primary);
+}
+.u-slider-thumb {
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid color-mix(in oklab, var(--u-primary) 50%, var(--u-border));
+  box-shadow: var(--u-shadow-sm);
+  outline: 0;
+  transition: box-shadow var(--u-duration-fast);
+  &:has(:focus-visible),
+  &[data-dragging] {
+    box-shadow:
+      var(--u-shadow-sm),
+      0 0 0 4px color-mix(in oklab, var(--u-primary) 22%, transparent);
+  }
+}
+
+// ---------------------------------------------------------------- Toggle / Segmented
+.u-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  height: 2.25rem;
+  min-width: 2.25rem;
+  padding-inline: 0.625rem;
+  border-radius: var(--u-radius);
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  font-weight: 500;
+  transition:
+    background-color var(--u-duration-fast),
+    color var(--u-duration-fast);
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  &:hover {
+    background: var(--u-hover);
+    color: var(--u-foreground);
+  }
+  &[data-pressed] {
+    background: var(--u-active);
+    color: var(--u-foreground);
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+  &[data-variant='outline'] {
+    border: 1px solid var(--u-input);
+    box-shadow: var(--u-shadow-xs);
+  }
+  &[data-size='sm'] {
+    height: 2rem;
+    min-width: 2rem;
+    padding-inline: 0.5rem;
+  }
+}
+.u-toggle-group {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+.u-segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: calc(var(--u-radius) + 1px);
+  background: var(--u-muted);
+  &[data-full-width] {
+    display: flex;
+    > * {
+      flex: 1;
+    }
+  }
+  > .u-toggle {
+    height: 1.875rem;
+    border-radius: calc(var(--u-radius) - 2px);
+    color: var(--u-muted-foreground);
+    &:hover {
+      background: transparent;
+      color: var(--u-foreground);
+    }
+    &[data-pressed] {
+      background: var(--u-background);
+      color: var(--u-foreground);
+      box-shadow:
+        var(--u-shadow-sm),
+        0 0 0 1px color-mix(in oklab, var(--u-foreground) 6%, transparent);
+    }
+  }
+}

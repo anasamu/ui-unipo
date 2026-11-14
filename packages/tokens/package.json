@@ -1,0 +1,35 @@
+{
+  "name": "@unipo/tokens",
+  "version": "0.1.0",
+  "description": "Design token UNIPO untuk web (CSS/SCSS/LESS/Tailwind), React Native, dan Android (Kotlin Compose/XML).",
+  "type": "module",
+  "license": "MIT",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./css": "./dist/tokens.css",
+    "./scss": "./dist/_tokens.scss",
+    "./less": "./dist/tokens.less",
+    "./tailwind": "./dist/tailwind-preset.cjs",
+    "./kotlin": "./dist/UnipoTheme.kt",
+    "./android/colors.xml": "./dist/android/colors.xml",
+    "./tokens.json": "./src/tokens.json",
+    "./json": "./src/tokens.json"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "less": "^4.9.1"
+  }
+}

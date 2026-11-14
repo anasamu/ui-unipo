@@ -1,0 +1,453 @@
+@use '../mixins' as *;
+
+// ================================================================ Sidebar dasbor
+.u-sidebar {
+  --u-sidebar-w: 16.5rem;
+  --u-sidebar-bg: var(--u-surface);
+  display: flex;
+  flex-direction: column;
+  width: var(--u-sidebar-w);
+  height: 100%;
+  min-height: 0;
+  background: var(--u-sidebar-bg);
+  border-inline-end: 1px solid var(--u-border);
+  transition: width var(--u-duration-slow) var(--u-ease-out);
+  &[data-collapsed] {
+    --u-sidebar-w: 4.25rem;
+    .u-sidebar-brand {
+      flex-direction: column;
+      padding-inline: 0.5rem;
+    }
+    .u-app-logo-text {
+      display: none;
+    }
+    .u-nav-item {
+      justify-content: center;
+      padding: 0;
+      width: 2.5rem;
+      margin-inline: auto;
+    }
+    .u-nav-group + .u-nav-group {
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--u-border);
+    }
+    .u-sidebar-user-button {
+      justify-content: center;
+      padding: 0.375rem;
+    }
+  }
+}
+.u-sidebar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 3.75rem;
+  padding: 0.75rem 0.75rem 0.5rem 1rem;
+}
+.u-sidebar-header {
+  padding: 0.25rem 0.75rem 0.5rem;
+}
+.u-sidebar-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.25rem 0.625rem 1rem;
+  scrollbar-width: thin;
+}
+.u-nav-group + .u-nav-group {
+  margin-top: 1.125rem;
+}
+.u-nav-group-label {
+  padding: 0 0.625rem 0.375rem;
+  color: var(--u-muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.u-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  height: 2.25rem;
+  padding-inline: 0.625rem;
+  border-radius: calc(var(--u-radius) - 2px);
+  color: color-mix(in oklab, var(--u-foreground) 78%, transparent);
+  font-size: var(--u-text-base);
+  font-weight: 500;
+  text-align: start;
+  text-decoration: none;
+  transition:
+    background-color var(--u-duration-fast),
+    color var(--u-duration-fast);
+  &:hover {
+    background: var(--u-hover);
+    color: var(--u-foreground);
+  }
+  &:focus-visible {
+    @include focus-ring(-2px);
+  }
+  &[data-active] {
+    background: var(--u-background);
+    color: var(--u-foreground);
+    font-weight: 600;
+    box-shadow:
+      var(--u-shadow-xs),
+      0 0 0 1px var(--u-border);
+    .u-nav-icon {
+      color: var(--u-primary);
+    }
+  }
+  &[data-parent-active] {
+    color: var(--u-foreground);
+    font-weight: 600;
+  }
+  &[data-depth='1'] {
+    height: 2rem;
+    font-size: var(--u-text-sm);
+    &[data-active] {
+      box-shadow: none;
+      background: var(--u-primary-soft);
+      color: var(--u-primary-soft-foreground);
+    }
+  }
+  &[aria-disabled] {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+.u-nav-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.125rem;
+  color: var(--u-muted-foreground);
+  &:empty {
+    display: none;
+  }
+  svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+.u-nav-label {
+  flex: 1;
+  min-width: 0;
+  @include truncate;
+}
+.u-nav-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding-inline: 0.375rem;
+  border-radius: 999px;
+  background: var(--u-primary);
+  color: var(--u-primary-foreground);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.u-nav-chevron {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex: none;
+  color: var(--u-muted-foreground);
+  transition: transform var(--u-duration-base) var(--u-ease-out);
+  [data-panel-open] > & {
+    transform: rotate(180deg);
+  }
+}
+.u-nav-sub {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0.125rem 0 0.25rem 1.1875rem;
+  padding-inline-start: 0.75rem;
+  border-inline-start: 1px solid var(--u-border);
+}
+.u-sidebar-footer {
+  padding: 0.5rem 0.75rem;
+}
+.u-sidebar-user {
+  padding: 0.5rem 0.625rem 0.75rem;
+  border-top: 1px solid var(--u-border);
+}
+.u-sidebar-user-button {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  border-radius: var(--u-radius);
+  text-align: start;
+  &:hover,
+  &[data-popup-open] {
+    background: var(--u-hover);
+  }
+  &:focus-visible {
+    @include focus-ring(-2px);
+  }
+}
+.u-sidebar-user-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+  span {
+    @include truncate;
+  }
+  span:first-child {
+    font-size: var(--u-text-sm);
+    font-weight: 600;
+  }
+  span:last-child:not(:first-child) {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+  }
+}
+
+// ================================================================ App shell
+.u-app-shell {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  min-height: 100dvh;
+  background: var(--u-background);
+}
+.u-app-shell-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+}
+.u-app-shell-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.u-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+  padding: 0.5rem 1.5rem;
+  border-bottom: 1px solid var(--u-border);
+  background: color-mix(in oklab, var(--u-background) 92%, transparent);
+  backdrop-filter: saturate(1.4) blur(8px);
+}
+.u-topbar-menu {
+  display: none !important;
+}
+.u-app-shell-content {
+  flex: 1;
+  min-width: 0;
+  padding: 1.5rem;
+}
+.u-app-shell-drawer {
+  --u-sheet-w: 17rem;
+  .u-dialog-header {
+    display: none;
+  }
+  .u-dialog-body {
+    padding: 0;
+  }
+  .u-sidebar {
+    width: 100%;
+    border: 0;
+  }
+}
+@media (max-width: 1023px) {
+  .u-app-shell {
+    grid-template-columns: 1fr;
+  }
+  .u-app-shell-sidebar {
+    display: none;
+  }
+  .u-topbar-menu {
+    display: inline-flex !important;
+  }
+  .u-topbar {
+    padding-inline: 1rem;
+  }
+  .u-app-shell-content {
+    padding: 1rem;
+  }
+}
+.u-search-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: min(100%, 22rem);
+  height: 2.25rem;
+  padding-inline: 0.75rem 0.375rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius);
+  background: var(--u-surface);
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  text-align: start;
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  span {
+    flex: 1;
+    @include truncate;
+  }
+  &:hover {
+    border-color: var(--u-border-strong);
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+
+// ================================================================ Sidebar dokumentasi
+.u-docs-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+.u-docs-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-inline-start: 1px solid var(--u-border);
+  }
+}
+.u-docs-section-title {
+  margin-bottom: 0.5rem;
+  color: var(--u-foreground);
+  font-size: var(--u-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.u-docs-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-inline-start: -1px;
+  padding: 0.3rem 0.75rem;
+  border-inline-start: 1px solid transparent;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  text-align: start;
+  text-decoration: none;
+  transition:
+    color var(--u-duration-fast),
+    border-color var(--u-duration-fast);
+  &:hover {
+    color: var(--u-foreground);
+    border-color: var(--u-border-strong);
+  }
+  &:focus-visible {
+    @include focus-ring(-2px);
+  }
+  &[data-active] {
+    color: var(--u-primary);
+    border-color: var(--u-primary);
+    font-weight: 600;
+  }
+}
+.u-docs-badge {
+  margin-inline-start: auto;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 4px;
+  background: var(--u-secondary-soft);
+  color: var(--u-secondary-soft-foreground);
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.u-toc {
+  font-size: var(--u-text-sm);
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  li[data-level='3'] a {
+    padding-inline-start: 1.5rem;
+  }
+  a {
+    display: block;
+    padding: 0.25rem 0 0.25rem 0.75rem;
+    border-inline-start: 2px solid var(--u-border);
+    color: var(--u-muted-foreground);
+    text-decoration: none;
+    &:hover {
+      color: var(--u-foreground);
+    }
+    &[data-active] {
+      border-color: var(--u-primary);
+      color: var(--u-foreground);
+      font-weight: 600;
+    }
+  }
+}
+
+// ================================================================ Sidebar portal / media
+.u-portal-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  min-width: 0;
+  &[data-sticky] {
+    position: sticky;
+    top: 5rem;
+  }
+}
+.u-side-widget {
+  min-width: 0;
+  &[data-variant='card'] {
+    padding: 1.125rem;
+    border: 1px solid var(--u-border);
+    border-radius: calc(var(--u-radius) + 4px);
+    background: var(--u-card);
+  }
+}
+.u-side-widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.875rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 2px solid var(--u-foreground);
+  h3 {
+    margin: 0;
+    font-family: var(--u-font-heading);
+    font-size: var(--u-text-sm);
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  a {
+    color: var(--u-primary);
+    font-size: var(--u-text-xs);
+    font-weight: 600;
+    text-decoration: none;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+  .u-side-widget[data-variant='card'] & {
+    border-bottom-width: 1px;
+    border-color: var(--u-border);
+  }
+}

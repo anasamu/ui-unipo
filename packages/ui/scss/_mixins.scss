@@ -1,0 +1,50 @@
+@mixin focus-ring($offset: 2px) {
+  outline: 2px solid var(--u-ring);
+  outline-offset: $offset;
+}
+@mixin control-surface {
+  background: var(--u-background);
+  border: 1px solid var(--u-input);
+  border-radius: var(--u-radius);
+  box-shadow: var(--u-shadow-xs);
+  transition:
+    border-color var(--u-duration-fast),
+    box-shadow var(--u-duration-fast),
+    background-color var(--u-duration-fast);
+}
+@mixin control-focus {
+  border-color: var(--u-primary);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--u-primary) 18%, transparent);
+  outline: none;
+}
+@mixin control-invalid {
+  border-color: var(--u-danger);
+  &:focus-visible,
+  &:focus-within {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--u-danger) 18%, transparent);
+  }
+}
+@mixin popup-surface {
+  background: var(--u-popover);
+  color: var(--u-foreground);
+  border: 1px solid var(--u-border);
+  border-radius: calc(var(--u-radius) + 2px);
+  box-shadow: var(--u-shadow-lg);
+}
+// Animasi masuk/keluar untuk popup Base UI (data-starting-style / data-ending-style).
+@mixin popup-motion($from: scale(0.97)) {
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity var(--u-duration-fast) var(--u-ease-out),
+    transform var(--u-duration-base) var(--u-ease-out);
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    transform: $from;
+  }
+}
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

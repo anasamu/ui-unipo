@@ -1,0 +1,3 @@
+// Konfigurasi tema. Semua variabel !default dari @unipo/tokens dapat ditimpa:
+//   @use '@unipo/ui/scss' with ($u-primary: #0f766e, $u-secondary: #f59e0b, $u-radius-base: 8);
+@forward 'tokens';
