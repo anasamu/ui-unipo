@@ -7,6 +7,7 @@ import { Badge, Button, Skeleton, type BadgeVariant } from '../components/action
 import { Empty, Progress, ProgressRing } from '../components/display';
 import { StatCard, StatGrid } from '../components/charts';
 import { pesanGalat, useSiakadQuery, type QueryState } from './provider';
+import { KodeLaporan } from '../components/galat';
 
 /*
  * Widget LMS (/v1/lms) untuk e-learning: ringkasan beranda, kartu kelas dengan sampul abstrak dan progres,
@@ -117,7 +118,7 @@ export function useKalenderLms(q: { dari?: string; sampai?: string; kelas_id?: n
 function Galat({ q }: { q: QueryState<unknown> }) {
   return (
     <div className="u-widget-error" role="alert">
-      <span>{pesanGalat(q.error)}</span>
+      <span>{pesanGalat(q.error, { kode: false })}<KodeLaporan error={q.error} /></span>
       <Button size="sm" variant="ghost" onClick={q.refetch}>
         <RefreshCw /> Muat ulang
       </Button>

@@ -8,6 +8,7 @@ import { Avatar, DescriptionList, Empty, Tabs } from '../components/display';
 import { LineChart, SegmentBar } from '../components/charts';
 import { Sheet } from '../components/overlays';
 import { pesanGalat, useSiakadQuery, type QueryState } from './provider';
+import { KodeLaporan } from '../components/galat';
 
 /*
  * Detail data akademik dari API SIAKAD: profil mahasiswa (biodata, riwayat studi, KRS, KHS, transkrip),
@@ -92,7 +93,7 @@ export function useKelasMataKuliah(kodeMk: string | undefined, q: { prodi?: stri
 function Galat({ q }: { q: QueryState<unknown> }) {
   return (
     <div className="u-widget-error" role="alert">
-      <span>{pesanGalat(q.error)}</span>
+      <span>{pesanGalat(q.error, { kode: false })}<KodeLaporan error={q.error} /></span>
       <Button size="sm" variant="ghost" onClick={q.refetch}>
         <RefreshCw /> Muat ulang
       </Button>

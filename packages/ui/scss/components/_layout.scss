@@ -23,9 +23,29 @@
     }
     .u-nav-item {
       justify-content: center;
+      gap: 0;
       padding: 0;
       width: 2.5rem;
       margin-inline: auto;
+    }
+    // Rail: hanya ikon. Label, chevron, dan sub-menu tidak ikut tampil (sub-menu dibuka sebagai menu melayang).
+    .u-nav-label,
+    .u-nav-chevron,
+    .u-nav-sub,
+    .u-sidebar-user-text {
+      display: none;
+    }
+    // Lencana jadi titik kecil di pojok ikon.
+    .u-nav-badge {
+      position: absolute;
+      top: 0.25rem;
+      right: 0.25rem;
+      min-width: 0;
+      width: 0.5rem;
+      height: 0.5rem;
+      padding: 0;
+      font-size: 0;
+      box-shadow: 0 0 0 2px var(--u-sidebar-bg);
     }
     .u-nav-group + .u-nav-group {
       margin-top: 0.5rem;

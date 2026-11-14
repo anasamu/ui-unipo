@@ -8,6 +8,7 @@ import { Field, Input, Textarea } from '../components/forms';
 import { Combobox, Select } from '../components/select';
 import { FormGrid, Wizard, WizardReview, type WizardStep } from '../components/wizard';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { KodeLaporan } from '../components/galat';
 
 // ================================================================ Tipe (GET /v1/kelengkapan/saya)
 export interface IsianKurang {
@@ -262,7 +263,8 @@ export function WizardKelengkapan({ pengguna, onSelesai, onLewati, kontakPetugas
   if (q.error)
     return (
       <Alert variant="danger" title="Kelengkapan data tidak bisa diperiksa">
-        {pesanGalat(q.error)}
+        {pesanGalat(q.error, { kode: false })}
+        <KodeLaporan error={q.error} />
       </Alert>
     );
   if (!q.data)

@@ -14,7 +14,8 @@ export const meta: DemoMeta = {
   props: [
     ['groups', 'Array<{ label?, items: NavItem[] }>', 'NavItem: key, label, icon, href/onClick, badge, children.'],
     ['activeKey', 'string', 'Kunci menu aktif; induk sub-menu terbuka otomatis.'],
-    ['collapsed / onCollapsedChange', 'boolean', 'Mode rail ikon saja dengan tooltip.'],
+    ['accordion', 'boolean', 'Bawaan true: membuka satu sub-menu menutup sub-menu lain. Isi false agar bisa terbuka bersamaan (mis. saat menu disaring).'],
+    ['collapsed / onCollapsedChange', 'boolean', 'Mode rail: hanya ikon (label disembunyikan, lencana jadi titik), nama menu di tooltip, sub-menu sebagai menu melayang.'],
     ['renderLink', '(item, props) => ReactElement', 'Pakai <Link> Next.js/React Router.'],
     ['user', '{ name, subtitle, avatar, menu }', 'Profil di kaki sidebar.'],
   ],
@@ -48,7 +49,15 @@ const GROUPS: NavGroup[] = [
   {
     label: 'Administrasi',
     items: [
-      { key: 'keuangan', label: 'Keuangan', icon: <Wallet />, href: '#' },
+      {
+        key: 'keuangan',
+        label: 'Keuangan',
+        icon: <Wallet />,
+        children: [
+          { key: 'tagihan', label: 'Tagihan UKT', href: '#' },
+          { key: 'pembayaran', label: 'Riwayat pembayaran', href: '#' },
+        ],
+      },
       { key: 'surat', label: 'Surat', icon: <Mail />, href: '#' },
       { key: 'laporan', label: 'Laporan', icon: <BarChart3 />, href: '#' },
     ],

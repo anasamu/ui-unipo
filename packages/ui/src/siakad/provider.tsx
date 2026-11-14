@@ -2,6 +2,7 @@
 import * as React from 'react';
 import type { ApiResult, Meta, Siakad } from 'unipo-siakad-sdk';
 import { Toaster, TooltipProvider } from '../components/overlays';
+import { requestIdDari } from '../components/galat';
 
 const SiakadContext = React.createContext<Siakad | null>(null);
 
@@ -145,14 +146,22 @@ export function useSiakadQuery<T>(key: ReadonlyArray<unknown>, fn: (siakad: Siak
   };
 }
 
-/** Pesan galat ramah dari galat SDK (SiakadError punya .status dan .message). */
-export function pesanGalat(e: unknown): string {
+/**
+ * Pesan galat ramah dari galat SDK (SiakadError punya .status dan .message). Untuk galat server (5xx) pesan
+ * menyertakan kode laporan (request_id); matikan dengan `{ kode: false }` bila kode ditampilkan terpisah
+ * dengan <KodeLaporan />.
+ */
+export function pesanGalat(e: unknown, opsi: { kode?: boolean } = {}): string {
   const err = e as { status?: number; message?: string } | null;
   if (!err) return 'Terjadi kesalahan.';
   if (err.status === 401) return 'Sesi Anda berakhir. Silakan masuk lagi.';
   if (err.status === 403) return 'Akun Anda belum punya izin untuk data ini.';
   if (err.status === 404) return 'Data tidak ditemukan.';
   if (err.status === 429) return 'Terlalu banyak permintaan. Coba lagi sebentar lagi.';
-  if (err.status && err.status >= 500) return 'Server SIAKAD sedang bermasalah. Coba lagi beberapa saat.';
+  if (err.status && err.status >= 500) {
+    // Sertakan kode laporan agar teks ini juga berguna di toast (tempat <KodeLaporan /> tidak bisa dipasang).
+    const id = opsi.kode === false ? null : requestIdDari(e);
+    return `Server SIAKAD sedang bermasalah. Coba lagi beberapa saat.${id ? ` Kode laporan: ${id}.` : ''}`;
+  }
   return err.message || 'Terjadi kesalahan.';
 }

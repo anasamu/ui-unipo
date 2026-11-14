@@ -9,6 +9,7 @@ export * from './components/overlays';
 export * from './components/display';
 export * from './components/calendar';
 export * from './components/code';
+export * from './components/galat';
 export * from './components/layout';
 export * from './components/navbar';
 export * from './components/faq';

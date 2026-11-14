@@ -12,6 +12,7 @@ import { SegmentedControl } from '../components/forms';
 import { ConfirmDialog, Sheet } from '../components/overlays';
 import { DataTable, type DataColumn } from '../components/data-table';
 import { pesanGalat, useSiakadQuery } from './provider';
+import { KodeLaporan } from '../components/galat';
 import { invalidateSso, useSsoAdmin, useSsoQuery } from './aplikasi';
 
 /*
@@ -268,7 +269,8 @@ export function RingkasanLogApi({ clientId, hari: awal = 7, ringkas, className }
   if (q.error && !d)
     return (
       <Alert variant="danger" title="Ringkasan log gagal dimuat">
-        {pesanGalat(q.error)}
+        {pesanGalat(q.error, { kode: false })}
+        <KodeLaporan error={q.error} />
       </Alert>
     );
   const label = (w: string) => (d?.per === 'jam' ? w.slice(11, 16) : new Date(`${w}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }));
@@ -501,7 +503,8 @@ export function LogAktivitas({ username, clientId, grup, perPage = 30, saringan 
             </Button>
           }
         >
-          {pesanGalat(q.error)}
+          {pesanGalat(q.error, { kode: false })}
+          <KodeLaporan error={q.error} />
         </Alert>
       ) : q.loading && !q.data ? (
         <div className="u-audit-list">
@@ -622,7 +625,8 @@ export function KeamananPengguna({ username, limit = 30, className }: { username
   if (q.error && !d)
     return (
       <Alert variant="danger" title="Data keamanan akun gagal dimuat">
-        {pesanGalat(q.error)}
+        {pesanGalat(q.error, { kode: false })}
+        <KodeLaporan error={q.error} />
       </Alert>
     );
   return (

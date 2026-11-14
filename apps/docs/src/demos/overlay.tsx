@@ -8,6 +8,11 @@ export const meta: DemoMeta = {
   description: 'Lapisan di atas halaman. Dialog untuk tugas singkat, Sheet (panel samping) untuk saringan dan detail, ConfirmDialog untuk tindakan yang tidak bisa dibatalkan, Menu untuk aksi baris.',
   importLine: "import { Dialog, Sheet, ConfirmDialog, Popover, Tooltip, Menu, useToast } from 'unipo-ui';",
   demos: { DialogForm: 'Dialog berisi formulir', Konfirmasi: 'Konfirmasi hapus', Panel: 'Sheet saringan', MenuAksi: 'Menu aksi', Melayang: 'Popover & Tooltip', Notifikasi: 'Toast' },
+  props: [
+    ['side', "'right' | 'left' | 'bottom'", 'Dengan side, Dialog menjadi Sheet. Sheet bawaan dari kanan.'],
+    ['size', "'sm' | 'md' | 'lg' | 'xl' | 'full'", 'Dialog: 24/32/40/48 rem. Sheet kanan: 24, 36 (bawaan, cukup untuk formulir dua kolom), 44, 56 rem, atau selebar layar. Lebar bebas lewat CSS --u-sheet-w.'],
+    ['title / description / footer', 'ReactNode', 'Kepala dan kaki panel; footer tetap di bawah saat isi digulir.'],
+  ],
 };
 
 export function DialogForm() {
@@ -52,6 +57,7 @@ export function Konfirmasi() {
 export function Panel() {
   return (
     <Sheet
+      size="sm"
       trigger={<Button variant="outline">Saring data</Button>}
       title="Saring mahasiswa"
       description="Hasil diperbarui setelah Anda menekan Terapkan."
