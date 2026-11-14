@@ -25,6 +25,16 @@ body {
   text-decoration: none;
   color: inherit;
 }
+.docs-brand {
+  min-width: 0;
+  overflow: hidden;
+}
+@media (max-width: 520px) {
+  .docs-topbar > .u-badge,
+  .docs-brand .u-app-logo-tagline {
+    display: none;
+  }
+}
 .docs-topbar-actions {
   display: flex;
   gap: 0.25rem;
@@ -53,9 +63,15 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 13rem;
   gap: 3rem;
-  &:has(> .docs-article[data-layout='wide']),
-  &:has(> .docs-article[data-layout='full']) {
+  &:has(> .docs-article[data-layout='wide']) {
     grid-template-columns: minmax(0, 1fr) 11rem;
+  }
+  // Halaman fitur penuh: tanpa daftar isi agar modul (navigasi + tabel) punya ruang.
+  &:has(> .docs-article[data-layout='full']) {
+    grid-template-columns: minmax(0, 1fr);
+    > .docs-toc {
+      display: none;
+    }
   }
 }
 .docs-toc {

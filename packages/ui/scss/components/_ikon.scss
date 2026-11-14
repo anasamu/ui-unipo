@@ -1,0 +1,249 @@
+// ================================================================ Warna fitur (ikon, ilustrasi)
+// Nada tema mengikuti token; nada fitur tetap agar tiap grup modul punya warna sendiri.
+[data-nada] {
+  --u-nada: var(--u-primary);
+}
+[data-nada='secondary'] {
+  --u-nada: var(--u-secondary);
+}
+[data-nada='success'] {
+  --u-nada: var(--u-success);
+}
+[data-nada='warning'] {
+  --u-nada: var(--u-warning);
+}
+[data-nada='danger'] {
+  --u-nada: var(--u-danger);
+}
+[data-nada='info'] {
+  --u-nada: var(--u-info);
+}
+[data-nada='neutral'],
+[data-nada='abu'] {
+  --u-nada: #64748b;
+}
+[data-nada='biru'] {
+  --u-nada: #2f7fe0;
+}
+[data-nada='indigo'] {
+  --u-nada: #5b5bd6;
+}
+[data-nada='ungu'] {
+  --u-nada: #8b5cf6;
+}
+[data-nada='merah-muda'] {
+  --u-nada: #e0569b;
+}
+[data-nada='mawar'] {
+  --u-nada: #e5484d;
+}
+[data-nada='oranye'] {
+  --u-nada: #f2780c;
+}
+[data-nada='kuning'] {
+  --u-nada: #e3a008;
+}
+[data-nada='hijau'] {
+  --u-nada: #16a36a;
+}
+[data-nada='toska'] {
+  --u-nada: #0ea5a0;
+}
+[data-nada='langit'] {
+  --u-nada: #0ea5e9;
+}
+
+// ================================================================ Ikon
+.u-ikon {
+  flex: none;
+}
+
+// ================================================================ IkonKotak
+.u-ikon-kotak {
+  --s: 2.5rem;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--s);
+  height: var(--s);
+  border-radius: calc(var(--s) * 0.3);
+  color: #fff;
+  transition: transform 220ms var(--u-anim-pegas, ease-out);
+  svg {
+    width: 52%;
+    height: 52%;
+  }
+  &[data-ukuran='sm'] {
+    --s: 2rem;
+  }
+  &[data-ukuran='lg'] {
+    --s: 3rem;
+  }
+  &[data-ukuran='xl'] {
+    --s: 4rem;
+  }
+  &[data-bentuk='bulat'] {
+    border-radius: 999px;
+  }
+  &[data-gaya='clay'] {
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.35), transparent 55%),
+      linear-gradient(145deg, color-mix(in oklab, var(--u-nada) 70%, white), color-mix(in oklab, var(--u-nada) 92%, black));
+    box-shadow:
+      inset 0 -3px 5px color-mix(in oklab, var(--u-nada) 60%, black),
+      inset 0 2px 3px rgb(255 255 255 / 0.45),
+      0 8px 18px -8px color-mix(in oklab, var(--u-nada) 75%, transparent);
+  }
+  &[data-gaya='lembut'] {
+    color: color-mix(in oklab, var(--u-nada) 80%, var(--u-foreground));
+    background: color-mix(in oklab, var(--u-nada) 13%, var(--u-background));
+  }
+  &[data-gaya='padat'] {
+    background: var(--u-nada);
+  }
+  &[data-gaya='garis'] {
+    color: color-mix(in oklab, var(--u-nada) 85%, var(--u-foreground));
+    border: 1.5px solid color-mix(in oklab, var(--u-nada) 40%, transparent);
+  }
+  @media (hover: hover) {
+    :hover > &[data-gerak='angkat'],
+    &[data-gerak='angkat']:hover {
+      transform: translateY(-2px) rotate(-5deg);
+    }
+    :hover > &[data-gerak='ayun'] svg,
+    &[data-gerak='ayun']:hover svg {
+      animation: u-anim-lonceng 900ms ease-in-out;
+      transform-origin: 50% 10%;
+    }
+    :hover > &[data-gerak='putar'] svg,
+    &[data-gerak='putar']:hover svg {
+      transition: transform 600ms var(--u-anim-pegas, ease-out);
+      transform: rotate(180deg);
+    }
+  }
+}
+
+// ================================================================ Ilustrasi
+.u-ilustrasi {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  overflow: visible;
+  .u-ilus-latar-1 {
+    stop-color: color-mix(in oklab, var(--u-nada) 16%, var(--u-background));
+  }
+  .u-ilus-latar-2 {
+    stop-color: color-mix(in oklab, var(--u-nada) 3%, var(--u-background));
+    stop-opacity: 0;
+  }
+  .u-ilus-terang {
+    stop-color: color-mix(in oklab, var(--u-nada) 62%, white);
+  }
+  .u-ilus-gelap {
+    stop-color: color-mix(in oklab, var(--u-nada) 95%, black);
+  }
+  .u-ilus-sisi {
+    fill: color-mix(in oklab, var(--u-nada) 70%, black);
+  }
+  .u-ilus-lantai {
+    fill: var(--u-foreground);
+    opacity: 0.08;
+  }
+}
+.u-ilustrasi[data-bergerak] {
+  .u-ilus-bentuk > * {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: u-ilus-apung 5s ease-in-out infinite;
+  }
+  .u-ilus-b2 {
+    animation-delay: -1.2s !important;
+    animation-duration: 6s !important;
+  }
+  .u-ilus-b3 {
+    animation-delay: -2.4s !important;
+  }
+  .u-ilus-b4 {
+    animation-delay: -0.6s !important;
+    animation-duration: 5.6s !important;
+  }
+  .u-ilus-b5 {
+    animation-delay: -3s !important;
+  }
+  .u-ilus-b6 {
+    animation-delay: -1.8s !important;
+    animation-duration: 6.4s !important;
+  }
+  .u-ilus-kotak {
+    animation: u-ilus-kotak 4.6s ease-in-out infinite;
+  }
+  .u-ilus-kotak2 {
+    animation: u-ilus-kotak 5.4s -1.5s ease-in-out infinite;
+  }
+  .u-ilus-tokoh[data-pose='jalan'] {
+    animation: u-ilus-langkah 1.4s ease-in-out infinite;
+  }
+  .u-ilus-tokoh[data-pose='tunjuk'] .u-ilus-lengan {
+    transform-box: fill-box;
+    transform-origin: 0 50%;
+    animation: u-ilus-tunjuk 2.6s ease-in-out infinite;
+  }
+  .u-ilus-kepala {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: u-ilus-angguk 3.2s ease-in-out infinite;
+  }
+}
+@keyframes u-ilus-apung {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-6px) rotate(14deg);
+  }
+}
+@keyframes u-ilus-kotak {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -5px;
+  }
+}
+@keyframes u-ilus-langkah {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -3px;
+  }
+}
+@keyframes u-ilus-tunjuk {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  50% {
+    rotate: -6deg;
+  }
+}
+@keyframes u-ilus-angguk {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  50% {
+    rotate: 4deg;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .u-ilustrasi *,
+  .u-ikon-kotak,
+  .u-ikon-kotak svg {
+    animation: none !important;
+    transition: none !important;
+  }
+}

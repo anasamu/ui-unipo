@@ -132,6 +132,49 @@ function entryFile() {
   return cands.find((f) => existsSync(join(cwd, f)));
 }
 
+// ---------------------------------------------------------------- platform
+const PLATFORM = ['web', 'desktop', 'mobile'];
+const OS = ['ios', 'android', 'auto'];
+/** Target platform: web (peramban), desktop (Electron/Tauri), mobile (Capacitor/WebView) dengan pilihan iOS/Android. */
+async function tanyaPlatform(cfg) {
+  const platform = String(flags.platform ?? (await ask('Target platform: web / desktop / mobile', cfg.platform ?? 'web'))).toLowerCase();
+  if (!PLATFORM.includes(platform)) fail('Platform harus web, desktop, atau mobile.');
+  let os = null;
+  if (platform === 'mobile') {
+    os = String(flags.os ?? (await ask('Sistem operasi mobile: ios / android / auto (deteksi saat berjalan)', cfg.os ?? 'auto'))).toLowerCase();
+    if (!OS.includes(os)) fail('OS mobile harus ios, android, atau auto.');
+  }
+  return { platform, os };
+}
+function barisPlatform(platform, os) {
+  if (!platform || platform === 'web') return '';
+  return `import { setelPlatform } from 'unipo-ui';\nsetelPlatform({ platform: '${platform}'${os ? `, os: '${os}'` : ''} });\n`;
+}
+const PLATFORM_LABEL = { web: 'Web', desktop: 'Desktop (Electron/Tauri)', mobile: 'Mobile' };
+
+// ---------------------------------------------------------------- perintah: platform
+async function platformCmd() {
+  const cfg = config();
+  if (rest[0]) flags.platform = rest[0];
+  const { platform, os } = await tanyaPlatform(cfg);
+  const entry = entryFile();
+  if (entry && !entry.endsWith('.vue') && !flags['no-edit']) {
+    const p = join(cwd, entry);
+    let src = readFileSync(p, 'utf8');
+    src = src.replace(/import \{ setelPlatform \} from 'unipo-ui';\nsetelPlatform\([^)]*\);\n/, '');
+    const baris = barisPlatform(platform, os);
+    if (baris) {
+      const i = src.indexOf("import 'unipo-ui/css';\n");
+      src = i >= 0 ? src.slice(0, i) + "import 'unipo-ui/css';\n" + baris + src.slice(i + "import 'unipo-ui/css';\n".length) : baris + src;
+    }
+    writeFileSync(p, src);
+    ok(`Platform di ${c.b(entry)} diatur ke ${PLATFORM_LABEL[platform]}${os ? ` (${os})` : ''}`);
+  } else if (platform !== 'web') {
+    warn(`Panggil sekali di awal aplikasi: ${c.c(barisPlatform(platform, os).split('\n')[1])}  atau tandai <html data-u-platform="${platform}"${os ? ` data-u-os="${os}"` : ''}>`);
+  }
+  if (existsSync(CONFIG)) writeFileSync(CONFIG, JSON.stringify({ ...cfg, platform, os }, null, 2) + '\n');
+}
+
 // ---------------------------------------------------------------- perintah: init
 async function init() {
   if (!project) fail('package.json tidak ditemukan. Jalankan di folder akar proyek (atau `npm init -y` dulu).');
@@ -144,11 +187,12 @@ async function init() {
   const radius = Number(flags.radius ?? (await ask('Radius sudut (px)', String(cfg.radius ?? 10))));
   if (!HEX.test(primary) || !HEX.test(secondary)) fail('Warna harus berformat hex, mis. #244ce6.');
   const sdk = flags.sdk ?? (fw === 'react' || fw === 'next' ? (await ask('Pasang juga SDK SIAKAD (unipo-siakad-sdk)? y/n', 'y')).toLowerCase().startsWith('y') : false);
+  const { platform, os } = await tanyaPlatform(cfg);
 
   if (fw === 'react-native') {
     install(['unipo-ui-tokens']);
     ok('Terpasang unipo-ui-tokens. Di React Native pakai token: import { colors } from "unipo-ui-tokens"; colors("light").primary');
-    writeFileSync(CONFIG, JSON.stringify({ framework: fw, primary, secondary, radius }, null, 2) + '\n');
+    writeFileSync(CONFIG, JSON.stringify({ framework: fw, primary, secondary, radius, platform, os }, null, 2) + '\n');
     return;
   }
 
@@ -168,7 +212,7 @@ async function init() {
     let src = readFileSync(p, 'utf8');
     if (!src.includes('unipo-ui/css')) {
       const relTheme = './' + relative(dirname(p), join(cwd, themePath)).split('\\').join('/');
-      const lines = entry.endsWith('.vue') ? null : `${font ? "import '@fontsource-variable/plus-jakarta-sans';\n" : ''}import 'unipo-ui/css';\nimport '${relTheme.startsWith('./..') ? relTheme.slice(2) : relTheme}';\n`;
+      const lines = entry.endsWith('.vue') ? null : `${font ? "import '@fontsource-variable/plus-jakarta-sans';\n" : ''}import 'unipo-ui/css';\nimport '${relTheme.startsWith('./..') ? relTheme.slice(2) : relTheme}';\n${barisPlatform(platform, os)}`;
       if (lines) {
         const m = src.match(/^(['"]use client['"];?\s*\n)/);
         src = m ? m[1] + lines + src.slice(m[1].length) : lines + src;
@@ -178,6 +222,7 @@ async function init() {
     }
   } else if (fw === 'laravel' || fw === 'html') {
     warn('Salin CSS jadi: node_modules/unipo-ui/dist/ui-unipo.min.css ke folder publik, lalu muat setelahnya unipo-tema.css.');
+    if (platform !== 'web') warn(`Tandai platform di tag <html>: <html data-u-platform="${platform}"${os ? ` data-u-os="${os}"` : ''}>`);
   } else {
     warn(`Impor sekali di berkas awal aplikasi: import 'unipo-ui/css'; import './${themePath}';`);
   }
@@ -208,7 +253,7 @@ export function Providers({ children, accessToken }: { children: React.ReactNode
     }
   }
 
-  writeFileSync(CONFIG, JSON.stringify({ $schema: 'https://api.unipo.ac.id/docs/panduan/ui', framework: fw, dir: cfg.dir ?? defaultDir(fw), theme: themePath, primary, secondary, radius, sdk }, null, 2) + '\n');
+  writeFileSync(CONFIG, JSON.stringify({ $schema: 'https://api.unipo.ac.id/docs/panduan/ui', framework: fw, dir: cfg.dir ?? defaultDir(fw), theme: themePath, primary, secondary, radius, sdk, platform, os }, null, 2) + '\n');
   ok(`Konfigurasi disimpan di ${c.b('unipo.json')}`);
   console.log(`\nSelesai. Contoh pakai:\n  ${c.c("import { Button, FilterBar } from 'unipo-ui';")}${sdk ? `\n  ${c.c("import { CariMahasiswa } from 'unipo-ui/siakad';")}` : ''}\nDaftar komponen: ${c.c('npx unipo-ui list')}  ·  Salin sumber untuk diubah: ${c.c('npx unipo-ui add <Komponen>')}\n`);
 }
@@ -329,6 +374,8 @@ ${c.b('unipo-ui')} ${c.d('v' + pkg.version)}  Komponen UI UNIPO
 ${c.b('Perintah')}
   init                 Pasang unipo-ui (+ SDK), buat berkas tema, impor CSS otomatis
                        --primary "#244ce6" --secondary "#f2b42a" --radius 10 --sdk -y
+                       --platform web|desktop|mobile --os ios|android|auto
+  platform [target]    Ganti target platform: web, desktop, mobile (--os ios|android|auto)
   add <Komponen...>    Salin sumber komponen dan dependensinya ke proyek (bisa diubah bebas)
                        --dir src/components/unipo --overwrite
   list [kata]          Daftar komponen per kelompok
@@ -340,6 +387,8 @@ ${c.b('Opsi umum')}
 
 ${c.b('Contoh')}
   npx unipo-ui init -y --primary "#0f766e"
+  npx unipo-ui init -y --platform mobile --os ios
+  npx unipo-ui platform desktop
   npx unipo-ui add FilterBar CariMahasiswa
   npx unipo-ui list cari
 
@@ -347,6 +396,6 @@ Panduan: https://api.unipo.ac.id/docs/panduan/ui
 `);
 }
 
-const run = { init, add, list, tema, theme: tema, help, '--help': help, '-h': help, '--version': () => console.log(pkg.version), '-v': () => console.log(pkg.version) }[cmd];
+const run = { init, platform: platformCmd, add, list, tema, theme: tema, help, '--help': help, '-h': help, '--version': () => console.log(pkg.version), '-v': () => console.log(pkg.version) }[cmd];
 if (!run) fail(`Perintah "${cmd}" tidak dikenal. Lihat \`npx unipo-ui help\`.`);
 await run();

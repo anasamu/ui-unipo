@@ -1,14 +1,15 @@
 {
   "name": "unipo-ui",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "sideEffects": [
     "*.css",
     "*.scss"
   ],
   "scripts": {
-    "build": "node build-css.mjs && tsup && node add-use-client.mjs && node gen-registry.mjs",
+    "build": "node build-css.mjs && tsup && node add-use-client.mjs && node scripts/katalog/rapikan-dist.mjs && node gen-registry.mjs",
     "build:css": "node build-css.mjs",
+    "katalog": "node scripts/katalog/buat.mjs",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
@@ -25,7 +26,7 @@
     "@base-ui/react": "1.9.0",
     "lucide-react": "1.73.0",
     "country-flag-icons": "1.6.20",
-    "unipo-ui-tokens": "1.1.0"
+    "unipo-ui-tokens": "1.2.0"
   },
   "devDependencies": {
     "sass": "1.108.2",
@@ -66,6 +67,26 @@
         "default": "./dist/siakad.cjs"
       }
     },
+    "./katalog": {
+      "import": {
+        "types": "./dist/katalog.d.ts",
+        "default": "./dist/katalog.js"
+      },
+      "require": {
+        "types": "./dist/katalog.d.cts",
+        "default": "./dist/katalog.cjs"
+      }
+    },
+    "./ikon": {
+      "import": {
+        "types": "./dist/ikon.d.ts",
+        "default": "./dist/ikon.js"
+      },
+      "require": {
+        "types": "./dist/ikon.d.cts",
+        "default": "./dist/ikon.cjs"
+      }
+    },
     "./tema": {
       "import": {
         "types": "./dist/tema.d.ts",
@@ -91,6 +112,7 @@
   "files": [
     "dist",
     "src",
+    "!src/katalog/data/modul",
     "cli",
     "README.md"
   ],

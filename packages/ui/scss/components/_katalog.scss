@@ -1,0 +1,662 @@
+@use '../mixins' as *;
+
+// ================================================================ Formulir skema
+.u-formulir-skema {
+  display: grid;
+  gap: 1rem 1.25rem;
+  grid-template-columns: minmax(0, 1fr);
+  container-type: inline-size;
+}
+@container (min-width: 520px) {
+  .u-formulir-skema[data-columns='2'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .u-formulir-skema[data-columns='2'] > .u-formulir-lebar {
+    grid-column: 1 / -1;
+  }
+}
+@supports not (container-type: inline-size) {
+  @media (min-width: 720px) {
+    .u-formulir-skema[data-columns='2'] {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .u-formulir-skema[data-columns='2'] > .u-formulir-lebar {
+      grid-column: 1 / -1;
+    }
+  }
+}
+.u-isian-saklar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 2.25rem;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+}
+.u-isian-berkas {
+  @include control-surface;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  border-style: dashed;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  cursor: pointer;
+  svg {
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+  }
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  &:hover {
+    border-color: var(--u-primary);
+    background: var(--u-primary-soft);
+  }
+  &:focus-within {
+    @include control-focus;
+  }
+  &.is-disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}
+.u-isian-daftar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  > .u-input {
+    flex: 1 1 8rem;
+    min-width: 8rem;
+  }
+}
+
+// ================================================================ Nilai sel
+.u-nilai-kosong {
+  color: var(--u-muted-foreground);
+}
+.u-nilai-angka {
+  font-variant-numeric: tabular-nums;
+}
+.u-nilai-tanggal {
+  white-space: nowrap;
+}
+.u-nilai-daftar {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+  small {
+    color: var(--u-muted-foreground);
+  }
+}
+.u-nilai-panjang {
+  white-space: pre-wrap;
+}
+.u-nilai-json {
+  margin: 0;
+  max-height: 16rem;
+  overflow: auto;
+  padding: 0.75rem;
+  border-radius: var(--u-radius);
+  background: var(--u-muted);
+  font-family: var(--u-font-mono);
+  font-size: var(--u-text-xs);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+// ================================================================ Alur status
+.u-alur-status {
+  display: grid;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--u-border);
+  border-radius: calc(var(--u-radius) + 2px);
+  background: linear-gradient(180deg, var(--u-card), color-mix(in oklab, var(--u-muted) 50%, var(--u-card)));
+  ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: var(--u-text-sm);
+    color: var(--u-muted-foreground);
+    &:not(:last-child)::after {
+      content: '';
+      width: 1.5rem;
+      height: 2px;
+      margin-inline: 0.4rem;
+      border-radius: 2px;
+      background: var(--u-border-strong);
+    }
+    &[data-state='lewat'] {
+      color: var(--u-foreground);
+      &::after {
+        background: var(--u-primary);
+      }
+    }
+    &[data-state='sekarang'] {
+      color: var(--u-foreground);
+      font-weight: 600;
+    }
+  }
+}
+.u-alur-titik {
+  display: inline-grid;
+  place-items: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 999px;
+  border: 2px solid var(--u-border-strong);
+  background: var(--u-card);
+  svg {
+    width: 0.7rem;
+    height: 0.7rem;
+  }
+  [data-state='lewat'] > & {
+    border-color: var(--u-primary);
+    background: var(--u-primary);
+    color: var(--u-primary-foreground);
+  }
+  [data-state='sekarang'] > & {
+    border-color: var(--u-primary);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--u-primary) 18%, transparent);
+    animation: u-alur-denyut 2.4s var(--u-ease-out, ease-out) infinite;
+  }
+}
+@keyframes u-alur-denyut {
+  50% {
+    box-shadow: 0 0 0 7px color-mix(in oklab, var(--u-primary) 6%, transparent);
+  }
+}
+.u-alur-lanjut {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  svg {
+    width: 0.8rem;
+    height: 0.8rem;
+  }
+}
+
+// ================================================================ Kelola sumber
+.u-kelola-sumber {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  animation: u-fade-up var(--u-duration-slow, 240ms) var(--u-ease-out, ease-out) both;
+}
+.u-kelola-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  h2 {
+    margin: 0;
+    font-size: var(--u-text-lg);
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+  p {
+    margin: 0.2rem 0 0;
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
+  }
+}
+.u-kelola-head-aksi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.u-detail-sumber-wrap,
+.u-detail-sumber {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.u-aksi-sumber {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.u-lampiran {
+  display: grid;
+  gap: 0.75rem;
+}
+.u-lampiran-daftar {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius);
+    > svg {
+      width: 1rem;
+      height: 1rem;
+      color: var(--u-muted-foreground);
+      flex: none;
+    }
+    > span {
+      display: grid;
+      flex: 1;
+      min-width: 0;
+      b {
+        font-weight: 550;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      small {
+        color: var(--u-muted-foreground);
+      }
+    }
+  }
+}
+
+// ================================================================ Modul
+.u-daftar-modul {
+  display: grid;
+  gap: 2rem;
+  section {
+    display: grid;
+    gap: 0.75rem;
+  }
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: var(--u-text-sm);
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--u-muted-foreground);
+    svg {
+      width: 1rem;
+      height: 1rem;
+    }
+  }
+}
+.u-daftar-modul-kisi {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+}
+.u-kartu-modul {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 1rem;
+  text-align: start;
+  color: inherit;
+  text-decoration: none;
+  font: inherit;
+  width: 100%;
+  height: 100%;
+  &:hover .u-kartu-modul-ikon {
+    transform: translateY(-2px) rotate(-4deg);
+  }
+  &:hover .u-kartu-modul-panah {
+    transform: translateX(2px);
+    color: var(--u-primary);
+  }
+}
+.u-kartu-modul-ikon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.875rem;
+  color: var(--u-primary-soft-foreground);
+  background: radial-gradient(120% 120% at 25% 15%, color-mix(in oklab, var(--u-primary) 22%, white), var(--u-primary-soft) 70%);
+  box-shadow:
+    inset 0 -3px 6px color-mix(in oklab, var(--u-primary) 18%, transparent),
+    inset 0 2px 3px rgb(255 255 255 / 0.6),
+    0 6px 14px -6px color-mix(in oklab, var(--u-primary) 45%, transparent);
+  transition: transform var(--u-duration-base, 180ms) var(--u-ease-out, ease-out);
+  svg {
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+}
+.u-kartu-modul-teks {
+  display: grid;
+  gap: 0.2rem;
+  flex: 1;
+  min-width: 0;
+  b {
+    font-weight: 650;
+  }
+  small {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+.u-kartu-modul-meta {
+  margin-top: 0.25rem;
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
+}
+.u-kartu-modul-panah {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.25rem;
+  color: var(--u-muted-foreground);
+  transition: transform var(--u-duration-base, 180ms);
+}
+
+.u-halaman-modul {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+}
+.u-halaman-modul-head {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  h1 {
+    margin: 0;
+    font-size: var(--u-text-xl);
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+  p {
+    margin: 0.15rem 0 0;
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
+  }
+}
+.u-halaman-modul-judul {
+  flex: 1;
+  min-width: 0;
+}
+.u-halaman-modul-ilus {
+  flex: none;
+  margin-block: -1rem;
+}
+@media (max-width: 640px) {
+  .u-halaman-modul-head .u-halaman-modul-ilus {
+    display: none;
+  }
+}
+.u-daftar-modul-kisi > .u-anim {
+  display: flex;
+}
+.u-halaman-modul-isi {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(0, 1fr);
+  container-type: inline-size;
+}
+@media (min-width: 900px) {
+  .u-halaman-modul-judul {
+  flex: 1;
+  min-width: 0;
+}
+.u-halaman-modul-ilus {
+  flex: none;
+  margin-block: -1rem;
+}
+@media (max-width: 640px) {
+  .u-halaman-modul-head .u-halaman-modul-ilus {
+    display: none;
+  }
+}
+.u-daftar-modul-kisi > .u-anim {
+  display: flex;
+}
+.u-halaman-modul-isi {
+    grid-template-columns: 15rem minmax(0, 1fr);
+  }
+  .u-halaman-modul-nav {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
+  }
+}
+.u-halaman-modul-nav {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  // Layar sempit: daftar sumber dibatasi tingginya agar tabel tetap terlihat.
+  @media (max-width: 899px) {
+    max-height: 13rem;
+    overflow: auto;
+    padding: 0.5rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-lg);
+    overscroll-behavior: contain;
+  }
+  h4 {
+    margin: 0 0 0.25rem;
+    padding-inline: 0.625rem;
+    font-size: var(--u-text-xs);
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--u-muted-foreground);
+  }
+  ul {
+    display: grid;
+    gap: 1px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.4rem 0.625rem;
+    border: 0;
+    border-radius: var(--u-radius);
+    background: none;
+    color: var(--u-foreground);
+    font: inherit;
+    font-size: var(--u-text-sm);
+    text-align: start;
+    cursor: pointer;
+    svg {
+      width: 0.9rem;
+      height: 0.9rem;
+      color: var(--u-muted-foreground);
+    }
+    &:hover {
+      background: var(--u-hover);
+    }
+    &[aria-current='page'] {
+      background: var(--u-primary-soft);
+      color: var(--u-primary-soft-foreground);
+      font-weight: 600;
+    }
+    &:focus-visible {
+      @include focus-ring(0);
+    }
+  }
+}
+.u-halaman-modul-konten {
+  min-width: 0;
+}
+.u-form-operasi {
+  display: grid;
+  gap: 1rem;
+}
+.u-form-operasi-ds {
+  max-width: 70ch;
+}
+.u-form-operasi-aksi {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  small {
+    color: var(--u-danger-text);
+  }
+}
+.u-butir-fitur {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+  > svg {
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+    color: var(--u-primary);
+  }
+  span {
+    display: grid;
+    min-width: 0;
+  }
+  small {
+    color: var(--u-muted-foreground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+// ================================================================ Pemeliharaan
+.u-pemeliharaan {
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+  &[data-variant='page'] {
+    min-height: 100dvh;
+    background:
+      radial-gradient(60% 50% at 20% 10%, color-mix(in oklab, var(--u-primary) 10%, transparent), transparent),
+      radial-gradient(50% 40% at 85% 90%, color-mix(in oklab, var(--u-secondary) 12%, transparent), transparent),
+      var(--u-background);
+  }
+}
+.u-pemeliharaan-kartu {
+  display: grid;
+  justify-items: center;
+  gap: 0.875rem;
+  max-width: 30rem;
+  text-align: center;
+  animation: u-fade-up 360ms var(--u-ease-out, ease-out) both;
+  h1 {
+    margin: 0;
+    font-size: var(--u-text-2xl);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  > p {
+    margin: 0;
+    color: var(--u-muted-foreground);
+    line-height: 1.6;
+  }
+}
+.u-pemeliharaan-ikon {
+  display: inline-grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1.25rem;
+  color: var(--u-warning-text);
+  background: radial-gradient(120% 120% at 25% 15%, color-mix(in oklab, var(--u-warning) 30%, white), var(--u-warning-soft) 70%);
+  box-shadow:
+    inset 0 -4px 8px color-mix(in oklab, var(--u-warning) 25%, transparent),
+    inset 0 2px 4px rgb(255 255 255 / 0.6),
+    0 10px 24px -10px color-mix(in oklab, var(--u-warning) 60%, transparent);
+  svg {
+    width: 1.75rem;
+    height: 1.75rem;
+    animation: u-kunci-putar 3.2s var(--u-ease-in-out, ease-in-out) infinite;
+    transform-origin: 70% 30%;
+  }
+}
+@keyframes u-kunci-putar {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0);
+  }
+  70% {
+    transform: rotate(-18deg);
+  }
+  85% {
+    transform: rotate(10deg);
+  }
+}
+.u-pemeliharaan-waktu {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 999px;
+  background: var(--u-muted);
+  color: var(--u-foreground) !important;
+  font-size: var(--u-text-sm);
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+.u-pemeliharaan-kaki {
+  margin-top: 0.5rem;
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+}
+.u-banner-pemeliharaan {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem 0.5rem 1rem;
+  background: var(--u-warning-soft);
+  color: var(--u-warning-text);
+  border-bottom: 1px solid color-mix(in oklab, var(--u-warning) 30%, transparent);
+  font-size: var(--u-text-sm);
+  animation: u-fade-up 240ms var(--u-ease-out, ease-out) both;
+  > svg {
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+  }
+  p {
+    flex: 1;
+    margin: 0;
+  }
+  &[data-berjalan] {
+    background: color-mix(in oklab, var(--u-warning) 22%, var(--u-background));
+  }
+}
+.u-dialog-wizard .u-dialog-body {
+  padding-top: 0.5rem;
+}

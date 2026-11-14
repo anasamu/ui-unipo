@@ -1,0 +1,280 @@
+// ================================================================ Animasi UNIPO
+// Semua animasi memakai transform/opacity. Global reduced-motion di _base.scss mematikannya untuk kelas u-*.
+:root {
+  --u-anim-durasi: 420ms;
+  --u-anim-pegas: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --u-anim-halus: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.u-anim {
+  --u-anim-tunda: 0ms;
+  animation-duration: var(--u-anim-durasi);
+  animation-delay: var(--u-anim-tunda);
+  animation-timing-function: var(--u-anim-halus);
+  animation-fill-mode: both;
+}
+.u-anim[data-pemicu='terlihat']:not([data-siap]) {
+  opacity: 0;
+  animation: none;
+}
+.u-anim[data-pemicu='hover'] {
+  animation: none;
+}
+span.u-anim {
+  display: inline-block;
+}
+
+@mixin anim($jenis, $kf, $ulang: false, $fungsi: null) {
+  .u-anim[data-anim='#{$jenis}']:not([data-pemicu='hover']),
+  .u-anim[data-anim='#{$jenis}'][data-pemicu='hover']:hover,
+  [data-u-anim-hover]:hover > .u-anim[data-anim='#{$jenis}'][data-pemicu='hover'] {
+    animation-name: $kf;
+    @if $ulang {
+      animation-iteration-count: infinite;
+    }
+    @if $fungsi {
+      animation-timing-function: $fungsi;
+    }
+  }
+}
+
+@include anim('masuk', u-anim-masuk);
+@include anim('muncul', u-anim-muncul, false, var(--u-anim-pegas));
+@include anim('geser', u-anim-geser);
+@include anim('pantul', u-anim-pantul, false, var(--u-anim-pegas));
+@include anim('sukses', u-anim-sukses, false, var(--u-anim-pegas));
+@include anim('goyang', u-anim-goyang, false, ease-in-out);
+@include anim('denyut', u-anim-denyut, true, ease-out);
+@include anim('mengambang', u-anim-mengambang, true, ease-in-out);
+@include anim('lonceng', u-anim-lonceng, false, ease-in-out);
+@include anim('naik', u-anim-naik, false, var(--u-anim-pegas));
+@include anim('balik', u-anim-balik);
+@include anim('putar', u-anim-putar, true, linear);
+@include anim('kedip', u-anim-kedip, false, ease-in-out);
+@include anim('ketik', u-anim-ketik);
+
+.u-anim[data-anim='denyut'] {
+  --u-anim-durasi: 2000ms;
+  border-radius: 999px;
+}
+.u-anim[data-anim='mengambang'] {
+  --u-anim-durasi: 4200ms;
+}
+.u-anim[data-anim='putar'] {
+  --u-anim-durasi: 3600ms;
+}
+.u-anim[data-anim='lonceng'] {
+  --u-anim-durasi: 900ms;
+  transform-origin: 50% 8%;
+}
+.u-anim[data-anim='goyang'] {
+  --u-anim-durasi: 420ms;
+}
+.u-anim[data-anim='balik'] {
+  transform-origin: 50% 0;
+}
+.u-anim[data-anim='ketik'] {
+  --u-anim-durasi: 900ms;
+  clip-path: inset(0 0 0 0);
+}
+
+@keyframes u-anim-masuk {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes u-anim-muncul {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+@keyframes u-anim-geser {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+}
+@keyframes u-anim-pantul {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.03);
+  }
+}
+@keyframes u-anim-sukses {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes u-anim-goyang {
+  20%,
+  60% {
+    transform: translateX(-5px);
+  }
+  40%,
+  80% {
+    transform: translateX(5px);
+  }
+}
+@keyframes u-anim-denyut {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--u-primary) 45%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+@keyframes u-anim-mengambang {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@keyframes u-anim-lonceng {
+  15% {
+    transform: rotate(14deg);
+  }
+  30% {
+    transform: rotate(-12deg);
+  }
+  45% {
+    transform: rotate(8deg);
+  }
+  60% {
+    transform: rotate(-5deg);
+  }
+  75% {
+    transform: rotate(2deg);
+  }
+}
+@keyframes u-anim-naik {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+@keyframes u-anim-balik {
+  from {
+    opacity: 0;
+    transform: perspective(600px) rotateX(-70deg);
+  }
+}
+@keyframes u-anim-putar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes u-anim-kedip {
+  0%,
+  100% {
+    filter: none;
+  }
+  50% {
+    filter: brightness(1.25) drop-shadow(0 0 6px color-mix(in oklab, var(--u-primary) 50%, transparent));
+  }
+}
+@keyframes u-anim-ketik {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+
+// ---------------------------------------------------------------- Centang sukses
+.u-centang {
+  --c: var(--u-success);
+  &[data-nada='primary'] {
+    --c: var(--u-primary);
+  }
+  &[data-nada='danger'] {
+    --c: var(--u-danger);
+  }
+  &[data-nada='warning'] {
+    --c: var(--u-warning);
+  }
+  .u-centang-lingkar {
+    stroke: var(--c);
+    stroke-dasharray: 150;
+    stroke-dashoffset: 150;
+    animation: u-centang-gambar 600ms var(--u-anim-halus) forwards;
+  }
+  .u-centang-tanda {
+    stroke: var(--c);
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: u-centang-gambar 360ms 480ms var(--u-anim-halus) forwards;
+  }
+  animation: u-anim-sukses 420ms 760ms var(--u-anim-pegas) both;
+}
+@keyframes u-centang-gambar {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+// ---------------------------------------------------------------- Titik mengetik
+.u-titik-mengetik {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: 999px;
+  background: var(--u-muted);
+  i {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--u-muted-foreground);
+    animation: u-titik 1.2s ease-in-out infinite;
+    &:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+    &:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+  }
+}
+@keyframes u-titik {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+.u-angka-berjalan {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .u-anim,
+  .u-centang,
+  .u-centang * {
+    animation: none !important;
+  }
+  .u-centang .u-centang-lingkar,
+  .u-centang .u-centang-tanda {
+    stroke-dashoffset: 0;
+  }
+  .u-anim[data-pemicu='terlihat']:not([data-siap]) {
+    opacity: 1;
+  }
+}

@@ -1,0 +1,364 @@
+// ================================================================ Penyesuaian platform
+// Atribut di <html> dari setelPlatform(): data-u-platform="web|desktop|mobile", data-u-os="ios|android|…", data-u-sentuh.
+
+// ---------------------------------------------------------------- Mobile (umum)
+[data-u-platform='mobile'] {
+  --u-target-sentuh: 44px;
+  -webkit-tap-highlight-color: transparent;
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+    overscroll-behavior-y: none;
+  }
+  // Cegah zoom otomatis iOS saat fokus isian (font < 16px).
+  .u-input,
+  .u-textarea,
+  .u-select-trigger,
+  .u-combobox-input,
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em);
+  }
+  .u-btn {
+    min-height: var(--u-target-sentuh);
+  }
+  .u-btn[data-size='sm'] {
+    min-height: calc(var(--u-target-sentuh) - 8px);
+  }
+  .u-btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  .u-nav-item,
+  .u-menu-item,
+  .u-select-item,
+  .u-combobox-item {
+    min-height: var(--u-target-sentuh);
+  }
+  .u-sheet[data-side='bottom'] {
+    padding-bottom: env(safe-area-inset-bottom);
+    max-height: 92dvh;
+  }
+  .u-dialog-footer {
+    position: sticky;
+    bottom: 0;
+  }
+  .u-tooltip {
+    display: none;
+  }
+}
+.u-sheet-grabber {
+  display: block;
+  width: 2.25rem;
+  height: 5px;
+  margin: 0.5rem auto -0.25rem;
+  border-radius: 999px;
+  background: var(--u-border-strong);
+}
+
+// ---------------------------------------------------------------- iOS (Cupertino)
+[data-u-os='ios'][data-u-platform='mobile'] {
+  --u-target-sentuh: 44px;
+  font-family: -apple-system, BlinkMacSystemFont, var(--u-font-sans);
+  .u-sheet[data-side='bottom'] {
+    border-radius: 14px 14px 0 0;
+  }
+  .u-dialog-footer {
+    background: color-mix(in oklab, var(--u-card) 82%, transparent);
+    backdrop-filter: saturate(180%) blur(18px);
+  }
+  .u-switch {
+    --u-switch-w: 51px;
+    --u-switch-h: 31px;
+  }
+  .u-switch[data-checked] {
+    background: var(--u-success);
+  }
+  .u-card {
+    border-radius: 14px;
+  }
+  .u-btn {
+    border-radius: 12px;
+    font-weight: 600;
+  }
+}
+
+// ---------------------------------------------------------------- Android (Material)
+[data-u-os='android'][data-u-platform='mobile'] {
+  --u-target-sentuh: 48px;
+  font-family: Roboto, var(--u-font-sans);
+  .u-btn {
+    border-radius: 999px;
+    letter-spacing: 0.01em;
+    position: relative;
+    overflow: hidden;
+  }
+  // Efek riak saat ditekan.
+  .u-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, currentColor 0 10%, transparent 11%) center / 0 0 no-repeat;
+    opacity: 0;
+    transition:
+      background-size 380ms ease-out,
+      opacity 500ms ease-out;
+    pointer-events: none;
+  }
+  .u-btn:active::after {
+    background-size: 1200% 1200%;
+    opacity: 0.18;
+    transition: 0s;
+  }
+  .u-sheet[data-side='bottom'] {
+    border-radius: 28px 28px 0 0;
+  }
+  .u-dialog {
+    border-radius: 28px;
+  }
+  .u-card {
+    border-radius: 16px;
+  }
+}
+
+// ---------------------------------------------------------------- Desktop (Electron/Tauri)
+[data-u-platform='desktop'] {
+  --u-target-sentuh: 32px;
+  user-select: none;
+  input,
+  textarea,
+  [contenteditable],
+  .u-dl,
+  .u-data-table td,
+  pre,
+  code,
+  p {
+    user-select: text;
+  }
+  .u-btn,
+  .u-nav-item {
+    cursor: default;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--u-foreground) 22%, transparent) padding-box;
+  }
+}
+[data-u-platform='desktop'] .u-bilah-aplikasi {
+  -webkit-app-region: drag;
+  app-region: drag;
+  button,
+  a,
+  input,
+  .u-bilah-aplikasi-kanan {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+  }
+}
+[data-u-platform='desktop'][data-u-os='macos'] .u-bilah-aplikasi {
+  padding-inline-start: 5rem; // ruang tombol lampu lalu lintas macOS
+}
+
+// ---------------------------------------------------------------- Bilah aplikasi
+.u-bilah-aplikasi {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 3.25rem;
+  padding: env(safe-area-inset-top) 0.75rem 0;
+  background: color-mix(in oklab, var(--u-background) 86%, transparent);
+  backdrop-filter: saturate(180%) blur(16px);
+  border-bottom: 1px solid var(--u-border);
+  &[data-os='android'] {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    min-height: 4rem;
+    background: var(--u-background);
+    border-bottom: 0;
+    box-shadow: var(--u-shadow-xs);
+    .u-bilah-aplikasi-judul {
+      text-align: start;
+      font-size: 1.25rem;
+      font-weight: 500;
+    }
+  }
+  &[data-besar][data-os='ios'] {
+    grid-template-rows: auto auto;
+    .u-bilah-aplikasi-judul {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      text-align: start;
+      font-size: 2rem;
+      font-weight: 700;
+      padding-bottom: 0.5rem;
+    }
+  }
+}
+.u-bilah-aplikasi-judul {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.u-bilah-aplikasi-kanan {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+.u-bilah-kembali {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  min-height: 2.5rem;
+  padding: 0 0.25rem;
+  border: 0;
+  background: none;
+  color: var(--u-primary);
+  font: inherit;
+  cursor: pointer;
+  svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+// ---------------------------------------------------------------- Navigasi bawah
+.u-nav-bawah {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 40;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  padding-bottom: env(safe-area-inset-bottom);
+  background: color-mix(in oklab, var(--u-background) 86%, transparent);
+  backdrop-filter: saturate(180%) blur(18px);
+  border-top: 1px solid var(--u-border);
+}
+[data-u-platform='web'] .u-nav-bawah,
+[data-u-platform='desktop'] .u-nav-bawah,
+:root:not([data-u-platform]) .u-nav-bawah {
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+.u-nav-bawah-item {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 0.4rem 0 0.35rem;
+  min-height: 3.25rem;
+  border: 0;
+  background: none;
+  color: var(--u-muted-foreground);
+  font: inherit;
+  font-size: 0.6875rem;
+  text-decoration: none;
+  cursor: pointer;
+  &[aria-current='page'] {
+    color: var(--u-primary);
+  }
+  &:active .u-nav-bawah-ikon {
+    transform: scale(0.9);
+  }
+}
+.u-nav-bawah-ikon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  transition:
+    background-color 200ms,
+    transform 160ms;
+  svg {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+}
+.u-nav-bawah[data-os='android'] {
+  background: color-mix(in oklab, var(--u-primary) 5%, var(--u-background));
+  backdrop-filter: none;
+  border-top: 0;
+  .u-nav-bawah-item {
+    min-height: 4.5rem;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    &[aria-current='page'] {
+      color: var(--u-foreground);
+      .u-nav-bawah-ikon {
+        background: var(--u-primary-soft);
+        color: var(--u-primary-soft-foreground);
+      }
+    }
+  }
+  .u-nav-bawah-ikon {
+    height: 2rem;
+  }
+}
+.u-nav-bawah-badge {
+  position: absolute;
+  top: -2px;
+  inset-inline-end: 0.6rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--u-danger);
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1rem;
+  text-align: center;
+}
+
+// ---------------------------------------------------------------- Tombol melayang
+.u-tombol-melayang {
+  position: fixed;
+  inset-inline-end: 1rem;
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  z-index: 35;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 3.5rem;
+  height: 3.5rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 1rem;
+  background: var(--u-primary);
+  color: var(--u-primary-foreground);
+  font: inherit;
+  font-weight: 600;
+  box-shadow: var(--u-shadow-lg);
+  cursor: pointer;
+  transition: transform 160ms var(--u-anim-pegas, ease-out);
+  svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  &:active {
+    transform: scale(0.94);
+  }
+}
+.u-nav-bawah ~ .u-tombol-melayang,
+.u-nav-bawah + * .u-tombol-melayang {
+  bottom: calc(5.5rem + env(safe-area-inset-bottom));
+}
+[data-u-os='ios'] .u-tombol-melayang {
+  border-radius: 999px;
+}

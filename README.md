@@ -27,6 +27,20 @@ Widget kecil per fitur yang mengambil data sendiri lewat `unipo-siakad-sdk` (bun
 | LMS | `RingkasanLms`, `DaftarKelasLms`, `KartuKelas`, `TugasMendatang`, `KuisTerbuka`, `AgendaLms`, `ProgresKelas` | `docs/screenshots/lms--*.png` |
 | CBT | `DaftarUjianSaya`, `LembarUjian`, `SoalCbt`, `NavigasiSoal`, `TimerUjian`, `HasilUjian` | `docs/screenshots/cbt--*.png` |
 
+## Fitur API (`unipo-ui/katalog`)
+
+Komponen untuk setiap fitur API SIAKAD (40 modul, 703 sumber data), dibuat dari OpenAPI dengan aturan validasi, alur status, dan scope yang sama dengan backend.
+
+```tsx
+import { KelolaSumber, HalamanModul, WizardSumber, KatalogProvider } from 'unipo-ui/katalog';
+
+<KatalogProvider scopes={token.scope.split(' ')}>
+  <KelolaSumber sumber="/v1/kemahasiswaan/beasiswa" />
+</KatalogProvider>
+```
+
+Ikon kampus, `IkonKotak`, dan `Ilustrasi` per modul ada di `unipo-ui/ikon`; animasi per fitur (`Animasi`, `animasiFitur()`) dan target platform (`setelPlatform({ platform: 'mobile', os: 'ios' })`) di `unipo-ui`.
+
 ## Rilis
 
 Rilis ke npm berjalan otomatis lewat GitHub Actions (`.github/workflows/rilis.yml`):

@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: { index: 'src/index.ts', siakad: 'src/siakad/index.ts', tema: 'src/tema/index.ts' },
+  entry: { index: 'src/index.ts', siakad: 'src/siakad/index.ts', tema: 'src/tema/index.ts', katalog: 'src/katalog/index.ts', ikon: 'src/ikon/index.ts' },
   format: ['esm', 'cjs'],
   dts: true,
   sourcemap: true,

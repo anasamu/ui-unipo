@@ -3,6 +3,7 @@ import * as React from 'react';
 import type { ApiResult, Meta, Siakad } from 'unipo-siakad-sdk';
 import { Toaster, TooltipProvider } from '../components/overlays';
 import { requestIdDari } from '../components/galat';
+import { laporPemeliharaan } from './pemeliharaan';
 
 const SiakadContext = React.createContext<Siakad | null>(null);
 
@@ -129,6 +130,7 @@ export function useSiakadQuery<T>(key: ReadonlyArray<unknown>, fn: (siakad: Siak
         if (!ctrl.signal.aborted) setState({ result, loading: false, error: null });
       })
       .catch((e: Error) => {
+        if ((e as { status?: number })?.status === 503) laporPemeliharaan({ message: e.message, until: null });
         if (!ctrl.signal.aborted && e?.name !== 'AbortError') setState((s) => ({ ...s, loading: false, error: e }));
       });
     return () => ctrl.abort();

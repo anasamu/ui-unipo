@@ -43,6 +43,7 @@ function slice(src: string, name: string): string {
 
 export const CATEGORIES = [
   'Mulai',
+  'Fitur API',
   'Fondasi',
   'Aksi',
   'Formulir',
