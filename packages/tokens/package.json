@@ -13,9 +13,18 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./css": "./dist/tokens.css",
-    "./scss": "./dist/_tokens.scss",
-    "./less": "./dist/tokens.less",
+    "./css": {
+      "types": "./dist/css.d.ts",
+      "default": "./dist/tokens.css"
+    },
+    "./scss": {
+      "types": "./dist/css.d.ts",
+      "default": "./dist/_tokens.scss"
+    },
+    "./less": {
+      "types": "./dist/css.d.ts",
+      "default": "./dist/tokens.less"
+    },
     "./tailwind": "./dist/tailwind-preset.cjs",
     "./kotlin": "./dist/UnipoTheme.kt",
     "./android/colors.xml": "./dist/android/colors.xml",
@@ -31,5 +40,24 @@
   },
   "devDependencies": {
     "less": "^4.9.1"
+  },
+  "keywords": [
+    "unipo",
+    "design-tokens",
+    "tailwind",
+    "react-native",
+    "kotlin",
+    "compose",
+    "scss",
+    "less"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anasamu/ui-unipo.git",
+    "directory": "packages/tokens"
+  },
+  "homepage": "https://api.unipo.ac.id/docs/panduan/ui",
+  "publishConfig": {
+    "access": "public"
   }
 }

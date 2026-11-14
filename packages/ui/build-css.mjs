@@ -11,3 +11,4 @@ for (const style of ['expanded', 'compressed']) {
 }
 cpSync('scss', 'dist/scss', { recursive: true });
 console.log('unipo-ui: dist/ui-unipo.css, dist/ui-unipo.min.css, dist/scss/');
+writeFileSync('dist/css.d.ts', '// Impor efek samping CSS: import "unipo-ui/css".\nexport {};\n');

@@ -277,3 +277,4 @@ writeFileSync(join(out, 'tailwind-preset.cjs'), `// ${HEADER}\nmodule.exports = 
 writeFileSync(join(out, 'tokens.resolved.json'), JSON.stringify({ palette: Object.fromEntries(palette), light: Object.fromEntries(themes.light), dark: Object.fromEntries(themes.dark), scalar: Object.fromEntries(scalar) }, null, 2));
 
 console.log(`unipo-ui-tokens: ${palette.length} warna, ${themes.light.length} token semantik, ${scalar.length} token skalar → dist/`);
+writeFileSync(join(out, 'css.d.ts'), '// Impor efek samping stylesheet token.\nexport {};\n');
