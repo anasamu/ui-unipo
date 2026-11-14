@@ -23,7 +23,7 @@ export interface FilterOption {
 export type FilterField =
   | { key: string; label: string; type: 'select'; options: FilterOption[]; icon?: React.ReactNode; searchable?: boolean }
   | { key: string; label: string; type: 'multi'; options: FilterOption[]; icon?: React.ReactNode; searchable?: boolean }
-  | { key: string; label: string; type: 'date-range'; icon?: React.ReactNode }
+  | { key: string; label: string; type: 'date-range'; icon?: React.ReactNode; /** Nama parameter query [awal, akhir]; bawaan `<key>_dari`, `<key>_sampai`. */ params?: [string, string] }
   | { key: string; label: string; type: 'boolean'; icon?: React.ReactNode }
   | { key: string; label: string; type: 'custom'; icon?: React.ReactNode; render: (value: unknown, set: (v: unknown) => void) => React.ReactNode; format?: (value: unknown) => string };
 
@@ -359,10 +359,10 @@ export function useFilterParams(initial: FilterValues = {}): [FilterValues, (v: 
 
 /**
  * Ubah nilai saringan menjadi parameter query SDK/REST:
- * multi → "a,b", rentang tanggal → `<key>_dari` & `<key>_sampai`, boolean → 1. Nilai kosong dibuang.
- *   siakad.mahasiswa.list({ ...filterToQuery(values), page })
+ * multi → "a,b", rentang tanggal → `<key>_dari` & `<key>_sampai` (atau `params` field), boolean → 1. Nilai kosong dibuang.
+ *   siakad.arsip.getSuratMasuk({ ...filterToQuery(values, fields), page })
  */
-export function filterToQuery(values: FilterValues): Record<string, string | number> {
+export function filterToQuery(values: FilterValues, fields?: FilterField[]): Record<string, string | number> {
   const out: Record<string, string | number> = {};
   for (const [k, v] of Object.entries(values)) {
     if (isEmpty(v)) continue;
@@ -370,8 +370,10 @@ export function filterToQuery(values: FilterValues): Record<string, string | num
     else if (v === true) out[k] = 1;
     else if (typeof v === 'object') {
       const r = v as DateRangeValue;
-      if (r.from) out[`${k}_dari`] = r.from;
-      if (r.to) out[`${k}_sampai`] = r.to;
+      const f = fields?.find((x) => x.key === k);
+      const [a, b] = f?.type === 'date-range' && f.params ? f.params : [`${k}_dari`, `${k}_sampai`];
+      if (r.from) out[a] = r.from;
+      if (r.to) out[b] = r.to;
     } else out[k] = v as string | number;
   }
   return out;

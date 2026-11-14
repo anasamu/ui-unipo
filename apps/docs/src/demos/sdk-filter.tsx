@@ -19,7 +19,7 @@ export const meta: DemoMeta = {
     SuratMasuk: 'Surat masuk',
     SuratKeluar: 'Surat keluar',
     Dokumen: 'Dokumen arsip',
-    Berkas: 'Berkas',
+    Berkas: 'Berkas arsip',
     Kustom: 'FilterBar dengan field sendiri',
   },
   props: [
@@ -30,7 +30,7 @@ export const meta: DemoMeta = {
     ['FilterField.type', "'select' | 'multi' | 'date-range' | 'boolean' | 'custom'", 'Jenis kontrol di dalam popover.'],
   ],
   notes: [
-    'filterToQuery(values) mengubah nilai saringan menjadi parameter query: pilihan banyak → "a,b", rentang tanggal → tanggal_dari dan tanggal_sampai, ya/tidak → 1.',
+    'filterToQuery(values, fields) mengubah nilai saringan menjadi parameter query: pilihan banyak → "a,b", rentang tanggal → nama di params (surat: dari dan sampai), ya/tidak → 1. Kunci setiap preset sama persis dengan parameter endpoint SDK-nya.',
     'useFilterParams() menyimpan saringan di URL (?prodi=55201&status=A) sehingga halaman bisa dibagikan dan tombol kembali browser tetap bekerja.',
   ],
 };
@@ -69,18 +69,19 @@ export function Mahasiswa() {
   );
 }
 
+const SURAT_KELUAR: FilterField[] = [{ key: 'tanggal', label: 'Tanggal', type: 'date-range', params: ['dari', 'sampai'] }];
 const useF = (init: FilterValues = {}) => React.useState<FilterValues>(init);
 
 export function Dosen() {
-  const [f, setF] = useF({ jabatan: ['lektor', 'lektor_kepala'] });
+  const [f, setF] = useF({ status: 'A' });
   return <FilterDosen value={f} onValueChange={setF} resultCount={24} />;
 }
 export function Pegawai() {
-  const [f, setF] = useF({ jenis: 'tendik' });
+  const [f, setF] = useF({ jenis: 'tendik', serdos: false });
   return <FilterPegawai value={f} onValueChange={setF} resultCount={86} />;
 }
 export function MataKuliah() {
-  const [f, setF] = useF({ prodi: '55201', sks: ['3'] });
+  const [f, setF] = useF({ prodi: '55201', semester: '3' });
   return <FilterMataKuliah value={f} onValueChange={setF} resultCount={42} />;
 }
 export function SuratMasuk() {
@@ -89,14 +90,19 @@ export function SuratMasuk() {
 }
 export function SuratKeluar() {
   const [f, setF] = useF({ tanggal: { from: '2026-11-01', to: '2026-11-14' } });
-  return <FilterSuratKeluar value={f} onValueChange={setF} resultCount={19} />;
+  return (
+    <div style={{ display: 'grid', gap: '0.75rem' }}>
+      <FilterSuratKeluar value={f} onValueChange={setF} resultCount={19} />
+      <code style={{ fontSize: 12, color: 'var(--u-muted-foreground)' }}>arsip.getSuratKeluar({JSON.stringify(filterToQuery(f, SURAT_KELUAR))})</code>
+    </div>
+  );
 }
 export function Dokumen() {
   const [f, setF] = useF({ status_verifikasi: 'diajukan' });
   return <FilterDokumen value={f} onValueChange={setF} resultCount={128} />;
 }
 export function Berkas() {
-  const [f, setF] = useF({ tipe: ['pdf'] });
+  const [f, setF] = useF({ status: 'terbuka' });
   return (
     <FilterBerkas
       value={f}

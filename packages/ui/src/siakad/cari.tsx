@@ -1,7 +1,7 @@
 'use client';
 import * as React from 'react';
 import type { Siakad } from 'unipo-siakad-sdk';
-import { BookOpen, Building2, Globe2, GraduationCap, MapPin, School, UserRound, Users } from 'lucide-react';
+import { BookOpen, Building2, Globe2, GraduationCap, MapPin, PenLine, School, UserRound, Users } from 'lucide-react';
 import { Combobox, OptionContent, Select, type ComboboxProps, type SelectOption } from '../components/select';
 import { Avatar } from '../components/display';
 import { Badge } from '../components/actions';
@@ -28,6 +28,31 @@ function useLoader<T>(defaultLoad: ((s: Siakad, q: string, signal: AbortSignal, 
     [siakad, custom, limit],
   );
 }
+
+/**
+ * Tambahkan butir "ketik manual" di akhir hasil bila nama yang diketik tidak ada di daftar
+ * (sama seperti formulir PMB). Butir manual punya `manual: true` dan `kode: ''`.
+ */
+function withManual<T extends { kode: string; nama: string; manual?: boolean }>(load: (q: string, signal: AbortSignal) => Promise<T[]>, enabled: boolean, min = 3) {
+  if (!enabled) return load;
+  return async (q: string, signal: AbortSignal) => {
+    const rows = await load(q, signal).catch((e) => {
+      if (e?.name === 'AbortError') throw e;
+      return [] as T[];
+    });
+    const text = q.trim();
+    if (text.length < min || rows.some((r) => r.nama.toLowerCase() === text.toLowerCase())) return rows;
+    return [...rows, { kode: '', nama: text, manual: true } as T];
+  };
+}
+const ManualItem = ({ nama }: { nama: string }) => (
+  <>
+    <span className="u-option-media" data-shape="square">
+      <PenLine size={14} />
+    </span>
+    <OptionContent title={`Pakai "${nama}"`} meta="Tidak ada di daftar, ketik manual" />
+  </>
+);
 
 // ================================================================ Mahasiswa
 export interface MahasiswaOption {
@@ -206,11 +231,17 @@ export interface SekolahOption {
   nama: string;
   kota?: string | null;
   jenis?: string | null;
+  /** true bila nama diketik manual (tidak ada di daftar); kode kosong. */
+  manual?: boolean;
   [k: string]: unknown;
 }
-/** Cari sekolah asal (SMA/SMK/MA) untuk formulir PMB (SDK: pmb.getInfoSekolah, publik, minimal 3 huruf). */
-export function CariSekolah({ load, limit, placeholder = 'Ketik nama sekolah, mis. SMA Negeri 1 Marisa', ...props }: CariProps<SekolahOption>) {
-  const loader = useLoader<SekolahOption>(async (s, q, signal) => (await s.pmb.getInfoSekolah({ q }, { signal })).data as SekolahOption[], load, limit);
+/**
+ * Cari sekolah asal (SMA/SMK/MA) seperti formulir PMB (SDK: pmb.getInfoSekolah, publik, minimal 3 huruf).
+ * Sekolah yang tidak ada di daftar bisa diketik manual (matikan dengan allowManual={false}).
+ */
+export function CariSekolah({ load, limit, allowManual = true, placeholder = 'Ketik nama sekolah, mis. SMA Negeri 1 Marisa', ...props }: CariProps<SekolahOption> & { allowManual?: boolean }) {
+  const base = useLoader<SekolahOption>(async (s, q, signal) => (await s.pmb.getInfoSekolah({ q }, { signal })).data as SekolahOption[], load, limit);
+  const loader = React.useMemo(() => withManual(base, allowManual), [base, allowManual]);
   return (
     <Combobox<SekolahOption>
       {...props}
@@ -220,16 +251,20 @@ export function CariSekolah({ load, limit, placeholder = 'Ketik nama sekolah, mi
       minQueryLength={3}
       hintText="Ketik minimal 3 huruf nama atau NPSN sekolah."
       itemToString={(s) => s.nama}
-      itemKey={(s) => s.kode}
+      itemKey={(s) => (s.manual ? `manual:${s.nama}` : s.kode)}
       emptyText="Sekolah tidak ditemukan. Periksa ejaan atau hubungi panitia."
-      renderItem={(s) => (
+      renderItem={(s) =>
+        s.manual ? (
+          <ManualItem nama={s.nama} />
+        ) : (
         <>
           <span className="u-option-media" data-shape="square">
             <School size={14} />
           </span>
           <OptionContent title={s.nama} meta={[s.jenis, s.kota].filter(Boolean).join(' · ')} />
         </>
-      )}
+        )
+      }
     />
   );
 }
@@ -241,14 +276,16 @@ export interface PerguruanTinggiOption {
   singkatan?: string | null;
   kota?: string | null;
   logo?: string | null;
+  manual?: boolean;
   [k: string]: unknown;
 }
 /**
- * Cari perguruan tinggi (mis. asal mahasiswa pindahan, mitra kerja sama, studi lanjut dosen).
- * API SIAKAD belum punya endpoint daftar PT nasional, jadi isi `load` (mis. dari mitra kerja sama atau data PDDikti Anda).
+ * Cari perguruan tinggi (asal mahasiswa pindahan, mitra kerja sama, studi lanjut dosen).
+ * API SIAKAD belum punya daftar PT nasional: bawaan memakai mitra kerja sama (kerjasama.getMitra) dan nama lain bisa
+ * diketik manual seperti isian `nama_asal_pt` di formulir PMB. Isi `load` bila punya sumber lain (mis. data PDDikti).
  */
-export function CariPerguruanTinggi({ load, limit, placeholder = 'Cari nama perguruan tinggi', ...props }: CariProps<PerguruanTinggiOption>) {
-  const loader = useLoader<PerguruanTinggiOption>(
+export function CariPerguruanTinggi({ load, limit, allowManual = true, placeholder = 'Cari atau ketik nama perguruan tinggi', ...props }: CariProps<PerguruanTinggiOption> & { allowManual?: boolean }) {
+  const base = useLoader<PerguruanTinggiOption>(
     async (s, q, signal, per_page) =>
       ((await s.kerjasama.getMitra({ q: q || undefined, per_page }, { signal })).data as Array<Record<string, unknown>>).map((m) => ({
         kode: String(m.id ?? m.kode ?? m.nama),
@@ -259,6 +296,7 @@ export function CariPerguruanTinggi({ load, limit, placeholder = 'Cari nama perg
     load,
     limit,
   );
+  const loader = React.useMemo(() => withManual(base, allowManual), [base, allowManual]);
   return (
     <Combobox<PerguruanTinggiOption>
       {...props}
@@ -266,16 +304,20 @@ export function CariPerguruanTinggi({ load, limit, placeholder = 'Cari nama perg
       icon={<Building2 />}
       loadItems={loader}
       itemToString={(p) => p.nama}
-      itemKey={(p) => p.kode}
-      emptyText="Perguruan tinggi tidak ditemukan."
-      renderItem={(p) => (
-        <>
-          <span className="u-option-media" data-shape="square">
-            {p.logo ? <img src={p.logo} alt="" /> : <Building2 size={14} />}
-          </span>
-          <OptionContent title={p.nama} meta={[p.singkatan, p.kota].filter(Boolean).join(' · ')} />
-        </>
-      )}
+      itemKey={(p) => (p.manual ? `manual:${p.nama}` : p.kode)}
+      emptyText="Perguruan tinggi tidak ditemukan. Ketik minimal 3 huruf untuk mengisi manual."
+      renderItem={(p) =>
+        p.manual ? (
+          <ManualItem nama={p.nama} />
+        ) : (
+          <>
+            <span className="u-option-media" data-shape="square">
+              {p.logo ? <img src={p.logo} alt="" /> : <Building2 size={14} />}
+            </span>
+            <OptionContent title={p.nama} meta={[p.singkatan, p.kota].filter(Boolean).join(' · ')} />
+          </>
+        )
+      }
     />
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { Archive, BadgeCheck, BookOpen, Briefcase, Building2, Calendar, CircleDot, FileType2, Flag, GraduationCap, Inbox, Layers, Send, ShieldCheck, Tag, Users } from 'lucide-react';
+import { Archive, BadgeCheck, Briefcase, Building2, Calendar, CircleDot, Clock, Flag, FolderOpen, GraduationCap, Inbox, Layers, Lock, Send, ShieldCheck, Users } from 'lucide-react';
 import { FilterBar, type FilterBarProps, type FilterField, type FilterOption } from '../components/filter';
 import { useSiakadQuery } from './provider';
 
@@ -10,6 +10,12 @@ const opt = (pairs: Array<[string, string]>): FilterOption[] => pairs.map(([valu
 export function useProdiOptions(): FilterOption[] {
   const { data } = useSiakadQuery(['referensi', 'prodi'], (s, signal) => s.referensi.getProdi({}, { signal }), { staleTime: 10 * 60_000 });
   return React.useMemo(() => (data ?? []).map((p) => ({ value: String(p.kode_prodi), label: `${p.kode_jenjang ?? ''} ${p.nama_prodi ?? ''}`.trim(), text: String(p.nama_prodi ?? '') })), [data]);
+}
+
+/** Opsi tahun akademik dari SDK (referensi.getTahunAkademik). */
+export function useTahunOptions(enabled = true): FilterOption[] {
+  const { data } = useSiakadQuery(['referensi', 'tahun'], (s, signal) => s.referensi.getTahunAkademik({}, { signal }), { staleTime: 10 * 60_000, enabled });
+  return React.useMemo(() => ((data as Array<Record<string, unknown>> | undefined) ?? []).map((t) => ({ value: String(t.tahun_id), label: String(t.nama_tahun ?? t.tahun_id) })), [data]);
 }
 
 function angkatanOptions(n = 8): FilterOption[] {
@@ -62,6 +68,36 @@ export const STATUS_VERIFIKASI = opt([
   ['ditolak', 'Ditolak'],
   ['tidak_perlu', 'Tidak perlu'],
 ]);
+export const KEAMANAN_SURAT = opt([
+  ['biasa', 'Biasa'],
+  ['terbatas', 'Terbatas'],
+  ['rahasia', 'Rahasia'],
+  ['sangat_rahasia', 'Sangat rahasia'],
+]);
+export const AKSES_ARSIP = opt([
+  ['publik', 'Publik'],
+  ['internal', 'Internal'],
+  ['terbatas', 'Terbatas'],
+  ['rahasia', 'Rahasia'],
+]);
+export const PEMILIK_ARSIP = opt([
+  ['universitas', 'Universitas'],
+  ['fakultas', 'Fakultas'],
+  ['prodi', 'Program studi'],
+  ['unit', 'Unit'],
+  ['dosen', 'Dosen'],
+  ['mahasiswa', 'Mahasiswa'],
+]);
+export const STATUS_PEGAWAI = opt([
+  ['aktif', 'Aktif'],
+  ['cuti', 'Cuti'],
+  ['tugas_belajar', 'Tugas belajar'],
+  ['izin_belajar', 'Izin belajar'],
+  ['diperbantukan', 'Diperbantukan'],
+  ['nonaktif', 'Non-aktif'],
+  ['pensiun', 'Pensiun'],
+  ['keluar', 'Keluar'],
+]);
 export const JABATAN_AKADEMIK = opt([
   ['tenaga_pengajar', 'Tenaga pengajar'],
   ['asisten_ahli', 'Asisten Ahli'],
@@ -74,6 +110,7 @@ export const JABATAN_AKADEMIK = opt([
 /** Saringan siap pakai: kunci field sama dengan parameter query endpoint SDK terkait. */
 export function useFilterFields(jenis: FilterPreset): FilterField[] {
   const prodi = useProdiOptions();
+  const tahun = useTahunOptions(jenis === 'mata-kuliah');
   return React.useMemo(() => {
     const fProdi: FilterField = { key: 'prodi', label: 'Prodi', type: 'select', options: prodi, icon: <Building2 />, searchable: true };
     switch (jenis) {
@@ -88,53 +125,54 @@ export function useFilterFields(jenis: FilterPreset): FilterField[] {
         return [
           fProdi,
           { key: 'status', label: 'Status', type: 'select', options: opt([['A', 'Aktif'], ['T', 'Tugas belajar'], ['C', 'Cuti'], ['K', 'Keluar']]), icon: <CircleDot /> },
-          { key: 'jabatan', label: 'Jabatan', type: 'multi', options: JABATAN_AKADEMIK, icon: <Briefcase /> },
-          { key: 'serdos', label: 'Bersertifikat dosen', type: 'boolean', icon: <BadgeCheck /> },
         ];
       case 'pegawai':
         return [
           { key: 'jenis', label: 'Jenis', type: 'select', options: opt([['dosen', 'Dosen'], ['tendik', 'Tenaga kependidikan']]), icon: <Users /> },
           { key: 'kategori', label: 'Kategori', type: 'select', options: opt([['tetap', 'Tetap'], ['tidak_tetap', 'Tidak tetap']]), icon: <Briefcase /> },
-          { key: 'status_aktif', label: 'Status', type: 'select', options: opt([['aktif', 'Aktif'], ['cuti', 'Cuti'], ['tugas_belajar', 'Tugas belajar'], ['pensiun', 'Pensiun'], ['keluar', 'Keluar']]), icon: <CircleDot /> },
+          { key: 'status_aktif', label: 'Status', type: 'select', options: STATUS_PEGAWAI, icon: <CircleDot /> },
           { key: 'kode_prodi', label: 'Prodi', type: 'select', options: prodi, icon: <Building2 />, searchable: true },
+          { key: 'serdos', label: 'Bersertifikat dosen', type: 'boolean', icon: <BadgeCheck /> },
         ];
       case 'mata-kuliah':
         return [
           fProdi,
           { key: 'semester', label: 'Semester', type: 'select', options: Array.from({ length: 8 }, (_, i) => ({ value: String(i + 1), label: `Semester ${i + 1}` })), icon: <Layers /> },
-          { key: 'sifat', label: 'Sifat', type: 'select', options: opt([['W', 'Wajib'], ['P', 'Pilihan']]), icon: <Tag /> },
-          { key: 'sks', label: 'SKS', type: 'multi', options: ['1', '2', '3', '4', '6'].map((v) => ({ value: v, label: `${v} SKS` })), icon: <BookOpen /> },
+          { key: 'tahun_id', label: 'Tahun akademik', type: 'select', options: tahun, icon: <Calendar /> },
         ];
       case 'dokumen':
         return [
-          { key: 'jenis', label: 'Jenis', type: 'multi', options: opt([['ijazah', 'Ijazah'], ['transkrip', 'Transkrip'], ['sk', 'Surat keputusan'], ['sertifikat', 'Sertifikat'], ['kontrak', 'Kontrak'], ['lainnya', 'Lainnya']]), icon: <FileType2 /> },
+          { key: 'pemilik_jenis', label: 'Pemilik', type: 'select', options: PEMILIK_ARSIP, icon: <Users /> },
           { key: 'status_verifikasi', label: 'Verifikasi', type: 'select', options: STATUS_VERIFIKASI, icon: <ShieldCheck /> },
           { key: 'status_arsip', label: 'Status arsip', type: 'select', options: STATUS_ARSIP, icon: <Archive /> },
-          { key: 'tanggal', label: 'Tanggal', type: 'date-range', icon: <Calendar /> },
+          { key: 'akses', label: 'Akses', type: 'select', options: AKSES_ARSIP, icon: <Lock /> },
+          { key: 'berlaku', label: 'Masa berlaku', type: 'select', options: opt([['berlaku', 'Masih berlaku'], ['akan_habis', 'Akan habis (90 hari)'], ['habis', 'Sudah habis']]), icon: <Calendar /> },
         ];
       case 'berkas':
         return [
-          { key: 'tipe', label: 'Tipe berkas', type: 'multi', options: opt([['pdf', 'PDF'], ['gambar', 'Gambar'], ['dokumen', 'Dokumen (Word)'], ['spreadsheet', 'Spreadsheet'], ['arsip', 'Arsip (ZIP)']]), icon: <FileType2 /> },
-          { key: 'ukuran', label: 'Ukuran', type: 'select', options: opt([['kecil', '< 1 MB'], ['sedang', '1 – 10 MB'], ['besar', '> 10 MB']]), icon: <Layers /> },
-          { key: 'diunggah', label: 'Diunggah', type: 'date-range', icon: <Calendar /> },
-          { key: 'milik_saya', label: 'Milik saya', type: 'boolean', icon: <Users /> },
+          { key: 'status', label: 'Status berkas', type: 'select', options: opt([['terbuka', 'Terbuka'], ['ditutup', 'Ditutup']]), icon: <FolderOpen /> },
+          { key: 'status_arsip', label: 'Status arsip', type: 'select', options: STATUS_ARSIP, icon: <Archive /> },
+          { key: 'tahun', label: 'Tahun', type: 'select', options: angkatanOptions(10), icon: <Calendar /> },
         ];
       case 'surat-masuk':
         return [
           { key: 'status', label: 'Status', type: 'multi', options: STATUS_SURAT_MASUK, icon: <Inbox /> },
           { key: 'sifat', label: 'Sifat', type: 'multi', options: SIFAT_SURAT, icon: <Flag /> },
-          { key: 'tanggal', label: 'Tanggal surat', type: 'date-range', icon: <Calendar /> },
+          { key: 'keamanan', label: 'Keamanan', type: 'multi', options: KEAMANAN_SURAT, icon: <Lock /> },
+          { key: 'tanggal', label: 'Tanggal surat', type: 'date-range', params: ['dari', 'sampai'], icon: <Calendar /> },
           { key: 'perlu_tindakan', label: 'Perlu tindakan saya', type: 'boolean', icon: <BadgeCheck /> },
+          { key: 'lewat_batas', label: 'Lewat batas waktu', type: 'boolean', icon: <Clock /> },
         ];
       case 'surat-keluar':
         return [
           { key: 'status', label: 'Status', type: 'multi', options: STATUS_SURAT_KELUAR, icon: <Send /> },
           { key: 'sifat', label: 'Sifat', type: 'multi', options: SIFAT_SURAT, icon: <Flag /> },
-          { key: 'tanggal', label: 'Tanggal', type: 'date-range', icon: <Calendar /> },
-          { key: 'tujuan', label: 'Tujuan', type: 'select', options: opt([['unit', 'Unit internal'], ['dosen', 'Dosen'], ['mahasiswa', 'Mahasiswa'], ['eksternal', 'Pihak luar']]), icon: <Users /> },
+          { key: 'keamanan', label: 'Keamanan', type: 'multi', options: KEAMANAN_SURAT, icon: <Lock /> },
+          { key: 'tanggal', label: 'Tanggal', type: 'date-range', params: ['dari', 'sampai'], icon: <Calendar /> },
+          { key: 'perlu_tindakan', label: 'Menunggu persetujuan saya', type: 'boolean', icon: <BadgeCheck /> },
         ];
     }
-  }, [jenis, prodi]);
+  }, [jenis, prodi, tahun]);
 }
 
 export type FilterPreset = 'mahasiswa' | 'dosen' | 'pegawai' | 'mata-kuliah' | 'dokumen' | 'berkas' | 'surat-masuk' | 'surat-keluar';
@@ -145,7 +183,7 @@ const PLACEHOLDER: Record<FilterPreset, [string, string]> = {
   pegawai: ['Cari nama, NIP, NIDN', 'pegawai'],
   'mata-kuliah': ['Cari kode atau nama MK', 'mata kuliah'],
   dokumen: ['Cari judul atau nomor dokumen', 'dokumen'],
-  berkas: ['Cari nama berkas', 'berkas'],
+  berkas: ['Cari nomor atau judul berkas', 'berkas'],
   'surat-masuk': ['Cari nomor, perihal, atau pengirim', 'surat'],
   'surat-keluar': ['Cari nomor, perihal, atau tujuan', 'surat'],
 };
@@ -169,17 +207,17 @@ function makePreset(jenis: FilterPreset) {
 
 /** Saringan mahasiswa: prodi (dari SDK), angkatan, status, kelas → cocok untuk mahasiswa.list(query). */
 export const FilterMahasiswa = makePreset('mahasiswa');
-/** Saringan dosen: prodi, status, jabatan akademik, serdos → dosen.list(query). */
+/** Saringan dosen: prodi, status → dosen.list(query). Jabatan dan serdos ada di FilterPegawai (sdm.getPegawai). */
 export const FilterDosen = makePreset('dosen');
-/** Saringan pegawai/tendik: jenis, kategori, status, prodi → sdm.getPegawai(query). */
+/** Saringan pegawai/tendik: jenis, kategori, status, prodi, serdos → sdm.getPegawai(query). */
 export const FilterPegawai = makePreset('pegawai');
-/** Saringan mata kuliah: prodi, semester, sifat, SKS → mataKuliah.list(query). */
+/** Saringan mata kuliah: prodi, semester, tahun akademik → mataKuliah.list(query). */
 export const FilterMataKuliah = makePreset('mata-kuliah');
-/** Saringan dokumen arsip: jenis, verifikasi, status arsip, tanggal. */
+/** Saringan dokumen arsip: pemilik, verifikasi, status arsip, akses, masa berlaku → arsip.getDokumen(query). */
 export const FilterDokumen = makePreset('dokumen');
-/** Saringan berkas: tipe, ukuran, tanggal unggah, milik saya. */
+/** Saringan berkas arsip: status berkas, status arsip, tahun → arsip.getBerkas(query). */
 export const FilterBerkas = makePreset('berkas');
-/** Saringan surat masuk: status, sifat, tanggal, perlu tindakan. */
+/** Saringan surat masuk: status, sifat, keamanan, tanggal (dari/sampai), perlu tindakan, lewat batas → arsip.getSuratMasuk(query). */
 export const FilterSuratMasuk = makePreset('surat-masuk');
-/** Saringan surat keluar: status, sifat, tanggal, tujuan. */
+/** Saringan surat keluar: status, sifat, keamanan, tanggal (dari/sampai), menunggu persetujuan → arsip.getSuratKeluar(query). */
 export const FilterSuratKeluar = makePreset('surat-keluar');
