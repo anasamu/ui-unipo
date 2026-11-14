@@ -1,64 +1,48 @@
-import { ArrowRight, GraduationCap } from "lucide-react";
-import { Button, Hero, Section } from "unipo-ui";
-import {
-  AgendaPortal,
-  BeritaPortal,
-  BeritaTerpopuler,
-  KalenderSidebar,
-  PengumumanPortal,
-} from "unipo-ui/siakad";
-import type { DemoMeta } from "../registry";
+import { ArrowRight, GraduationCap } from 'lucide-react';
+import { Button, Hero, Section } from 'unipo-ui';
+import { AgendaPortal, BeritaPortal, BeritaTerpopuler, KalenderSidebar, PengumumanPortal } from 'unipo-ui/siakad';
+import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
-  title: "Portal & landing page",
-  category: "Widget fitur",
-  layout: "full",
+  title: 'Portal & landing page',
+  category: 'Widget fitur',
+  layout: 'full',
   order: 2,
   description:
-    "Widget portal kampus dari /v1/portal: berita (grid, sorotan, daftar), terpopuler, pengumuman dengan prioritas dan masa berlaku, serta agenda dengan jam WITA dan mode luring/daring. Ditambah Hero dan Section untuk menyusun landing page. Semua tata letak menyesuaikan lebar wadah, jadi bisa dipakai di kolom utama maupun sidebar.",
+    'Widget portal kampus dari /v1/portal: berita (grid, sorotan, daftar), terpopuler, pengumuman dengan prioritas dan masa berlaku, serta agenda dengan jam WITA dan mode luring/daring. Ditambah Hero dan Section untuk menyusun landing page. Semua tata letak menyesuaikan lebar wadah, jadi bisa dipakai di kolom utama maupun sidebar.',
   importLine:
     "import { BeritaPortal, BeritaTerpopuler, PengumumanPortal, AgendaPortal } from 'unipo-ui/siakad';\nimport { Hero, Section, NewsGrid, NewsCard, AnnouncementList, EventCard } from 'unipo-ui';",
   demos: {
-    Landing: "Landing page: Hero + Section + widget",
+    Landing: 'Landing page: Hero + Section + widget',
     Sorotan: 'BeritaPortal layout="featured"',
     Grid: 'BeritaPortal layout="grid"',
-    Beranda: "Kolom utama + sidebar (pengumuman, terpopuler, kalender)",
+    Beranda: 'Kolom utama + sidebar (pengumuman, terpopuler, kalender)',
     Agenda: 'AgendaPortal variant="card"',
   },
   props: [
-    [
-      "situs",
-      "string",
-      "Kode situs portal ('univ', kode fakultas). Kosong = semua situs.",
-    ],
-    ["turunan", "boolean", "Ikutkan konten situs turunan (fakultas/prodi)."],
-    ["jumlah", "number", "Banyak item (per_page)."],
-    ["layout", "'grid' | 'featured' | 'list'", "Tata letak BeritaPortal."],
-    ["urut", "'terbaru' | 'populer'", "Urutan berita."],
-    [
-      "href",
-      "(jenis, konten) => string",
-      "Pembentuk tautan detail. Bawaan /berita/{slug}.",
-    ],
+    ['situs', 'string', "Kode situs portal ('univ', kode fakultas). Kosong = semua situs."],
+    ['turunan', 'boolean', 'Ikutkan konten situs turunan (fakultas/prodi).'],
+    ['jumlah', 'number', 'Banyak item (per_page).'],
+    ['layout', "'grid' | 'featured' | 'list'", 'Tata letak BeritaPortal.'],
+    ['urut', "'terbaru' | 'populer'", 'Urutan berita.'],
+    ['href', '(jenis, konten) => string', 'Pembentuk tautan detail. Bawaan /berita/{slug}.'],
   ],
-  notes: [
-    "Gambar contoh di halaman ini berupa pola warna, bukan foto. Di produksi, gambar diambil dari media portal (kolom gambar.url).",
-  ],
+  notes: ['Gambar contoh di halaman ini berupa pola warna, bukan foto. Di produksi, gambar diambil dari media portal (kolom gambar.url).'],
 };
 
 export function Landing() {
   return (
-    <div style={{ display: "grid", gap: 48 }}>
+    <div style={{ display: 'grid', gap: 48 }}>
       <Hero
         variant="image"
         announcement={
           <>
             <span
               style={{
-                background: "var(--u-primary)",
-                color: "#fff",
+                background: 'var(--u-primary)',
+                color: '#fff',
                 borderRadius: 999,
-                padding: "2px 8px",
+                padding: '2px 8px',
                 fontSize: 11,
               }}
             >
@@ -79,9 +63,9 @@ export function Landing() {
               size="lg"
               variant="outline"
               style={{
-                background: "transparent",
-                color: "#fff",
-                borderColor: "rgb(255 255 255 / .4)",
+                background: 'transparent',
+                color: '#fff',
+                borderColor: 'rgb(255 255 255 / .4)',
               }}
             >
               Lihat program studi
@@ -89,9 +73,9 @@ export function Landing() {
           </>
         }
         stats={[
-          { value: "12", label: "Program studi" },
-          { value: "3.400+", label: "Mahasiswa aktif" },
-          { value: "Baik Sekali", label: "Akreditasi institusi" },
+          { value: '12', label: 'Program studi' },
+          { value: '3.400+', label: 'Mahasiswa aktif' },
+          { value: 'Baik Sekali', label: 'Akreditasi institusi' },
         ]}
       />
       <Section eyebrow="Kabar kampus" title="Berita terbaru" href="/berita">
@@ -113,15 +97,13 @@ export function Beranda() {
   return (
     <div
       style={{
-        display: "flex",
-        flexWrap: "wrap",
+        display: 'flex',
+        flexWrap: 'wrap',
         gap: 32,
-        alignItems: "flex-start",
+        alignItems: 'flex-start',
       }}
     >
-      <div
-        style={{ flex: "999 1 420px", minWidth: 0, display: "grid", gap: 40 }}
-      >
+      <div style={{ flex: '999 1 420px', minWidth: 0, display: 'grid', gap: 40 }}>
         <Section title="Berita" href="/berita">
           <BeritaPortal layout="list" jumlah={4} />
         </Section>
@@ -129,9 +111,7 @@ export function Beranda() {
           <AgendaPortal jumlah={3} />
         </Section>
       </div>
-      <aside
-        style={{ flex: "1 1 260px", display: "grid", gap: 32, minWidth: 0 }}
-      >
+      <aside style={{ flex: '1 1 260px', display: 'grid', gap: 32, minWidth: 0 }}>
         <Section title="Pengumuman" href="/pengumuman" style={{ gap: 12 }}>
           <PengumumanPortal jumlah={4} />
         </Section>

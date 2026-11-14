@@ -8,3 +8,5 @@ export * from './tabel';
 export * from './status-layanan';
 export * from './kalender';
 export * from './portal';
+export * from './pmb';
+export * from './kelengkapan';

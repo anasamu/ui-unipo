@@ -16,3 +16,4 @@ export * from './components/data-table';
 export * from './components/status';
 export * from './components/schedule';
 export * from './components/content';
+export * from './components/wizard';

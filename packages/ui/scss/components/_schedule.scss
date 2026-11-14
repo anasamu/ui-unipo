@@ -11,7 +11,7 @@
   width: 3.25rem;
   height: 3.5rem;
   border-radius: calc(var(--u-radius) + 2px);
-  background: color-mix(in oklab, var(--tone) 9%, var(--u-surface));
+  background: color-mix(in oklab, var(--tone) 9%, var(--u-card));
   border: 1px solid color-mix(in oklab, var(--tone) 18%, var(--u-border));
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -90,7 +90,7 @@
 .u-evcal-grid {
   border: 1px solid var(--u-border);
   border-radius: calc(var(--u-radius) + 4px);
-  background: var(--u-surface);
+  background: var(--u-card);
   overflow: hidden;
 }
 .u-evcal-weekdays,
@@ -100,7 +100,7 @@
 }
 .u-evcal-weekdays {
   border-bottom: 1px solid var(--u-border);
-  background: color-mix(in oklab, var(--u-muted) 60%, var(--u-surface));
+  background: color-mix(in oklab, var(--u-muted) 60%, var(--u-card));
   span {
     padding: 0.5rem 0.625rem;
     font-size: var(--u-text-xs);
@@ -131,7 +131,7 @@
     border-left: 1px solid var(--u-border);
   }
   &[data-outside] {
-    background: color-mix(in oklab, var(--u-muted) 45%, var(--u-surface));
+    background: color-mix(in oklab, var(--u-muted) 45%, var(--u-card));
     .u-evcal-date {
       color: color-mix(in oklab, var(--u-muted-foreground) 70%, transparent);
     }
@@ -141,7 +141,7 @@
     color: var(--u-danger);
   }
   &[data-holiday] {
-    background: color-mix(in oklab, var(--u-danger) 5%, var(--u-surface));
+    background: color-mix(in oklab, var(--u-danger) 5%, var(--u-card));
   }
   &[data-selected] {
     box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--u-primary) 70%, transparent);
@@ -195,7 +195,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   color: color-mix(in oklab, var(--tone) 70%, var(--u-foreground));
-  background: color-mix(in oklab, var(--tone) 13%, var(--u-surface));
+  background: color-mix(in oklab, var(--tone) 13%, var(--u-card));
   cursor: pointer;
   transition: filter var(--u-duration-fast) var(--u-ease-out);
   &::before {
@@ -387,7 +387,7 @@
   padding: 0.125rem 0.5rem;
   border-radius: 999px;
   color: color-mix(in oklab, var(--tone) 75%, var(--u-foreground));
-  background: color-mix(in oklab, var(--tone) 11%, var(--u-surface));
+  background: color-mix(in oklab, var(--tone) 11%, var(--u-card));
 }
 .u-agenda[data-compact] {
   gap: 0;
@@ -453,7 +453,7 @@
   padding: 0 0.625rem;
   border-radius: 999px;
   border: 1px solid var(--u-border);
-  background: var(--u-surface);
+  background: var(--u-card);
   font-size: var(--u-text-xs);
   font-weight: var(--u-weight-medium);
   color: var(--u-foreground);
@@ -501,7 +501,7 @@
   gap: 0.75rem;
   border: 1px solid var(--u-border);
   border-radius: calc(var(--u-radius) + 4px);
-  background: var(--u-surface);
+  background: var(--u-card);
   padding: 1rem 0.5rem 0.5rem;
   h4 {
     margin: 0;
