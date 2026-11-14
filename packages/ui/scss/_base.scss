@@ -1,0 +1,148 @@
+@use 'sass:string';
+@use 'config' as *;
+
+// Token turunan. Semuanya dihitung dari --u-primary / --u-secondary dsb. di runtime,
+// sehingga mengganti satu variabel CSS sudah cukup untuk mengganti seluruh tema.
+:root,
+.u-theme {
+  @include u-root-vars;
+  @include u-light-vars;
+  --u-radius: var(--u-radius-base);
+  --u-primary-hover: color-mix(in oklab, var(--u-primary) 88%, black);
+  --u-primary-soft: color-mix(in oklab, var(--u-primary) 9%, var(--u-background));
+  --u-primary-soft-hover: color-mix(in oklab, var(--u-primary) 14%, var(--u-background));
+  --u-primary-soft-foreground: color-mix(in oklab, var(--u-primary) 82%, var(--u-foreground));
+  --u-secondary-hover: color-mix(in oklab, var(--u-secondary) 90%, black);
+  --u-secondary-soft: color-mix(in oklab, var(--u-secondary) 16%, var(--u-background));
+  --u-secondary-soft-foreground: color-mix(in oklab, var(--u-secondary) 45%, var(--u-foreground));
+  --u-success-soft: color-mix(in oklab, var(--u-success) 10%, var(--u-background));
+  --u-warning-soft: color-mix(in oklab, var(--u-warning) 12%, var(--u-background));
+  --u-danger-soft: color-mix(in oklab, var(--u-danger) 9%, var(--u-background));
+  --u-info-soft: color-mix(in oklab, var(--u-info) 10%, var(--u-background));
+  --u-success-text: color-mix(in oklab, var(--u-success) 85%, var(--u-foreground));
+  --u-warning-text: color-mix(in oklab, var(--u-warning) 75%, var(--u-foreground));
+  --u-danger-text: color-mix(in oklab, var(--u-danger) 88%, var(--u-foreground));
+  --u-info-text: color-mix(in oklab, var(--u-info) 85%, var(--u-foreground));
+  --u-card: var(--u-background);
+  --u-popover: var(--u-background);
+  --u-hover: color-mix(in oklab, var(--u-foreground) 5%, transparent);
+  --u-active: color-mix(in oklab, var(--u-foreground) 8%, transparent);
+  --u-ring: color-mix(in oklab, var(--u-primary) 55%, transparent);
+  --u-ring-danger: color-mix(in oklab, var(--u-danger) 45%, transparent);
+  --u-border-strong: color-mix(in oklab, var(--u-foreground) 16%, var(--u-border));
+  --u-overlay: rgb(9 11 16 / 0.45);
+  --u-shadow-xs: 0 1px 2px rgb(16 24 40 / 0.05);
+  --u-shadow-sm: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.06);
+  --u-shadow-md: 0 2px 4px -1px rgb(16 24 40 / 0.05), 0 6px 14px -4px rgb(16 24 40 / 0.08);
+  --u-shadow-lg: 0 4px 8px -2px rgb(16 24 40 / 0.05), 0 16px 32px -8px rgb(16 24 40 / 0.14);
+  --u-shadow-xl: 0 8px 16px -4px rgb(16 24 40 / 0.06), 0 28px 56px -12px rgb(16 24 40 / 0.22);
+}
+
+.dark,
+[data-theme='dark'] {
+  @include u-dark-vars;
+  --u-card: var(--u-surface);
+  --u-popover: color-mix(in oklab, var(--u-surface) 70%, var(--u-muted));
+  --u-primary-hover: color-mix(in oklab, var(--u-primary) 86%, white);
+  --u-primary-soft: color-mix(in oklab, var(--u-primary) 16%, var(--u-background));
+  --u-primary-soft-hover: color-mix(in oklab, var(--u-primary) 22%, var(--u-background));
+  --u-primary-soft-foreground: color-mix(in oklab, var(--u-primary) 55%, white);
+  --u-secondary-soft-foreground: color-mix(in oklab, var(--u-secondary) 75%, white);
+  --u-success-text: color-mix(in oklab, var(--u-success) 70%, white);
+  --u-warning-text: color-mix(in oklab, var(--u-warning) 70%, white);
+  --u-danger-text: color-mix(in oklab, var(--u-danger) 70%, white);
+  --u-info-text: color-mix(in oklab, var(--u-info) 70%, white);
+  --u-success-soft: color-mix(in oklab, var(--u-success) 16%, var(--u-background));
+  --u-warning-soft: color-mix(in oklab, var(--u-warning) 16%, var(--u-background));
+  --u-danger-soft: color-mix(in oklab, var(--u-danger) 16%, var(--u-background));
+  --u-info-soft: color-mix(in oklab, var(--u-info) 16%, var(--u-background));
+  --u-overlay: rgb(0 0 0 / 0.6);
+  --u-shadow-xs: 0 1px 2px rgb(0 0 0 / 0.3);
+  --u-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 3px rgb(0 0 0 / 0.25);
+  --u-shadow-md: 0 2px 4px -1px rgb(0 0 0 / 0.35), 0 6px 14px -4px rgb(0 0 0 / 0.4);
+  --u-shadow-lg: 0 4px 8px -2px rgb(0 0 0 / 0.4), 0 16px 32px -8px rgb(0 0 0 / 0.5);
+  --u-shadow-xl: 0 8px 16px -4px rgb(0 0 0 / 0.4), 0 28px 56px -12px rgb(0 0 0 / 0.6);
+}
+
+// Tipografi dasar hanya untuk area yang memakai kelas .u-root (opsional),
+// supaya pustaka ini aman dipasang di aplikasi yang sudah punya gaya sendiri.
+.u-root {
+  font-family: var(--u-font-sans);
+  font-size: var(--u-text-base);
+  line-height: var(--u-leading-normal);
+  color: var(--u-foreground);
+  background: var(--u-background);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+// Reset minimal untuk elemen pustaka. :where() = spesifisitas 0 supaya mudah ditimpa.
+:where([class^='u-'], [class*=' u-']) {
+  box-sizing: border-box;
+  &::before,
+  &::after {
+    box-sizing: border-box;
+  }
+}
+:where(button[class^='u-'], button[class*=' u-']) {
+  font: inherit;
+  color: inherit;
+  margin: 0;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+.u-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.u-icon {
+  width: 1em;
+  height: 1em;
+  flex: none;
+}
+
+@keyframes u-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes u-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+@keyframes u-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+@keyframes u-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([class^='u-'], [class*=' u-']) {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,65 @@
+.u-app-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+  color: var(--u-foreground);
+  text-decoration: none;
+  > svg,
+  > img {
+    flex: none;
+  }
+  &[data-layout='stacked'] {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+  &[data-tone='inverse'] {
+    color: #fff;
+  }
+  &[data-size='sm'] {
+    gap: 0.5rem;
+  }
+  &[data-size='lg'] {
+    gap: 0.75rem;
+  }
+  &[data-size='xl'] {
+    gap: 0.875rem;
+  }
+}
+.u-app-logo-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.1;
+}
+.u-app-logo-name {
+  font-family: var(--u-font-heading);
+  font-size: var(--u-text-md);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  [data-size='sm'] > .u-app-logo-text > & {
+    font-size: var(--u-text-sm);
+  }
+  [data-size='lg'] > .u-app-logo-text > & {
+    font-size: var(--u-text-lg);
+  }
+  [data-size='xl'] > .u-app-logo-text > & {
+    font-size: var(--u-text-2xl);
+  }
+}
+.u-app-logo-tagline {
+  margin-top: 0.1875rem;
+  color: var(--u-muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  [data-tone='inverse'] & {
+    color: rgb(255 255 255 / 0.72);
+  }
+  [data-size='xl'] & {
+    font-size: var(--u-text-sm);
+  }
+}

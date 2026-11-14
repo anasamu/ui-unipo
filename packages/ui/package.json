@@ -1,0 +1,68 @@
+{
+  "name": "@unipo/ui",
+  "version": "0.1.0",
+  "type": "module",
+  "sideEffects": [
+    "*.css",
+    "*.scss"
+  ],
+  "scripts": {
+    "build": "node build-css.mjs && tsup && node add-use-client.mjs",
+    "build:css": "node build-css.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18",
+    "unipo-siakad-sdk": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "unipo-siakad-sdk": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@base-ui/react": "1.9.0",
+    "lucide-react": "1.73.0",
+    "country-flag-icons": "1.6.20",
+    "@unipo/tokens": "0.1.0"
+  },
+  "devDependencies": {
+    "sass": "1.108.2",
+    "tsup": "8.5.1",
+    "typescript": "5.9.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "react": "19.2.9",
+    "react-dom": "19.2.9",
+    "unipo-siakad-sdk": "1.0.0",
+    "date-fns": "4.4.0",
+    "@date-fns/tz": "1.5.0"
+  },
+  "description": "Komponen UI UNIPO: CSS kelas u-* (framework-agnostic) dan komponen React di atas Base UI, terhubung ke SDK SIAKAD.",
+  "license": "MIT",
+  "author": "Pustikom Universitas Pohuwato",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./css": "./dist/ui-unipo.css",
+    "./css/min": "./dist/ui-unipo.min.css",
+    "./scss": "./dist/scss/index.scss",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

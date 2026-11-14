@@ -1,0 +1,245 @@
+@use '../mixins' as *;
+
+// Blok kode. Palet sintaks diatur lewat variabel --u-code-* agar mudah diganti.
+.u-code {
+  --u-code-bg: var(--u-surface);
+  --u-code-header: var(--u-muted);
+  --u-code-fg: var(--u-foreground);
+  --u-code-muted: var(--u-muted-foreground);
+  --u-code-border: var(--u-border);
+  --u-code-tab-active: var(--u-background);
+  --u-code-hl: color-mix(in oklab, var(--u-primary) 10%, transparent);
+  --u-tok-string: #15803d;
+  --u-tok-property: #1d4ed8;
+  --u-tok-number: #b45309;
+  --u-tok-keyword: #9333ea;
+  --u-tok-function: #0e7490;
+  --u-tok-comment: #8a93a1;
+  --u-tok-variable: #be185d;
+  --u-tok-type: #a16207;
+  --u-tok-tag: #be123c;
+  --u-tok-attr: #0369a1;
+  overflow: hidden;
+  border: 1px solid var(--u-code-border);
+  border-radius: calc(var(--u-radius) + 6px);
+  background: var(--u-code-bg);
+  color: var(--u-code-fg);
+  box-shadow: var(--u-shadow-sm);
+  &[data-theme='code-dark'],
+  .dark &,
+  [data-theme='dark'] & {
+    --u-code-bg: #0d1220;
+    --u-code-header: #0d1220;
+    --u-code-fg: #dfe5f0;
+    --u-code-muted: #6e7891;
+    --u-code-border: #1e2638;
+    --u-code-tab-active: #1c2436;
+    --u-code-hl: rgb(110 140 255 / 0.12);
+    --u-tok-string: #7ee2b8;
+    --u-tok-property: #8cc8ff;
+    --u-tok-number: #f6c560;
+    --u-tok-keyword: #c49bff;
+    --u-tok-function: #7fd4f0;
+    --u-tok-comment: #626d86;
+    --u-tok-variable: #ff9ccf;
+    --u-tok-type: #f6c560;
+    --u-tok-tag: #ff8fa3;
+    --u-tok-attr: #8cc8ff;
+    color-scheme: dark;
+  }
+}
+.u-code-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 3.25rem;
+  padding: 0.5rem 0.625rem 0.5rem 1rem;
+  border-bottom: 1px solid var(--u-code-border);
+  background: var(--u-code-header);
+}
+.u-code-dots {
+  display: inline-flex;
+  gap: 0.5rem;
+  span {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    &:nth-child(1) {
+      background: #e0525b;
+    }
+    &:nth-child(2) {
+      background: #d6a53a;
+    }
+    &:nth-child(3) {
+      background: #4ea06e;
+    }
+  }
+}
+.u-code-tabs {
+  display: flex;
+  gap: 0.25rem;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.u-code-tab {
+  height: 2.125rem;
+  padding-inline: 0.875rem;
+  border-radius: calc(var(--u-radius) - 2px);
+  color: var(--u-code-muted);
+  font-size: var(--u-text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    color var(--u-duration-fast),
+    background-color var(--u-duration-fast);
+  &:hover {
+    color: var(--u-code-fg);
+  }
+  &[aria-selected='true'] {
+    background: var(--u-code-tab-active);
+    color: var(--u-code-fg);
+  }
+  &:focus-visible {
+    @include focus-ring(-2px);
+  }
+}
+.u-code-filename {
+  min-width: 0;
+  color: var(--u-code-muted);
+  font-family: var(--u-font-mono);
+  font-size: var(--u-text-xs);
+  @include truncate;
+}
+.u-code-copy {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  margin-inline-start: auto;
+  border-radius: calc(var(--u-radius) - 2px);
+  color: var(--u-code-muted);
+  transition:
+    color var(--u-duration-fast),
+    background-color var(--u-duration-fast);
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  &:hover {
+    color: var(--u-code-fg);
+    background: color-mix(in oklab, var(--u-code-fg) 8%, transparent);
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+  &[data-copied] {
+    color: var(--u-success);
+  }
+}
+.u-code-body {
+  margin: 0;
+  padding: 0.875rem 0;
+  overflow: auto;
+  font-family: var(--u-font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.75;
+  tab-size: 2;
+  outline: 0;
+  &:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--u-ring);
+  }
+  code {
+    display: block;
+    min-width: max-content;
+    font: inherit;
+  }
+  .u-code[data-wrap] & code {
+    min-width: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
+.u-code-line {
+  display: flex;
+  padding-inline: 1rem 1.25rem;
+  &[data-highlight] {
+    background: var(--u-code-hl);
+    box-shadow: inset 2px 0 0 var(--u-primary);
+  }
+}
+.u-code-ln {
+  flex: none;
+  width: 2.25rem;
+  padding-inline-end: 1rem;
+  color: var(--u-code-muted);
+  text-align: end;
+  user-select: none;
+  opacity: 0.75;
+}
+.u-code-text {
+  flex: 1;
+}
+.u-tok-string {
+  color: var(--u-tok-string);
+}
+.u-tok-property {
+  color: var(--u-tok-property);
+}
+.u-tok-number {
+  color: var(--u-tok-number);
+}
+.u-tok-keyword {
+  color: var(--u-tok-keyword);
+}
+.u-tok-function {
+  color: var(--u-tok-function);
+}
+.u-tok-comment {
+  color: var(--u-tok-comment);
+  font-style: italic;
+}
+.u-tok-variable {
+  color: var(--u-tok-variable);
+}
+.u-tok-type {
+  color: var(--u-tok-type);
+}
+.u-tok-tag {
+  color: var(--u-tok-tag);
+}
+.u-tok-attr {
+  color: var(--u-tok-attr);
+}
+.u-tok-punct {
+  color: color-mix(in oklab, var(--u-code-fg) 70%, transparent);
+}
+
+.u-inline-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.0625rem 0.375rem;
+  border: 1px solid var(--u-border);
+  border-radius: 6px;
+  background: var(--u-surface);
+  font-family: var(--u-font-mono);
+  font-size: 0.85em;
+  &[data-copyable] {
+    padding: 0.25rem 0.25rem 0.25rem 0.625rem;
+    code {
+      font: inherit;
+    }
+    .u-code-copy {
+      --u-code-muted: var(--u-muted-foreground);
+      --u-code-fg: var(--u-foreground);
+      width: 1.625rem;
+      height: 1.625rem;
+      svg {
+        width: 0.875rem;
+        height: 0.875rem;
+      }
+    }
+  }
+}
