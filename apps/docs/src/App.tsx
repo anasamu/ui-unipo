@@ -116,6 +116,12 @@ export function App() {
     const p = new URLSearchParams(location.search);
     if (p.get('theme') === 'dark') setDark(true);
     if (p.get('theme') === 'light') setDark(false);
+    // Saat disematkan (iframe), halaman induk dari origin yang sama boleh mengganti tema tanpa memuat ulang.
+    const on = (e: MessageEvent) => {
+      if (e.origin === location.origin && e.data?.type === 'unipo-ui:tema') setDark(!!e.data.gelap);
+    };
+    window.addEventListener('message', on);
+    return () => window.removeEventListener('message', on);
   }, []);
   React.useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
