@@ -8,7 +8,8 @@ import { formatDate, formatNumber, formatRupiah } from '../lib/format';
 import { judulOperasi, keabsahanAksi, labelKolom, labelNilai, nadaStatus } from './aturan';
 import type { Baris, Operasi, Skema } from './tipe';
 
-const UANG = /(nominal|biaya|tarif|harga|jumlah_bayar|jumlah_tagihan|total_bayar|total_tagihan|saldo|anggaran|pagu|realisasi|denda|potongan|honor|gaji|nilai_kontrak|uang|rupiah|^bayar|^tagihan)/i;
+// Dicocokkan per kata (dipisah _), agar mis. ruang_id tidak dianggap uang.
+const UANG = /(^|_)(nominal|biaya|tarif|harga|jumlah_bayar|jumlah_tagihan|total_bayar|total_tagihan|saldo|anggaran|pagu|realisasi|denda|potongan|honor|gaji|nilai_kontrak|uang|rupiah|bayar|tagihan)(_|$)/i;
 const STATUS = /(^status|_status$|^aktif$|^tahap$|^kondisi$)/i;
 
 /** Tampilan satu nilai sesuai tipe skema: lencana status, tanggal, rupiah, Ya/Tidak, tautan, atau teks. */
@@ -36,7 +37,7 @@ export function NilaiSel({ nama, value: v, skema: s, ringkas = true }: { nama: s
   }
   if ((typeof v === 'number' || (typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v))) && (s?.t === 'number' || s?.t === 'integer' || typeof v === 'number')) {
     const n = Number(v);
-    if (UANG.test(nama)) return <span className="u-nilai-angka">{formatRupiah(n)}</span>;
+    if (UANG.test(nama) && !/(^|_)id$/i.test(nama)) return <span className="u-nilai-angka">{formatRupiah(n)}</span>;
     if (/^(id|.*_id|tahun.*|kode.*|nim|nidn|nik|nip|no.*|nomor.*)$/i.test(nama)) return <span className="u-mono">{String(v)}</span>;
     return <span className="u-nilai-angka">{formatNumber(n)}</span>;
   }
