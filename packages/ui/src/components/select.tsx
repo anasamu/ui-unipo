@@ -155,7 +155,8 @@ export function Combobox<T>({
   errorText = 'Data tidak bisa dimuat. Coba lagi.',
   ...rest
 }: ComboboxProps<T>) {
-  const [query, setQuery] = React.useState('');
+  const initial = value !== undefined ? value : (defaultValue ?? null);
+  const [query, setQuery] = React.useState(() => (initial ? itemToString(initial) : ''));
   const [open, setOpen] = React.useState(false);
   const [remote, setRemote] = React.useState<T[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -163,6 +164,12 @@ export function Combobox<T>({
   const [inner, setInner] = React.useState<T | null>(defaultValue ?? null);
   const selected = value !== undefined ? value : inner;
   const debounced = useDebounced(query, debounceMs);
+  // Nilai dari luar berubah (mis. form diisi ulang): samakan teks isian selama daftar tertutup.
+  const selectedLabel = selected ? itemToString(selected) : '';
+  React.useEffect(() => {
+    if (!open) setQuery(selectedLabel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLabel]);
   const tooShort = Boolean(loadItems) && debounced.trim().length < minQueryLength;
 
   React.useEffect(() => {

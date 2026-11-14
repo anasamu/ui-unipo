@@ -1,4 +1,4 @@
-import { CodeBlock, InlineCode } from '@unipo/ui';
+import { CodeBlock, InlineCode } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
@@ -6,7 +6,7 @@ export const meta: DemoMeta = {
   category: 'Tampilan data',
   layout: 'wide',
   description: 'Blok kode bertab untuk dokumentasi API dan halaman pengembang: nomor baris, pewarnaan sintaks ringan tanpa dependensi, sorot baris, dan tombol salin.',
-  importLine: "import { CodeBlock, InlineCode } from '@unipo/ui';",
+  importLine: "import { CodeBlock, InlineCode } from 'unipo-ui';",
   demos: { Tab: 'Contoh permintaan API', Tunggal: 'Satu berkas dengan sorotan', Sebaris: 'Kode sebaris' },
   props: [
     ['tabs', 'Array<{ label, language, code, filename? }>', 'Beberapa bahasa dalam satu blok.'],

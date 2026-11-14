@@ -1,12 +1,12 @@
 import { ArrowRight, Download, Plus, Printer, Save, Trash2 } from 'lucide-react';
-import { Button, ButtonGroup, Tooltip } from '@unipo/ui';
+import { Button, ButtonGroup, Tooltip } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
   title: 'Button',
   category: 'Aksi',
   description: 'Tombol untuk aksi utama dan sekunder. Tulis label dengan kata kerja ("Simpan KRS", bukan "OK").',
-  importLine: "import { Button, ButtonGroup } from '@unipo/ui';",
+  importLine: "import { Button, ButtonGroup } from 'unipo-ui';",
   demos: { Varian: 'Varian', Ukuran: 'Ukuran', Ikon: 'Dengan ikon', Memuat: 'Status memuat dan nonaktif', Grup: 'Grup tombol', Tautan: 'Sebagai tautan' },
   props: [
     ['variant', "'primary' | 'secondary' | 'outline' | 'soft' | 'ghost' | 'destructive' | 'destructive-soft' | 'link'", 'Gaya tombol. Bawaan primary.'],

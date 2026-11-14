@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Palette } from 'lucide-react';
-import { Button, Popover, SegmentedControl } from '@unipo/ui';
+import { Button, Popover, SegmentedControl } from 'unipo-ui';
 
 const PRIMARY = [
   { name: 'Biru UNIPO', value: '' },

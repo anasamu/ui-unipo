@@ -1,4 +1,4 @@
-import { Alert, Badge, CodeBlock } from '@unipo/ui';
+import { Alert, Badge, CodeBlock } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
@@ -15,9 +15,9 @@ export function Lapisan() {
     <>
       <p>Pustaka ini disusun berlapis supaya bagian yang sama bisa dipakai di banyak teknologi:</p>
       <ol>
-        <li><strong>Token</strong> (<code className="u-inline-code">@unipo/tokens</code>): warna, jarak, sudut, huruf, durasi. Satu sumber JSON dibangun menjadi CSS, SCSS, LESS, preset Tailwind, TypeScript untuk React Native, dan tema Kotlin Jetpack Compose.</li>
-        <li><strong>CSS komponen</strong> (<code className="u-inline-code">@unipo/ui/css</code>): kelas <code className="u-inline-code">u-*</code> tanpa JavaScript, bisa dipakai di Vue, Svelte, Blade, atau HTML biasa.</li>
-        <li><strong>Komponen React</strong> (<code className="u-inline-code">@unipo/ui</code>): primitif aksesibel di atas Base UI, lalu komponen terhubung SDK (<code className="u-inline-code">@unipo/ui/siakad</code>) dan widget per fitur (<code className="u-inline-code">@unipo/ui/widgets</code>).</li>
+        <li><strong>Token</strong> (<code className="u-inline-code">unipo-ui-tokens</code>): warna, jarak, sudut, huruf, durasi. Satu sumber JSON dibangun menjadi CSS, SCSS, LESS, preset Tailwind, TypeScript untuk React Native, dan tema Kotlin Jetpack Compose.</li>
+        <li><strong>CSS komponen</strong> (<code className="u-inline-code">unipo-ui/css</code>): kelas <code className="u-inline-code">u-*</code> tanpa JavaScript, bisa dipakai di Vue, Svelte, Blade, atau HTML biasa.</li>
+        <li><strong>Komponen React</strong> (<code className="u-inline-code">unipo-ui</code>): primitif aksesibel di atas Base UI, lalu komponen terhubung SDK (<code className="u-inline-code">unipo-ui/siakad</code>) dan widget per fitur (<code className="u-inline-code">unipo-ui/widgets</code>).</li>
       </ol>
     </>
   );

@@ -6,6 +6,6 @@ Sistem desain dan pustaka komponen untuk aplikasi Universitas Pohuwato (SIAKAD, 
 
 | Paket | Isi |
 |---|---|
-| `packages/tokens` (`@unipo/tokens`) | Design token → CSS, SCSS, LESS, Tailwind, TypeScript/React Native, Kotlin Compose, XML Android |
-| `packages/ui` (`@unipo/ui`) | CSS kelas `u-*` + komponen React di atas [Base UI](https://base-ui.com) |
+| `packages/tokens` (`unipo-ui-tokens`) | Design token → CSS, SCSS, LESS, Tailwind, TypeScript/React Native, Kotlin Compose, XML Android |
+| `packages/ui` (`unipo-ui`) | CSS kelas `u-*` + komponen React di atas [Base UI](https://base-ui.com) |
 | `apps/docs` | Situs dokumentasi dan galeri komponen |

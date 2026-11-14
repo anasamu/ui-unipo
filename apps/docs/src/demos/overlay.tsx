@@ -1,12 +1,12 @@
 import { Copy, Download, Eye, LogOut, MoreHorizontal, Pencil, Settings, Trash2, User } from 'lucide-react';
-import { Button, ConfirmDialog, Dialog, DialogClose, Field, Input, Menu, Popover, Select, Sheet, Tooltip, useToast } from '@unipo/ui';
+import { Button, ConfirmDialog, Dialog, DialogClose, Field, Input, Menu, Popover, Select, Sheet, Tooltip, useToast } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
   title: 'Dialog, Sheet & Menu',
   category: 'Overlay',
   description: 'Lapisan di atas halaman. Dialog untuk tugas singkat, Sheet (panel samping) untuk saringan dan detail, ConfirmDialog untuk tindakan yang tidak bisa dibatalkan, Menu untuk aksi baris.',
-  importLine: "import { Dialog, Sheet, ConfirmDialog, Popover, Tooltip, Menu, useToast } from '@unipo/ui';",
+  importLine: "import { Dialog, Sheet, ConfirmDialog, Popover, Tooltip, Menu, useToast } from 'unipo-ui';",
   demos: { DialogForm: 'Dialog berisi formulir', Konfirmasi: 'Konfirmasi hapus', Panel: 'Sheet saringan', MenuAksi: 'Menu aksi', Melayang: 'Popover & Tooltip', Notifikasi: 'Toast' },
 };
 

@@ -1,5 +1,5 @@
-// @unipo/ui: komponen dasar (primitif). Komponen terhubung SDK ada di '@unipo/ui/siakad',
-// widget per fitur di '@unipo/ui/widgets'.
+// unipo-ui: komponen dasar (primitif). Komponen terhubung SDK ada di 'unipo-ui/siakad',
+// widget per fitur di 'unipo-ui/widgets'.
 export * from './lib/cn';
 export * from './lib/format';
 export * from './components/actions';
@@ -11,3 +11,5 @@ export * from './components/calendar';
 export * from './components/code';
 export * from './components/layout';
 export * from './components/identity';
+export * from './components/filter';
+export * from './components/data-table';

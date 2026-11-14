@@ -1,6 +1,6 @@
 import { BookOpen, Building, Calendar } from 'lucide-react';
 import * as React from 'react';
-import { Combobox, Field, OptionContent, Select } from '@unipo/ui';
+import { Combobox, Field, OptionContent, Select } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
@@ -8,7 +8,7 @@ export const meta: DemoMeta = {
   category: 'Pilihan',
   layout: 'narrow',
   description: 'Select untuk daftar pendek yang sudah diketahui. Combobox untuk daftar panjang atau data dari API; menjadi dasar semua komponen Cari* (mahasiswa, dosen, negara, sekolah).',
-  importLine: "import { Select, Combobox, OptionContent } from '@unipo/ui';",
+  importLine: "import { Select, Combobox, OptionContent } from 'unipo-ui';",
   demos: { Dasar: 'Select', Grup: 'Select dengan grup dan deskripsi', Cari: 'Combobox statis', Async: 'Combobox memuat dari server' },
   props: [
     ['items / loadItems', 'T[] / (q, signal) => Promise<T[]>', 'Daftar statis atau fungsi pemuat (debounce + batal otomatis).'],

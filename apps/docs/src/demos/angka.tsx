@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Field, NumberField, OtpField, SegmentedControl, Slider, Toggle, ToggleGroup } from '@unipo/ui';
+import { Field, NumberField, OtpField, SegmentedControl, Slider, Toggle, ToggleGroup } from 'unipo-ui';
 import { Bold, Italic, LayoutGrid, List, Underline } from 'lucide-react';
 import type { DemoMeta } from '../registry';
 
@@ -7,7 +7,7 @@ export const meta: DemoMeta = {
   title: 'Angka, OTP & Toggle',
   category: 'Pilihan',
   description: 'Kontrol khusus: jumlah (SKS, kuota), rentang (IPK), kode OTP verifikasi, dan tombol tekan/segmen untuk mengganti tampilan.',
-  importLine: "import { NumberField, Slider, OtpField, Toggle, ToggleGroup, SegmentedControl } from '@unipo/ui';",
+  importLine: "import { NumberField, Slider, OtpField, Toggle, ToggleGroup, SegmentedControl } from 'unipo-ui';",
   demos: { Jumlah: 'NumberField', Rentang: 'Slider', Otp: 'Kode OTP', Segmen: 'SegmentedControl', Tekan: 'Toggle' },
 };
 

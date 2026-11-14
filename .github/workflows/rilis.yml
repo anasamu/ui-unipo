@@ -1,0 +1,45 @@
+# Rilis ke npm: samakan versi di packages/tokens dan packages/ui, lalu
+#   git tag v0.2.0 && git push origin v0.2.0
+# Butuh secret NPM_TOKEN (token "Automation" dari npmjs.com) di Settings → Secrets → Actions.
+name: Rilis
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  rilis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: Versi tag sama dengan kedua paket
+        run: |
+          VERSI="${GITHUB_REF_NAME#v}"
+          UI="$(node -p "require('./packages/ui/package.json').version")"
+          TOK="$(node -p "require('./packages/tokens/package.json').version")"
+          DEP="$(node -p "require('./packages/ui/package.json').dependencies['unipo-ui-tokens']")"
+          echo "tag=$VERSI ui=$UI tokens=$TOK ui→tokens=$DEP"
+          [ "$VERSI" = "$UI" ] && [ "$VERSI" = "$TOK" ] && [ "$DEP" = "$TOK" ] || { echo "::error::Versi tidak sama"; exit 1; }
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - run: npm run typecheck
+      - name: Uji CLI
+        run: node packages/ui/cli/index.mjs list > /dev/null && node packages/ui/cli/index.mjs tema --stdout --primary "#0f766e" > /dev/null
+      - name: Terbitkan ke npm (tokens lalu ui)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then echo "::warning::Secret NPM_TOKEN belum diisi; npm dilewati."; exit 0; fi
+          npm publish -w unipo-ui-tokens --access public
+          npm publish -w unipo-ui --access public
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "Lihat CHANGELOG.md." --verify-tag

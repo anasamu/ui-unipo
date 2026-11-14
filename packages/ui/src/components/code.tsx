@@ -191,7 +191,7 @@ export function CodeBlock({ code, language = 'text', filename, tabs, defaultTab 
   );
 }
 
-/** Kode sebaris, mis. `npm install @unipo/ui`, dengan tombol salin opsional. */
+/** Kode sebaris, mis. `npm install unipo-ui`, dengan tombol salin opsional. */
 export function InlineCode({ children, copyable, className }: { children: string; copyable?: boolean; className?: string }) {
   if (!copyable) return <code className={cn('u-inline-code', className)}>{children}</code>;
   return (

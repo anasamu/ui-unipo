@@ -1,5 +1,5 @@
 {
-  "name": "@unipo/ui",
+  "name": "unipo-ui",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": [
@@ -7,7 +7,7 @@
     "*.scss"
   ],
   "scripts": {
-    "build": "node build-css.mjs && tsup && node add-use-client.mjs",
+    "build": "node build-css.mjs && tsup && node add-use-client.mjs && node gen-registry.mjs",
     "build:css": "node build-css.mjs",
     "typecheck": "tsc --noEmit"
   },
@@ -25,7 +25,7 @@
     "@base-ui/react": "1.9.0",
     "lucide-react": "1.73.0",
     "country-flag-icons": "1.6.20",
-    "@unipo/tokens": "0.1.0"
+    "unipo-ui-tokens": "0.1.0"
   },
   "devDependencies": {
     "sass": "1.108.2",
@@ -56,13 +56,60 @@
         "default": "./dist/index.cjs"
       }
     },
-    "./css": "./dist/ui-unipo.css",
-    "./css/min": "./dist/ui-unipo.min.css",
+    "./siakad": {
+      "import": {
+        "types": "./dist/siakad.d.ts",
+        "default": "./dist/siakad.js"
+      },
+      "require": {
+        "types": "./dist/siakad.d.cts",
+        "default": "./dist/siakad.cjs"
+      }
+    },
+    "./css": {
+      "types": "./dist/css.d.ts",
+      "default": "./dist/ui-unipo.css"
+    },
+    "./css/min": {
+      "types": "./dist/css.d.ts",
+      "default": "./dist/ui-unipo.min.css"
+    },
     "./scss": "./dist/scss/index.scss",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./registry.json": "./dist/registry.json"
   },
   "files": [
     "dist",
+    "src",
+    "cli",
     "README.md"
-  ]
+  ],
+  "bin": {
+    "unipo-ui": "./cli/index.mjs"
+  },
+  "keywords": [
+    "unipo",
+    "siakad",
+    "ui",
+    "react",
+    "components",
+    "design-system",
+    "base-ui",
+    "nextjs",
+    "scss",
+    "less",
+    "tailwind"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anasamu/ui-unipo.git",
+    "directory": "packages/ui"
+  },
+  "homepage": "https://api.unipo.ac.id/docs/panduan/ui",
+  "bugs": {
+    "url": "https://github.com/anasamu/ui-unipo/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

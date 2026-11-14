@@ -17,6 +17,10 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run typecheck
+      - name: Uji CLI dan isi paket
+        run: |
+          node packages/ui/cli/index.mjs list > /dev/null
+          npm pack -w unipo-ui --dry-run > /dev/null
       - run: npm run build -w docs
       - uses: actions/upload-artifact@v4
         with:

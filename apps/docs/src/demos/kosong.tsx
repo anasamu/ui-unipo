@@ -1,12 +1,12 @@
 import { FileSearch, Inbox, Plus, SearchX } from 'lucide-react';
-import { Button, Empty, Skeleton, Spinner } from '@unipo/ui';
+import { Button, Empty, Skeleton, Spinner } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
   title: 'Empty, Skeleton & Spinner',
   category: 'Tampilan data',
   description: 'Keadaan kosong selalu memberi jalan keluar. Skeleton untuk muatan lebih dari satu detik, Spinner untuk aksi singkat di dalam tombol atau baris.',
-  importLine: "import { Empty, Skeleton, Spinner } from '@unipo/ui';",
+  importLine: "import { Empty, Skeleton, Spinner } from 'unipo-ui';",
   demos: { Kosong: 'Belum ada data', Pencarian: 'Hasil saringan kosong', Kerangka: 'Skeleton', Putar: 'Spinner' },
 };
 

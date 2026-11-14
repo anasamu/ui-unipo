@@ -1,0 +1,341 @@
+#!/usr/bin/env node
+// CLI unipo-ui: pasang pustaka, atur tema, dan salin sumber komponen ke proyek.
+//   npx unipo-ui init            pasang paket + berkas tema + impor CSS
+//   npx unipo-ui add FilterBar   salin sumber komponen (beserta dependensinya) untuk diubah sendiri
+//   npx unipo-ui list [kata]     daftar komponen
+//   npx unipo-ui tema --primary "#0f766e"
+import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { execSync } from 'node:child_process';
+import { createInterface } from 'node:readline/promises';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const pkgRoot = resolve(here, '..');
+const pkg = JSON.parse(readFileSync(join(pkgRoot, 'package.json'), 'utf8'));
+const cwd = process.cwd();
+
+// ---------------------------------------------------------------- argumen
+const argv = process.argv.slice(2);
+const cmd = argv[0] && !argv[0].startsWith('-') ? argv[0] : 'help';
+const flags = {};
+const rest = [];
+for (let i = cmd === 'help' ? 0 : 1; i < argv.length; i++) {
+  const a = argv[i];
+  if (a.startsWith('--')) {
+    const [k, v] = a.slice(2).split('=');
+    if (v !== undefined) flags[k] = v;
+    else if (argv[i + 1] && !argv[i + 1].startsWith('-')) flags[k] = argv[++i];
+    else flags[k] = true;
+  } else if (a === '-y') flags.yes = true;
+  else rest.push(a);
+}
+
+const c = process.stdout.isTTY && !process.env.NO_COLOR ? { b: (s) => `\x1b[1m${s}\x1b[0m`, g: (s) => `\x1b[32m${s}\x1b[0m`, y: (s) => `\x1b[33m${s}\x1b[0m`, r: (s) => `\x1b[31m${s}\x1b[0m`, d: (s) => `\x1b[2m${s}\x1b[0m`, c: (s) => `\x1b[36m${s}\x1b[0m` } : Object.fromEntries(['b', 'g', 'y', 'r', 'd', 'c'].map((k) => [k, (s) => s]));
+const ok = (s) => console.log(`${c.g('✔')} ${s}`);
+const warn = (s) => console.log(`${c.y('!')} ${s}`);
+const fail = (s) => {
+  console.error(`${c.r('✖')} ${s}`);
+  process.exit(1);
+};
+
+// ---------------------------------------------------------------- proyek
+function readJson(p) {
+  try {
+    return JSON.parse(readFileSync(p, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+const project = readJson(join(cwd, 'package.json'));
+const deps = { ...(project?.dependencies ?? {}), ...(project?.devDependencies ?? {}) };
+
+function packageManager() {
+  if (flags.pm) return flags.pm;
+  if (existsSync(join(cwd, 'pnpm-lock.yaml'))) return 'pnpm';
+  if (existsSync(join(cwd, 'yarn.lock'))) return 'yarn';
+  if (existsSync(join(cwd, 'bun.lockb')) || existsSync(join(cwd, 'bun.lock'))) return 'bun';
+  return 'npm';
+}
+function framework() {
+  if (deps.next) return 'next';
+  if (deps.nuxt) return 'nuxt';
+  if (deps['react-native'] || deps.expo) return 'react-native';
+  if (deps.vue) return 'vue';
+  if (deps.react) return 'react';
+  if (existsSync(join(cwd, 'artisan'))) return 'laravel';
+  return 'html';
+}
+const FW_LABEL = { next: 'Next.js', nuxt: 'Nuxt', 'react-native': 'React Native', vue: 'Vue', react: 'React (Vite/CRA)', laravel: 'Laravel/Blade', html: 'HTML/PHP biasa' };
+
+function install(list, dev = false) {
+  const nameOf = (p) => (p.startsWith('@') ? '@' + p.slice(1).split('@')[0] : p.split('@')[0]);
+  const todo = list.filter((p) => !deps[nameOf(p)]);
+  if (!todo.length) return;
+  const pm = packageManager();
+  const verb = pm === 'npm' ? 'install' : 'add';
+  const cmdline = `${pm} ${verb} ${dev ? (pm === 'npm' ? '--save-dev ' : '-D ') : ''}${todo.join(' ')}`;
+  if (flags['no-install']) {
+    warn(`Lewati pemasangan. Jalankan sendiri: ${c.c(cmdline)}`);
+    return;
+  }
+  console.log(c.d(`$ ${cmdline}`));
+  try {
+    execSync(cmdline, { stdio: 'inherit', cwd });
+  } catch {
+    fail(`Gagal memasang paket. Jalankan sendiri: ${cmdline}`);
+  }
+}
+
+async function ask(q, def) {
+  if (flags.yes || !process.stdin.isTTY) return def;
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const a = (await rl.question(`${c.b('?')} ${q} ${def ? c.d(`(${def}) `) : ''}`)).trim();
+  rl.close();
+  return a || def;
+}
+const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+// ---------------------------------------------------------------- konfigurasi unipo.json
+const CONFIG = join(cwd, 'unipo.json');
+function config() {
+  return readJson(CONFIG) ?? {};
+}
+function defaultDir(fw) {
+  if (fw === 'next') return existsSync(join(cwd, 'src')) ? 'src/components/unipo' : 'components/unipo';
+  return existsSync(join(cwd, 'src')) ? 'src/components/unipo' : 'components/unipo';
+}
+function themeCss({ primary, secondary, radius }) {
+  return `/* Tema UNIPO untuk proyek ini. Semua warna turunan (hover, soft, ring, grafik) dihitung otomatis dari dua warna ini. */
+:root {
+  --u-primary: ${primary};
+  --u-secondary: ${secondary};
+  --u-radius: ${radius}px;
+}
+/* Mode gelap ikut kelas .dark atau [data-theme="dark"] di <html>. Timpa di sini bila perlu warna lain:
+.dark, [data-theme='dark'] {
+  --u-primary: ${primary};
+}
+*/
+`;
+}
+function entryFile() {
+  const cands = ['app/layout.tsx', 'src/app/layout.tsx', 'app/layout.jsx', 'src/app/layout.jsx', 'pages/_app.tsx', 'src/pages/_app.tsx', 'src/main.tsx', 'src/main.jsx', 'src/main.ts', 'src/main.js', 'app.vue', 'src/App.vue'];
+  return cands.find((f) => existsSync(join(cwd, f)));
+}
+
+// ---------------------------------------------------------------- perintah: init
+async function init() {
+  if (!project) fail('package.json tidak ditemukan. Jalankan di folder akar proyek (atau `npm init -y` dulu).');
+  const fw = framework();
+  console.log(`\n${c.b('UNIPO UI')} ${c.d('v' + pkg.version)}  ·  proyek ${c.b(project.name ?? relative(process.env.HOME ?? '', cwd))}  ·  ${FW_LABEL[fw]}  ·  ${packageManager()}\n`);
+
+  const cfg = config();
+  const primary = flags.primary ?? (await ask('Warna primer', cfg.primary ?? '#244ce6'));
+  const secondary = flags.secondary ?? (await ask('Warna sekunder', cfg.secondary ?? '#f2b42a'));
+  const radius = Number(flags.radius ?? (await ask('Radius sudut (px)', String(cfg.radius ?? 10))));
+  if (!HEX.test(primary) || !HEX.test(secondary)) fail('Warna harus berformat hex, mis. #244ce6.');
+  const sdk = flags.sdk ?? (fw === 'react' || fw === 'next' ? (await ask('Pasang juga SDK SIAKAD (unipo-siakad-sdk)? y/n', 'y')).toLowerCase().startsWith('y') : false);
+
+  if (fw === 'react-native') {
+    install(['unipo-ui-tokens']);
+    ok('Terpasang unipo-ui-tokens. Di React Native pakai token: import { colors } from "unipo-ui-tokens"; colors("light").primary');
+    writeFileSync(CONFIG, JSON.stringify({ framework: fw, primary, secondary, radius }, null, 2) + '\n');
+    return;
+  }
+
+  const font = !flags['no-font'] && fw !== 'laravel' && fw !== 'html';
+  install(['unipo-ui', ...(sdk ? ['unipo-siakad-sdk'] : []), ...(font ? ['@fontsource-variable/plus-jakarta-sans'] : [])]);
+
+  const styleDir = fw === 'next' ? (existsSync(join(cwd, 'src/app')) ? 'src/app' : existsSync(join(cwd, 'app')) ? 'app' : 'styles') : existsSync(join(cwd, 'src')) ? 'src' : fw === 'laravel' ? 'resources/css' : '.';
+  const themePath = join(styleDir, 'unipo-tema.css');
+  mkdirSync(join(cwd, styleDir), { recursive: true });
+  writeFileSync(join(cwd, themePath), themeCss({ primary, secondary, radius }));
+  ok(`Tema ditulis ke ${c.b(themePath)}`);
+
+  const entry = entryFile();
+  const isReactish = fw === 'next' || fw === 'react' || fw === 'vue' || fw === 'nuxt';
+  if (entry && isReactish && !flags['no-edit']) {
+    const p = join(cwd, entry);
+    let src = readFileSync(p, 'utf8');
+    if (!src.includes('unipo-ui/css')) {
+      const relTheme = './' + relative(dirname(p), join(cwd, themePath)).split('\\').join('/');
+      const lines = entry.endsWith('.vue') ? null : `${font ? "import '@fontsource-variable/plus-jakarta-sans';\n" : ''}import 'unipo-ui/css';\nimport '${relTheme.startsWith('./..') ? relTheme.slice(2) : relTheme}';\n`;
+      if (lines) {
+        const m = src.match(/^(['"]use client['"];?\s*\n)/);
+        src = m ? m[1] + lines + src.slice(m[1].length) : lines + src;
+        writeFileSync(p, src);
+        ok(`CSS diimpor di ${c.b(entry)}`);
+      } else warn(`Tambahkan di ${entry} (blok <script>): import 'unipo-ui/css'; import '${relTheme}';`);
+    }
+  } else if (fw === 'laravel' || fw === 'html') {
+    warn('Salin CSS jadi: node_modules/unipo-ui/dist/ui-unipo.min.css ke folder publik, lalu muat setelahnya unipo-tema.css.');
+  } else {
+    warn(`Impor sekali di berkas awal aplikasi: import 'unipo-ui/css'; import './${themePath}';`);
+  }
+
+  if (sdk && (fw === 'next' || fw === 'react')) {
+    const dir = join(cwd, defaultDir(fw), '..');
+    const prov = join(dir, 'unipo-provider.tsx');
+    if (!existsSync(prov)) {
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(
+        prov,
+        `'use client';
+import { Siakad } from 'unipo-siakad-sdk';
+import { UnipoProvider } from 'unipo-ui/siakad';
+import { useMemo } from 'react';
+
+/**
+ * Bungkus aplikasi dengan komponen ini. Browser memanggil BFF/proksi milik aplikasi sendiri,
+ * bukan API SIAKAD langsung: client_secret hanya disimpan di server.
+ */
+export function Providers({ children, accessToken }: { children: React.ReactNode; accessToken?: string }) {
+  const siakad = useMemo(() => new Siakad({ baseUrl: '/bff/api', accessToken }), [accessToken]);
+  return <UnipoProvider siakad={siakad}>{children}</UnipoProvider>;
+}
+`,
+      );
+      ok(`Provider SDK ditulis ke ${c.b(relative(cwd, prov))}`);
+    }
+  }
+
+  writeFileSync(CONFIG, JSON.stringify({ $schema: 'https://api.unipo.ac.id/docs/panduan/ui', framework: fw, dir: cfg.dir ?? defaultDir(fw), theme: themePath, primary, secondary, radius, sdk }, null, 2) + '\n');
+  ok(`Konfigurasi disimpan di ${c.b('unipo.json')}`);
+  console.log(`\nSelesai. Contoh pakai:\n  ${c.c("import { Button, FilterBar } from 'unipo-ui';")}${sdk ? `\n  ${c.c("import { CariMahasiswa } from 'unipo-ui/siakad';")}` : ''}\nDaftar komponen: ${c.c('npx unipo-ui list')}  ·  Salin sumber untuk diubah: ${c.c('npx unipo-ui add <Komponen>')}\n`);
+}
+
+// ---------------------------------------------------------------- registry
+function registry() {
+  const r = readJson(join(pkgRoot, 'dist/registry.json'));
+  if (!r) fail('registry.json tidak ada di paket. Pasang ulang unipo-ui.');
+  return r;
+}
+const GROUP = {
+  'components/actions.tsx': 'Aksi',
+  'components/forms.tsx': 'Formulir',
+  'components/select.tsx': 'Pilihan',
+  'components/overlays.tsx': 'Overlay',
+  'components/display.tsx': 'Tampilan data',
+  'components/calendar.tsx': 'Tanggal & berkas',
+  'components/code.tsx': 'Blok kode',
+  'components/layout.tsx': 'Tata letak',
+  'components/identity.tsx': 'Identitas',
+  'components/filter.tsx': 'Saringan',
+  'lib/cn.ts': 'Utilitas',
+  'lib/format.ts': 'Utilitas',
+};
+const groupOf = (file) => GROUP[file] ?? (file.startsWith('siakad/') ? 'Terhubung SDK (unipo-ui/siakad)' : file.startsWith('widgets/') ? 'Widget fitur' : 'Lainnya');
+
+function list() {
+  const r = registry();
+  const q = (rest[0] ?? '').toLowerCase();
+  const byGroup = {};
+  for (const [file, info] of Object.entries(r.files)) {
+    const comps = info.exports.filter((e) => /^[A-Z]/.test(e) && !/Props$|Option$|Value(s)?$|Field$|^[A-Z][A-Z_]+$/.test(e));
+    const hooks = info.exports.filter((e) => /^use[A-Z]/.test(e));
+    const all = [...comps, ...hooks].filter((e) => !q || e.toLowerCase().includes(q) || file.includes(q));
+    if (!all.length) continue;
+    (byGroup[groupOf(file)] ??= []).push([file, all]);
+  }
+  for (const [g, items] of Object.entries(byGroup)) {
+    console.log(`\n${c.b(g)}`);
+    for (const [file, all] of items) console.log(`  ${c.d(file.replace(/\.tsx?$/, '').padEnd(24))} ${all.join(', ')}`);
+  }
+  console.log(`\nImpor: ${c.c("import { Nama } from 'unipo-ui'")} · komponen SDK: ${c.c("from 'unipo-ui/siakad'")}\n`);
+}
+
+// ---------------------------------------------------------------- perintah: add
+function add() {
+  if (!rest.length) fail('Sebutkan komponen, mis. `npx unipo-ui add FilterBar CariMahasiswa`.');
+  if (!project) fail('package.json tidak ditemukan. Jalankan di folder akar proyek.');
+  const r = registry();
+  const lower = Object.fromEntries(Object.keys(r.exports).map((k) => [k.toLowerCase(), k]));
+  const want = new Set();
+  for (const name of rest) {
+    const exact = r.exports[name] ?? r.exports[lower[name.toLowerCase()]];
+    const byFile = Object.keys(r.files).find((f) => f.replace(/\.tsx?$/, '') === name || f.replace(/\.tsx?$/, '').endsWith('/' + name));
+    const file = exact ?? byFile;
+    if (!file) fail(`Komponen "${name}" tidak dikenal. Lihat \`npx unipo-ui list ${name}\`.`);
+    want.add(file);
+  }
+  // tutup dependensi lokal
+  const queue = [...want];
+  const all = new Set();
+  while (queue.length) {
+    const f = queue.shift();
+    if (all.has(f)) continue;
+    all.add(f);
+    queue.push(...(r.files[f]?.local ?? []));
+  }
+  const dir = flags.dir ?? config().dir ?? defaultDir(framework());
+  let copied = 0;
+  for (const f of all) {
+    const from = join(pkgRoot, 'src', f);
+    const to = join(cwd, dir, f);
+    const requested = want.has(f);
+    if (existsSync(to) && !flags.overwrite) {
+      console.log(`  ${c.d('lewati')} ${relative(cwd, to)} ${c.d('(sudah ada; --overwrite untuk menimpa)')}`);
+      continue;
+    }
+    mkdirSync(dirname(to), { recursive: true });
+    copyFileSync(from, to);
+    copied++;
+    console.log(`  ${requested ? c.g('+') : c.d('+')} ${relative(cwd, to)}${requested ? '' : c.d('  (dependensi)')}`);
+  }
+  const npm = [...new Set([...all].flatMap((f) => r.files[f]?.npm ?? []))].filter((p) => p !== 'react' && p !== 'react-dom');
+  const missing = npm.filter((p) => !deps[p]).map((p) => (r.versions[p] ? `${p}@${r.versions[p]}` : p));
+  if (missing.length) install(missing);
+  if (!deps['unipo-ui']) install(['unipo-ui']);
+  ok(`${copied} berkas disalin ke ${c.b(dir)}. CSS tetap dari ${c.c("'unipo-ui/css'")}; impor komponen dari folder itu untuk mengubah markup atau perilakunya.`);
+}
+
+// ---------------------------------------------------------------- perintah: tema
+async function tema() {
+  const cfg = config();
+  const primary = flags.primary ?? cfg.primary ?? '#244ce6';
+  const secondary = flags.secondary ?? cfg.secondary ?? '#f2b42a';
+  const radius = Number(flags.radius ?? cfg.radius ?? 10);
+  if (!HEX.test(primary) || !HEX.test(secondary)) fail('Warna harus berformat hex, mis. --primary "#0f766e".');
+  const out = flags.out ?? cfg.theme ?? 'unipo-tema.css';
+  if (flags.scss) {
+    console.log(`@use 'unipo-ui/scss' with ($u-primary: ${primary}, $u-secondary: ${secondary}, $u-radius-base: ${radius});`);
+    return;
+  }
+  if (flags.stdout) {
+    process.stdout.write(themeCss({ primary, secondary, radius }));
+    return;
+  }
+  mkdirSync(dirname(join(cwd, out)), { recursive: true });
+  writeFileSync(join(cwd, out), themeCss({ primary, secondary, radius }));
+  if (existsSync(CONFIG)) writeFileSync(CONFIG, JSON.stringify({ ...cfg, primary, secondary, radius, theme: out }, null, 2) + '\n');
+  ok(`Tema ditulis ke ${c.b(out)} (primer ${primary}, sekunder ${secondary}, radius ${radius}px)`);
+}
+
+function help() {
+  console.log(`
+${c.b('unipo-ui')} ${c.d('v' + pkg.version)}  Komponen UI UNIPO
+
+${c.b('Perintah')}
+  init                 Pasang unipo-ui (+ SDK), buat berkas tema, impor CSS otomatis
+                       --primary "#244ce6" --secondary "#f2b42a" --radius 10 --sdk -y
+  add <Komponen...>    Salin sumber komponen dan dependensinya ke proyek (bisa diubah bebas)
+                       --dir src/components/unipo --overwrite
+  list [kata]          Daftar komponen per kelompok
+  tema                 Tulis ulang berkas tema   --primary --secondary --radius --out --scss --stdout
+
+${c.b('Opsi umum')}
+  --pm npm|pnpm|yarn|bun   paksa pengelola paket   --no-install   --no-edit   --no-font
+
+${c.b('Contoh')}
+  npx unipo-ui init -y --primary "#0f766e"
+  npx unipo-ui add FilterBar CariMahasiswa
+  npx unipo-ui list cari
+
+Panduan: https://api.unipo.ac.id/docs/panduan/ui
+`);
+}
+
+const run = { init, add, list, tema, theme: tema, help, '--help': help, '-h': help, '--version': () => console.log(pkg.version), '-v': () => console.log(pkg.version) }[cmd];
+if (!run) fail(`Perintah "${cmd}" tidak dikenal. Lihat \`npx unipo-ui help\`.`);
+await run();

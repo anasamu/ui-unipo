@@ -25,6 +25,10 @@
   }
 }
 @mixin popup-surface {
+  // Popup dirender lewat portal ke <body>, di luar .u-root: bawa tipografi sendiri.
+  font-family: var(--u-font-sans);
+  font-size: var(--u-text-base);
+  line-height: var(--u-leading-normal);
   background: var(--u-popover);
   color: var(--u-foreground);
   border: 1px solid var(--u-border);

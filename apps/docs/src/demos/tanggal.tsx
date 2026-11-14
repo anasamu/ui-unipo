@@ -1,12 +1,12 @@
 import * as React from 'react';
-import { Calendar, DatePicker, Dropzone, Field, FileList, toISODate, useToast, type UploadedFile } from '@unipo/ui';
+import { Calendar, DatePicker, Dropzone, Field, FileList, toISODate, useToast, type UploadedFile } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
   title: 'Kalender, tanggal & unggah',
   category: 'Tanggal & berkas',
   description: 'Kalender bulanan (mulai Senin, akhir pekan merah, titik agenda, mode rentang, navigasi panah), pemilih tanggal, dan unggah berkas dengan seret-lepas.',
-  importLine: "import { Calendar, DatePicker, Dropzone, FileList } from '@unipo/ui';",
+  importLine: "import { Calendar, DatePicker, Dropzone, FileList } from 'unipo-ui';",
   demos: { Bulanan: 'Kalender dengan penanda', Rentang: 'Pilih rentang', Pemilih: 'DatePicker', Unggah: 'Dropzone + daftar berkas' },
 };
 

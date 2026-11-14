@@ -9,9 +9,9 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: [
-      { find: /^@unipo\/ui\/scss$/, replacement: `${ui}/scss/index.scss` },
-      { find: /^@unipo\/ui\/(.*)$/, replacement: `${ui}/src/$1/index.ts` },
-      { find: /^@unipo\/ui$/, replacement: `${ui}/src/index.ts` },
+      { find: /^unipo-ui\/scss$/, replacement: `${ui}/scss/index.scss` },
+      { find: /^unipo-ui\/(.*)$/, replacement: `${ui}/src/$1/index.ts` },
+      { find: /^unipo-ui$/, replacement: `${ui}/src/index.ts` },
     ],
   },
   css: { preprocessorOptions: { scss: { api: 'modern-compiler', silenceDeprecations: ['global-builtin'] } } },
