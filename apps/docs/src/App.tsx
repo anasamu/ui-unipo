@@ -168,7 +168,7 @@ export function App() {
                   <AppLogo name="UNIPO UI" tagline="Sistem desain Universitas Pohuwato" />
                 </a>
                 <Badge variant="outline" shape="square">
-                  v0.1.0
+                  v1.0.1
                 </Badge>
               </>
             )}
