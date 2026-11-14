@@ -56,16 +56,20 @@
   flex: 1;
   min-width: 0;
 }
-.u-status-banner-title {
+.u-status-banner .u-status-banner-title {
   margin: 0;
+}
+.u-status-banner-title {
   font-family: var(--u-font-heading, var(--u-font-sans));
   font-size: 1.1875rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   line-height: 1.3;
 }
-.u-status-banner-note {
+.u-status-banner .u-status-banner-note {
   margin: 0.125rem 0 0;
+}
+.u-status-banner-note {
   color: color-mix(in oklab, white 82%, transparent);
   font-size: var(--u-text-sm);
   font-variant-numeric: tabular-nums;

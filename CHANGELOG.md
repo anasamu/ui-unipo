@@ -1,5 +1,10 @@
 # Catatan perubahan
 
+## 1.0.2 (2026-11-15)
+
+- Alert: ikon sejajar baris judul dan jarak atas sama dengan jarak bawah, juga saat alert ditaruh di dalam artikel/markdown yang memberi margin pada `<p>` (mis. kelas prose). Judul, deskripsi, dan isi deskripsi kebal terhadap margin dan tinggi baris dari CSS halaman.
+- Perlindungan yang sama untuk teks di Empty, StatusBanner, dan pembuka Wizard.
+
 ## 1.0.1 (2026-11-15)
 
 Rilis pertama di npm.
