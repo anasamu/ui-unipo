@@ -9,7 +9,8 @@
     "dev": "npm run dev -w docs",
     "docs:build": "npm run build && npm run build -w docs",
     "typecheck": "npm run typecheck -w unipo-ui && npm run typecheck -w docs",
-    "screenshots": "node scripts/screenshots.mjs"
+    "screenshots": "node scripts/screenshots.mjs",
+    "versi": "node scripts/versi.mjs"
   },
   "engines": { "node": ">=18.17" }
 }

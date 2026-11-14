@@ -14,6 +14,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Versi kedua paket sama
+        run: |
+          UI="$(node -p "require('./packages/ui/package.json').version")"
+          TOK="$(node -p "require('./packages/tokens/package.json').version")"
+          DEP="$(node -p "require('./packages/ui/package.json').dependencies['unipo-ui-tokens']")"
+          [ "$UI" = "$TOK" ] && [ "$DEP" = "$TOK" ] || { echo "::error::Versi tidak sama (ui=$UI tokens=$TOK ui→tokens=$DEP). Pakai: npm run versi -- patch"; exit 1; }
       - run: npm ci
       - run: npm run build
       - run: npm run typecheck

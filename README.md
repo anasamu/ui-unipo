@@ -26,3 +26,13 @@ Widget kecil per fitur yang mengambil data sendiri lewat `unipo-siakad-sdk` (bun
 | Pustikom & SSO | `DaftarAplikasi`, `KartuAplikasi`, `DetailAplikasi`, `FormAplikasi`, `WizardAplikasi`, `SecretSekali`, `PilihScope`, `LogApi`, `RingkasanLogApi`, `LogAktivitas`, `KeamananPengguna` (`SsoAdminProvider` + `createSsoAdmin` untuk API admin SSO lewat BFF) | `docs/screenshots/aplikasi--*.png`, `log--*.png` |
 | LMS | `RingkasanLms`, `DaftarKelasLms`, `KartuKelas`, `TugasMendatang`, `KuisTerbuka`, `AgendaLms`, `ProgresKelas` | `docs/screenshots/lms--*.png` |
 | CBT | `DaftarUjianSaya`, `LembarUjian`, `SoalCbt`, `NavigasiSoal`, `TimerUjian`, `HasilUjian` | `docs/screenshots/cbt--*.png` |
+
+## Rilis
+
+Rilis ke npm berjalan otomatis lewat GitHub Actions (`.github/workflows/rilis.yml`):
+
+1. `npm run versi -- patch` (atau `minor`, `major`, `X.Y.Z`). Perintah ini menaikkan versi `unipo-ui` dan `unipo-ui-tokens` bersamaan, memperbarui lockfile, dan menambah judul versi di `CHANGELOG.md`.
+2. Isi catatan perubahan, commit, buka PR, lalu merge ke `main`.
+3. Workflow **Rilis** menerbitkan kedua paket ke npm, membuat tag `vX.Y.Z`, dan GitHub Release dengan catatan dari CHANGELOG. Versi yang sudah terbit dilewati. Versi prarilis (`1.1.0-beta.1`) terbit dengan dist-tag `next`.
+
+Butuh secret `NPM_TOKEN` di Settings → Secrets and variables → Actions.
