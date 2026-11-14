@@ -1,13 +1,13 @@
 import { BookOpen, Hash, Tag as TagIcon } from 'lucide-react';
 import * as React from 'react';
-import { Badge, Kbd, Tag } from '@unipo/ui';
+import { Badge, Kbd, Tag } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
   title: 'Badge, Tag & Kbd',
   category: 'Aksi',
   description: 'Badge untuk status (Aktif, Cuti, Lulus), Tag untuk kategori/kata kunci yang bisa diklik atau dihapus, Kbd untuk pintasan papan ketik.',
-  importLine: "import { Badge, Tag, Kbd } from '@unipo/ui';",
+  importLine: "import { Badge, Tag, Kbd } from 'unipo-ui';",
   demos: { Status: 'Badge status', Bentuk: 'Bentuk dan ukuran', Kategori: 'Tag kategori', Hapus: 'Tag yang bisa dihapus', Pintasan: 'Kbd' },
 };
 

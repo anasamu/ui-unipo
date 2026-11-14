@@ -9,7 +9,7 @@ const src = JSON.parse(readFileSync(join(root, 'src/tokens.json'), 'utf8'));
 const out = join(root, 'dist');
 mkdirSync(join(out, 'android'), { recursive: true });
 
-const HEADER = 'Dibuat otomatis oleh @unipo/tokens dari src/tokens.json. Jangan diubah manual.';
+const HEADER = 'Dibuat otomatis oleh unipo-ui-tokens dari src/tokens.json. Jangan diubah manual.';
 
 /** "{primary.600}" -> "#244ce6" */
 function resolve(value) {
@@ -65,7 +65,7 @@ const scssName = (k) => `$u-${k}`;
 writeFileSync(
   join(out, '_tokens.scss'),
   `// ${HEADER}
-// Pakai: @use '@unipo/tokens/scss' with ($u-primary: #0f766e);
+// Pakai: @use 'unipo-ui-tokens/scss' with ($u-primary: #0f766e);
 @use 'sass:string';
 ${palette.map(([k, v]) => `${scssName(k)}: ${v} !default;`).join('\n')}
 ${scalar.map(([k, v]) => `${scssName(k)}: ${/[",(]/.test(v) ? `string.unquote('${v.replace(/'/g, "\\'")}')` : v} !default;`).join('\n')}
@@ -276,4 +276,4 @@ writeFileSync(join(out, 'tailwind-preset.cjs'), `// ${HEADER}\nmodule.exports = 
 // ---------- JSON hasil resolusi ----------
 writeFileSync(join(out, 'tokens.resolved.json'), JSON.stringify({ palette: Object.fromEntries(palette), light: Object.fromEntries(themes.light), dark: Object.fromEntries(themes.dark), scalar: Object.fromEntries(scalar) }, null, 2));
 
-console.log(`@unipo/tokens: ${palette.length} warna, ${themes.light.length} token semantik, ${scalar.length} token skalar → dist/`);
+console.log(`unipo-ui-tokens: ${palette.length} warna, ${themes.light.length} token semantik, ${scalar.length} token skalar → dist/`);

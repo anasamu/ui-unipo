@@ -11,8 +11,8 @@
     "isolatedModules": true,
     "types": ["vite/client"],
     "paths": {
-      "@unipo/ui": ["../../packages/ui/src/index.ts"],
-      "@unipo/ui/*": ["../../packages/ui/src/*/index.ts"]
+      "unipo-ui": ["../../packages/ui/src/index.ts"],
+      "unipo-ui/*": ["../../packages/ui/src/*/index.ts"]
     }
   },
   "include": ["src"]

@@ -1,12 +1,12 @@
 import { Building2, GraduationCap, Laptop, Moon, Sun } from 'lucide-react';
-import { Checkbox, CheckboxGroup, Choice, RadioGroup, Switch } from '@unipo/ui';
+import { Checkbox, CheckboxGroup, Choice, RadioGroup, Switch } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
   title: 'Checkbox, Radio & Switch',
   category: 'Pilihan',
   description: 'Kontrol pilihan modern dengan dua tampilan: daftar dan kartu. Kartu cocok untuk memilih jalur pendaftaran, kelas, atau paket.',
-  importLine: "import { Checkbox, CheckboxGroup, RadioGroup, Switch, Choice } from '@unipo/ui';",
+  importLine: "import { Checkbox, CheckboxGroup, RadioGroup, Switch, Choice } from 'unipo-ui';",
   demos: { Tunggal: 'Checkbox dan Switch', Daftar: 'Grup checkbox', Radio: 'Grup radio', Kartu: 'Kartu pilihan (radio)', KartuCek: 'Kartu pilihan (checkbox)' },
 };
 

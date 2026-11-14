@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { BarChart3, BookOpen, CalendarDays, ClipboardList, FileText, GraduationCap, LayoutDashboard, LogOut, Mail, Settings, User, Users, Wallet } from 'lucide-react';
-import { Alert, AppShell, Badge, Breadcrumb, DocsSidebar, PortalSidebar, SearchTrigger, Sidebar, SidebarWidget, Tag, TableOfContents, UnipoAppLogo, type NavGroup } from '@unipo/ui';
+import { Alert, AppShell, Badge, Breadcrumb, DocsSidebar, PortalSidebar, SearchTrigger, Sidebar, SidebarWidget, Tag, TableOfContents, UnipoAppLogo, type NavGroup } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
@@ -9,7 +9,7 @@ export const meta: DemoMeta = {
   layout: 'full',
   badge: 'baru',
   description: 'Tiga jenis sidebar: dasbor aplikasi (menu bergrup, sub-menu, lencana, profil, mode rail, laci di ponsel), dokumentasi (seksi + saringan + daftar isi), dan kolom samping portal media.',
-  importLine: "import { Sidebar, AppShell, DocsSidebar, TableOfContents, PortalSidebar, SidebarWidget } from '@unipo/ui';",
+  importLine: "import { Sidebar, AppShell, DocsSidebar, TableOfContents, PortalSidebar, SidebarWidget } from 'unipo-ui';",
   demos: { Dasbor: 'Sidebar dasbor', Rail: 'Mode rail (diciutkan)', Dokumentasi: 'Sidebar dokumentasi', Portal: 'Kolom samping portal' },
   props: [
     ['groups', 'Array<{ label?, items: NavItem[] }>', 'NavItem: key, label, icon, href/onClick, badge, children.'],

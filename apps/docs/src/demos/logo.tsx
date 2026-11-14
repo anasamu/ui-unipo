@@ -1,4 +1,4 @@
-import { AppLogo, APP_GLYPHS, UnipoAppLogo, UnipoMark, type UnipoApp } from '@unipo/ui';
+import { AppLogo, APP_GLYPHS, UnipoAppLogo, UnipoMark, type UnipoApp } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
@@ -6,7 +6,7 @@ export const meta: DemoMeta = {
   category: 'Identitas',
   layout: 'wide',
   description: 'Logo vektor yang mengikuti tema, dengan banyak varian: bentuk tanda, tata letak, nada warna, ukuran, dan logo siap pakai untuk tiap aplikasi di ekosistem UNIPO. Logo resmi bisa dipasang lewat prop src.',
-  importLine: "import { AppLogo, UnipoAppLogo, UnipoMark } from '@unipo/ui';",
+  importLine: "import { AppLogo, UnipoAppLogo, UnipoMark } from 'unipo-ui';",
   demos: { Bentuk: 'Bentuk tanda', TataLetak: 'Tata letak', Nada: 'Nada warna', Ekosistem: 'Logo tiap aplikasi' },
   props: [
     ['layout', "'horizontal' | 'stacked' | 'mark' | 'wordmark'", 'Susunan tanda dan teks.'],

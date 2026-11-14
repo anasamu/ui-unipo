@@ -1,0 +1,14 @@
+.u-flag {
+  display: inline-block;
+  flex: none;
+  object-fit: cover;
+  border-radius: 2px;
+  background: var(--u-muted);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08);
+}
+.u-option-media[data-shape='flag'] .u-flag {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}

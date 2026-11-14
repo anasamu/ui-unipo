@@ -1,6 +1,6 @@
 import { AtSign, Eye, EyeOff, Mail, Search } from 'lucide-react';
 import * as React from 'react';
-import { Button, Field, Fieldset, Input, InputGroup, Textarea } from '@unipo/ui';
+import { Button, Field, Fieldset, Input, InputGroup, Textarea } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
@@ -8,7 +8,7 @@ export const meta: DemoMeta = {
   category: 'Formulir',
   layout: 'narrow',
   description: 'Field menyatukan label, kontrol, deskripsi, dan pesan galat; atribut aria terhubung otomatis. Galat ditampilkan setelah pengguna meninggalkan isian, bukan saat mengetik.',
-  importLine: "import { Field, Fieldset, Input, InputGroup, Textarea } from '@unipo/ui';",
+  importLine: "import { Field, Fieldset, Input, InputGroup, Textarea } from 'unipo-ui';",
   demos: { Dasar: 'Isian dengan label', Galat: 'Galat dan deskripsi', Grup: 'Ikon dan imbuhan', Sandi: 'Kata sandi', Area: 'Teks panjang', Kelompok: 'Fieldset' },
   props: [
     ['label', 'ReactNode', 'Label terlihat (wajib untuk aksesibilitas).'],

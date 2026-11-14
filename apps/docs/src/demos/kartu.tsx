@@ -1,5 +1,5 @@
 import { BadgeCheck, FileText, MoreHorizontal, Users } from 'lucide-react';
-import { Alert, Avatar, AvatarGroup, Badge, Button, Card, CardContent, CardFooter, CardHeader, DescriptionList } from '@unipo/ui';
+import { Alert, Avatar, AvatarGroup, Badge, Button, Card, CardContent, CardFooter, CardHeader, DescriptionList } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
@@ -7,7 +7,7 @@ export const meta: DemoMeta = {
   category: 'Tampilan data',
   layout: 'wide',
   description: 'Wadah dasar untuk menyusun widget. Avatar memakai foto profil; bila foto gagal dimuat, inisial dengan warna stabil per nama ditampilkan.',
-  importLine: "import { Card, CardHeader, CardContent, CardFooter, Alert, Avatar, AvatarGroup, DescriptionList } from '@unipo/ui';",
+  importLine: "import { Card, CardHeader, CardContent, CardFooter, Alert, Avatar, AvatarGroup, DescriptionList } from 'unipo-ui';",
   demos: { Kartu: 'Card', Peringatan: 'Alert', Foto: 'Avatar', Grup: 'AvatarGroup' },
 };
 

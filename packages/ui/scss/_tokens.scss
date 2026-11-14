@@ -1,5 +1,5 @@
-// Dibuat otomatis oleh @unipo/tokens dari src/tokens.json. Jangan diubah manual.
-// Pakai: @use '@unipo/tokens/scss' with ($u-primary: #0f766e);
+// Dibuat otomatis oleh unipo-ui-tokens dari src/tokens.json. Jangan diubah manual.
+// Pakai: @use 'unipo-ui-tokens/scss' with ($u-primary: #0f766e);
 @use 'sass:string';
 $u-primary-50: #eef4ff !default;
 $u-primary-100: #dae5fe !default;

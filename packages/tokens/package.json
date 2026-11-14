@@ -1,5 +1,5 @@
 {
-  "name": "@unipo/tokens",
+  "name": "unipo-ui-tokens",
   "version": "0.1.0",
   "description": "Design token UNIPO untuk web (CSS/SCSS/LESS/Tailwind), React Native, dan Android (Kotlin Compose/XML).",
   "type": "module",

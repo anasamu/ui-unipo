@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { BookOpen, ClipboardList, GraduationCap, Wallet } from 'lucide-react';
-import { Accordion, Breadcrumb, Button, Pagination, Progress, ProgressRing, Stepper, Tabs } from '@unipo/ui';
+import { Accordion, Breadcrumb, Button, Pagination, Progress, ProgressRing, Stepper, Tabs } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
@@ -8,7 +8,7 @@ export const meta: DemoMeta = {
   category: 'Navigasi & alur',
   layout: 'wide',
   description: 'Komponen untuk berpindah antar bagian dan menunjukkan kemajuan: tab, langkah wizard, halaman, breadcrumb, akordeon, dan progres.',
-  importLine: "import { Tabs, Stepper, Pagination, Breadcrumb, Accordion, Progress, ProgressRing } from '@unipo/ui';",
+  importLine: "import { Tabs, Stepper, Pagination, Breadcrumb, Accordion, Progress, ProgressRing } from 'unipo-ui';",
   demos: { TabGaris: 'Tabs garis bawah', TabPil: 'Tabs pil', Langkah: 'Stepper', LangkahVertikal: 'Stepper vertikal', Halaman: 'Pagination', Jejak: 'Breadcrumb', Faq: 'Accordion', Kemajuan: 'Progress' },
 };
 

@@ -1,5 +1,5 @@
 // UNIPO UI: titik masuk SCSS.
-// Ganti tema saat build:  @use '@unipo/ui/scss' with ($u-primary: #0f766e, $u-secondary: #f59e0b);
+// Ganti tema saat build:  @use 'unipo-ui/scss' with ($u-primary: #0f766e, $u-secondary: #f59e0b);
 // Ganti tema saat runtime: :root { --u-primary: #0f766e; }
 @forward 'config';
 @use 'base';
@@ -10,3 +10,5 @@
 @use 'components/code';
 @use 'components/layout';
 @use 'components/identity';
+@use 'components/filter';
+@use 'components/siakad';
