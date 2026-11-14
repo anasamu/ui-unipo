@@ -23,5 +23,6 @@ Widget kecil per fitur yang mengambil data sendiri lewat `unipo-siakad-sdk` (bun
 | Tabel SIAKAD | `TabelMahasiswa`, `TabelDosen`, `TabelMataKuliah`, … dengan `detail` (panel samping), `tampilan="kartu"`, `varian="ringkas"` | `docs/screenshots/tabel-siakad--*.png` |
 | Struktur kurikulum | `TabelStrukturKurikulum` (dikelompokkan per semester, detail MK di baris atau popup), `DetailMkKurikulum`, `SheetMkKurikulum` | `docs/screenshots/kurikulum--Struktur*.png` |
 | Navigasi portal | `Navbar` (aplikasi, portal, ringkas, mega menu, panel ponsel), `NavbarPortal`, `LogoSitus`, `Faq`, `FaqPortal` | `docs/screenshots/navbar--*.png`, `faq--*.png` |
+| Pustikom & SSO | `DaftarAplikasi`, `KartuAplikasi`, `DetailAplikasi`, `FormAplikasi`, `WizardAplikasi`, `SecretSekali`, `PilihScope`, `LogApi`, `RingkasanLogApi`, `LogAktivitas`, `KeamananPengguna` (`SsoAdminProvider` + `createSsoAdmin` untuk API admin SSO lewat BFF) | `docs/screenshots/aplikasi--*.png`, `log--*.png` |
 | LMS | `RingkasanLms`, `DaftarKelasLms`, `KartuKelas`, `TugasMendatang`, `KuisTerbuka`, `AgendaLms`, `ProgresKelas` | `docs/screenshots/lms--*.png` |
 | CBT | `DaftarUjianSaya`, `LembarUjian`, `SoalCbt`, `NavigasiSoal`, `TimerUjian`, `HasilUjian` | `docs/screenshots/cbt--*.png` |

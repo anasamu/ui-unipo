@@ -57,6 +57,7 @@ export const CATEGORIES = [
   'PMB',
   'LMS',
   'CBT',
+  'Pustikom & SSO',
   'Statistik',
   'Identitas',
 ];

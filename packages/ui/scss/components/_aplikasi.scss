@@ -1,0 +1,872 @@
+@use '../mixins' as *;
+
+// Aplikasi integrasi (Pustikom/SSO) dan log admin.
+
+.u-app-muted {
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+}
+.u-form-grid > .u-span-2 {
+  grid-column: 1 / -1;
+}
+
+// ================================================================ Lencana & kartu
+.u-app-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  .u-badge svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+}
+.u-app-icon {
+  border: 1px solid var(--u-border);
+}
+.u-app-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+.u-app-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.u-app-search {
+  flex: 1 1 16rem;
+  max-width: 24rem;
+}
+.u-app-toolbar-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.u-app-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 1rem;
+}
+.u-app-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1.125rem;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  &[role='button'],
+  &[href] {
+    cursor: pointer;
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+.u-app-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.u-app-card-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.125rem;
+  strong {
+    font-weight: var(--u-weight-semibold);
+    font-size: var(--u-text-md);
+    @include truncate;
+  }
+  span {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+    @include truncate;
+  }
+}
+.u-app-card-desc {
+  margin: 0;
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.u-app-card-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: auto 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--u-border);
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+  dt {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+  dd {
+    margin: 0;
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-medium);
+    font-variant-numeric: tabular-nums;
+    @include truncate;
+  }
+}
+.u-app-card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.u-app-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+  > span {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  strong {
+    font-weight: var(--u-weight-medium);
+    @include truncate;
+  }
+  small {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+    @include truncate;
+  }
+}
+
+// ================================================================ Detail
+.u-app-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+.u-app-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.u-app-detail-title {
+  flex: 1 1 14rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  h2 {
+    margin: 0;
+    font-family: var(--u-font-heading);
+    font-size: var(--u-text-xl, 1.25rem);
+    font-weight: var(--u-weight-semibold);
+    line-height: 1.25;
+  }
+  p {
+    margin: 0;
+    font-size: var(--u-text-sm);
+    color: var(--u-muted-foreground);
+    a {
+      color: var(--u-primary);
+      text-decoration: none;
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+.u-app-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.u-app-inline-alert {
+  flex-basis: 100%;
+}
+.u-app-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-top: 0.25rem;
+  a {
+    color: var(--u-primary);
+    text-decoration: none;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+.u-app-subtitle {
+  margin: 0 0 0.75rem;
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-semibold);
+}
+.u-app-uris {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  code {
+    word-break: break-all;
+  }
+}
+.u-app-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  .u-code-copy {
+    position: static;
+    opacity: 1;
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+}
+.u-scope-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  .u-badge {
+    font-family: var(--u-font-mono);
+    font-size: 0.6875rem;
+  }
+}
+
+// ================================================================ Formulir & wizard
+.u-app-wizard {
+  .u-wizard {
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+    background: transparent;
+  }
+}
+.u-app-step,
+.u-app-form fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.u-app-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0 0 1.5rem;
+    border-bottom: 1px solid var(--u-border);
+    &:last-of-type {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+  }
+  legend {
+    padding: 0;
+    margin-bottom: 0.25rem;
+    font-weight: var(--u-weight-semibold);
+    font-size: var(--u-text-md);
+  }
+  ul {
+    margin: 0;
+    padding-left: 1.125rem;
+  }
+}
+.u-app-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+  // Di panel samping, tombol menempel di bawah saat formulir digulir.
+  .u-sheet & {
+    position: sticky;
+    bottom: -1px;
+    padding: 0.75rem 0;
+    background: var(--u-popover, var(--u-background));
+    border-top: 1px solid var(--u-border);
+  }
+}
+.u-app-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  cursor: pointer;
+  transition:
+    border-color var(--u-duration-fast),
+    background-color var(--u-duration-fast);
+  &[data-on] {
+    border-color: color-mix(in oklab, var(--u-primary) 40%, var(--u-border));
+    background: color-mix(in oklab, var(--u-primary) 5%, var(--u-card));
+    .u-app-option-icon {
+      background: var(--u-primary-soft);
+      color: var(--u-primary-soft-foreground);
+    }
+  }
+  .u-switch {
+    margin-top: 0.125rem;
+    flex-shrink: 0;
+  }
+}
+.u-app-option-icon {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: var(--u-radius);
+  background: var(--u-muted);
+  color: var(--u-muted-foreground);
+  svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+.u-app-option-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  strong {
+    font-weight: var(--u-weight-medium);
+  }
+  span {
+    font-size: var(--u-text-sm);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-app-logo-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  > label.u-button {
+    cursor: pointer;
+  }
+  small {
+    flex-basis: 100%;
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-app-roles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.25rem 1rem;
+  max-height: 16rem;
+  overflow-y: auto;
+  padding: 0.75rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.375rem 0;
+    cursor: pointer;
+    > span {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    strong {
+      font-weight: var(--u-weight-medium);
+      font-size: var(--u-text-sm);
+    }
+    code {
+      font-size: 0.6875rem;
+      color: var(--u-muted-foreground);
+    }
+  }
+}
+.u-app-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  label,
+  > span {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    cursor: pointer;
+    > span {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+    }
+  }
+  strong {
+    font-weight: var(--u-weight-medium);
+    font-size: var(--u-text-sm);
+  }
+  small {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-app-review-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  > div {
+    display: flex;
+    flex-direction: column;
+  }
+  strong {
+    font-size: var(--u-text-md);
+    font-weight: var(--u-weight-semibold);
+  }
+  span {
+    font-size: var(--u-text-sm);
+    color: var(--u-muted-foreground);
+  }
+}
+
+// ================================================================ Pemilih scope
+.u-scope-picker {
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  overflow: hidden;
+}
+.u-scope-picker-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--u-border);
+  background: var(--u-muted);
+  .u-input-group {
+    flex: 1;
+    max-width: 18rem;
+  }
+}
+.u-scope-count {
+  margin-left: auto;
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.u-scope-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  > li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 0.875rem;
+    & + li {
+      border-top: 1px solid var(--u-border);
+    }
+  }
+}
+.u-scope-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  strong {
+    font-family: var(--u-font-mono);
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-medium);
+  }
+  small {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+    @include truncate;
+  }
+}
+.u-scope-actions {
+  display: grid;
+  grid-template-columns: 4.5rem 4.5rem;
+  grid-auto-flow: dense;
+  gap: 0.25rem 0.5rem;
+  flex-shrink: 0;
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: var(--u-text-sm);
+    cursor: pointer;
+    &[data-tulis] {
+      color: var(--u-warning-text, var(--u-foreground));
+    }
+  }
+}
+.u-scope-empty {
+  justify-content: center !important;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+}
+
+// ================================================================ Secret
+.u-secret {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.u-secret-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  .u-code-copy {
+    position: static;
+    opacity: 1;
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+}
+.u-secret-ack {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: auto;
+  font-size: var(--u-text-sm);
+  cursor: pointer;
+}
+
+// ================================================================ Log API
+.u-http-method {
+  display: inline-block;
+  min-width: 3.25rem;
+  padding: 0.0625rem 0.375rem;
+  border-radius: calc(var(--u-radius) - 2px);
+  font-family: var(--u-font-mono);
+  font-size: 0.6875rem;
+  font-weight: var(--u-weight-semibold);
+  text-align: center;
+  letter-spacing: 0.02em;
+  background: var(--u-muted);
+  color: var(--u-muted-foreground);
+  &[data-method='GET'] {
+    background: color-mix(in oklab, var(--u-info) 12%, transparent);
+    color: var(--u-info);
+  }
+  &[data-method='POST'] {
+    background: color-mix(in oklab, var(--u-success) 12%, transparent);
+    color: var(--u-success);
+  }
+  &[data-method='PUT'],
+  &[data-method='PATCH'] {
+    background: color-mix(in oklab, var(--u-warning) 14%, transparent);
+    color: var(--u-warning-text, var(--u-warning));
+  }
+  &[data-method='DELETE'] {
+    background: color-mix(in oklab, var(--u-danger) 12%, transparent);
+    color: var(--u-danger);
+  }
+}
+.u-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.u-log-path {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  code {
+    font-size: var(--u-text-sm);
+    @include truncate;
+  }
+}
+.u-log-path-lg {
+  display: flex;
+  margin: 0 0 1rem;
+  code {
+    white-space: normal;
+    word-break: break-all;
+  }
+}
+.u-log-ms {
+  font-variant-numeric: tabular-nums;
+  &[data-tone='warning'] {
+    color: var(--u-warning-text, var(--u-warning));
+  }
+  &[data-tone='danger'] {
+    color: var(--u-danger);
+    font-weight: var(--u-weight-medium);
+  }
+}
+.u-log-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.u-log-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+.u-log-summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.u-log-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.u-log-summary-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+.u-log-time {
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  small {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-log-endpoint {
+  font-size: var(--u-text-xs);
+  @include truncate;
+}
+.u-log-status {
+  list-style: none;
+  margin: 0.875rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: var(--u-text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// ================================================================ Log aktivitas SSO
+.u-audit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+}
+.u-audit-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    border: 1px solid var(--u-border);
+    border-radius: 999px;
+    background: var(--u-card);
+    color: var(--u-foreground);
+    font: inherit;
+    font-size: var(--u-text-xs);
+    cursor: pointer;
+    transition:
+      background-color var(--u-duration-fast),
+      border-color var(--u-duration-fast);
+    &:hover {
+      background: var(--u-hover);
+    }
+    &:focus-visible {
+      @include focus-ring;
+    }
+    span {
+      color: var(--u-muted-foreground);
+      font-variant-numeric: tabular-nums;
+    }
+    &[data-on] {
+      border-color: var(--u-primary);
+      background: var(--u-primary-soft);
+      color: var(--u-primary-soft-foreground);
+      span {
+        color: inherit;
+      }
+    }
+  }
+}
+.u-audit-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card);
+  transition: opacity var(--u-duration-fast);
+  &[data-loading] {
+    opacity: 0.6;
+  }
+  > li {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: start;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    & + li {
+      border-top: 1px solid var(--u-border);
+    }
+  }
+  time {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+    white-space: nowrap;
+    padding-top: 0.125rem;
+  }
+}
+.u-audit-icon {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: var(--u-muted);
+  color: var(--u-muted-foreground);
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  @each $t in success, danger, warning, info, primary {
+    &[data-tone='#{$t}'] {
+      background: color-mix(in oklab, var(--u-#{$t}) 12%, transparent);
+      color: var(--u-#{$t});
+    }
+  }
+}
+.u-audit-body {
+  min-width: 0;
+  p {
+    margin: 0;
+    font-size: var(--u-text-sm);
+  }
+  strong {
+    font-weight: var(--u-weight-medium);
+  }
+}
+.u-audit-user {
+  font: inherit;
+  color: var(--u-foreground);
+  background: none;
+  border: 0;
+  padding: 0;
+  &:is(button) {
+    cursor: pointer;
+    color: var(--u-primary);
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+.u-audit-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin-top: 0.125rem !important;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs) !important;
+  code {
+    font-size: inherit;
+  }
+}
+.u-audit-detail {
+  @include truncate;
+  max-width: 28rem;
+}
+
+// ================================================================ Keamanan pengguna
+.u-security {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  td:not(:last-child) {
+    white-space: nowrap;
+  }
+}
+.u-sessions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  > li {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0;
+    & + li {
+      border-top: 1px solid var(--u-border);
+    }
+  }
+  strong {
+    font-weight: var(--u-weight-medium);
+    font-size: var(--u-text-sm);
+  }
+  p {
+    margin: 0.125rem 0 0;
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+  small {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-sessions-icon {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--u-radius);
+  background: var(--u-muted);
+  color: var(--u-muted-foreground);
+  svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .u-app-toolbar-end {
+    margin-left: 0;
+  }
+  .u-audit-list > li {
+    grid-template-columns: auto 1fr;
+    time {
+      grid-column: 2;
+    }
+  }
+  .u-sessions > li {
+    grid-template-columns: auto 1fr;
+    small {
+      grid-column: 2;
+    }
+  }
+}

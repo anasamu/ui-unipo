@@ -3,13 +3,14 @@ import '@fontsource-variable/plus-jakarta-sans';
 import '@fontsource-variable/jetbrains-mono';
 import 'unipo-ui/scss';
 import './docs.scss';
-import { UnipoProvider, configureFlags } from 'unipo-ui/siakad';
+import { SsoAdminProvider, UnipoProvider, configureFlags } from 'unipo-ui/siakad';
 import { siakadDemo } from './mock/siakad';
 import './mock/fitur';
 import './mock/dasbor';
 import './mock/kurikulum';
 import './mock/lms';
 import './mock/akademik';
+import { ssoDemo } from './mock/aplikasi';
 import { App } from './App';
 
 // Bendera dari paket country-flag-icons (tanpa CDN), dibundel Vite.
@@ -19,6 +20,8 @@ configureFlags((kode) => byCode[kode] ?? '');
 
 createRoot(document.getElementById('root')!).render(
   <UnipoProvider siakad={siakadDemo} withProviders={false}>
-    <App />
+    <SsoAdminProvider client={ssoDemo}>
+      <App />
+    </SsoAdminProvider>
   </UnipoProvider>,
 );
