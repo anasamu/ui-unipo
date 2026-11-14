@@ -13,6 +13,8 @@ import { Playground } from './Playground';
 import { Galeri } from './Galeri';
 import { PratinjauTema } from './PratinjauTema';
 
+declare const __VERSI_UI__: string;
+
 const EMBED = new URLSearchParams(location.search).has('embed');
 /** ?polos: hanya isi halaman (tanpa bilah atas dan sidebar), untuk pratinjau di pembuat tema. */
 const POLOS = new URLSearchParams(location.search).has('polos');
@@ -168,7 +170,7 @@ export function App() {
                   <AppLogo name="UNIPO UI" tagline="Sistem desain Universitas Pohuwato" />
                 </a>
                 <Badge variant="outline" shape="square">
-                  v1.0.2
+                  v{__VERSI_UI__}
                 </Badge>
               </>
             )}

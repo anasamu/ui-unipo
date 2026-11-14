@@ -1,45 +1,110 @@
-# Rilis ke npm: samakan versi di packages/tokens dan packages/ui, lalu
-#   git tag v0.2.0 && git push origin v0.2.0
-# Butuh secret NPM_TOKEN (token "Automation" dari npmjs.com) di Settings → Secrets → Actions.
+# Rilis otomatis ke npm.
+#
+# Cara pakai:
+#   1. npm run versi -- patch   (atau minor / major / X.Y.Z), isi catatan di CHANGELOG.md
+#   2. Commit, buka PR, merge ke main.
+# Begitu versi baru masuk main, workflow ini menerbitkan unipo-ui-tokens lalu unipo-ui ke npm,
+# membuat tag vX.Y.Z, dan GitHub Release berisi catatan dari CHANGELOG.md. Tidak perlu membuat tag manual.
+# Versi yang sudah terbit dilewati, jadi push ke main tanpa naik versi tidak menerbitkan apa pun.
+# Tag vX.Y.Z yang di-push manual dan tombol "Run workflow" tetap bisa dipakai (hasilnya sama).
+#
+# Butuh secret NPM_TOKEN (token "Automation"/granular dengan izin publish dari npmjs.com)
+# di Settings → Secrets and variables → Actions.
 name: Rilis
 
 on:
   push:
+    branches: [main]
+    paths:
+      - package.json
+      - packages/tokens/package.json
+      - packages/ui/package.json
+      - CHANGELOG.md
+      - .github/workflows/rilis.yml
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: rilis
+  cancel-in-progress: false
 
 jobs:
   rilis:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-      - name: Versi tag sama dengan kedua paket
+
+      - name: Periksa versi
+        id: versi
         run: |
-          VERSI="${GITHUB_REF_NAME#v}"
           UI="$(node -p "require('./packages/ui/package.json').version")"
           TOK="$(node -p "require('./packages/tokens/package.json').version")"
           DEP="$(node -p "require('./packages/ui/package.json').dependencies['unipo-ui-tokens']")"
-          echo "tag=$VERSI ui=$UI tokens=$TOK ui→tokens=$DEP"
-          [ "$VERSI" = "$UI" ] && [ "$VERSI" = "$TOK" ] && [ "$DEP" = "$TOK" ] || { echo "::error::Versi tidak sama"; exit 1; }
-      - run: npm ci --no-audit --no-fund
-      - run: npm run build
-      - run: npm run typecheck
-      - name: Uji CLI
-        run: node packages/ui/cli/index.mjs list > /dev/null && node packages/ui/cli/index.mjs tema --stdout --primary "#0f766e" > /dev/null
-      - name: Terbitkan ke npm (tokens lalu ui)
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then echo "::warning::Secret NPM_TOKEN belum diisi; npm dilewati."; exit 0; fi
-          npm publish -w unipo-ui-tokens --access public
-          npm publish -w unipo-ui --access public
-      - name: GitHub Release
+          echo "ui=$UI tokens=$TOK ui→tokens=$DEP"
+          [ "$UI" = "$TOK" ] && [ "$DEP" = "$TOK" ] || { echo "::error::Versi unipo-ui, unipo-ui-tokens, dan dependensinya harus sama. Pakai: npm run versi -- patch"; exit 1; }
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "${GITHUB_REF_NAME#v}" != "$UI" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME tidak sama dengan versi paket $UI"; exit 1
+          fi
+          ada() { [ -n "$(npm view "$1@$UI" version 2>/dev/null || true)" ]; }
+          ada unipo-ui-tokens && T=0 || T=1
+          ada unipo-ui && U=0 || U=1
+          gh release view "v$UI" > /dev/null 2>&1 && R=0 || R=1
+          # Versi prarilis (1.1.0-beta.1) diterbitkan dengan dist-tag "next" agar tidak jadi "latest".
+          case "$UI" in *-*) DT=next ;; *) DT=latest ;; esac
+          echo "versi=$UI" >> "$GITHUB_OUTPUT"
+          echo "tokens=$T" >> "$GITHUB_OUTPUT"
+          echo "ui=$U" >> "$GITHUB_OUTPUT"
+          echo "rilis=$R" >> "$GITHUB_OUTPUT"
+          echo "disttag=$DT" >> "$GITHUB_OUTPUT"
+          if [ $T$U$R = 000 ]; then echo "Versi $UI sudah terbit di npm dan GitHub Release; tidak ada yang dikerjakan."; fi
+          {
+            echo "### Rilis $UI"
+            echo "- unipo-ui-tokens: $([ $T = 1 ] && echo 'akan diterbitkan' || echo 'sudah ada di npm')"
+            echo "- unipo-ui: $([ $U = 1 ] && echo 'akan diterbitkan' || echo 'sudah ada di npm')"
+            echo "- GitHub Release v$UI: $([ $R = 1 ] && echo 'akan dibuat' || echo 'sudah ada')"
+          } >> "$GITHUB_STEP_SUMMARY"
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "Lihat CHANGELOG.md." --verify-tag
+
+      - name: Pasang, build, typecheck
+        if: steps.versi.outputs.tokens == '1' || steps.versi.outputs.ui == '1' || steps.versi.outputs.rilis == '1'
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          npm run typecheck
+          node packages/ui/cli/index.mjs list > /dev/null
+          node packages/ui/cli/index.mjs tema --stdout --primary "#0f766e" > /dev/null
+
+      - name: Terbitkan ke npm (tokens lalu ui)
+        if: steps.versi.outputs.tokens == '1' || steps.versi.outputs.ui == '1'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DT: ${{ steps.versi.outputs.disttag }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then echo "::error::Secret NPM_TOKEN belum diisi di Settings → Secrets and variables → Actions."; exit 1; fi
+          if [ "${{ steps.versi.outputs.tokens }}" = 1 ]; then npm publish -w unipo-ui-tokens --access public --tag "$DT"; fi
+          if [ "${{ steps.versi.outputs.ui }}" = 1 ]; then npm publish -w unipo-ui --access public --tag "$DT"; fi
+
+      - name: Tag dan GitHub Release
+        if: steps.versi.outputs.rilis == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.versi.outputs.versi }}
+        run: |
+          # Catatan rilis = bagian "## V" di CHANGELOG.md sampai judul versi berikutnya.
+          awk -v v="$V" '$0 ~ "^## " v "( |$)" {on=1; next} on && /^## / {exit} on {print}' CHANGELOG.md > catatan.md
+          [ -s catatan.md ] || echo "Lihat CHANGELOG.md." > catatan.md
+          echo "" >> catatan.md
+          echo "\`npm i unipo-ui@$V\`" >> catatan.md
+          PRA=""; case "$V" in *-*) PRA="--prerelease" ;; esac
+          # Tag dibuat oleh GitHub (token bawaan), jadi tidak memicu workflow ini lagi.
+          gh release create "v$V" --title "v$V" --notes-file catatan.md --target "$GITHUB_SHA" $PRA
