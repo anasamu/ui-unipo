@@ -1,6 +1,7 @@
 import { Building2, GraduationCap, Laptop, Moon, Sun } from 'lucide-react';
 import { Checkbox, CheckboxGroup, Choice, RadioGroup, Switch } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
+import { jsxProps } from '../Playground';
 
 export const meta: DemoMeta = {
   title: 'Checkbox, Radio & Switch',
@@ -8,6 +9,22 @@ export const meta: DemoMeta = {
   description: 'Kontrol pilihan modern dengan dua tampilan: daftar dan kartu. Kartu cocok untuk memilih jalur pendaftaran, kelas, atau paket.',
   importLine: "import { Checkbox, CheckboxGroup, RadioGroup, Switch, Choice } from 'unipo-ui';",
   demos: { Tunggal: 'Checkbox dan Switch', Daftar: 'Grup checkbox', Radio: 'Grup radio', Kartu: 'Kartu pilihan (radio)', KartuCek: 'Kartu pilihan (checkbox)' },
+  playground: {
+    title: 'Playground Switch',
+    controls: [
+      { name: 'label', type: 'text', default: 'Kirim notifikasi nilai ke email' },
+      { name: 'size', type: 'select', options: ['sm', 'md'], default: 'md' },
+      { name: 'defaultChecked', type: 'boolean', default: true },
+      { name: 'disabled', type: 'boolean', default: false },
+    ],
+    render: ({ label, ...p }) => (
+      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+        <Switch key={String(p.defaultChecked)} {...p} />
+        {label}
+      </label>
+    ),
+    code: ({ label, ...p }) => `<label>\n  <Switch${jsxProps(p, { size: 'md', defaultChecked: false, disabled: false })} />\n  ${label}\n</label>`,
+  },
 };
 
 export function Tunggal() {

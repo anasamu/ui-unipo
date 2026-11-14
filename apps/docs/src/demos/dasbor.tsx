@@ -22,7 +22,7 @@ import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
   title: 'Dasbor unit kerja',
-  category: 'Widget fitur',
+  category: 'Statistik',
   layout: 'full',
   order: 5,
   description:

@@ -5,7 +5,7 @@ import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
   title: 'CBT ujian',
-  category: 'Widget fitur',
+  category: 'CBT',
   layout: 'full',
   order: 8,
   description:

@@ -1,6 +1,7 @@
 import { Button, Faq } from 'unipo-ui';
 import { FaqPortal } from 'unipo-ui/siakad';
 import type { DemoMeta } from '../registry';
+import { jsxProps } from '../Playground';
 
 export const meta: DemoMeta = {
   title: 'FAQ',
@@ -22,6 +23,19 @@ export const meta: DemoMeta = {
     ['contact', '{ title, description, action }', 'Kotak "Masih ada pertanyaan?" di bawah daftar.'],
     ['FaqPortal.situs / kategori / turunan / bahasa', '…', 'Saring per situs atau kategori, sertakan situs turunan, pakai kolom _en.'],
   ],
+  playground: {
+    controls: [
+      { name: 'layout', type: 'select', options: ['stack', 'split'], default: 'stack' },
+      { name: 'variant', type: 'select', options: ['line', 'card'], default: 'line' },
+      { name: 'title', label: 'Judul', type: 'text', default: 'Pertanyaan umum' },
+    ],
+    render: (p) => (
+      <div style={{ width: '100%' }}>
+        <FaqPortal situs="univ" jumlah={6} {...p} />
+      </div>
+    ),
+    code: (p) => `<FaqPortal situs="univ" jumlah={6}${jsxProps(p, { layout: 'stack', variant: 'line' })} />`,
+  },
 };
 
 export function Halaman() {

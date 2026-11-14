@@ -1,5 +1,6 @@
 import { KeamananPengguna, LogAktivitas, LogApi, RingkasanLogApi } from 'unipo-ui/siakad';
 import type { DemoMeta } from '../registry';
+import { jsxProps } from '../Playground';
 
 export const meta: DemoMeta = {
   title: 'Log & keamanan',
@@ -28,6 +29,16 @@ export const meta: DemoMeta = {
     'Log API tidak menyimpan token, password, maupun isi permintaan. Hanya admin dengan token pengguna yang bisa membacanya.',
     'Log aktivitas dan keamanan akun memakai API admin SSO (/api/admin/audit, /api/admin/users/{u}/security) lewat BFF, sama seperti komponen aplikasi.',
   ],
+  playground: {
+    title: 'Playground LogAktivitas',
+    controls: [
+      { name: 'grup', label: 'Kelompok awal', type: 'select', options: ['semua', 'login', 'logout', 'authorize', 'password', 'session', 'admin'], default: 'semua' },
+      { name: 'perPage', type: 'number', default: 5, min: 1, max: 50 },
+      { name: 'saringan', label: 'Bilah saringan', type: 'boolean', default: true },
+    ],
+    render: ({ grup, ...p }) => <LogAktivitas key={grup + p.perPage} grup={grup === 'semua' ? undefined : grup} {...p} />,
+    code: ({ grup, ...p }) => `<LogAktivitas${jsxProps({ grup: grup === 'semua' ? '' : grup, ...p }, { perPage: 30, saringan: true })} />`,
+  },
 };
 
 export function Ringkasan() {

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Button } from 'unipo-ui';
 import { DaftarAplikasi, DetailAplikasi, FormAplikasi, KartuAplikasi, PilihScope, SecretSekali, WizardAplikasi, useAplikasiTerpadu, type AplikasiTerpadu } from 'unipo-ui/siakad';
 import type { DemoMeta } from '../registry';
+import { jsxProps } from '../Playground';
 
 export const meta: DemoMeta = {
   title: 'Aplikasi integrasi',
@@ -38,6 +39,17 @@ export const meta: DemoMeta = {
     'Di Pustikom: createSsoAdmin({ baseUrl: "/bff/sso", headers: () => ({ "X-CSRF-Token": csrf }), methodOverride: true }). methodOverride mengirim PATCH/DELETE sebagai POST untuk hosting yang menolak metode itu.',
     'Endpoint yang dipakai: GET/POST /v1/rbac/aplikasi, /v1/rbac/klien-api (+ /scope, /{id}/secret), /v1/rbac/peran, dan di SSO /clients, /clients/{id}(/secret|/logo).',
   ],
+  playground: {
+    title: 'Playground DaftarAplikasi',
+    controls: [
+      { name: 'tampilan', type: 'select', options: ['kartu', 'tabel'], default: 'kartu' },
+      { name: 'statistik', label: 'Kartu angka', type: 'boolean', default: false },
+      { name: 'bolehBuat', label: 'Tombol aplikasi baru', type: 'boolean', default: true },
+    ],
+    render: (p) => <DaftarAplikasi key={p.tampilan} {...p} />,
+    code: (p) =>
+      `<SsoAdminProvider client={createSsoAdmin({ baseUrl: '/bff/sso' })}>\n  <DaftarAplikasi${jsxProps(p, { tampilan: 'kartu', statistik: true, bolehBuat: true })} />\n</SsoAdminProvider>`,
+  },
 };
 
 export function Daftar() {

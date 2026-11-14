@@ -2,6 +2,7 @@ import { BookOpen, Building2, CalendarDays, FileText, GraduationCap, Library, Lo
 import { AppLogo, Button, Navbar, SearchTrigger, UnipoAppLogo, type NavbarMenu } from 'unipo-ui';
 import { LogoSitus, NavbarPortal } from 'unipo-ui/siakad';
 import type { DemoMeta } from '../registry';
+import { jsxProps } from '../Playground';
 
 export const meta: DemoMeta = {
   title: 'Navbar & mega menu',
@@ -37,6 +38,40 @@ export const meta: DemoMeta = {
     'Menu portal tiga tingkat (menu → judul kolom → tautan) otomatis menjadi mega menu; dua tingkat menjadi dropdown. Tipe halaman, kategori, dan modul diubah ke URL lewat hrefMenuPortal, yang bisa diganti dengan prop href.',
     'Mega menu dibangun di atas NavigationMenu Base UI: bisa dipakai dengan papan ketik (Tab, panah, Esc) dan panel bergeser halus saat pindah menu.',
   ],
+  playground: {
+    controls: [
+      { name: 'variant', type: 'select', options: ['app', 'portal', 'ringkas'], default: 'portal' },
+      { name: 'align', type: 'select', options: ['start', 'center'], default: 'start' },
+      { name: 'cari', label: 'Tombol cari', type: 'boolean', default: true },
+      { name: 'aksi', label: 'Tombol masuk', type: 'boolean', default: true },
+    ],
+    render: ({ variant, align, cari, aksi }) => (
+      <div style={{ width: '100%', border: '1px solid var(--u-border)', borderRadius: 'var(--u-radius)', overflow: 'hidden' }}>
+        <Navbar
+          variant={variant}
+          align={align}
+          brand={<UnipoAppLogo app="siakad" />}
+          menus={[
+            { key: 'beranda', label: 'Beranda', href: '#' },
+            {
+              key: 'akademik',
+              label: 'Akademik',
+              items: [
+                { key: 'krs', label: 'KRS', href: '#' },
+                { key: 'khs', label: 'KHS', href: '#' },
+              ],
+            },
+            { key: 'layanan', label: 'Layanan', href: '#' },
+          ]}
+          activeKey="beranda"
+          search={cari ? <SearchTrigger placeholder="Cari…" /> : undefined}
+          actions={aksi ? <Button size="sm">Masuk</Button> : undefined}
+        />
+      </div>
+    ),
+    code: ({ variant, align, cari, aksi }) =>
+      `<Navbar${jsxProps({ variant, align }, { variant: 'app', align: 'start' })}\n  brand={<UnipoAppLogo app="siakad" />}\n  menus={menus}\n  activeKey="beranda"${cari ? '\n  search={<SearchTrigger placeholder="Cari…" />}' : ''}${aksi ? '\n  actions={<Button size="sm">Masuk</Button>}' : ''}\n/>`,
+  },
 };
 
 const MENU: NavbarMenu[] = [

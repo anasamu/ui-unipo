@@ -7,7 +7,7 @@ import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
   title: 'Detail mahasiswa, dosen & MK',
-  category: 'Widget fitur',
+  category: 'Akademik',
   layout: 'wide',
   order: 3,
   description:

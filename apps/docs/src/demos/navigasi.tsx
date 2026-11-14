@@ -2,6 +2,7 @@ import * as React from 'react';
 import { BookOpen, ClipboardList, GraduationCap, Wallet } from 'lucide-react';
 import { Accordion, Breadcrumb, Button, Pagination, Progress, ProgressRing, Stepper, Tabs } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
+import { jsxProps } from '../Playground';
 
 export const meta: DemoMeta = {
   title: 'Tabs, Stepper & Pagination',
@@ -9,7 +10,38 @@ export const meta: DemoMeta = {
   layout: 'wide',
   description: 'Komponen untuk berpindah antar bagian dan menunjukkan kemajuan: tab, langkah wizard, halaman, breadcrumb, akordeon, dan progres.',
   importLine: "import { Tabs, Stepper, Pagination, Breadcrumb, Accordion, Progress, ProgressRing } from 'unipo-ui';",
-  demos: { TabGaris: 'Tabs garis bawah', TabPil: 'Tabs pil', Langkah: 'Stepper', LangkahVertikal: 'Stepper vertikal', Halaman: 'Pagination', Jejak: 'Breadcrumb', Faq: 'Accordion', Kemajuan: 'Progress' },
+  demos: {
+    TabGaris: 'Tabs garis bawah',
+    TabPil: 'Tabs pil',
+    Langkah: 'Stepper',
+    LangkahVertikal: 'Stepper vertikal',
+    Halaman: 'Pagination',
+    Jejak: 'Breadcrumb',
+    Faq: 'Accordion',
+    Kemajuan: 'Progress',
+  },
+  playground: {
+    title: 'Playground Tabs',
+    controls: [
+      { name: 'variant', type: 'select', options: ['underline', 'pill'], default: 'underline' },
+      { name: 'ikon', label: 'Ikon', type: 'boolean', default: true },
+      { name: 'count', label: 'Jumlah', type: 'boolean', default: true },
+    ],
+    render: ({ variant, ikon, count }) => (
+      <div style={{ width: '100%', maxWidth: 560 }}>
+        <Tabs
+          variant={variant}
+          items={[
+            { value: 'krs', label: 'KRS', icon: ikon ? <ClipboardList /> : undefined, count: count ? 8 : undefined, content: <p>Daftar mata kuliah semester ini.</p> },
+            { value: 'khs', label: 'KHS', icon: ikon ? <BookOpen /> : undefined, content: <p>Nilai semester lalu.</p> },
+            { value: 'tagihan', label: 'Tagihan', icon: ikon ? <Wallet /> : undefined, count: count ? 1 : undefined, content: <p>Satu tagihan belum dibayar.</p> },
+          ]}
+        />
+      </div>
+    ),
+    code: ({ variant, ikon, count }) =>
+      `<Tabs${jsxProps({ variant }, { variant: 'underline' })}\n  items={[\n    { value: 'krs', label: 'KRS'${ikon ? ', icon: <ClipboardList />' : ''}${count ? ', count: 8' : ''}, content: <TabelKrs /> },\n    { value: 'khs', label: 'KHS'${ikon ? ', icon: <BookOpen />' : ''}, content: <TabelKhs /> },\n    { value: 'tagihan', label: 'Tagihan'${ikon ? ', icon: <Wallet />' : ''}${count ? ', count: 1' : ''}, content: <Tagihan /> },\n  ]}\n/>`,
+  },
 };
 
 export function TabGaris() {
@@ -26,7 +58,17 @@ export function TabGaris() {
 }
 
 export function TabPil() {
-  return <Tabs variant="pill" items={[{ value: 'semua', label: 'Semua' }, { value: 'berita', label: 'Berita' }, { value: 'agenda', label: 'Agenda' }, { value: 'pengumuman', label: 'Pengumuman' }]} />;
+  return (
+    <Tabs
+      variant="pill"
+      items={[
+        { value: 'semua', label: 'Semua' },
+        { value: 'berita', label: 'Berita' },
+        { value: 'agenda', label: 'Agenda' },
+        { value: 'pengumuman', label: 'Pengumuman' },
+      ]}
+    />
+  );
 }
 
 const STEPS = [
@@ -43,8 +85,12 @@ export function Langkah() {
     <div className="demo-stack">
       <Stepper steps={STEPS} current={cur} onStepClick={setCur} />
       <div className="demo-row">
-        <Button variant="outline" size="sm" disabled={cur === 0} onClick={() => setCur(cur - 1)}>Kembali</Button>
-        <Button size="sm" disabled={cur === STEPS.length - 1} onClick={() => setCur(cur + 1)}>Lanjut</Button>
+        <Button variant="outline" size="sm" disabled={cur === 0} onClick={() => setCur(cur - 1)}>
+          Kembali
+        </Button>
+        <Button size="sm" disabled={cur === STEPS.length - 1} onClick={() => setCur(cur + 1)}>
+          Lanjut
+        </Button>
       </div>
     </div>
   );

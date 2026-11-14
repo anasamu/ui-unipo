@@ -6,7 +6,7 @@ import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
   title: 'Wizard formulir',
-  category: 'Widget fitur',
+  category: 'Formulir',
   layout: 'full',
   order: 3,
   description:
