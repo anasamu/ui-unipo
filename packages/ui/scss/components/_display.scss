@@ -89,8 +89,37 @@
   > svg {
     width: 1.125rem;
     height: 1.125rem;
-    margin-top: 0.0625rem;
+    // Tengah baris pertama (judul 1.4 × text-base, atau deskripsi 1.5 × text-sm bila tanpa judul).
+    margin-top: calc((var(--u-text-base) * 1.4 - 1.125rem) / 2);
     color: var(--u-alert-accent);
+  }
+  // Teks di dalam alert kebal terhadap margin CSS halaman (mis. `.prose p { margin: 1em 0 }` di artikel/markdown),
+  // supaya ikon tetap sejajar judul dan jarak atas = jarak bawah.
+  .u-alert-title {
+    margin: 0;
+  }
+  .u-alert-description {
+    margin: 0;
+    // Ukuran dan tinggi baris milik alert, bukan milik pembungkus dari halaman (mis. hasil markdown).
+    :where(div, p, ul, ol, li) {
+      font-size: inherit;
+      line-height: inherit;
+    }
+    :first-child {
+      margin-top: 0;
+    }
+    :last-child {
+      margin-bottom: 0;
+    }
+    :where(p, ul, ol) {
+      margin-block: 0.375rem;
+    }
+  }
+  .u-alert-title + .u-alert-description {
+    margin-top: 0.125rem;
+  }
+  &:not(:has(.u-alert-title)) > svg {
+    margin-top: calc((var(--u-text-sm) * 1.5 - 1.125rem) / 2);
   }
   &[data-variant='info'] {
     --u-alert-accent: var(--u-info);
@@ -591,14 +620,18 @@
     height: 1.25rem;
   }
 }
-.u-empty-title {
+.u-empty .u-empty-title {
   margin: 0;
+}
+.u-empty-title {
   font-size: var(--u-text-md);
   font-weight: 600;
 }
+.u-empty .u-empty-description {
+  margin: 0;
+}
 .u-empty-description {
   max-width: 24rem;
-  margin: 0;
   color: var(--u-muted-foreground);
   font-size: var(--u-text-sm);
   line-height: 1.5;

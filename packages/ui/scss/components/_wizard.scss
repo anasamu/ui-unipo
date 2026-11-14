@@ -31,14 +31,18 @@
     display: none;
   }
 }
-.u-wizard-intro-title {
+.u-wizard .u-wizard-intro-title {
   margin: 0;
+}
+.u-wizard-intro-title {
   font-family: var(--u-font-heading);
   font-weight: var(--u-weight-semibold);
   font-size: 1rem;
 }
-.u-wizard-intro-desc {
+.u-wizard .u-wizard-intro-desc {
   margin: 0.25rem 0 0;
+}
+.u-wizard-intro-desc {
   font-size: var(--u-text-sm);
   color: var(--u-muted-foreground);
   line-height: 1.5;
