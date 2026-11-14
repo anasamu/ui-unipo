@@ -422,7 +422,7 @@ export function tambahRute(pola: RegExp, balas: (u: URL, init?: RequestInit) => 
 }
 export { MAHASISWA, DOSEN, PEGAWAI, MATA_KULIAH, PRODI };
 
-const mockFetch: typeof fetch = async (input, init) => {
+export const mockFetch: typeof fetch = async (input, init) => {
   const u = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
   await new Promise((r) => setTimeout(r, 180 + Math.random() * 220));
   if (init?.signal?.aborted) throw new DOMException('Dibatalkan', 'AbortError');

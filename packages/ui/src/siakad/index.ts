@@ -16,3 +16,5 @@ export * from './lms';
 export * from './cbt';
 export * from './akademik';
 export * from './navigasi';
+export * from './aplikasi';
+export * from './log';
