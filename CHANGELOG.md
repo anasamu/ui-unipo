@@ -1,5 +1,12 @@
 # Catatan perubahan
 
+## 1.25.0 (2026-11-15)
+
+- **Laporan dan statistik bersama** (`unipo-ui`), untuk laporan di semua aplikasi: `KerangkaLaporan` (judul, filter, tombol Cetak/PDF yang hanya mencetak laporan itu, CSV, kepala cetak, catatan, tanda tangan), `TabelLaporan` berjenjang (grup, subtotal, total, format akuntansi), `TabelRekap` (batang proporsi, baris total, klik baris), `PilihPeriode` (preset bulan/triwulan/tahun/tahun akademik), `StatistikRingkas`, `KepalaCetak`, `TandaTanganLaporan`, `unduhCsv` (titik koma + BOM untuk Excel), `formatAkuntansi`, `formatNilai`, `labelPeriode`, `rentangPreset`, dan `terbilang` di `lib/format`.
+- **Payroll gaji dosen dan tendik** (`unipo-ui/siakad`, API `/v1/gaji`), dipakai BAUK dan aplikasi SDM: `RekapGaji` (per pegawai/unit/komponen, peringatan, rekening), `SlipGaji` (cetak, terbilang, iuran universitas, QR verifikasi), `DaftarSlipSaya` dan `PajakGajiSaya` (pegawai), `StatistikGaji`, `VerifikasiSlipGaji` (publik), `PilihPeriodeGaji`, hooks `useRekapGaji`, `useStatistikGaji`, `useSlipGaji`, `useGajiSaya`, `usePajakGajiSaya`.
+- **Keuangan universitas** (`unipo-ui/siakad`, API `/v1/keu`): `LaporanKeuangan` (posisi keuangan, aktivitas, arus kas, neraca saldo, dengan pembanding), `KasUnit`, `TransparansiBiaya`, `StatistikKeuangan`, beserta hooks-nya.
+- **SOP dan kebijakan unit** (`KebijakanUnit`, `useDokumenKebijakan`) dari `/v1/spmi/publik/dokumen` untuk transparansi aturan di aplikasi bagian.
+
 ## 1.24.0 (2026-11-15)
 
 - **Pengolah dokumen ala Word** (`unipo-ui/editor`): `PengolahDokumen` dengan pita menu (Beranda, Sisipkan, Tata letak, Tinjau, plus pita Tabel/Gambar saat dipilih), kertas A4/F4/Letter dengan margin nyata dan perkiraan batas halaman, kop/data surat/tanda tangan tetap di kertas, chip penanda `{{nama}}`, tabel bergaris atau polos, gambar dan kode QR lewat unggah berkas, cari & ganti, zoom, cetak, dan pintasan keyboard. Keluarannya HTML berkelas `ub-*` (`KELAS_PENGOLAH`) yang lolos saringan SIAKAD dan diterjemahkan ke PDF. Ekspor `KERTAS`, `MARGIN_SIAP`, `KopLembar`, `htmlPengolah`, `penandaKeChip`.
