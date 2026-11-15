@@ -12,6 +12,7 @@ import { FormGrid, Wizard, WizardReview, type ReviewSection, type WizardStep } f
 import { formatDate } from '../lib/format';
 import { CariPerguruanTinggi, CariSekolah } from './cari';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { hurufJudul, labelJenjang } from './pmb-publik';
 
 // ================================================================ Tipe formulir (PATCH /v1/pmb/saya/pendaftaran/{id})
 type Isian = Record<string, string | number | null | undefined>;
@@ -256,9 +257,15 @@ export interface ProdiGelombang {
   nama_prodi: string;
   jenjang?: string | null;
   kode_fakultas?: string | null;
+  /** Nama fakultas (SIAKAD terbaru); bila kosong hanya jenjang yang ditampilkan. */
+  nama_fakultas?: string | null;
   kuota?: number | null;
   jumlah_peminat?: number | null;
 }
+
+/** "C" + "ILMU HUKUM" -> "S1 Ilmu Hukum". */
+export const namaProdiPmb = (p: { jenjang?: string | null; nama_prodi?: string | null; kode_prodi?: string }) =>
+  [p.jenjang ? labelJenjang(p.jenjang) : null, hurufJudul(p.nama_prodi || p.kode_prodi || '')].filter(Boolean).join(' ');
 
 /** Pilih program studi sesuai urutan prioritas (pilihan 1, 2, …) dengan kuota dan jumlah peminat. */
 export function PilihanProdi({ prodi, value, onChange, maks = 2 }: { prodi: ProdiGelombang[]; value: string[]; onChange: (v: string[]) => void; maks?: number }) {
@@ -279,15 +286,11 @@ export function PilihanProdi({ prodi, value, onChange, maks = 2 }: { prodi: Prod
                   {i >= 0 ? i + 1 : <GraduationCap />}
                 </span>
                 <span className="u-prodi-text">
-                  <span className="u-prodi-name">
-                    {p.jenjang ? `${p.jenjang} ` : ''}
-                    {p.nama_prodi}
-                  </span>
-                  <span className="u-prodi-meta">
-                    {p.kode_fakultas}
-                    {p.kuota ? ` · kuota ${p.kuota}` : ''}
-                    {p.jumlah_peminat != null ? ` · ${p.jumlah_peminat} peminat` : ''}
-                  </span>
+                  <span className="u-prodi-name">{namaProdiPmb(p)}</span>
+                  {p.nama_fakultas && (
+                    <span className="u-prodi-fak">{hurufJudul(p.nama_fakultas)}</span>
+                  )}
+                  <span className="u-prodi-meta">{[p.kuota ? `Kuota ${p.kuota}` : null, p.jumlah_peminat != null ? `${p.jumlah_peminat} peminat` : null].filter(Boolean).join(' · ')}</span>
                 </span>
                 {p.kuota ? (
                   <span className="u-prodi-meter" data-level={rasio > 1.5 ? 'tinggi' : rasio > 0.8 ? 'sedang' : 'rendah'} title="Perbandingan peminat dan kuota">
@@ -658,7 +661,7 @@ export function WizardPendaftaranPmb({ id, onDiajukan, kontak, langkah, onLangka
     {
       id: 'prodi',
       title: 'Program studi',
-      description: d.gelombang.nama + (d.gelombang.jalur ? ` · ${d.gelombang.jalur}` : ''),
+      description: 'Pilihan dan urutan prioritas',
       content: gel.loading ? (
         <Skeleton style={{ height: 240 }} />
       ) : (
@@ -763,7 +766,7 @@ export function WizardPendaftaranPmb({ id, onDiajukan, kontak, langkah, onLangka
         onStepChange={gantiStep}
         savedAt={savedAt}
         freeNavigation
-        title="Formulir pendaftaran"
+        title="Langkah pengisian"
         description="Isian tersimpan tiap langkah. Anda bisa melanjutkan kapan saja."
         aside={kontak}
         finishLabel={d.status === 'perlu_perbaikan' ? 'Ajukan ulang' : 'Ajukan pendaftaran'}
@@ -812,7 +815,7 @@ function PmbReview({
       onEdit: ke(0),
       missing: kurang.pilihan,
       items: [
-        ...(f.pilihan ?? []).map((k, i) => ({ label: `Pilihan ${i + 1}`, value: prodi.find((x) => x.kode_prodi === k)?.nama_prodi ?? k })),
+        ...(f.pilihan ?? []).map((k, i) => ({ label: `Pilihan ${i + 1}`, value: (() => { const x = prodi.find((y) => y.kode_prodi === k); return x ? namaProdiPmb(x) : k; })() })),
         { label: 'Sumber informasi', value: nama(r.sumber_informasi, f.sumber_informasi) },
         { label: 'Kode referal', value: f.kode_referal },
       ],

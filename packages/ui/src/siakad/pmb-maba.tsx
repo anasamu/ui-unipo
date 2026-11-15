@@ -58,6 +58,7 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
 import { WizardPendaftaranPmb } from './pmb';
 import {
   TautanPmb,
+  hurufJudul,
   keadaanGelombang,
   labelTahunPmb,
   rentangPmb,
@@ -1572,7 +1573,7 @@ export function KartuPesertaPmb({ pendaftaranId }: { pendaftaranId: string }) {
                   <>
                     {k.pilihan.map((x) => (
                       <span key={x.urut} className="u-pmb-blok">
-                        {x.urut}. {x.nama_prodi}
+                        {x.urut}. {hurufJudul(x.nama_prodi ?? x.kode_prodi)}
                       </span>
                     ))}
                   </>
@@ -1644,7 +1645,7 @@ export function HasilSeleksiPmb() {
           <CentangSukses ukuran={56} />
           <h2>Selamat, Anda resmi menjadi mahasiswa baru!</h2>
           <p>
-            Program studi <b>{diterima?.nama_prodi}</b>
+            Program studi <b>{hurufJudul(diterima?.nama_prodi ?? '')}</b>
           </p>
           {diterima?.nim && (
             <p className="u-pmb-nim">
@@ -1659,7 +1660,7 @@ export function HasilSeleksiPmb() {
             <PartyPopper aria-hidden />
             <h2>Selamat, Anda lulus seleksi!</h2>
             <p>
-              Diterima di program studi <b>{lulus?.nama_prodi}</b>. Lakukan daftar ulang agar mendapat NIM.
+              Diterima di program studi <b>{hurufJudul(lulus?.nama_prodi ?? '')}</b>. Lakukan daftar ulang agar mendapat NIM.
             </p>
           </section>
           <Card>
@@ -1722,7 +1723,7 @@ export function HasilSeleksiPmb() {
                 <li key={x.urut}>
                   <span className="u-pmb-urut">{x.urut}</span>
                   <span>
-                    <strong>{x.nama_prodi}</strong>
+                    <strong>{hurufJudul(x.nama_prodi ?? '')}</strong>
                   </span>
                   {x.diterima ? (
                     <Badge variant="success">Diterima{x.nim ? ` · ${x.nim}` : ''}</Badge>
