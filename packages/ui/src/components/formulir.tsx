@@ -123,6 +123,59 @@ export function Pilihan({ options, value, onValueChange, tampilan, required, pla
   );
 }
 
+export interface PilihanBanyakProps {
+  options: SelectOption<string>[];
+  value: string[];
+  onValueChange: (value: string[]) => void;
+  placeholder?: string;
+  /** Batas jumlah pilihan; isian tambah disembunyikan setelah penuh. */
+  maks?: number;
+  disabled?: boolean;
+  id?: string;
+  className?: string;
+  'aria-label'?: string;
+}
+
+/**
+ * Pilih beberapa nilai dari daftar (mis. cakupan prodi atau fakultas): yang terpilih tampil sebagai tag dengan tombol
+ * hapus, sisanya dipilih lewat daftar atau isian cari (lebih dari 8 opsi). Kosong berarti "semua" di banyak API.
+ */
+export function PilihanBanyak({ options, value, onValueChange, placeholder, maks, disabled, id, className, ...rest }: PilihanBanyakProps) {
+  const [putaran, setPutaran] = React.useState(0);
+  const sisa = options.filter((o) => !value.includes(o.value));
+  const label = (v: string) => options.find((o) => o.value === v)?.label ?? v;
+  return (
+    <div className={cn('u-pilihan-banyak', className)}>
+      {value.length > 0 && (
+        <div className="u-pilihan-banyak-tag">
+          {value.map((v) => (
+            <Tag key={v} size="sm" removeLabel={`Hapus ${teksLabel({ value: v, label: label(v) })}`} onRemove={disabled ? undefined : () => onValueChange(value.filter((x) => x !== v))}>
+              {label(v)}
+            </Tag>
+          ))}
+        </div>
+      )}
+      {(!maks || value.length < maks) && sisa.length > 0 && (
+        <Pilihan
+          key={putaran}
+          id={id}
+          tampilan={sisa.length > 8 ? 'cari' : 'daftar'}
+          options={sisa}
+          value={null}
+          disabled={disabled}
+          aria-label={rest['aria-label']}
+          placeholder={placeholder ?? (value.length ? 'Tambah lagi…' : 'Pilih…')}
+          onValueChange={(v) => {
+            if (!v) return;
+            onValueChange([...value, v]);
+            setPutaran((x) => x + 1);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 /** Ubah peta `{kode: label}` dari API (mis. jenis_tinggal, JENIS_MK) menjadi opsi Pilihan. */
 export function opsiDariPeta(peta: Record<string, React.ReactNode> | undefined | null): SelectOption<string>[] {
   return Object.entries(peta ?? {}).map(([value, label]) => ({ value, label }));

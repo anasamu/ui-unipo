@@ -16,6 +16,62 @@ export const meta: DemoMeta = {
 
 type Baris = { k: string; kegunaan: string; komponen: string; dari: 'unipo-ui' | 'unipo-ui/siakad' | 'unipo-ui/katalog'; api?: string; scope?: string; halaman: string };
 const PETA: Baris[] = [
+  // Aturan akademik dinamis
+  {
+    k: 'Aturan',
+    kegunaan: 'Kelola aturan akademik, kelulusan, dan keuangan (syarat, batas waktu, batas SKS)',
+    komponen: 'KelolaAturan',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/aturan',
+    scope: 'aturan:write',
+    halaman: 'aturan-dinamis',
+  },
+  {
+    k: 'Aturan',
+    kegunaan: 'Susun syarat secara visual (IPK, SKS, tunggakan, mata kuliah lulus)',
+    komponen: 'PenyusunKondisi',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/aturan/katalog',
+    scope: 'aturan:read',
+    halaman: 'aturan-dinamis',
+  },
+  {
+    k: 'Aturan',
+    kegunaan: 'Tambah atau ubah aturan dengan cakupan prodi/angkatan dan masa berlaku',
+    komponen: 'FormAturan',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/aturan, /v1/aturan/{id}',
+    scope: 'aturan:write',
+    halaman: 'aturan-dinamis',
+  },
+  {
+    k: 'Aturan',
+    kegunaan: 'Lampirkan SK, beri dispensasi, uji aturan, lihat riwayat',
+    komponen: 'PanelDetailAturan',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/aturan/{id}/lampiran, /pengecualian, /uji, /riwayat',
+    scope: 'aturan:write',
+    halaman: 'aturan-dinamis',
+  },
+  {
+    k: 'Aturan',
+    kegunaan: 'Tampilkan syarat KRS, KKN, yudisium, atau wisuda untuk mahasiswa',
+    komponen: 'SyaratSaya',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/aturan/periksa',
+    scope: 'aturan:read',
+    halaman: 'aturan-dinamis',
+  },
+  { k: 'Aturan', kegunaan: 'Tampilkan alasan langkah ditolak (409 aturan_dilanggar)', komponen: 'HasilPeriksaAturanPanel + hasilDariGalatAturan', dari: 'unipo-ui/siakad', halaman: 'aturan-dinamis' },
+  {
+    k: 'Aturan',
+    kegunaan: 'Atur siapa yang berhak mengatur aturan per kategori',
+    komponen: 'PengaturAturan',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/aturan/pengatur',
+    scope: 'aturan:admin',
+    halaman: 'aturan-dinamis',
+  },
   // Formulir tambah/ubah
   {
     k: 'Formulir',

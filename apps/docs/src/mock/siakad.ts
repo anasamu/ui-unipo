@@ -3,13 +3,13 @@
 import { Siakad } from 'unipo-siakad-sdk';
 
 const PRODI = [
-  { kode_prodi: '55201', nama_prodi: 'Informatika', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Ilmu Komputer' },
-  { kode_prodi: '57201', nama_prodi: 'Sistem Informasi', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Ilmu Komputer' },
-  { kode_prodi: '61201', nama_prodi: 'Manajemen', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Ekonomi' },
-  { kode_prodi: '62201', nama_prodi: 'Akuntansi', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Ekonomi' },
-  { kode_prodi: '54211', nama_prodi: 'Agroteknologi', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Pertanian' },
-  { kode_prodi: '74201', nama_prodi: 'Ilmu Hukum', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Hukum' },
-  { kode_prodi: '86206', nama_prodi: 'Pendidikan Guru SD', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Keguruan' },
+  { kode_prodi: '55201', nama_prodi: 'Informatika', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Ilmu Komputer', kode_fakultas: 'FIK' },
+  { kode_prodi: '57201', nama_prodi: 'Sistem Informasi', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Ilmu Komputer', kode_fakultas: 'FIK' },
+  { kode_prodi: '61201', nama_prodi: 'Manajemen', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Ekonomi', kode_fakultas: 'FE' },
+  { kode_prodi: '62201', nama_prodi: 'Akuntansi', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Ekonomi', kode_fakultas: 'FE' },
+  { kode_prodi: '54211', nama_prodi: 'Agroteknologi', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Pertanian', kode_fakultas: 'FP' },
+  { kode_prodi: '74201', nama_prodi: 'Ilmu Hukum', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Hukum', kode_fakultas: 'FH' },
+  { kode_prodi: '86206', nama_prodi: 'Pendidikan Guru SD', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Keguruan', kode_fakultas: 'FKIP' },
 ];
 const prodiNama = (k: string) => PRODI.find((p) => p.kode_prodi === k)?.nama_prodi ?? '';
 
