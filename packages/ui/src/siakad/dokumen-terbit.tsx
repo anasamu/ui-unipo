@@ -82,6 +82,7 @@ export function kodeDokumenDariQr(teks: string): string | null {
   return k.length === 12 && [...k].every((c) => HURUF_KODE.includes(c)) ? k : null;
 }
 
+/** Format kode verifikasi untuk dibaca manusia: `k7qm2xpa9rtd` → `K7QM-2XPA-9RTD`. */
 export const formatKodeDokumen = (k: string) => (k.replace(/[\s-]/g, '').toUpperCase().match(/.{1,4}/g) ?? []).join('-');
 
 const tanggal = (s?: string | null) => (s ? new Date(s.replace(' ', 'T')).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '–');
