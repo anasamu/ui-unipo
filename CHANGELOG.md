@@ -1,5 +1,19 @@
 # Catatan perubahan
 
+## 1.8.0 (2026-11-15)
+
+- **Komponen AI** (`unipo-ui/siakad`) di atas `POST /v1/integrasi/ai/teks` SIAKAD. Kunci API penyedia tetap di server; browser hanya memakai token SIAKAD (scope `integrasi:ai`).
+  - `useAi()`: kirim `prompt` atau `pesan`, `sistem`, `json`, `effort`, `maks_token`, `penyedia`; hasil `{ hasil, galat, dibatalkan }` tanpa melempar galat, bisa dihentikan. `galatMasukanAi()` memeriksa masukan dengan aturan yang sama dengan `AiService::masukan()`, `pesanGalatAi()` menerjemahkan `kuota_habis`, `penyedia_gagal`, scope belum ada, dan validasi. `ambilJsonAi()` membaca jawaban JSON.
+  - `usePenyediaAi()` + `PilihPenyediaAi`: penyedia aktif dari `/v1/integrasi/ai/penyedia` (Claude, GPT/OpenAI-kompatibel, Gemini) dengan pilihan Otomatis = penyedia utama.
+  - `ObrolanAi`: obrolan seperti ChatGPT/Claude/Gemini dengan saran pertanyaan, Markdown aman (`TeksAi`, tanpa innerHTML), salin, ulangi, hentikan, mulai baru, info model dan token. Riwayat dikirim ulang dan dipangkas agar muat 100 pesan / 400.000 karakter (`riwayatAi()`).
+  - `AsistenDokumen` + `TombolAsistenDokumen`: buat draf (surat, SK, notulen, laporan, proposal, pengumuman, berita, skripsi, RPS), rapikan (EYD V, kalimat efektif, struktur, daftar/tabel), ringkas, dan terjemahkan. Hasil HTML disaring seperti `HtmlSanitizer` SIAKAD dan penanda `{{nama}}` diperiksa (`cekPenandaAi()`). Cocok untuk slot `aksi` EditorDokumen.
+  - `BantuTulisAi` (perbaiki, formal, persingkat, kembangkan, judul, Inggris, dengan Urungkan) untuk isian teks biasa, dan `RingkasAi` untuk tiket, notulen, atau laporan.
+  - `AnalisisAi`: analisis data keuangan, mahasiswa/EWS, akademik, PMB, SDM, EDOM, atau umum dari `data` atau `sumber` (GET endpoint SIAKAD). Hasilnya ringkasan, angka kunci, temuan bertingkat, rekomendasi berprioritas, keterbatasan, dan tanya lanjutan. Kolom pribadi (`KOLOM_SAMAR_AI`) disamarkan dan baris dibatasi sebelum dikirim (`siapkanDataAi()`).
+  - `BuatSoalAi`: soal CBT/kuis LMS dari materi dan CPMK untuk enam jenis soal. Setiap soal diperiksa dengan aturan `PenilaianKuis::validasiSoal` (`validasiSoalAi()`), bisa dipilih, diubah, dibuang, lalu disimpan ke `/v1/cbt/soal` atau `/v1/lms/bank-soal`. `PratinjauSoalAi` menampilkan kunci dan pembahasan.
+  - `KoreksiEsaiAi`: saran skor (dibatasi 0..poin maksimum), komentar, kekuatan, dan kekurangan jawaban esai; keputusan tetap di pengajar.
+  - `PemakaianAi`: rekap permintaan dan token per hari, aplikasi, dan model dari `/v1/integrasi/ai/pemakaian`.
+- Halaman docs **Komponen AI** (kategori baru AI) dengan data contoh untuk semua komponen.
+
 ## 1.7.0 (2026-11-15)
 
 - **Logo unggahan ikut varian logo**: `AppLogo` dengan `src` kini memotong gambar mengikuti `shape` (square, circle, shield, plain) dan `tone` (mono jadi abu-abu, inverse memakai pelat putih). `color` menjadi warna pelat di belakang logo PNG transparan, dan `fit` mengatur gambar memenuhi bentuk (cover) atau utuh (contain). Tata letak baru `layout="full"` menampilkan gambar logo utuh (mis. logo dengan tulisan) tanpa teks tambahan. Komponen tanda gambarnya juga tersedia sendiri: `LogoGambar`.
