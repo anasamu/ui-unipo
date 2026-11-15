@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.8.1 (2026-11-15)
+
+- `MenuAkun`/`KartuAkun`: jalur mengikuti rute profile.unipo.ac.id. Ubah profil dan Ganti foto ke `/profil`, Ganti password ke `/akun` (sebelumnya `/keamanan`, yang tidak ada), item baru **Data pribadi** (`/data-pribadi`), dan bilah kelengkapan menuju Data pribadi.
+
 ## 1.8.0 (2026-11-15)
 
 - **Komponen AI** (`unipo-ui/siakad`) di atas `POST /v1/integrasi/ai/teks` SIAKAD. Kunci API penyedia tetap di server; browser hanya memakai token SIAKAD (scope `integrasi:ai`).
