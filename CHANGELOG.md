@@ -3,6 +3,7 @@
 ## 1.27.0 (2026-11-16)
 
 - `KebijakanUnit` dan `useDokumenKebijakan` menerima `fakultas` (kode fakultas SIAKAD) dan `prodi` (kode prodi) selain `unit`, untuk aplikasi yang tidak tahu kode unit SPMI. Butuh SIAKAD yang mengenal parameter `fakultas`/`prodi` di `/v1/spmi/publik/dokumen`.
+- **Aturan mutu**: `KategoriAturan` bertambah `mutu` (titik `spmi.capaian.ajukan`, `spmi.temuan.catat`, `spmi.tindak_lanjut.selesai`, `spmi.auditor.tugaskan`, `spmi.dokumen.sahkan` dari API SIAKAD), label "Mutu (SPMI)" di `KelolaAturan`, saringan, dan `FormAturan`. Dipakai aplikasi SPMI spmi.unipo.ac.id.
 
 ## 1.26.0 (2026-11-16)
 
