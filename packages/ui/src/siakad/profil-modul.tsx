@@ -24,10 +24,11 @@ import { cn } from '../lib/cn';
 import { formatDate, formatNumber, formatRupiah } from '../lib/format';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Avatar, DescriptionList, Empty, Progress, Tabs, type TabItem } from '../components/display';
-import { Checkbox, Field, Input, Textarea } from '../components/forms';
+import { Field, Input, Switch, Textarea } from '../components/forms';
+import { GridForm, IsianTanggal, PanelForm, Pilihan, opsiDariPeta } from '../components/formulir';
+import { PETUNJUK_ISIAN, PilihKecamatan } from './kelengkapan';
 import { ModalFitur } from '../components/modal-fitur';
 import { ConfirmDialog } from '../components/overlays';
-import { Select } from '../components/select';
 import { Ilustrasi, type NamaIlustrasi } from '../ikon/ilustrasi';
 import { DataDiriMahasiswa, JadwalMengajar, MahasiswaBimbingan, RiwayatStudi, labelTahunAkademik } from './akademik';
 import { useAkunSaya } from './akun';
@@ -144,6 +145,42 @@ export function KepalaProfilSaya({ aksi, className }: { aksi?: React.ReactNode; 
 
 // ================================================================ Data pribadi
 
+const JENIS_TINGGAL: Record<string, string> = { '1': 'Bersama orang tua', '2': 'Wali', '3': 'Kos', '4': 'Asrama', '5': 'Panti asuhan', '10': 'Rumah sendiri', '99': 'Lainnya' };
+
+/** Satu isian data pribadi dengan kontrol sesuai jenisnya (kecamatan dicari, jenis tinggal dipilih, NIK/HP angka). */
+function IsianDataPribadiSaya({ isian: x, value, onChange, error }: { isian: IsianDataPribadi; value: string; onChange: (v: string) => void; error?: string }) {
+  const p = PETUNJUK_ISIAN[x.kode] ?? {};
+  const ref = useSiakadQuery<{ jenis_tinggal: Record<string, string> }>(
+    ['kelengkapan', 'referensi'],
+    (s, signal) => s.request<{ jenis_tinggal: Record<string, string> }>({ method: 'GET', path: '/v1/kelengkapan/referensi' }, { signal }),
+    { enabled: x.jenis === 'jenis_tinggal', staleTime: 3_600_000 },
+  );
+  const id = `pribadi-${x.kode}`;
+  let kontrol: React.ReactNode;
+  if (x.jenis === 'wilayah') kontrol = <PilihKecamatan id={id} value={value || null} labelAwal={x.tampil} onValueChange={(k) => onChange(k ?? '')} />;
+  else if (x.jenis === 'jenis_tinggal') kontrol = <Pilihan id={id} options={opsiDariPeta(ref.data?.jenis_tinggal ?? JENIS_TINGGAL)} value={value || null} onValueChange={(v) => onChange(v ?? '')} />;
+  else if (x.jenis === 'tanggal') kontrol = <IsianTanggal id={id} value={value || null} onValueChange={onChange} />;
+  else if (p.multiline || x.kode === 'alamat') kontrol = <Textarea id={id} rows={2} value={value} onChange={(e) => onChange(e.target.value)} />;
+  else
+    kontrol = (
+      <Input
+        id={id}
+        value={value}
+        type={p.type ?? (x.jenis === 'email' ? 'email' : x.jenis === 'hp' ? 'tel' : 'text')}
+        inputMode={p.inputMode}
+        maxLength={p.maxLength}
+        placeholder={p.placeholder}
+        onChange={(e) => onChange(p.filter ? p.filter(e.target.value) : e.target.value)}
+      />
+    );
+  const lebar = p.span || x.jenis === 'wilayah' || x.kode === 'alamat';
+  return (
+    <Field label={x.label} description={p.description} error={error || undefined} className={lebar ? 'u-form-lebar' : undefined}>
+      {kontrol}
+    </Field>
+  );
+}
+
 /**
  * Data pribadi per kelompok (identitas, kontak, alamat, keluarga) dari /v1/profil/saya. Isian `bisa_diubah` disimpan
  * lewat POST /v1/profil/saya/data-pribadi (validasi sama dengan wizard PDDikti); isian induk (nama, tanggal lahir,
@@ -215,34 +252,47 @@ export function DataPribadiSaya({ className }: { className?: string }) {
           </section>
         );
       })}
-      <ModalFitur
+      <PanelForm
         open={ubah != null}
         onOpenChange={(o) => !o && setUbah(null)}
-        size="md"
-        ilustrasi={{ nama: 'pendaftaran', aksesori: ['dokumen'] }}
+        tampilan="dialog"
+        size="lg"
         title={`Ubah ${(label[ubah ?? ''] ?? '').toLowerCase()}`}
         description="Data ini dikirim ke PDDikti. Pastikan sesuai KTP/KK."
-        tutup="Batal"
-        aksi={{
-          label: 'Simpan',
-          onClick: async () => {
-            try {
-              await siakad.request({ method: 'POST', path: '/v1/profil/saya/data-pribadi', body: isi });
-              invalidateSiakad('profil');
-            } catch (e) {
-              const f = (e as { fields?: Record<string, unknown> }).fields;
-              if (f) setSalah(Object.fromEntries(Object.entries(f).map(([k, v]) => [k, String(v)])));
-              throw e;
+        berubah={daftarUbah.some((x) => (isi[x.kode] ?? '') !== (x.nilai ?? ''))}
+        labelSimpan="Simpan"
+        onSimpan={async () => {
+          const body = Object.fromEntries(daftarUbah.filter((x) => (isi[x.kode] ?? '') !== (x.nilai ?? '')).map((x) => [x.kode, (isi[x.kode] ?? '').trim()]));
+          if (!Object.keys(body).length) return;
+          try {
+            await siakad.request({ method: 'POST', path: '/v1/profil/saya/data-pribadi', body });
+            invalidateSiakad('profil');
+            invalidateSiakad('kelengkapan');
+          } catch (e) {
+            const f = (e as { fields?: Record<string, unknown> }).fields;
+            if (f) {
+              setSalah(Object.fromEntries(Object.entries(f).map(([k, v]) => [k, String(v)])));
+              return 'Periksa isian yang ditandai.';
             }
-          },
+            throw e;
+          }
         }}
       >
-        {daftarUbah.map((x) => (
-          <Field key={x.kode} label={x.label} error={salah[x.kode]}>
-            <Input value={isi[x.kode] ?? ''} type={x.jenis === 'email' ? 'email' : x.jenis === 'hp' ? 'tel' : 'text'} onChange={(e) => setIsi({ ...isi, [x.kode]: e.target.value })} />
-          </Field>
-        ))}
-      </ModalFitur>
+        <GridForm>
+          {daftarUbah.map((x) => (
+            <IsianDataPribadiSaya
+              key={x.kode}
+              isian={x}
+              value={isi[x.kode] ?? ''}
+              error={salah[x.kode]}
+              onChange={(v) => {
+                setIsi((n) => ({ ...n, [x.kode]: v }));
+                setSalah((g) => (g[x.kode] ? { ...g, [x.kode]: '' } : g));
+              }}
+            />
+          ))}
+        </GridForm>
+      </PanelForm>
       <ModalFitur
         open={ajukan != null}
         onOpenChange={(o) => !o && setAjukan(null)}
@@ -262,7 +312,21 @@ export function DataPribadiSaya({ className }: { className?: string }) {
       >
         <DescriptionList items={[{ label: 'Nilai sekarang', value: ajukan?.tampil ?? '-' }]} />
         <Field label="Nilai baru" required>
-          <Input value={baru} maxLength={255} onChange={(e) => setBaru(e.target.value)} />
+          {ajukan?.jenis === 'tanggal' ? (
+            <IsianTanggal value={baru || null} onValueChange={setBaru} />
+          ) : ajukan?.jenis === 'jenis_kelamin' ? (
+            <Pilihan
+              required
+              value={baru || null}
+              onValueChange={(v) => setBaru(v ?? '')}
+              options={[
+                { value: 'L', label: 'Laki-laki' },
+                { value: 'P', label: 'Perempuan' },
+              ]}
+            />
+          ) : (
+            <Input value={baru} maxLength={255} onChange={(e) => setBaru(e.target.value)} />
+          )}
         </Field>
         <Field label="Alasan" required>
           <Textarea value={alasan} rows={3} onChange={(e) => setAlasan(e.target.value)} />
@@ -461,7 +525,13 @@ export function RiwayatProfilSaya({ jenis, className }: { jenis: JenisRiwayatPro
   const q = useSiakadQuery<Row[]>(['profil', jenis, username], (s, signal) => s.request<Row[]>({ method: 'GET', path: `/v1/profil/${jenis}`, query: { username, per_page: 100 } }, { signal }), {
     enabled: Boolean(username),
   });
-  const [form, setForm] = React.useState<Row | null>(null);
+  const [form, setFormMentah] = React.useState<Row | null>(null);
+  const [formAwal, setFormAwal] = React.useState<Row | null>(null);
+  const setForm: React.Dispatch<React.SetStateAction<Row | null>> = setFormMentah;
+  const bukaForm = (r: Row) => {
+    setFormAwal(r);
+    setFormMentah(r);
+  };
   const [hapus, setHapus] = React.useState<Row | null>(null);
   const [salah, setSalah] = React.useState<Record<string, string>>({});
   if (q.error) return <GalatApi error={q.error} onRetry={q.refetch} className={className} />;
@@ -471,7 +541,7 @@ export function RiwayatProfilSaya({ jenis, className }: { jenis: JenisRiwayatPro
       size="sm"
       onClick={() => {
         setSalah({});
-        setForm({});
+        bukaForm({});
       }}
     >
       <Plus /> Tambah
@@ -504,7 +574,7 @@ export function RiwayatProfilSaya({ jenis, className }: { jenis: JenisRiwayatPro
                     aria-label="Ubah"
                     onClick={() => {
                       setSalah({});
-                      setForm({ ...r });
+                      bukaForm({ ...r });
                     }}
                   >
                     <Pencil />
@@ -518,64 +588,84 @@ export function RiwayatProfilSaya({ jenis, className }: { jenis: JenisRiwayatPro
           </ol>
         </>
       )}
-      <ModalFitur
+      <PanelForm
         open={form != null}
         onOpenChange={(o) => !o && setForm(null)}
-        size="md"
-        ilustrasi={def.ilus}
+        tampilan="dialog"
+        size="lg"
         title={form?.id ? `Ubah ${def.judul.toLowerCase()}` : `Tambah ${def.judul.toLowerCase()}`}
-        tutup="Batal"
-        aksi={{
-          label: 'Simpan',
-          onClick: async () => {
-            const body: Row = { username };
-            for (const c of def.kolom) {
-              const v = form?.[c.k];
-              body[c.k] = c.tipe === 'bool' ? (v && v !== '0' ? 1 : 0) : v === '' || v == null ? null : c.tipe === 'angka' ? Number(v) : v;
+        berubah={form != null && JSON.stringify(form) !== JSON.stringify(formAwal)}
+        labelSimpan={form?.id ? 'Simpan perubahan' : 'Tambah'}
+        onSimpan={async () => {
+          const body: Row = { username };
+          for (const c of def.kolom) {
+            const v = form?.[c.k];
+            body[c.k] = c.tipe === 'bool' ? (v && v !== '0' ? 1 : 0) : v === '' || v == null ? null : c.tipe === 'angka' ? Number(v) : v;
+          }
+          const kurang = Object.fromEntries(def.kolom.filter((c) => c.wajib && (body[c.k] == null || body[c.k] === '')).map((c) => [c.k, `${c.label} wajib diisi`]));
+          setSalah(kurang);
+          if (Object.keys(kurang).length) return 'Lengkapi isian yang ditandai.';
+          try {
+            await siakad.request({ method: 'POST', path: form?.id ? `/v1/profil/${jenis}/${form.id}/ubah` : `/v1/profil/${jenis}`, body });
+            invalidateSiakad('profil');
+          } catch (e) {
+            const f = (e as { fields?: Record<string, unknown> }).fields;
+            if (f) {
+              setSalah(Object.fromEntries(Object.entries(f).map(([k, v]) => [k, String(v)])));
+              return 'Periksa isian yang ditandai.';
             }
-            const kurang = Object.fromEntries(def.kolom.filter((c) => c.wajib && (body[c.k] == null || body[c.k] === '')).map((c) => [c.k, `${c.label} wajib diisi`]));
-            setSalah(kurang);
-            if (Object.keys(kurang).length) return 'Lengkapi isian yang ditandai.';
-            try {
-              await siakad.request({ method: 'POST', path: form?.id ? `/v1/profil/${jenis}/${form.id}/ubah` : `/v1/profil/${jenis}`, body });
-              invalidateSiakad('profil');
-            } catch (e) {
-              const f = (e as { fields?: Record<string, unknown> }).fields;
-              if (f) setSalah(Object.fromEntries(Object.entries(f).map(([k, v]) => [k, String(v)])));
-              throw e;
-            }
-          },
+            throw e;
+          }
         }}
       >
-        <div className="u-modul-form">
+        <GridForm>
           {def.kolom.map((c) => {
             const v = form?.[c.k];
-            const set = (x: unknown) => setForm({ ...(form ?? {}), [c.k]: x });
+            const set = (x: unknown) => {
+              setForm((f) => ({ ...(f ?? {}), [c.k]: x }));
+              setSalah((g) => (g[c.k] ? { ...g, [c.k]: '' } : g));
+            };
+            // "Selesai" tidak relevan saat masih berjalan (masih bekerja/studi/aktif).
+            const berjalan = def.kolom.find((x) => x.tipe === 'bool' && /^masih_/.test(x.k));
+            const mati = c.k === 'selesai' || c.k === 'tahun_lulus' ? Boolean(berjalan && form?.[berjalan.k] && form[berjalan.k] !== '0') : false;
             if (c.tipe === 'bool')
               return (
-                <label key={c.k} className="u-modul-centang">
-                  <Checkbox checked={Boolean(v && v !== '0')} onCheckedChange={(x) => set(x ? 1 : 0)} /> {c.label}
-                </label>
+                <Field key={c.k} className="u-form-lebar" error={salah[c.k]}>
+                  <span className="u-isian-saklar">
+                    <Switch checked={Boolean(v && v !== '0')} onCheckedChange={(x) => set(x ? 1 : 0)} aria-label={c.label} />
+                    <span>{c.label}</span>
+                  </span>
+                </Field>
               );
             return (
-              <Field key={c.k} label={c.label} required={c.wajib} optional={!c.wajib} error={salah[c.k]} className={c.tipe === 'panjang' ? 'u-modul-penuh' : undefined}>
+              <Field key={c.k} label={c.label} required={c.wajib} optional={!c.wajib} error={salah[c.k]} className={c.tipe === 'panjang' ? 'u-form-lebar' : undefined}>
                 {c.tipe === 'pilihan' ? (
-                  <Select value={v ?? null} onValueChange={set} options={(c.opsi ?? []).map((o) => ({ value: o, label: label_(o) }))} />
+                  <Pilihan
+                    required={c.wajib}
+                    value={v ? String(v) : null}
+                    onValueChange={set}
+                    options={(c.opsi ?? []).map((o) => ({ value: o, label: label_(o).replace(/^./, (h) => h.toUpperCase()) }))}
+                  />
                 ) : c.tipe === 'panjang' ? (
                   <Textarea value={v ?? ''} rows={3} onChange={(e) => set(e.target.value)} />
+                ) : c.tipe === 'tanggal' ? (
+                  <IsianTanggal value={v ? String(v) : null} onValueChange={set} disabled={mati} placeholder={mati ? 'Masih berjalan' : undefined} />
                 ) : (
                   <Input
-                    type={c.tipe === 'tanggal' ? 'date' : c.tipe === 'angka' ? 'number' : 'text'}
+                    type={c.tipe === 'angka' ? 'number' : 'text'}
+                    inputMode={c.tipe === 'angka' ? (c.k === 'ipk' ? 'decimal' : 'numeric') : undefined}
                     step={c.k === 'ipk' ? '0.01' : undefined}
                     value={v ?? ''}
+                    disabled={mati}
+                    placeholder={mati ? 'Masih berjalan' : undefined}
                     onChange={(e) => set(e.target.value)}
                   />
                 )}
               </Field>
             );
           })}
-        </div>
-      </ModalFitur>
+        </GridForm>
+      </PanelForm>
       <ConfirmDialog
         open={hapus != null}
         onOpenChange={(o) => !o && setHapus(null)}

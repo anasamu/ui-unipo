@@ -38,3 +38,4 @@ export * from './pmb-maba';
 export * from './lms-belajar';
 export * from './modal-fitur';
 export * from './profil-modul';
+export * from './formulir-profil';

@@ -1,5 +1,26 @@
 # Catatan perubahan
 
+## 1.18.0 (2026-11-15)
+
+- **Bahan formulir tambah/ubah** (`unipo-ui`):
+  - `Pilihan`: satu pilihan dari daftar yang memilih bentuknya sendiri: tombol untuk 2–4 opsi pendek, daftar tarik-turun untuk 5–8, isian cari untuk lebih dari 8 (`tampilan` untuk memaksa). `opsiDariPeta` mengubah peta `{kode: label}` dari API menjadi opsi.
+  - `IsianTanggal`: pemilih tanggal yang menerima dan mengembalikan `YYYY-MM-DD` seperti body API.
+  - `BagianForm` dan `GridForm`: bagian berjudul + ikon, grid 1–3 kolom yang mengikuti lebar panel (bukan layar), isian selebar bagian lewat `className="u-form-lebar"`.
+  - `PanelForm`: cangkang tambah/ubah (panel samping atau dialog; lembar bawah 94% layar di ponsel) dengan penanda "Perubahan belum disimpan", konfirmasi sebelum perubahan dibuang, Enter dan Ctrl/⌘+Enter untuk simpan, serta kotak galat + kode laporan.
+  - `IsianDaftar` (tag, kini juga di `unipo-ui`) dan `HitungKarakter`.
+- **Formulir dari skema** (`unipo-ui/katalog`):
+  - Enum memakai `Pilihan`; labelnya diambil dari keterangan backend bila ditulis "A wajib, B pilihan, …". Isian daftar yang keterangannya berisi kode menjadi tag pilihan ganda.
+  - `FormulirSkema` mendapat `bagian`, `lebar`, `opsi`, `label`, `keterangan`, `setelah`, dan grid yang benar-benar dua kolom di panel lebar (sebelumnya kueri kontainer tidak pernah aktif).
+  - `FormulirSumber` memakai `PanelForm` dan meneruskan tata letak (`bagian`, `render`, `opsi`, …) serta `judul`, `deskripsi`, `labelSimpan`, `olahBody`, `size`.
+  - Formulir per fitur: `FormKurikulum` (identitas, masa berlaku, beban studi dengan ringkasan SKS, rumusan, integrasi PDDikti) dan `FormMataKuliahKurikulum` (jenis, bobot SKS dengan tombol +/− dan total otomatis, bentuk pembelajaran, koordinator dari daftar dosen). Aturan wajib dan validasinya tetap dari skema backend.
+- **Profil dan layanan** (`unipo-ui/siakad`):
+  - `FormProfilSaya` (`POST /v1/profil/saya`): nama panggilan, judul, bio dengan hitungan karakter, keahlian, tautan akademik (LinkedIn, ORCID, Scholar, SINTA, Scopus, Garuda, ResearchGate, GitHub, situs), email alternatif; validasi sama dengan backend.
+  - `DataPribadiSaya`: ubah data memakai `PanelForm` dengan kontrol sesuai jenis (kecamatan dicari, jenis tinggal dipilih, NIK/RT/RW/kode pos hanya angka); pengajuan tanggal lahir dan jenis kelamin memakai pemilih.
+  - `RiwayatProfilSaya`: tanggal memakai pemilih, pilihan memakai `Pilihan`, "masih bekerja/aktif/studi" berupa saklar yang mematikan tanggal selesai.
+  - `PilihKecamatan` dan `PETUNJUK_ISIAN` diekspor dari kelengkapan data. `PilihProdi` dan `PilihTahunAkademik` menjadi isian cari bila opsinya banyak.
+  - Biodata PMB, `ModalAjukanLayanan`, dan pilihan prodi pendaftaran memakai `Pilihan` dan `IsianTanggal`.
+- Halaman docs **Formulir tambah/ubah per fitur** di menu Per kegunaan.
+
 ## 1.17.0 (2026-11-15)
 
 - **Beranda per peran** (`unipo-ui/siakad`): `BerandaSaya` menyusun beranda dari peran akun yang masuk. Mahasiswa mendapat profil akademik, KRS semester ini, tagihan, serta aksi cepat yang membuka modal fitur (ambil KRS, cek kesiapan lulus, daftar wisuda, ajukan layanan). Dosen mendapat profil, jadwal mengajar, dan mahasiswa PA. Tendik mendapat data kepegawaian. Semua peran mendapat pengingat kelengkapan data, pengumuman untuk akun, dan kalender akademik. Bagian-bagiannya juga diekspor: `SapaanBeranda`, `AksiCepat` (petak yang bisa membuka modal, tautan, atau fungsi), dan `TagihanSaya`.

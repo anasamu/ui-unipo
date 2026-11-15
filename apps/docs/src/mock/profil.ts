@@ -15,11 +15,27 @@ export function dengarPeranDemo(f: () => void) {
   return () => void pendengar.delete(f);
 }
 const badan = (init?: RequestInit) => (init?.body ? JSON.parse(String(init.body)) : {}) as Record<string, any>;
+const JENIS_IP: Record<string, string> = {
+  tanggal_lahir: 'tanggal',
+  jenis_kelamin: 'jenis_kelamin',
+  agama: 'agama',
+  nik: 'nik',
+  nik_dosen: 'nik',
+  hp: 'hp',
+  email: 'email',
+  rt: 'rtrw',
+  rw: 'rtrw',
+  kecamatan: 'wilayah',
+  kode_pos: 'kode_pos',
+  jenis_tinggal: 'jenis_tinggal',
+  nama_ibu_kandung: 'nama',
+  nama_ayah: 'nama',
+};
 const ip = (kode: string, label: string, kelompok: string, nilai: string | null, ubah: boolean, tampil?: string) => ({
   kode,
   label,
   kelompok,
-  jenis: 'teks',
+  jenis: JENIS_IP[kode] ?? 'teks',
   nilai,
   tampil: tampil ?? nilai,
   bisa_diubah: ubah,
@@ -49,8 +65,12 @@ function profilSaya() {
     ip('hp', 'Nomor HP', 'kontak', '081234567890', true),
     ip('email', 'Email', 'kontak', a.email, true),
     ip('alamat', 'Alamat (jalan)', 'alamat', 'Jl. Trans Sulawesi No. 12', true),
+    ip('rt', 'RT', 'alamat', '002', true),
+    ip('rw', 'RW', 'alamat', '001', true),
     ip('desa', 'Desa/kelurahan', 'alamat', 'Botubarani', true),
+    ip('kecamatan', 'Kecamatan', 'alamat', '750402', true, 'Kec. Marisa, Kab. Pohuwato'),
     ip('kode_pos', 'Kode pos', 'alamat', '96266', true),
+    ...(peran === 'mahasiswa' ? [ip('jenis_tinggal', 'Jenis tinggal', 'alamat', '3', true, 'Kos')] : []),
     ...(peran === 'mahasiswa' ? [ip('nama_ibu_kandung', 'Nama ibu kandung', 'keluarga', 'Sri Lamato', true), ip('nama_ayah', 'Nama ayah', 'keluarga', 'Yusuf Hasan', true)] : []),
   ];
   return {
@@ -58,13 +78,37 @@ function profilSaya() {
     identitas,
     data_pribadi,
     kelompok_data: { identitas: 'Identitas', kontak: 'Kontak', alamat: 'Alamat', keluarga: 'Keluarga' },
-    profil: { nama_panggilan: a.nama.split(' ')[0], judul: peran === 'dosen' ? 'Lektor · Rekayasa Perangkat Lunak' : null, punya_foto: peran === 'mahasiswa', foto_versi: 'a1b2c3d4', keahlian: [] },
+    profil: {
+      nama_panggilan: a.nama.split(' ')[0],
+      judul: peran === 'dosen' ? 'Lektor · Rekayasa Perangkat Lunak' : null,
+      bio: null,
+      punya_foto: peran === 'mahasiswa',
+      foto_versi: 'a1b2c3d4',
+      keahlian: peran === 'dosen' ? ['Rekayasa perangkat lunak', 'Sistem informasi'] : [],
+      tautan: peran === 'dosen' ? { sinta: 'https://sinta.kemdiktisaintek.go.id/authors/profile/6012345' } : {},
+      email_alternatif: null,
+      ...(ubahanProfil[peran] ?? {}),
+    },
     ringkasan: { pekerjaan: riwayat.pekerjaan.length, pendidikan: riwayat.pendidikan.length, prestasi: riwayat.prestasi.length, organisasi: riwayat.organisasi.length, dokumen: 4 },
     kelengkapan: peran === 'tendik' ? null : { persen_wajib: 86, lengkap: false, kurang: [{ kolom: peran === 'dosen' ? 'nik_dosen' : 'nik', label: 'NIK', wajib: true, bisa_diisi_sendiri: true }] },
   };
 }
-/** Dipakai juga oleh rute /v1/profil/saya di mock lain. */
-export function balasProfilSaya() {
+const ubahanProfil: Partial<Record<PeranDemo, Record<string, unknown>>> = {};
+/** Dipakai juga oleh rute /v1/profil/saya di mock lain. POST menyimpan ubahan profil (aturan sama dengan backend). */
+export function balasProfilSaya(init?: RequestInit) {
+  if (init?.method === 'POST') {
+    const b = badan(init);
+    const galat: Record<string, string> = {};
+    if (typeof b.nama_panggilan === 'string' && b.nama_panggilan.length > 60) galat.nama_panggilan = 'maksimal 60 karakter';
+    if (typeof b.judul === 'string' && b.judul.length > 150) galat.judul = 'maksimal 150 karakter';
+    if (typeof b.bio === 'string' && b.bio.length > 2000) galat.bio = 'maksimal 2000 karakter';
+    if (b.email_alternatif && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(b.email_alternatif)) galat.email_alternatif = 'alamat email tidak sah';
+    if (Array.isArray(b.keahlian) && b.keahlian.length > 30) galat.keahlian = 'daftar teks, maksimal 30';
+    for (const [j, url] of Object.entries((b.tautan ?? {}) as Record<string, string>)) if (url && !/^https?:\/\//i.test(url)) galat[`tautan.${j}`] = 'alamat harus diawali https://';
+    if (Object.keys(galat).length) return { __status: 422, error: { code: 'validation_failed', message: 'Data yang dikirim tidak valid.', details: galat } };
+    ubahanProfil[peran] = { ...(ubahanProfil[peran] ?? {}), ...b };
+    return { data: profilSaya().profil };
+  }
   return { data: profilSaya() };
 }
 

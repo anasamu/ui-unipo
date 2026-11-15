@@ -5,7 +5,7 @@ import { Badge, Skeleton } from '../components/actions';
 import { Alert } from '../components/display';
 import { Field, Input, Textarea } from '../components/forms';
 import { ModalFitur, ModalSesiHabis, RincianModal, type ModalFiturProps } from '../components/modal-fitur';
-import { Select } from '../components/select';
+import { IsianTanggal, Pilihan } from '../components/formulir';
 import { AmbilKrs, PendaftaranWisuda, type HasilAmbilKrs, type SyaratItem } from './alur';
 import { useAkunSaya } from './akun';
 import { GalatApi } from './galat';
@@ -251,9 +251,16 @@ export function ModalAjukanLayanan({ kategori, kodeJenis, onTerkirim, ...p }: Mo
               {f.tipe === 'panjang' ? (
                 <Textarea value={data[f.nama] ?? ''} onChange={(e) => setData({ ...data, [f.nama]: e.target.value })} rows={3} />
               ) : f.tipe === 'pilihan' && f.opsi?.length ? (
-                <Select value={data[f.nama] ?? null} onValueChange={(v) => setData({ ...data, [f.nama]: v ?? '' })} options={f.opsi.map((o) => ({ value: o, label: o }))} />
+                <Pilihan required={f.wajib} value={data[f.nama] || null} onValueChange={(v) => setData({ ...data, [f.nama]: v ?? '' })} options={f.opsi.map((o) => ({ value: o, label: o }))} />
+              ) : f.tipe === 'tanggal' ? (
+                <IsianTanggal value={data[f.nama] || null} onValueChange={(v) => setData({ ...data, [f.nama]: v })} />
               ) : (
-                <Input type={f.tipe === 'angka' ? 'number' : f.tipe === 'tanggal' ? 'date' : 'text'} value={data[f.nama] ?? ''} onChange={(e) => setData({ ...data, [f.nama]: e.target.value })} />
+                <Input
+                  type={f.tipe === 'angka' ? 'number' : 'text'}
+                  inputMode={f.tipe === 'angka' ? 'numeric' : undefined}
+                  value={data[f.nama] ?? ''}
+                  onChange={(e) => setData({ ...data, [f.nama]: e.target.value })}
+                />
               )}
             </Field>
           ))}

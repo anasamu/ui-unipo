@@ -16,6 +16,36 @@ export const meta: DemoMeta = {
 
 type Baris = { k: string; kegunaan: string; komponen: string; dari: 'unipo-ui' | 'unipo-ui/siakad' | 'unipo-ui/katalog'; api?: string; scope?: string; halaman: string };
 const PETA: Baris[] = [
+  // Formulir tambah/ubah
+  {
+    k: 'Formulir',
+    kegunaan: 'Tambah atau ubah kurikulum OBE',
+    komponen: 'FormKurikulum',
+    dari: 'unipo-ui/katalog',
+    api: '/v1/kurikulum-obe/kurikulum',
+    scope: 'kurikulum:write',
+    halaman: 'formulir-fitur',
+  },
+  {
+    k: 'Formulir',
+    kegunaan: 'Tambah MK ke kurikulum atau ubah MK',
+    komponen: 'FormMataKuliahKurikulum',
+    dari: 'unipo-ui/katalog',
+    api: '/v1/kurikulum-obe/kurikulum/{id}/mk, /v1/kurikulum-obe/mk/{mk}',
+    scope: 'kurikulum:write',
+    halaman: 'formulir-fitur',
+  },
+  {
+    k: 'Formulir',
+    kegunaan: 'Ubah profil sendiri (bio, keahlian, tautan)',
+    komponen: 'FormProfilSaya',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/profil/saya',
+    scope: 'profil:write',
+    halaman: 'formulir-fitur',
+  },
+  { k: 'Formulir', kegunaan: 'Formulir tambah/ubah buatan sendiri dengan tampilan seragam', komponen: 'PanelForm, BagianForm, Pilihan, IsianTanggal', dari: 'unipo-ui', halaman: 'formulir-fitur' },
+  { k: 'Formulir', kegunaan: 'Panel tambah/ubah sumber data apa pun dari katalog', komponen: 'FormulirSumber', dari: 'unipo-ui/katalog', api: 'sumber katalog', halaman: 'formulir-skema' },
   // Halaman pertama
   {
     k: 'Beranda',

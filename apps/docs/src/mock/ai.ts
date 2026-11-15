@@ -348,5 +348,5 @@ const FOTO =
   encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c084fc"/><stop offset="1" stop-color="#6d28d9"/></linearGradient></defs><rect width="96" height="96" fill="url(#g)"/><circle cx="48" cy="38" r="17" fill="#f5e9ff"/><path d="M16 96c4-20 18-30 32-30s28 10 32 30z" fill="#f5e9ff"/></svg>',
   );
-tambahRute(/\/v1\/profil\/saya$/, () => balasProfilSaya());
+tambahRute(/\/v1\/profil\/saya$/, (_u, init) => balasProfilSaya(init));
 tambahRute(/\/v1\/profil\/saya\/foto$/, () => ({ data: FOTO }));
