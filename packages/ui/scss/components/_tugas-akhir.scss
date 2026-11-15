@@ -30,6 +30,7 @@
   font-size: 0.875rem;
   margin: 0;
   svg {
+    display: inline-block;
     width: 0.875rem;
     height: 0.875rem;
     vertical-align: -2px;
@@ -259,11 +260,11 @@
     cursor: pointer;
     width: 100%;
   }
-  input:focus-visible + .u-btn {
+  input:focus-visible + .u-button {
     outline: 2px solid var(--u-ring, var(--u-primary));
     outline-offset: 2px;
   }
-  input:disabled + .u-btn {
+  input:disabled + .u-button {
     opacity: 0.6;
   }
 }

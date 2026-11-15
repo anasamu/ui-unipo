@@ -8,6 +8,7 @@
   - `ProgresTugasAkhir`: progres dari pengajuan judul, pembimbing, bimbingan, seminar proposal, ujian, yudisium, sampai wisuda.
   - `PengaturanPengajuanJudul`: buka/tutup pengajuan online, alur validasi (dosen PA lalu prodi, atau langsung prodi), usulan pembimbing, petunjuk, dan daftar berkas wajib/opsional.
   - `SyaratKelulusanSaya`: syarat yudisium dan wisuda dari data akademik dan syarat tambahan prodi; mahasiswa mengirim bukti (keterangan + berkas) untuk syarat manual/unggah dan melihat alasan bila ditolak.
+  - Pilihan pembimbing memakai `SUMBER_DOSEN_TA` (GET `/v1/ta/dosen`), jadi mahasiswa tanpa scope `dosen:read` tetap bisa mengusulkan pembimbing.
   - Hook `useTugasAkhirSaya`; tipe `PengajuanTa`, `PengaturanTa`, `ProgresTa`, `ValidasiTa`.
 
 ## 1.24.0 (2026-11-15)

@@ -29,7 +29,7 @@ import { Pilihan } from '../components/formulir';
 import { ConfirmDialog, Dialog, Sheet, useToast } from '../components/overlays';
 import { useUnggahBerkas } from './berkas';
 import { GalatApi } from './galat';
-import { PilihEntitas } from './pilih';
+import { PilihEntitas, type SumberEntitas } from './pilih';
 import { invalidateSiakad, pesanGalat, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
 
 /*
@@ -189,6 +189,18 @@ function labelAksi(a: string): string {
   return KEPUTUSAN_RIWAYAT[k ?? ''] ? `${KEPUTUSAN_RIWAYAT[k ?? '']} ${t === 'pa' ? 'dosen PA' : t === 'prodi' ? 'prodi' : ''}`.trim() : a;
 }
 export const JENIS_PENELITIAN_TA = ['Kuantitatif', 'Kualitatif', 'Campuran (mixed methods)', 'Research and Development (R&D)', 'Studi kasus', 'Eksperimen', 'Pengembangan sistem/perangkat lunak', 'Kajian pustaka'];
+
+/** Sumber pilihan dosen pembimbing (GET /v1/ta/dosen): bisa dipakai mahasiswa yang tidak punya scope dosen:read. */
+export const SUMBER_DOSEN_TA: SumberEntitas = {
+  nama: 'dosen',
+  path: `${P}/dosen`,
+  kunci: 'nidn',
+  saringKunci: 'nidn',
+  judul: (r) => String(r.nama ?? r.nidn ?? ''),
+  meta: (r) => [r.nidn && `NIDN ${String(r.nidn)}`, r.jabatan_akademik, r.nama_prodi].filter(Boolean).join(' · '),
+  avatar: true,
+  placeholder: 'Cari NIDN atau nama dosen',
+};
 
 function tgl(v: string | null | undefined, jam = false): string {
   if (!v) return '–';
@@ -390,10 +402,10 @@ function FormJudul({ awal, usulanPembimbing, onSelesai, onBatal }: { awal?: Peng
       {usulanPembimbing && (
         <div className="u-ta-form-kisi">
           <Field label="Usulan pembimbing 1" optional error={galat.usulan_pembimbing_1} description="Prodi yang menetapkan pembimbing akhir.">
-            <PilihEntitas jenis="dosen" value={v.usulan_pembimbing_1 || null} onValueChange={(x) => set('usulan_pembimbing_1', x ?? '')} placeholder="Cari nama dosen" />
+            <PilihEntitas jenis={SUMBER_DOSEN_TA} value={v.usulan_pembimbing_1 || null} onValueChange={(x) => set('usulan_pembimbing_1', x ?? '')} placeholder="Cari nama dosen" />
           </Field>
           <Field label="Usulan pembimbing 2" optional error={galat.usulan_pembimbing_2}>
-            <PilihEntitas jenis="dosen" value={v.usulan_pembimbing_2 || null} onValueChange={(x) => set('usulan_pembimbing_2', x ?? '')} placeholder="Cari nama dosen" />
+            <PilihEntitas jenis={SUMBER_DOSEN_TA} value={v.usulan_pembimbing_2 || null} onValueChange={(x) => set('usulan_pembimbing_2', x ?? '')} placeholder="Cari nama dosen" />
           </Field>
         </div>
       )}
@@ -457,6 +469,7 @@ function BerkasPengajuan({ pengajuan, daftar, bolehUbah }: { pengajuan: Pengajua
       {baris.map((d) => {
         const ada = berkas.filter((b) => b.jenis === d.kode || (d.kode === 'lainnya' && !daftar.some((x) => x.kode === b.jenis)));
         const p = proses[d.kode];
+        if (!bolehUbah && !ada.length) return null;
         return (
           <li key={d.kode} data-lengkap={ada.length ? '' : undefined}>
             <div className="u-ta-berkas-kepala">
@@ -479,7 +492,7 @@ function BerkasPengajuan({ pengajuan, daftar, bolehUbah }: { pengajuan: Pengajua
                       e.target.value = '';
                     }}
                   />
-                  <span className="u-btn" data-variant="outline" data-size="sm">
+                  <span className="u-button" data-variant="outline" data-size="sm">
                     <Upload aria-hidden /> {p !== undefined ? `Mengunggah ${p}%` : ada.length ? 'Tambah' : 'Unggah'}
                   </span>
                 </label>
@@ -863,10 +876,10 @@ function FormPutuskan({ p, onSelesai }: { p: PengajuanTa; onSelesai: () => void 
           </Field>
           <div className="u-ta-form-kisi">
             <Field label="Pembimbing 1" required error={galat.pembimbing_1}>
-              <PilihEntitas jenis="dosen" value={pb1 || null} onValueChange={(x) => setPb1(x ?? '')} placeholder="Cari nama dosen" />
+              <PilihEntitas jenis={SUMBER_DOSEN_TA} value={pb1 || null} onValueChange={(x) => setPb1(x ?? '')} placeholder="Cari nama dosen" />
             </Field>
             <Field label="Pembimbing 2" optional error={galat.pembimbing_2}>
-              <PilihEntitas jenis="dosen" value={pb2 || null} onValueChange={(x) => setPb2(x ?? '')} placeholder="Cari nama dosen" />
+              <PilihEntitas jenis={SUMBER_DOSEN_TA} value={pb2 || null} onValueChange={(x) => setPb2(x ?? '')} placeholder="Cari nama dosen" />
             </Field>
           </div>
         </>
