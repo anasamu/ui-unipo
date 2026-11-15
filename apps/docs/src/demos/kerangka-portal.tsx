@@ -16,7 +16,7 @@ export const meta: DemoMeta = {
     "import { KerangkaPortal, FooterPortal, TopbarPortal, PitaPengumumanPortal, PopupPengumumanPortal, PengumumanPortal, PengumumanSaya, DetailPengumumanPortal } from 'unipo-ui/siakad';\nimport { Footer, PitaPengumuman, TopbarKontak, AnnouncementList } from 'unipo-ui';",
   demos: {
     Kerangka: 'KerangkaPortal: pita + navbar (menu utama, mega menu, pita kontak) + isi + footer',
-    Footer: 'FooterPortal: tiga varian dari profil situs, menu footer, dan tautan cepat',
+    Kaki: 'FooterPortal: tiga varian dari profil situs, menu footer, dan tautan cepat',
     Pita: 'PitaPengumumanPortal dan PitaPengumuman: darurat, penting, biasa',
     Pengumuman: 'PengumumanPortal variant: daftar, kartu, ringkas, sorotan, linimasa',
     Saya: 'PengumumanSaya: pengumuman sesuai akun yang masuk, untuk dasbor',
@@ -90,7 +90,7 @@ export function Kerangka() {
   );
 }
 
-export function Footer_() {
+export function Kaki() {
   const [v, setV] = React.useState<'gelap' | 'terang' | 'ringkas'>('gelap');
   return (
     <div style={{ display: 'grid', gap: '1rem' }}>
@@ -107,7 +107,6 @@ export function Footer_() {
     </div>
   );
 }
-export { Footer_ as Footer };
 
 export function Pita() {
   return (
