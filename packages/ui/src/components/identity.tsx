@@ -35,7 +35,7 @@ export function UnipoMark({ size = 32, shape = 'square', tone = 'brand', color, 
       {shape === 'circle' && <circle cx="16" cy="16" r="16" fill={bg} />}
       {shape === 'shield' && <path d="M16 1.5 29 5.6v10.2c0 7.6-5.3 12.6-13 14.7C8.3 28.4 3 23.4 3 15.8V5.6Z" fill={bg} />}
       {shape !== 'plain' && shape !== 'shield' && <path d="M0 8.5A8.5 8.5 0 0 1 8.5 0h15A8.5 8.5 0 0 1 32 8.5V11C21 9 11 9 0 13Z" fill="#fff" fillOpacity={tone === 'brand' ? 0.08 : 0} />}
-      {glyph ?? (
+      {glyph ? <g color={fg}>{glyph}</g> : (
         <>
           <path d="M9.5 9.5h13" stroke={acc} strokeWidth="2.6" strokeLinecap="round" />
           <path d="M10.5 13.2v4.6a5.5 5.5 0 0 0 11 0v-4.6" stroke={stroke} strokeWidth="3" strokeLinecap="round" fill="none" />
@@ -144,7 +144,7 @@ export function LogoGambar({ src, size = 32, shape = 'square', tone = 'brand', c
 // ================================================================ Logo per aplikasi ekosistem UNIPO
 const G = (d: string, extra?: React.ReactNode) => (
   <>
-    <path d={d} stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <path d={d} stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
     {extra}
   </>
 );
@@ -152,7 +152,7 @@ const G = (d: string, extra?: React.ReactNode) => (
 /** Glyph khas tiap aplikasi (dalam kotak 32×32). */
 export const APP_GLYPHS = {
   siakad: G('M9.5 9.5h13M10.5 13.2v4.6a5.5 5.5 0 0 0 11 0v-4.6'),
-  pmb: G('M16 8.5v15M8.5 16h15', <circle cx="16" cy="16" r="10" stroke="#fff" strokeOpacity=".35" strokeWidth="1.6" fill="none" />),
+  pmb: G('M16 8.5v15M8.5 16h15', <circle cx="16" cy="16" r="10" stroke="currentColor" strokeOpacity=".35" strokeWidth="1.6" fill="none" />),
   lms: G('M8 11.5 16 8l8 3.5-8 3.5Zm3.5 2v5c0 1.6 2 3 4.5 3s4.5-1.4 4.5-3v-5'),
   cbt: G('M9 9.5h14v10H9ZM13 23h6M16 19.5V23M12.5 14.5l2.2 2.2 4.3-4.3'),
   tracer: G('M8.5 22.5 13 17l3.5 3 7-8.5M19 11.5h4.5V16'),
@@ -220,7 +220,7 @@ export function glyphInisial(nama: string): React.ReactNode {
       y="16.5"
       textAnchor="middle"
       dominantBaseline="central"
-      fill="#fff"
+      fill="currentColor"
       fontSize={teks.length > 1 ? 12.5 : 15}
       fontWeight={800}
       fontFamily="var(--u-font-heading, inherit)"
