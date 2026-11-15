@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.27.0 (2026-11-16)
+
+- **Aturan mutu**: `KategoriAturan` bertambah `mutu` (titik `spmi.capaian.ajukan`, `spmi.temuan.catat`, `spmi.tindak_lanjut.selesai`, `spmi.auditor.tugaskan`, `spmi.dokumen.sahkan` dari API SIAKAD), label "Mutu (SPMI)" di `KelolaAturan`, saringan, dan `FormAturan`. Dipakai aplikasi SPMI spmi.unipo.ac.id.
+
 ## 1.26.0 (2026-11-16)
 
 - **Penelitian & PkM** (API SIAKAD `/v1/lppm`), dipakai aplikasi LP2M lp2m.unipo.ac.id dan dasbor fakultas:
