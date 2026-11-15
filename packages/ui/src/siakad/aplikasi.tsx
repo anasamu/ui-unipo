@@ -1,11 +1,31 @@
 'use client';
 import * as React from 'react';
-import { AppWindow, Eye, EyeOff, Globe, ImagePlus, KeyRound, LayoutGrid, List, Lock, Pencil, Plus, RefreshCw, Search, Server, ShieldCheck, Smartphone, TriangleAlert, Users } from 'lucide-react';
+import {
+  AppWindow,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Globe,
+  ImagePlus,
+  KeyRound,
+  LayoutGrid,
+  List,
+  Lock,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Server,
+  ShieldCheck,
+  Smartphone,
+  TriangleAlert,
+  Users,
+} from 'lucide-react';
 import type { Siakad } from 'unipo-siakad-sdk';
 import { cn } from '../lib/cn';
 import { formatDate, formatNumber } from '../lib/format';
 import { Badge, Button, Skeleton } from '../components/actions';
-import { Alert, Avatar, Card, DescriptionList, Empty, Tabs } from '../components/display';
+import { Alert, Card, DescriptionList, Empty, Tabs } from '../components/display';
 import { StatCard, StatGrid } from '../components/charts';
 import { CodeBlock, CopyButton } from '../components/code';
 import { Checkbox, Field, Input, InputGroup, SegmentedControl, Switch, Textarea } from '../components/forms';
@@ -14,6 +34,7 @@ import { Wizard, WizardReview, FormGrid } from '../components/wizard';
 import { DataTable, type DataColumn } from '../components/data-table';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakadQuery, type QueryState } from './provider';
 import { KodeLaporan } from '../components/galat';
+import { LogoAplikasi } from '../components/identity';
 import { LogAktivitas, LogApi, RingkasanLogApi } from './log';
 
 /*
@@ -122,6 +143,7 @@ export function useSsoQuery<T>(
 
 // ================================================================ Tipe
 export type JenisAplikasi = 'web' | 'mobile' | 'layanan' | 'api';
+export type Visibilitas = 'publik' | 'privat';
 
 /** Aplikasi di katalog hak akses SIAKAD (/v1/rbac/aplikasi). */
 export interface AplikasiRbac {
@@ -131,6 +153,12 @@ export interface AplikasiRbac {
   keterangan?: string | null;
   jenis: JenisAplikasi;
   url?: string | null;
+  /** publik = tampil di dasbor SSO dan /v1/rbac/aplikasi-publik; privat = hanya di Pustikom. */
+  visibilitas?: Visibilitas;
+  /** Tautan unduh Android (Google Play / APK). */
+  url_android?: string | null;
+  /** Tautan unduh iOS (App Store / TestFlight). */
+  url_ios?: string | null;
   client_id_api?: string | null;
   client_id_sso?: string | null;
   sistem?: boolean;
@@ -150,6 +178,10 @@ export interface KlienSso {
   levels?: string[];
   permission?: string;
   portal_url?: string;
+  /** public = tampil di dasbor SSO (bawaan), private = disembunyikan. */
+  visibility?: 'public' | 'private';
+  android_url?: string;
+  ios_url?: string;
   active: boolean;
   logo_url?: string | null;
   admin?: boolean;
@@ -184,6 +216,9 @@ export interface AplikasiTerpadu {
   jenis: JenisAplikasi;
   url: string | null;
   logo: string | null;
+  visibilitas: Visibilitas;
+  url_android: string | null;
+  url_ios: string | null;
   aktif: boolean;
   bawaan: boolean;
   /** Login SSO dibatasi izin <kode>.akses. */
@@ -241,6 +276,9 @@ export function gabungAplikasi(rbac: AplikasiRbac[], sso: KlienSso[], api: Klien
       jenis: a.jenis,
       url: a.url || s?.portal_url || null,
       logo: s?.logo_url ?? k?.logo_uri ?? null,
+      visibilitas: a.visibilitas ?? (s?.visibility === 'private' ? 'privat' : 'publik'),
+      url_android: a.url_android || s?.android_url || null,
+      url_ios: a.url_ios || s?.ios_url || null,
       aktif: a.aktif && (s ? s.active : true) && (k ? k.active : true),
       bawaan: !!a.sistem,
       terbatas: !!s?.permission,
@@ -259,6 +297,9 @@ export function gabungAplikasi(rbac: AplikasiRbac[], sso: KlienSso[], api: Klien
       jenis: 'web',
       url: s.portal_url || null,
       logo: s.logo_url ?? null,
+      visibilitas: s.visibility === 'private' ? 'privat' : 'publik',
+      url_android: s.android_url || null,
+      url_ios: s.ios_url || null,
       aktif: s.active,
       bawaan: false,
       terbatas: !!s.permission,
@@ -267,7 +308,21 @@ export function gabungAplikasi(rbac: AplikasiRbac[], sso: KlienSso[], api: Klien
   }
   for (const k of api) {
     if (pakaiApi.has(k.id)) continue;
-    hasil.push({ kunci: `api:${k.id}`, kode: k.id, nama: k.name, jenis: 'api', url: null, logo: k.logo_uri ?? null, aktif: k.active, bawaan: false, terbatas: false, api: k });
+    hasil.push({
+      kunci: `api:${k.id}`,
+      kode: k.id,
+      nama: k.name,
+      jenis: 'api',
+      url: null,
+      logo: k.logo_uri ?? null,
+      visibilitas: 'privat',
+      url_android: null,
+      url_ios: null,
+      aktif: k.active,
+      bawaan: false,
+      terbatas: false,
+      api: k,
+    });
   }
   return hasil;
 }
@@ -316,8 +371,63 @@ const JENIS: Record<JenisAplikasi, { label: string; pendek: string; icon: React.
 
 // ================================================================ Tampilan kecil
 /** Logo aplikasi; tanpa gambar memakai inisial berwarna tetap. */
-export function IkonAplikasi({ nama, src, size = 'md', className }: { nama: string; src?: string | null; size?: 'sm' | 'md' | 'lg' | 'xl'; className?: string }) {
-  return <Avatar name={nama || '?'} src={src ?? undefined} size={size} shape="square" className={cn('u-app-icon', className)} />;
+export function IkonAplikasi({ nama, kode, src, size = 'md', className }: { nama: string; kode?: string; src?: string | null; size?: 'sm' | 'md' | 'lg' | 'xl'; className?: string }) {
+  return <LogoAplikasi kode={kode || nama || '?'} name={nama || '?'} src={src} ssoUrl={null} layout="mark" size={size} className={cn('u-app-icon', className)} />;
+}
+
+/** Logo Android (robot) untuk tombol unduh. */
+export function IkonAndroid(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" aria-hidden {...props}>
+      <path d="M17.6 9.48l1.84-3.18a.38.38 0 0 0-.66-.38l-1.86 3.22a11.4 11.4 0 0 0-9.84 0L5.22 5.92a.38.38 0 0 0-.66.38L6.4 9.48A10.8 10.8 0 0 0 1 18h22a10.8 10.8 0 0 0-5.4-8.52zM7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z" />
+    </svg>
+  );
+}
+
+/** Logo Apple untuk tombol unduh iOS. */
+export function IkonApple(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" aria-hidden {...props}>
+      <path d="M16.4 12.6c0-2.5 2-3.7 2.1-3.8-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.3.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9-.1 0-2.8-1-2.8-4.2zM13.9 5.1c.7-.9 1.2-2 1-3.1-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.9-1.1 3 1.1.1 2.3-.6 3-1.4z" />
+    </svg>
+  );
+}
+
+export interface TautanAplikasiProps {
+  nama: string;
+  /** Alamat web: tombol Buka. */
+  url?: string | null;
+  url_android?: string | null;
+  url_ios?: string | null;
+  size?: 'sm' | 'md';
+  /** Hentikan klik agar tidak ikut memicu klik kartu. */
+  hentikanKlik?: boolean;
+  className?: string;
+}
+
+/** Tombol aksi aplikasi: Buka (web) dan unduh Android/iOS sesuai platform yang didukung. Kosong bila tidak ada tautan. */
+export function TautanAplikasi({ nama, url, url_android, url_ios, size = 'sm', hentikanKlik = true, className }: TautanAplikasiProps) {
+  if (!url && !url_android && !url_ios) return null;
+  const henti = hentikanKlik ? { onClick: (e: React.MouseEvent) => e.stopPropagation(), onKeyDown: (e: React.KeyboardEvent) => e.stopPropagation() } : {};
+  return (
+    <span className={cn('u-app-links', className)}>
+      {url && (
+        <Button size={size} render={<a href={url} target="_blank" rel="noopener noreferrer" {...henti} />}>
+          Buka <ExternalLink aria-hidden />
+        </Button>
+      )}
+      {url_android && (
+        <Button size={size} variant="outline" render={<a href={url_android} target="_blank" rel="noopener noreferrer" aria-label={`Unduh ${nama} untuk Android`} {...henti} />}>
+          <IkonAndroid /> Android
+        </Button>
+      )}
+      {url_ios && (
+        <Button size={size} variant="outline" render={<a href={url_ios} target="_blank" rel="noopener noreferrer" aria-label={`Unduh ${nama} untuk iOS`} {...henti} />}>
+          <IkonApple /> iOS
+        </Button>
+      )}
+    </span>
+  );
 }
 
 /** Lencana status aplikasi: aktif/nonaktif, login SSO, klien API, login terbatas, bawaan, lingkungan data. */
@@ -327,6 +437,11 @@ export function LencanaAplikasi({ aplikasi: a, className }: { aplikasi: Aplikasi
       <Badge variant={a.aktif ? 'success' : 'neutral'} dot>
         {a.aktif ? 'Aktif' : 'Nonaktif'}
       </Badge>
+      {(a.jenis === 'web' || a.jenis === 'mobile') && (
+        <Badge variant={a.visibilitas === 'publik' ? 'success' : 'neutral'}>
+          {a.visibilitas === 'publik' ? <Eye aria-hidden /> : <EyeOff aria-hidden />} {a.visibilitas === 'publik' ? 'Publik' : 'Privat'}
+        </Badge>
+      )}
       {a.sso && <Badge variant="info">SSO</Badge>}
       {a.api && <Badge variant="primary">API</Badge>}
       {a.terbatas && (
@@ -354,7 +469,7 @@ export function KartuAplikasi({ aplikasi: a, onPilih, href, aksi, className }: K
   const isi = (
     <>
       <div className="u-app-card-head">
-        <IkonAplikasi nama={a.nama} src={a.logo} size="lg" />
+        <IkonAplikasi nama={a.nama} kode={a.kode} src={a.logo} size="lg" />
         <div className="u-app-card-title">
           <strong>{a.nama}</strong>
           <span>{a.url ? hostDari(a.url) : <code>{a.kode}</code>}</span>
@@ -376,6 +491,7 @@ export function KartuAplikasi({ aplikasi: a, onPilih, href, aksi, className }: K
           <dd>{a.sso ? formatNumber(a.sso.redirect_uris.length) : '–'}</dd>
         </div>
       </dl>
+      {!href && (a.jenis === 'web' || a.jenis === 'mobile') && <TautanAplikasi nama={a.nama} url={a.jenis === 'web' || a.url ? a.url : null} url_android={a.url_android} url_ios={a.url_ios} />}
       {aksi && <div className="u-app-card-actions">{aksi}</div>}
     </>
   );
@@ -443,7 +559,7 @@ export function DaftarAplikasi({ onPilih, href, tampilan: awal = 'kartu', bolehB
       sortable: true,
       cell: (a) => (
         <span className="u-app-cell">
-          <IkonAplikasi nama={a.nama} src={a.logo} size="sm" />
+          <IkonAplikasi nama={a.nama} kode={a.kode} src={a.logo} size="sm" />
           <span>
             <strong>{a.nama}</strong>
             <small>{a.url ? hostDari(a.url) : a.kode}</small>
@@ -617,7 +733,7 @@ export function DetailAplikasi({ kode, aplikasi, tab, onTabChange, onUbah, class
   return (
     <div className={cn('u-app-detail', className)}>
       <header className="u-app-detail-head">
-        <IkonAplikasi nama={a.nama} src={a.logo} size="xl" />
+        <IkonAplikasi nama={a.nama} kode={a.kode} src={a.logo} size="xl" />
         <div className="u-app-detail-title">
           <h2>{a.nama}</h2>
           <p>
@@ -692,6 +808,12 @@ function TabRingkasan({ a }: { a: AplikasiTerpadu }) {
               </a>
             ) : null,
           },
+          ...(a.jenis === 'web' || a.jenis === 'mobile'
+            ? [
+                { label: 'Dasbor SSO', value: a.visibilitas === 'publik' ? 'Publik, tampil di dasbor SSO' : 'Privat, hanya terlihat di Pustikom' },
+                { label: 'Unduh', value: a.url_android || a.url_ios ? <TautanAplikasi nama={a.nama} url_android={a.url_android} url_ios={a.url_ios} /> : null },
+              ]
+            : []),
           { label: 'Keterangan', value: a.keterangan || null },
           { label: 'Login SSO', value: a.sso ? <IdSalin id={a.sso.id} /> : 'Belum dipasang' },
           { label: 'Klien API', value: a.api ? <IdSalin id={a.api.id} /> : 'Belum dipasang' },
@@ -969,7 +1091,13 @@ export function PilihScope({ value, onValueChange, katalog: katalogProp, maxHeig
   const pilih = new Set(value);
   const ganti = (s: string, on: boolean) => onValueChange(on ? [...value, s] : value.filter((x) => x !== s));
   if (!katalogProp && q.loading && !q.data) return <Skeleton style={{ height: 160 }} />;
-  if (!katalogProp && q.error) return <Alert variant="danger">{pesanGalat(q.error, { kode: false })}<KodeLaporan error={q.error} /></Alert>;
+  if (!katalogProp && q.error)
+    return (
+      <Alert variant="danger">
+        {pesanGalat(q.error, { kode: false })}
+        <KodeLaporan error={q.error} />
+      </Alert>
+    );
   return (
     <div className={cn('u-scope-picker', className)}>
       <div className="u-scope-picker-head">
@@ -1009,6 +1137,60 @@ export function PilihScope({ value, onValueChange, katalog: katalogProp, maxHeig
   );
 }
 
+// ================================================================ Visibilitas & unduhan
+const urlHttps = (u: string) => /^https:\/\/[^\s/]+\.[^\s]+$/.test(u.trim());
+
+/** Pesan galat isian unduhan (aturan sama dengan /v1/rbac/aplikasi): mobile publik wajib punya tautan Android atau iOS. */
+export function galatUnduhan(jenis: JenisAplikasi, visibilitas: Visibilitas, android: string, ios: string): string | undefined {
+  if (android.trim() && !urlHttps(android)) return 'Tautan Android harus alamat https://.';
+  if (ios.trim() && !urlHttps(ios)) return 'Tautan iOS harus alamat https://.';
+  if (jenis === 'mobile' && visibilitas === 'publik' && !android.trim() && !ios.trim()) return 'Aplikasi mobile publik perlu tautan unduh Android atau iOS.';
+}
+
+/** Pilihan publik/privat aplikasi di dasbor SSO. */
+export function PilihVisibilitas({ value, onValueChange }: { value: Visibilitas; onValueChange: (v: Visibilitas) => void }) {
+  return (
+    <SegmentedControl<Visibilitas>
+      value={value}
+      onValueChange={onValueChange}
+      fullWidth
+      options={[
+        { value: 'publik', label: 'Publik', icon: <Eye />, 'aria-label': 'Publik: tampil di dasbor SSO dan daftar aplikasi kampus' },
+        { value: 'privat', label: 'Privat', icon: <EyeOff />, 'aria-label': 'Privat: hanya terlihat di Pustikom' },
+      ]}
+    />
+  );
+}
+
+function IsianUnduhan({ android, ios, onAndroid, onIos }: { android: string; ios: string; onAndroid: (v: string) => void; onIos: (v: string) => void }) {
+  return (
+    <>
+      <Field
+        label={
+          <>
+            <IkonAndroid /> Tautan Android
+          </>
+        }
+        optional
+        description="Google Play atau APK."
+      >
+        <Input value={android} onChange={(e) => onAndroid(e.target.value)} placeholder="https://play.google.com/store/apps/details?id=…" className="u-mono" />
+      </Field>
+      <Field
+        label={
+          <>
+            <IkonApple /> Tautan iOS
+          </>
+        }
+        optional
+        description="App Store atau TestFlight."
+      >
+        <Input value={ios} onChange={(e) => onIos(e.target.value)} placeholder="https://apps.apple.com/app/…" className="u-mono" />
+      </Field>
+    </>
+  );
+}
+
 // ================================================================ Wizard aplikasi baru
 export interface InputAplikasiBaru {
   kode: string;
@@ -1016,6 +1198,10 @@ export interface InputAplikasiBaru {
   keterangan: string;
   jenis: JenisAplikasi;
   url: string;
+  /** Bawaan publik. */
+  visibilitas?: Visibilitas;
+  url_android?: string;
+  url_ios?: string;
   logo?: string | null;
   sso?: { redirect_uris: string[]; post_logout_redirect_uris: string[]; frontchannel_logout_uri: string; portal_url: string } | null;
   batasiLogin: boolean;
@@ -1037,7 +1223,19 @@ export interface HasilAplikasiBaru {
 export async function buatAplikasiLengkap(siakad: Siakad, sso: SsoAdminClient | null, x: InputAplikasiBaru): Promise<HasilAplikasiBaru> {
   const peringatan: string[] = [];
   const req = <T,>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body?: unknown, query?: Record<string, string | number>) => siakad.request<T>({ method, path, body, query });
-  let app = (await req<AplikasiRbac>('POST', `${A}/aplikasi`, { kode: x.kode, nama: x.nama, keterangan: x.keterangan || null, jenis: x.jenis, url: x.url || null, aktif: true })).data;
+  let app = (
+    await req<AplikasiRbac>('POST', `${A}/aplikasi`, {
+      kode: x.kode,
+      nama: x.nama,
+      keterangan: x.keterangan || null,
+      jenis: x.jenis,
+      url: x.url || null,
+      visibilitas: x.visibilitas ?? 'publik',
+      url_android: x.url_android || null,
+      url_ios: x.url_ios || null,
+      aktif: true,
+    })
+  ).data;
   const hasil: HasilAplikasiBaru = { aplikasi: app, peringatan };
   const tautan: Partial<AplikasiRbac> = {};
   const galat = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -1066,7 +1264,16 @@ export async function buatAplikasiLengkap(siakad: Siakad, sso: SsoAdminClient | 
     else
       try {
         const r = await sso.request<KlienSso & { client_secret: string }>('POST', '/clients', {
-          body: { id: idSsoDariKode(x.kode), name: x.nama, description: x.keterangan, ...x.sso, permission: x.batasiLogin ? izin : '' },
+          body: {
+            id: idSsoDariKode(x.kode),
+            name: x.nama,
+            description: x.keterangan,
+            ...x.sso,
+            permission: x.batasiLogin ? izin : '',
+            visibility: x.visibilitas === 'privat' ? 'private' : 'public',
+            android_url: x.url_android || '',
+            ios_url: x.url_ios || '',
+          },
         });
         hasil.sso = { id: r.data.id, secret: r.data.client_secret };
         tautan.client_id_sso = r.data.id;
@@ -1185,6 +1392,9 @@ export function WizardAplikasi({ open: openProp, onOpenChange, onSelesai, buat, 
   const [kodeManual, setKodeManual] = React.useState(false);
   const [jenis, setJenis] = React.useState<JenisAplikasi>('web');
   const [url, setUrl] = React.useState('https://');
+  const [visibilitas, setVisibilitas] = React.useState<Visibilitas>('publik');
+  const [android, setAndroid] = React.useState('');
+  const [ios, setIos] = React.useState('');
   const [ket, setKet] = React.useState('');
   const [logo, setLogo] = React.useState<string | null>(null);
   const [pakaiSso, setPakaiSso] = React.useState(true);
@@ -1218,6 +1428,9 @@ export function WizardAplikasi({ open: openProp, onOpenChange, onSelesai, buat, 
     keterangan: ket.trim(),
     jenis,
     url: urlValid ? dasar : '',
+    visibilitas,
+    url_android: jenis === 'mobile' ? android.trim() : '',
+    url_ios: jenis === 'mobile' ? ios.trim() : '',
     logo,
     sso: pakaiSso ? { redirect_uris: daftarTeks(cb), post_logout_redirect_uris: daftarTeks(keluar || `${dasar}/`), frontchannel_logout_uri: fc.trim(), portal_url: dasar } : null,
     batasiLogin: pakaiSso && batasi,
@@ -1235,7 +1448,9 @@ export function WizardAplikasi({ open: openProp, onOpenChange, onSelesai, buat, 
         if (!nama.trim()) return 'Nama aplikasi wajib diisi.';
         if (!/^[a-z0-9][a-z0-9_-]{1,39}$/.test(kode)) return 'Kode: huruf kecil, angka, - atau _, 2 sampai 40 karakter.';
         if (terpakai.includes(kode)) return `Kode ${kode} sudah dipakai aplikasi lain.`;
-        if (pakaiSso && !urlValid) return 'Alamat aplikasi wajib diisi (https://...).';
+        if (pakaiSso && !urlValid && jenis !== 'mobile') return 'Alamat aplikasi wajib diisi (https://...).';
+        const salah = galatUnduhan(jenis, visibilitas, android, ios);
+        if (salah) return salah;
       },
       content: (
         <FormGrid>
@@ -1263,8 +1478,16 @@ export function WizardAplikasi({ open: openProp, onOpenChange, onSelesai, buat, 
               options={(Object.keys(JENIS) as JenisAplikasi[]).map((j) => ({ value: j, label: JENIS[j].pendek, icon: JENIS[j].icon, 'aria-label': JENIS[j].label }))}
             />
           </Field>
-          <Field label="Alamat aplikasi" className="u-span-2" description="Dipakai untuk portal SSO dan alamat callback bawaan.">
+          <Field
+            label="Alamat aplikasi"
+            className="u-span-2"
+            description={jenis === 'mobile' ? 'Opsional untuk aplikasi mobile: versi web bila ada.' : 'Tombol Buka di dasbor SSO dan alamat callback bawaan.'}
+          >
             <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://elearning.unipo.ac.id" />
+          </Field>
+          {jenis === 'mobile' && <IsianUnduhan android={android} ios={ios} onAndroid={setAndroid} onIos={setIos} />}
+          <Field label="Tampil di dasbor SSO" className="u-span-2">
+            <PilihVisibilitas value={visibilitas} onValueChange={setVisibilitas} />
           </Field>
           <Field label="Keterangan" optional className="u-span-2">
             <Textarea value={ket} onChange={(e) => setKet(e.target.value)} rows={2} maxLength={255} />
@@ -1423,6 +1646,8 @@ export function WizardAplikasi({ open: openProp, onOpenChange, onSelesai, buat, 
                 onEdit: () => setStep(0),
                 items: [
                   { label: 'Alamat', value: urlValid ? dasar : '–' },
+                  { label: 'Dasbor SSO', value: visibilitas === 'publik' ? 'Publik' : 'Privat' },
+                  ...(jenis === 'mobile' ? [{ label: 'Unduh', value: [android.trim() && 'Android', ios.trim() && 'iOS'].filter(Boolean).join(', ') || '–' }] : []),
                   { label: 'Keterangan', value: ket || '–' },
                 ],
               },
@@ -1560,6 +1785,9 @@ export function FormAplikasi({ aplikasi: a, onTersimpan, onBatal, className }: F
   const [ket, setKet] = React.useState(a.keterangan ?? '');
   const [url, setUrl] = React.useState(a.url ?? '');
   const [aktif, setAktif] = React.useState(a.aktif);
+  const [visibilitas, setVisibilitas] = React.useState<Visibilitas>(a.visibilitas);
+  const [android, setAndroid] = React.useState(a.url_android ?? '');
+  const [ios, setIos] = React.useState(a.url_ios ?? '');
   const [logo, setLogo] = React.useState<string | null>(a.logo);
   const [cb, setCb] = React.useState(a.sso?.redirect_uris.join('\n') ?? '');
   const [keluar, setKeluar] = React.useState(a.sso?.post_logout_redirect_uris.join('\n') ?? '');
@@ -1576,11 +1804,16 @@ export function FormAplikasi({ aplikasi: a, onTersimpan, onBatal, className }: F
 
   const simpan = async (e: React.FormEvent) => {
     e.preventDefault();
+    const salah = galatUnduhan(a.jenis, visibilitas, android, ios);
+    if (salah) return setGalat([salah]);
     setKirim(true);
     const g: string[] = [];
     const req = (method: 'PUT' | 'PATCH', path: string, body: unknown) => siakad!.request({ method, path, body });
-    if (a.rbac && siakad && (nama !== a.rbac.nama || ket !== (a.rbac.keterangan ?? '') || url !== (a.rbac.url ?? '') || aktif !== a.rbac.aktif))
-      await req('PUT', `${A}/aplikasi/${a.rbac.id}`, { nama, keterangan: ket || null, url: url || null, aktif }).catch((x) => g.push(`Katalog: ${pesanGalat(x)}`));
+    const unduhBerubah = visibilitas !== (a.rbac?.visibilitas ?? 'publik') || android !== (a.rbac?.url_android ?? '') || ios !== (a.rbac?.url_ios ?? '');
+    if (a.rbac && siakad && (nama !== a.rbac.nama || ket !== (a.rbac.keterangan ?? '') || url !== (a.rbac.url ?? '') || aktif !== a.rbac.aktif || unduhBerubah))
+      await req('PUT', `${A}/aplikasi/${a.rbac.id}`, { nama, keterangan: ket || null, url: url || null, aktif, visibilitas, url_android: android.trim() || null, url_ios: ios.trim() || null }).catch(
+        (x) => g.push(`Katalog: ${pesanGalat(x)}`),
+      );
     if (a.sso && sso) {
       const ubah: Record<string, unknown> = {};
       if (nama !== a.sso.name) ubah.name = nama;
@@ -1591,6 +1824,10 @@ export function FormAplikasi({ aplikasi: a, onTersimpan, onBatal, className }: F
       if (url && url !== (a.sso.portal_url ?? '')) ubah.portal_url = url;
       if (batasi !== a.terbatas) ubah.permission = batasi ? `${a.kode}.akses` : '';
       if (aktif !== a.sso.active && !a.sso.admin) ubah.active = aktif;
+      const vis = visibilitas === 'privat' ? 'private' : 'public';
+      if (vis !== (a.sso.visibility ?? 'public')) ubah.visibility = vis;
+      if (android.trim() !== (a.sso.android_url ?? '')) ubah.android_url = android.trim();
+      if (ios.trim() !== (a.sso.ios_url ?? '')) ubah.ios_url = ios.trim();
       if (Object.keys(ubah).length) await sso.request('PATCH', `/clients/${a.sso.id}`, { body: ubah }).catch((x) => g.push(`Login SSO: ${pesanGalat(x)}`));
       if (logo !== a.logo) await sso.request(logo ? 'POST' : 'DELETE', `/clients/${a.sso.id}/logo`, logo ? { body: { data: logo } } : {}).catch((x) => g.push(`Logo: ${pesanGalat(x)}`));
     }
@@ -1636,6 +1873,12 @@ export function FormAplikasi({ aplikasi: a, onTersimpan, onBatal, className }: F
           <Field label="Alamat aplikasi" className="u-span-2">
             <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" />
           </Field>
+          {a.jenis === 'mobile' && <IsianUnduhan android={android} ios={ios} onAndroid={setAndroid} onIos={setIos} />}
+          {(a.jenis === 'web' || a.jenis === 'mobile') && (
+            <Field label="Tampil di dasbor SSO" className="u-span-2">
+              <PilihVisibilitas value={visibilitas} onValueChange={setVisibilitas} />
+            </Field>
+          )}
           <Field label="Keterangan" optional className="u-span-2">
             <Textarea value={ket} onChange={(e) => setKet(e.target.value)} rows={2} maxLength={255} />
           </Field>
@@ -1716,5 +1959,84 @@ export function SheetUbahAplikasi({ aplikasi, onOpenChange, onTersimpan }: { apl
         />
       )}
     </Sheet>
+  );
+}
+
+// ================================================================ Daftar aplikasi publik (tanpa login)
+/** Satu baris GET /v1/rbac/aplikasi-publik. */
+export interface AplikasiPublik {
+  kode: string;
+  nama: string;
+  keterangan?: string | null;
+  jenis: 'web' | 'mobile';
+  url?: string | null;
+  url_android?: string | null;
+  url_ios?: string | null;
+  client_id_sso?: string | null;
+  platform: Array<'web' | 'android' | 'ios'>;
+}
+
+/** Aplikasi kampus yang visibilitasnya publik (tanpa token). */
+export function useAplikasiPublik(jenis?: 'web' | 'mobile') {
+  return useSiakadQuery<AplikasiPublik[]>(
+    ['rbac', 'aplikasi-publik', jenis ?? ''],
+    (s, signal) => s.request<AplikasiPublik[]>({ method: 'GET', path: `${A}/aplikasi-publik`, query: { jenis }, public: true }, { signal }),
+    { staleTime: 5 * 60_000 },
+  );
+}
+
+export interface DaftarAplikasiPublikProps {
+  /** Batasi ke aplikasi web atau mobile. Bawaan: keduanya dengan saringan. */
+  jenis?: 'web' | 'mobile';
+  /** Alamat SSO untuk logo aplikasi (bawaan https://sso.unipo.ac.id). */
+  ssoUrl?: string | null;
+  /** Tagline di bawah nama; bawaan keterangan aplikasi. */
+  tagline?: string;
+  className?: string;
+}
+
+/**
+ * Daftar aplikasi kampus yang publik (sama dengan dasbor SSO): logo terdaftar, nama, keterangan, tombol Buka untuk
+ * aplikasi web, dan tombol unduh Android/iOS untuk aplikasi mobile sesuai platform yang didukung.
+ */
+export function DaftarAplikasiPublik({ jenis, ssoUrl, tagline, className }: DaftarAplikasiPublikProps) {
+  const [saring, setSaring] = React.useState<'semua' | 'web' | 'mobile'>('semua');
+  const q = useAplikasiPublik(jenis);
+  if (q.error)
+    return (
+      <Alert variant="danger" title="Daftar aplikasi tidak termuat" className={className}>
+        {pesanGalat(q.error)}
+      </Alert>
+    );
+  if (!q.data) return <Skeleton className={className} style={{ height: 180 }} />;
+  const semua = q.data;
+  const ada = { web: semua.filter((a) => a.jenis === 'web').length, mobile: semua.filter((a) => a.jenis === 'mobile').length };
+  const daftar = jenis || saring === 'semua' ? semua : semua.filter((a) => a.jenis === saring);
+  return (
+    <div className={cn('u-app-publik', className)}>
+      {!jenis && ada.web > 0 && ada.mobile > 0 && (
+        <Tabs<'semua' | 'web' | 'mobile'>
+          value={saring}
+          onValueChange={setSaring}
+          items={[
+            { value: 'semua', label: 'Semua', count: semua.length },
+            { value: 'web', label: 'Web', count: ada.web },
+            { value: 'mobile', label: 'Mobile', count: ada.mobile },
+          ]}
+        />
+      )}
+      {!daftar.length ? (
+        <Empty icon={<LayoutGrid />} title="Belum ada aplikasi publik" description="Aplikasi tampil di sini setelah ditandai publik di Pustikom." />
+      ) : (
+        <ul className="u-app-publik-grid">
+          {daftar.map((a) => (
+            <li key={a.kode} className="u-app-publik-item">
+              <LogoAplikasi kode={a.client_id_sso || a.kode} name={a.nama} tagline={tagline ?? (a.keterangan || (a.jenis === 'mobile' ? 'Aplikasi mobile' : hostDari(a.url ?? '')))} ssoUrl={ssoUrl} />
+              <TautanAplikasi nama={a.nama} url={a.url} url_android={a.url_android} url_ios={a.url_ios} hentikanKlik={false} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

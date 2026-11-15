@@ -39,6 +39,8 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   [data-size='sm'] > .u-app-logo-text > & {
     font-size: var(--u-text-sm);
   }
@@ -62,4 +64,74 @@
   [data-size='xl'] & {
     font-size: var(--u-text-sm);
   }
+}
+
+// ================================================================ Logo unggahan dalam bentuk tanda
+.u-logo-gambar {
+  --u-logo-pelat: transparent;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+  background: var(--u-logo-pelat);
+  border-radius: 26.5%;
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  &[data-fit='contain'] img {
+    width: 78%;
+    height: 78%;
+    object-fit: contain;
+  }
+  &[data-shape='circle'] {
+    border-radius: 50%;
+  }
+  &[data-shape='shield'] {
+    border-radius: 0;
+    clip-path: polygon(50% 4.7%, 90.6% 17.5%, 90.6% 52%, 86% 66%, 76% 79%, 64% 89%, 50% 95.3%, 36% 89%, 24% 79%, 14% 66%, 9.4% 52%, 9.4% 17.5%);
+    &[data-fit='contain'] img {
+      width: 64%;
+      height: 64%;
+    }
+  }
+  &[data-shape='plain'] {
+    border-radius: 0;
+    background: transparent;
+    img {
+      object-fit: contain;
+    }
+  }
+  &[data-tone='mono'] img {
+    filter: grayscale(1) contrast(1.1);
+  }
+  &[data-tone='inverse'] {
+    background: #fff;
+  }
+  &[data-tone='inverse'][data-shape='plain'] {
+    background: transparent;
+    img {
+      filter: brightness(0) invert(1);
+    }
+  }
+}
+.u-app-logo[data-layout='full'] {
+  .u-app-logo-full {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+  }
+  &[data-tone='mono'] .u-app-logo-full {
+    filter: grayscale(1);
+  }
+  &[data-tone='inverse'] .u-app-logo-full {
+    filter: brightness(0) invert(1);
+  }
+}
+.u-app-logo[data-memuat] > svg {
+  opacity: 0.85;
 }
