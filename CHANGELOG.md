@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.13.2 (2026-11-15)
+
+- Logo aplikasi dengan `tone="inverse"` (pelat putih untuk latar gelap/berwarna) kini menampilkan glyph-nya dengan warna aplikasi. Sebelumnya glyph bawaan (`UnipoAppLogo`, `LogoAplikasi`) dan inisial nama tetap putih sehingga logo tampak sebagai kotak putih kosong.
+
 ## 1.13.1 (2026-11-15)
 
 - `Split` bersarang tidak lagi tertukar: aturan `side="start"` dan `sticky` kini hanya berlaku untuk anak langsung. Sebelumnya bagian FAQ landing PMB (Split di dalam Split dengan sidebar kiri) menaruh kartu kontak di kolom lebar dan FAQ di kolom sempit.
