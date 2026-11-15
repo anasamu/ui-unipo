@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.27.1 (2026-11-16)
+
+- Terbitkan perubahan `KebijakanUnit`/`useDokumenKebijakan` (`fakultas`, `prodi`) yang tercatat di 1.27.0 tetapi belum ikut paket 1.27.0 di npm, karena nomor versinya bentrok dengan rilis aturan mutu.
+
 ## 1.27.0 (2026-11-16)
 
 - `KebijakanUnit` dan `useDokumenKebijakan` menerima `fakultas` (kode fakultas SIAKAD) dan `prodi` (kode prodi) selain `unit`, untuk aplikasi yang tidak tahu kode unit SPMI. Butuh SIAKAD yang mengenal parameter `fakultas`/`prodi` di `/v1/spmi/publik/dokumen`.
