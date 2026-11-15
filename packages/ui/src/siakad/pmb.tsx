@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import { Pilihan } from '../components/formulir';
 import { Check, GraduationCap, Medal, Plus, Trash2 } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Alert, Empty, Table, TableContainer } from '../components/display';
@@ -71,13 +72,13 @@ export function IsianDataDiri({ value: v, onChange, ref_, errors = {} }: BagianP
         <DatePicker value={v.tanggal_lahir ? parseISODate(String(v.tanggal_lahir)) : null} onValueChange={(d) => onChange({ tanggal_lahir: d ? toISODate(d) : null })} max={new Date()} />
       </Field>
       <Field label="Agama" required error={errors.agama}>
-        <Select options={opsi(ref_.agama)} value={teks(v.agama) || null} onValueChange={(x) => onChange({ agama: x })} />
+        <Pilihan options={opsi(ref_.agama)} value={teks(v.agama) || null} onValueChange={(x) => onChange({ agama: x })} />
       </Field>
       <Field label="Kewarganegaraan" error={errors.warga_negara}>
-        <Select options={opsi(ref_.warga_negara)} value={teks(v.warga_negara) || null} onValueChange={(x) => onChange({ warga_negara: x })} />
+        <Pilihan options={opsi(ref_.warga_negara)} value={teks(v.warga_negara) || null} onValueChange={(x) => onChange({ warga_negara: x })} />
       </Field>
       <Field label="Status sipil" optional error={errors.status_sipil}>
-        <Select options={opsi(ref_.status_sipil)} value={teks(v.status_sipil) || null} onValueChange={(x) => onChange({ status_sipil: x })} />
+        <Pilihan options={opsi(ref_.status_sipil)} value={teks(v.status_sipil) || null} onValueChange={(x) => onChange({ status_sipil: x })} />
       </Field>
       <Field label="Nomor HP (WhatsApp)" required error={errors.hp} description="Untuk informasi seleksi dan pembayaran.">
         <Input value={teks(v.hp)} onChange={(e) => onChange({ hp: e.target.value.replace(/[^\d+]/g, '') })} inputMode="tel" autoComplete="tel" placeholder="08xx" />
@@ -172,7 +173,7 @@ export function IsianAsalSekolah({ value: v, onChange, ref_, errors = {} }: Bagi
             />
           </Field>
           <Field label="Jenjang asal">
-            <Select options={opsi(ref_.asal_jenjang)} value={teks(v.asal_jenjang) || null} onValueChange={(x) => onChange({ asal_jenjang: x })} />
+            <Pilihan options={opsi(ref_.asal_jenjang)} value={teks(v.asal_jenjang) || null} onValueChange={(x) => onChange({ asal_jenjang: x })} />
           </Field>
           <Field label="Program studi asal" required error={errors.nama_asal_prodi}>
             <Input value={teks(v.nama_asal_prodi)} onChange={(e) => onChange({ nama_asal_prodi: e.target.value })} />
@@ -200,20 +201,20 @@ function IsianSatuOrtu({ label, value: v, onChange, ref_, wali }: BagianProps & 
         <DatePicker value={v.tanggal_lahir ? parseISODate(String(v.tanggal_lahir)) : null} onValueChange={(d) => onChange({ tanggal_lahir: d ? toISODate(d) : null })} max={new Date()} />
       </Field>
       <Field label="Agama" optional>
-        <Select options={opsi(ref_.agama)} value={teks(v.agama) || null} onValueChange={(x) => onChange({ agama: x })} />
+        <Pilihan options={opsi(ref_.agama)} value={teks(v.agama) || null} onValueChange={(x) => onChange({ agama: x })} />
       </Field>
       <Field label="Pendidikan terakhir">
-        <Select options={opsi(ref_.pendidikan)} value={teks(v.pendidikan) || null} onValueChange={(x) => onChange({ pendidikan: x })} />
+        <Pilihan options={opsi(ref_.pendidikan)} value={teks(v.pendidikan) || null} onValueChange={(x) => onChange({ pendidikan: x })} />
       </Field>
       <Field label="Pekerjaan">
-        <Select options={opsi(ref_.pekerjaan)} value={teks(v.pekerjaan) || null} onValueChange={(x) => onChange({ pekerjaan: x })} />
+        <Pilihan options={opsi(ref_.pekerjaan)} value={teks(v.pekerjaan) || null} onValueChange={(x) => onChange({ pekerjaan: x })} />
       </Field>
       <Field label="Penghasilan per bulan">
-        <Select options={opsi(ref_.penghasilan)} value={teks(v.penghasilan) || null} onValueChange={(x) => onChange({ penghasilan: x })} />
+        <Pilihan options={opsi(ref_.penghasilan)} value={teks(v.penghasilan) || null} onValueChange={(x) => onChange({ penghasilan: x })} />
       </Field>
       {!wali && (
         <Field label="Status" optional>
-          <Select options={opsi(ref_.hidup)} value={teks(v.hidup) || null} onValueChange={(x) => onChange({ hidup: x })} />
+          <Pilihan options={opsi(ref_.hidup)} value={teks(v.hidup) || null} onValueChange={(x) => onChange({ hidup: x })} />
         </Field>
       )}
       <Field label="Nomor HP" optional>
@@ -233,7 +234,17 @@ function IsianSatuOrtu({ label, value: v, onChange, ref_, wali }: BagianProps & 
 }
 
 /** Data ayah dan ibu, opsional wali (`wali`) bila tidak tinggal bersama orang tua. */
-export function IsianOrangTua({ value, onChange, ref_, wali }: { value: NonNullable<FormulirPmb['orang_tua']>; onChange: (v: NonNullable<FormulirPmb['orang_tua']>) => void; ref_: ReferensiFormulir; wali?: boolean }) {
+export function IsianOrangTua({
+  value,
+  onChange,
+  ref_,
+  wali,
+}: {
+  value: NonNullable<FormulirPmb['orang_tua']>;
+  onChange: (v: NonNullable<FormulirPmb['orang_tua']>) => void;
+  ref_: ReferensiFormulir;
+  wali?: boolean;
+}) {
   const hub = wali ? (['ayah', 'ibu', 'wali'] as const) : (['ayah', 'ibu'] as const);
   return (
     <FormGrid>
@@ -352,7 +363,19 @@ interface Pendaftaran {
 const judulKata = (x?: string | null) => (x ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 /** Daftar prestasi pendaftar + tambah/hapus lewat `pmb.postSayaPendaftaranByIdPrestasi`. */
-export function IsianPrestasiPmb({ id, prestasi, sertifikat = [], kunci, onBerubah }: { id: string; prestasi: PrestasiPmb[]; sertifikat?: Array<{ id: number; nama_asli: string }>; kunci?: boolean; onBerubah: () => void }) {
+export function IsianPrestasiPmb({
+  id,
+  prestasi,
+  sertifikat = [],
+  kunci,
+  onBerubah,
+}: {
+  id: string;
+  prestasi: PrestasiPmb[];
+  sertifikat?: Array<{ id: number; nama_asli: string }>;
+  kunci?: boolean;
+  onBerubah: () => void;
+}) {
   const siakad = useSiakad();
   const kosong = { nama: '', bidang: 'akademik', tingkat: 'kabupaten', peringkat: '', tahun: '', penyelenggara: '', berkas_id: '' };
   const [buka, setBuka] = React.useState(false);
@@ -468,7 +491,15 @@ export function IsianPrestasiPmb({ id, prestasi, sertifikat = [], kunci, onBerub
 
 const SEMESTER_RAPOR = [1, 2, 3, 4, 5];
 /** Tabel nilai rapor semester 1-5 per mata pelajaran (skala 0-100) dengan rata-rata per baris. */
-export function IsianRaporPmb({ value, onChange, kunci }: { value: { mapel: string[]; nilai: Record<string, string> }; onChange: (v: { mapel: string[]; nilai: Record<string, string> }) => void; kunci?: boolean }) {
+export function IsianRaporPmb({
+  value,
+  onChange,
+  kunci,
+}: {
+  value: { mapel: string[]; nilai: Record<string, string> };
+  onChange: (v: { mapel: string[]; nilai: Record<string, string> }) => void;
+  kunci?: boolean;
+}) {
   const { mapel, nilai } = value;
   const rata = (m: string) => {
     const a = SEMESTER_RAPOR.map((x) => Number(nilai[`${m}|${x}`])).filter((x) => x > 0);
@@ -492,7 +523,13 @@ export function IsianRaporPmb({ value, onChange, kunci }: { value: { mapel: stri
             {mapel.map((m, i) => (
               <tr key={i}>
                 <td>
-                  <Input size="sm" value={m} disabled={kunci} aria-label={`Mata pelajaran ${i + 1}`} onChange={(e) => onChange({ mapel: mapel.map((y, j) => (j === i ? e.target.value : y)), nilai })} />
+                  <Input
+                    size="sm"
+                    value={m}
+                    disabled={kunci}
+                    aria-label={`Mata pelajaran ${i + 1}`}
+                    onChange={(e) => onChange({ mapel: mapel.map((y, j) => (j === i ? e.target.value : y)), nilai })}
+                  />
                 </td>
                 {SEMESTER_RAPOR.map((x) => (
                   <td key={x}>
@@ -562,7 +599,10 @@ export function WizardPendaftaranPmb({ id, onDiajukan, kontak, langkah, onLangka
       });
     if (det.data && !rapor) {
       const r = det.data.rapor ?? [];
-      setRapor({ mapel: r.length ? [...new Set(r.map((x) => x.mapel))] : ['Matematika', 'Bahasa Indonesia', 'Bahasa Inggris'], nilai: Object.fromEntries(r.map((x) => [`${x.mapel}|${x.semester}`, String(x.nilai)])) });
+      setRapor({
+        mapel: r.length ? [...new Set(r.map((x) => x.mapel))] : ['Matematika', 'Bahasa Indonesia', 'Bahasa Inggris'],
+        nilai: Object.fromEntries(r.map((x) => [`${x.mapel}|${x.semester}`, String(x.nilai)])),
+      });
     }
   }, [det.data, f, rapor, kodeReferal]);
 
@@ -673,7 +713,7 @@ export function WizardPendaftaranPmb({ id, onDiajukan, kontak, langkah, onLangka
           )}
           <FormGrid>
             <Field label="Dari mana Anda mengetahui PMB ini?" optional error={errors.sumber_informasi}>
-              <Select options={opsi(r.sumber_informasi)} value={f.sumber_informasi || null} onValueChange={(v) => setF((x) => ({ ...x, sumber_informasi: v }))} />
+              <Pilihan options={opsi(r.sumber_informasi)} value={f.sumber_informasi || null} onValueChange={(v) => setF((x) => ({ ...x, sumber_informasi: v }))} />
             </Field>
             <Field label="Kode referal" optional error={errors.kode_referal} description="Dari sekolah, alumni, atau agen promosi.">
               <Input value={f.kode_referal ?? ''} onChange={(e) => setF((x) => ({ ...x, kode_referal: e.target.value.toUpperCase() }))} maxLength={30} className="u-pmb-kode" />

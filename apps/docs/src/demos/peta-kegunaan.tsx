@@ -1,0 +1,385 @@
+import * as React from 'react';
+import { Badge, Empty, Input } from 'unipo-ui';
+import { Search } from 'lucide-react';
+import type { DemoMeta } from '../registry';
+
+export const meta: DemoMeta = {
+  title: 'Peta kegunaan',
+  category: 'Per kegunaan',
+  layout: 'wide',
+  order: 0,
+  badge: 'baru',
+  description:
+    'Mulai dari yang ingin dibuat, bukan dari endpoint. Ketik kebutuhan Anda, misalnya "KRS", "wisuda", "tagihan", atau "footer", lalu pakai komponen yang muncul. Setiap komponen sudah memanggil API SIAKAD lewat SDK, membaca NIM/NIDN dari akun yang masuk, dan menampilkan galat dengan kode laporan, jadi aplikasi Anda tinggal menyusun halaman.',
+  demos: { Peta: 'Cari komponen menurut kegunaan' },
+};
+
+type Baris = { k: string; kegunaan: string; komponen: string; dari: 'unipo-ui' | 'unipo-ui/siakad' | 'unipo-ui/katalog'; api?: string; scope?: string; halaman: string };
+const PETA: Baris[] = [
+  // Formulir tambah/ubah
+  {
+    k: 'Formulir',
+    kegunaan: 'Tambah atau ubah kurikulum OBE',
+    komponen: 'FormKurikulum',
+    dari: 'unipo-ui/katalog',
+    api: '/v1/kurikulum-obe/kurikulum',
+    scope: 'kurikulum:write',
+    halaman: 'formulir-fitur',
+  },
+  {
+    k: 'Formulir',
+    kegunaan: 'Tambah MK ke kurikulum atau ubah MK',
+    komponen: 'FormMataKuliahKurikulum',
+    dari: 'unipo-ui/katalog',
+    api: '/v1/kurikulum-obe/kurikulum/{id}/mk, /v1/kurikulum-obe/mk/{mk}',
+    scope: 'kurikulum:write',
+    halaman: 'formulir-fitur',
+  },
+  {
+    k: 'Formulir',
+    kegunaan: 'Ubah profil sendiri (bio, keahlian, tautan)',
+    komponen: 'FormProfilSaya',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/profil/saya',
+    scope: 'profil:write',
+    halaman: 'formulir-fitur',
+  },
+  { k: 'Formulir', kegunaan: 'Formulir tambah/ubah buatan sendiri dengan tampilan seragam', komponen: 'PanelForm, BagianForm, Pilihan, IsianTanggal', dari: 'unipo-ui', halaman: 'formulir-fitur' },
+  { k: 'Formulir', kegunaan: 'Panel tambah/ubah sumber data apa pun dari katalog', komponen: 'FormulirSumber', dari: 'unipo-ui/katalog', api: 'sumber katalog', halaman: 'formulir-skema' },
+  // Halaman pertama
+  {
+    k: 'Beranda',
+    kegunaan: 'Beranda aplikasi sesuai peran (mahasiswa, dosen, tendik)',
+    komponen: 'BerandaSaya',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/profil/saya + widget',
+    scope: 'profil:read',
+    halaman: 'beranda',
+  },
+  {
+    k: 'Beranda',
+    kegunaan: 'Sapaan, aksi cepat, ringkas tagihan untuk beranda sendiri',
+    komponen: 'SapaanBeranda, AksiCepat, TagihanSaya',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/keuangan/mahasiswa/{nim}',
+    scope: 'keuangan:read',
+    halaman: 'beranda',
+  },
+  {
+    k: 'Beranda',
+    kegunaan: 'Ingatkan pengguna melengkapi data PDDikti',
+    komponen: 'PengingatKelengkapan, WizardKelengkapan',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/kelengkapan/saya',
+    scope: 'kelengkapan:saya',
+    halaman: 'kelengkapan',
+  },
+  // Profil
+  {
+    k: 'Profil',
+    kegunaan: 'Halaman profil lengkap dengan tab sesuai peran',
+    komponen: 'ModulProfilSaya',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/profil/saya',
+    scope: 'profil:read, profil:write',
+    halaman: 'modul-profil',
+  },
+  {
+    k: 'Profil',
+    kegunaan: 'Ubah data pribadi atau ajukan perubahan data induk',
+    komponen: 'DataPribadiSaya',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/profil/saya/data-pribadi, /v1/profil/permohonan',
+    scope: 'profil:write',
+    halaman: 'modul-profil',
+  },
+  { k: 'Profil', kegunaan: 'Data orang tua dan wali mahasiswa', komponen: 'OrangTuaWali', dari: 'unipo-ui/siakad', api: '/v1/profil/saya/keluarga', scope: 'profil:read', halaman: 'modul-profil' },
+  {
+    k: 'Profil',
+    kegunaan: 'Riwayat pendidikan, pekerjaan, prestasi, organisasi',
+    komponen: 'RiwayatProfilSaya',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/profil/{jenis}',
+    scope: 'profil:read, profil:write',
+    halaman: 'modul-profil',
+  },
+  {
+    k: 'Profil',
+    kegunaan: 'Riwayat pembayaran UKT dan biaya lain',
+    komponen: 'KeuanganMahasiswa',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/keuangan/mahasiswa/{nim}',
+    scope: 'keuangan:read',
+    halaman: 'modul-profil',
+  },
+  {
+    k: 'Profil',
+    kegunaan: 'Kepegawaian dosen/tendik: jabatan, pangkat, masa kerja',
+    komponen: 'KepegawaianSaya',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/sdm/saya',
+    scope: 'sdm:read',
+    halaman: 'modul-profil',
+  },
+  {
+    k: 'Profil',
+    kegunaan: 'Penelitian dan pengabdian dosen (LPPM)',
+    komponen: 'PenelitianDosen',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/lppm/peneliti/{nidn}',
+    scope: 'lppm:read',
+    halaman: 'modul-profil',
+  },
+  {
+    k: 'Profil',
+    kegunaan: 'Menu akun di pojok kanan atas (ke profile.unipo.ac.id)',
+    komponen: 'MenuAkunSiakad, KartuAkunSiakad',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/profil/saya',
+    scope: 'profil:read',
+    halaman: 'akun',
+  },
+  // Akademik
+  {
+    k: 'Akademik',
+    kegunaan: 'Mahasiswa mengambil KRS (batas SKS, bentrok jadwal)',
+    komponen: 'ModalAmbilKrs, AmbilKrs',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/mahasiswa/{nim}/krs/penawaran, /v1/mahasiswa/{nim}/krs',
+    scope: 'krs:read, krs:write',
+    halaman: 'modal-fitur',
+  },
+  {
+    k: 'Akademik',
+    kegunaan: 'Dosen PA menyetujui KRS',
+    komponen: 'PersetujuanKrs',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/akademik/krs/persetujuan',
+    scope: 'akademik:read, akademik:write',
+    halaman: 'alur-akademik',
+  },
+  {
+    k: 'Akademik',
+    kegunaan: 'Dosen mengisi nilai kelas',
+    komponen: 'DaftarKelasNilai, InputNilaiKelas',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/akademik/nilai/kelas',
+    scope: 'akademik:read, akademik:write',
+    halaman: 'alur-akademik',
+  },
+  { k: 'Akademik', kegunaan: 'Mahasiswa mengisi EDOM', komponen: 'IsiEdom', dari: 'unipo-ui/siakad', api: '/v1/edom/isi', scope: 'edom:read, edom:write', halaman: 'alur-akademik' },
+  {
+    k: 'Akademik',
+    kegunaan: 'KHS, transkrip, KRS, riwayat studi mahasiswa',
+    komponen: 'KhsMahasiswa, TranskripMahasiswa, KrsMahasiswa, RiwayatStudi',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/mahasiswa/{nim}, /khs, /krs',
+    scope: 'mahasiswa:read, nilai:read, krs:read',
+    halaman: 'akademik',
+  },
+  {
+    k: 'Akademik',
+    kegunaan: 'Jadwal mengajar dan mahasiswa bimbingan dosen',
+    komponen: 'JadwalMengajar, MahasiswaBimbingan',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/dosen/{nidn}/jadwal, /mahasiswa-bimbingan',
+    scope: 'jadwal:read, mahasiswa:read',
+    halaman: 'akademik',
+  },
+  {
+    k: 'Akademik',
+    kegunaan: 'Kalender akademik (KRS, UTS, UAS, input nilai)',
+    komponen: 'KalenderAkademik, KalenderSidebar',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/kalender/terpadu',
+    scope: 'kalender:read',
+    halaman: 'kalender',
+  },
+  { k: 'Akademik', kegunaan: 'Kurikulum OBE dan CPL', komponen: 'lihat halaman Kurikulum', dari: 'unipo-ui/siakad', api: '/v1/kurikulum-obe', scope: 'kurikulum:read', halaman: 'kurikulum' },
+  // Kelulusan & layanan
+  {
+    k: 'Kelulusan',
+    kegunaan: 'Cek kesiapan lulus dan syarat yudisium',
+    komponen: 'ModalCekKelulusan',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/kelulusan/mahasiswa/{nim}/syarat',
+    scope: 'kelulusan:read',
+    halaman: 'modal-fitur',
+  },
+  {
+    k: 'Kelulusan',
+    kegunaan: 'Pendaftaran wisuda',
+    komponen: 'ModalDaftarWisuda, PendaftaranWisuda',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/kelulusan/wisuda/daftar',
+    scope: 'kelulusan:write',
+    halaman: 'modal-fitur',
+  },
+  {
+    k: 'Layanan',
+    kegunaan: 'Ajukan surat aktif kuliah, cuti, transkrip, dan layanan lain',
+    komponen: 'ModalAjukanLayanan',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/layanan/jenis, /v1/layanan/permohonan',
+    scope: 'layanan:read, layanan:write',
+    halaman: 'modal-fitur',
+  },
+  {
+    k: 'Layanan',
+    kegunaan: 'Buat surat dari templat dan arsipkan',
+    komponen: 'BuatSuratDariTemplat, KelolaTemplatSurat',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/arsip/surat-keluar',
+    scope: 'arsip:read, arsip:write',
+    halaman: 'editor-surat',
+  },
+  {
+    k: 'Layanan',
+    kegunaan: 'Unggah dan pilih berkas (pas foto, ijazah, lampiran)',
+    komponen: 'UnggahBerkas, PilihBerkas, ManajerBerkas',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/berkas',
+    scope: 'berkas:read, berkas:write',
+    halaman: 'berkas',
+  },
+  { k: 'Layanan', kegunaan: 'Obrolan terenkripsi antar pengguna', komponen: 'ChatMengambang, KotakObrolan', dari: 'unipo-ui/siakad', api: '/v1/obrolan', halaman: 'obrolan' },
+  // Keamanan
+  { k: 'Login & keamanan', kegunaan: 'Sesi habis (401) di seluruh aplikasi', komponen: 'PenjagaSesiSiakad, ModalSesiHabis', dari: 'unipo-ui/siakad', api: 'balasan 401 SDK', halaman: 'modal-fitur' },
+  { k: 'Login & keamanan', kegunaan: 'Username/password salah, akun terkunci sementara', komponen: 'ModalSalahPassword', dari: 'unipo-ui', api: 'SSO /masuk (429/423)', halaman: 'modal-fitur' },
+  { k: 'Login & keamanan', kegunaan: 'Akses ditolak (403) dengan scope yang kurang', komponen: 'ModalAksesDitolak', dari: 'unipo-ui', api: 'PermissionError.requiredScopes', halaman: 'modal-fitur' },
+  { k: 'Login & keamanan', kegunaan: 'Galat API dengan kode laporan (request_id)', komponen: 'GalatApi, KodeLaporan', dari: 'unipo-ui/siakad', halaman: 'modal-fitur' },
+  // Portal
+  {
+    k: 'Portal & landing',
+    kegunaan: 'Kerangka situs: menu utama, mega menu, footer, pita, popup',
+    komponen: 'KerangkaPortal',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/portal/situs/{kode}, /menu, /banner, /tautan',
+    scope: 'portal:read',
+    halaman: 'kerangka-portal',
+  },
+  {
+    k: 'Portal & landing',
+    kegunaan: 'Footer situs dari pengaturan portal',
+    komponen: 'FooterPortal, Footer',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/portal/situs/{kode}/menu?lokasi=footer',
+    scope: 'portal:read',
+    halaman: 'kerangka-portal',
+  },
+  {
+    k: 'Portal & landing',
+    kegunaan: 'Pengumuman (daftar, kartu, ringkas, sorotan, linimasa)',
+    komponen: 'PengumumanPortal',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/portal/pengumuman',
+    scope: 'portal:read',
+    halaman: 'kerangka-portal',
+  },
+  {
+    k: 'Portal & landing',
+    kegunaan: 'Pengumuman untuk akun yang masuk',
+    komponen: 'PengumumanSaya',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/portal/pengumuman/saya',
+    scope: 'portal:read',
+    halaman: 'kerangka-portal',
+  },
+  {
+    k: 'Portal & landing',
+    kegunaan: 'Berita, terpopuler, agenda',
+    komponen: 'BeritaPortal, BeritaTerpopuler, AgendaPortal',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/portal/berita, /agenda',
+    scope: 'portal:read',
+    halaman: 'portal',
+  },
+  { k: 'Portal & landing', kegunaan: 'Tanya jawab (FAQ) dengan pencarian', komponen: 'FaqPortal', dari: 'unipo-ui/siakad', api: '/v1/portal/faq', scope: 'portal:read', halaman: 'faq' },
+  {
+    k: 'Portal & landing',
+    kegunaan: 'Sambutan pimpinan, struktur organisasi, testimoni',
+    komponen: 'SambutanPimpinan, StrukturOrganisasi, Testimoni',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/portal/struktur',
+    scope: 'portal:read',
+    halaman: 'struktur-organisasi',
+  },
+  // Aplikasi lain
+  { k: 'PMB', kegunaan: 'Pendaftaran mahasiswa baru, dasbor maba, panitia', komponen: 'lihat halaman PMB', dari: 'unipo-ui/siakad', api: '/v1/pmb', halaman: 'galeri' },
+  {
+    k: 'LMS',
+    kegunaan: 'Kelas e-learning, tugas mendatang, progres belajar',
+    komponen: 'RingkasanLms, DaftarKelasLms, TugasMendatang',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/lms/saya, /v1/lms/kelas',
+    scope: 'lms:read',
+    halaman: 'lms-belajar',
+  },
+  { k: 'CBT', kegunaan: 'Ujian berbasis komputer', komponen: 'lihat halaman CBT', dari: 'unipo-ui/siakad', api: '/v1/cbt/saya', scope: 'cbt:read', halaman: 'cbt' },
+  {
+    k: 'AI',
+    kegunaan: 'Asisten AI, koreksi esai, buat soal',
+    komponen: 'ObrolanAi, KoreksiEsaiAi, BuatSoalAi',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/integrasi/ai',
+    scope: 'integrasi:ai',
+    halaman: 'ai',
+  },
+  {
+    k: 'Pimpinan',
+    kegunaan: 'Dasbor unit kerja (akademik, keuangan, SDM, SPMI, LPPM, PMB, tracer)',
+    komponen: 'DasborAkademik, DasborKeuangan, …',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/dasbor/ringkas, …',
+    scope: 'dasbor:read',
+    halaman: 'dasbor',
+  },
+  {
+    k: 'Pengelola',
+    kegunaan: 'Pilih/cari mahasiswa, dosen, MK tanpa mengetik ID',
+    komponen: 'PilihEntitas, CariMahasiswa',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/mahasiswa, /v1/dosen',
+    scope: 'mahasiswa:read, dosen:read',
+    halaman: 'sdk-pilih',
+  },
+  { k: 'Pengelola', kegunaan: 'CRUD generik untuk sumber data yang belum punya widget', komponen: 'HalamanModul, KelolaSumber', dari: 'unipo-ui/katalog', api: 'semua /v1', halaman: 'katalog' },
+];
+
+export function Peta() {
+  const [q, setQ] = React.useState('');
+  const kata = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const hasil = PETA.filter((b) => kata.every((w) => `${b.k} ${b.kegunaan} ${b.komponen} ${b.api ?? ''}`.toLowerCase().includes(w)));
+  const grup = [...new Set(hasil.map((b) => b.k))];
+  return (
+    <div className="peta-kegunaan">
+      <label className="peta-cari">
+        <Search aria-hidden />
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Saya ingin… (KRS, wisuda, tagihan, footer, pengumuman)" aria-label="Cari kegunaan" />
+      </label>
+      {!hasil.length && <Empty title="Belum ada komponen untuk kata itu" description="Coba kata lain, atau pakai HalamanModul dari unipo-ui/katalog untuk sumber data apa pun." />}
+      {grup.map((g) => (
+        <section key={g}>
+          <h3>{g}</h3>
+          <ul>
+            {hasil
+              .filter((b) => b.k === g)
+              .map((b) => (
+                <li key={b.kegunaan}>
+                  <a href={`#/${b.halaman}`}>
+                    <span className="peta-kegunaan-judul">{b.kegunaan}</span>
+                    <code>{b.komponen}</code>
+                    <span className="peta-kegunaan-meta">
+                      <Badge variant="outline">{b.dari}</Badge>
+                      {b.api && <span className="u-mono">{b.api}</span>}
+                      {b.scope && <span>scope {b.scope}</span>}
+                    </span>
+                  </a>
+                </li>
+              ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  );
+}

@@ -1,8 +1,9 @@
 'use client';
 import * as React from 'react';
+import { Pilihan } from '../components/formulir';
 import type { Siakad } from 'unipo-siakad-sdk';
 import { BookOpen, Building2, Globe2, GraduationCap, MapPin, PenLine, School, UserRound, Users } from 'lucide-react';
-import { Combobox, OptionContent, Select, type ComboboxProps, type SelectOption } from '../components/select';
+import { Combobox, OptionContent, type ComboboxProps, type SelectOption } from '../components/select';
 import { Avatar } from '../components/display';
 import { Badge } from '../components/actions';
 import { Bendera, daftarNegara, type Negara } from './negara';
@@ -194,9 +195,19 @@ export interface MataKuliahOption {
   [k: string]: unknown;
 }
 /** Cari mata kuliah berdasarkan kode atau nama (SDK: mataKuliah.list). */
-export function CariMataKuliah({ load, limit, filter, placeholder = 'Cari kode atau nama mata kuliah', ...props }: CariProps<MataKuliahOption> & { filter?: { prodi?: string; tahun_id?: string; semester?: string } }) {
+export function CariMataKuliah({
+  load,
+  limit,
+  filter,
+  placeholder = 'Cari kode atau nama mata kuliah',
+  ...props
+}: CariProps<MataKuliahOption> & { filter?: { prodi?: string; tahun_id?: string; semester?: string } }) {
   const f = JSON.stringify(filter ?? {});
-  const loader = useLoader<MataKuliahOption>(async (s, q, signal, per_page) => (await s.mataKuliah.list({ ...JSON.parse(f), q: q || undefined, per_page }, { signal })).data as MataKuliahOption[], load, limit);
+  const loader = useLoader<MataKuliahOption>(
+    async (s, q, signal, per_page) => (await s.mataKuliah.list({ ...JSON.parse(f), q: q || undefined, per_page }, { signal })).data as MataKuliahOption[],
+    load,
+    limit,
+  );
   return (
     <Combobox<MataKuliahOption>
       {...props}
@@ -218,7 +229,11 @@ export function CariMataKuliah({ load, limit, filter, placeholder = 'Cari kode a
               {m.semester ? ` · Semester ${m.semester}` : ''}
             </span>
           </span>
-          {m.sks_mk != null && <Badge variant="primary" shape="square">{m.sks_mk} SKS</Badge>}
+          {m.sks_mk != null && (
+            <Badge variant="primary" shape="square">
+              {m.sks_mk} SKS
+            </Badge>
+          )}
         </>
       )}
     />
@@ -257,12 +272,12 @@ export function CariSekolah({ load, limit, allowManual = true, placeholder = 'Ke
         s.manual ? (
           <ManualItem nama={s.nama} />
         ) : (
-        <>
-          <span className="u-option-media" data-shape="square">
-            <School size={14} />
-          </span>
-          <OptionContent title={s.nama} meta={[s.jenis, s.kota].filter(Boolean).join(' · ')} />
-        </>
+          <>
+            <span className="u-option-media" data-shape="square">
+              <School size={14} />
+            </span>
+            <OptionContent title={s.nama} meta={[s.jenis, s.kota].filter(Boolean).join(' · ')} />
+          </>
         )
       }
     />
@@ -284,7 +299,13 @@ export interface PerguruanTinggiOption {
  * `r_perguruan_tinggi` lewat `GET /v1/pmb/info/perguruan-tinggi` (publik, minimal 3 huruf; SDK 1.1:
  * pmb.getInfoPerguruanTinggi). Nama yang tidak ada di daftar bisa diketik manual, seperti formulir PMB.
  */
-export function CariPerguruanTinggi({ load, limit, allowManual = true, placeholder = 'Cari atau ketik nama perguruan tinggi', ...props }: CariProps<PerguruanTinggiOption> & { allowManual?: boolean }) {
+export function CariPerguruanTinggi({
+  load,
+  limit,
+  allowManual = true,
+  placeholder = 'Cari atau ketik nama perguruan tinggi',
+  ...props
+}: CariProps<PerguruanTinggiOption> & { allowManual?: boolean }) {
   const base = useLoader<PerguruanTinggiOption>(
     // Lewat request() agar juga jalan dengan SDK 1.0 yang belum punya metode getInfoPerguruanTinggi.
     async (s, q, signal) => (await s.request<PerguruanTinggiOption[]>({ method: 'GET', path: '/v1/pmb/info/perguruan-tinggi', query: { q }, public: true }, { signal })).data,
@@ -372,7 +393,16 @@ export function CariWilayah({ propinsi, placeholder, ...props }: CariProps<Wilay
 }
 
 // ================================================================ Pilihan referensi (Select)
-type PilihProps<V> = { value?: V | null; onValueChange?: (v: V | null) => void; placeholder?: string; className?: string; id?: string; disabled?: boolean; size?: 'sm' | 'md' | 'lg'; 'aria-label'?: string };
+type PilihProps<V> = {
+  value?: V | null;
+  onValueChange?: (v: V | null) => void;
+  placeholder?: string;
+  className?: string;
+  id?: string;
+  disabled?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+  'aria-label'?: string;
+};
 
 /** Pilih program studi, dikelompokkan per fakultas (SDK: referensi.getProdi). */
 export function PilihProdi({ placeholder = 'Semua program studi', ...props }: PilihProps<string>) {
@@ -382,7 +412,7 @@ export function PilihProdi({ placeholder = 'Semua program studi', ...props }: Pi
     label: `${p.kode_jenjang ? p.kode_jenjang + ' ' : ''}${p.nama_prodi}`,
     group: p.nama_fakultas ?? undefined,
   }));
-  return <Select<string> {...props} placeholder={placeholder} options={options} />;
+  return <Pilihan {...props} placeholder={placeholder} options={options} />;
 }
 
 /** Pilih tahun akademik/periode (SDK: referensi.getTahunAkademik). */
@@ -393,6 +423,5 @@ export function PilihTahunAkademik({ placeholder = 'Pilih periode', ...props }: 
     label: String(t.nama_tahun ?? t.tahun_id),
     description: t.aktif === true || t.buka === 'Y' ? 'Aktif' : undefined,
   }));
-  return <Select<string> {...props} placeholder={placeholder} options={options} />;
+  return <Pilihan {...props} placeholder={placeholder} options={options} />;
 }
-

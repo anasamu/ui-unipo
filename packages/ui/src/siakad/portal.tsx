@@ -1,5 +1,7 @@
 'use client';
-import { AnnouncementList, EventCard, NewsGrid, RankedList, type AnnouncementItem, type EventCardItem, type NewsGridProps, type NewsItem } from '../components/content';
+import type * as React from 'react';
+import { AnnouncementList, EventCard, NewsGrid, RankedList, type AnnouncementItem, type AnnouncementVariant, type EventCardItem, type NewsGridProps, type NewsItem } from '../components/content';
+import { teksPolos } from '../components/tata-letak';
 import { Alert } from '../components/display';
 import { pesanGalat, useSiakadQuery } from './provider';
 
@@ -41,7 +43,8 @@ const JENIS_BERITA: Record<string, string> = {
 
 /** Pembentuk URL detail. Bawaan: `/berita/{slug}`, `/pengumuman/{slug}`, `/agenda/{slug}`. */
 export type HrefKonten = (jenis: 'berita' | 'pengumuman' | 'agenda', k: KontenPortal) => string | undefined;
-const hrefBawaan: HrefKonten = (jenis, k) => `/${jenis}/${k.slug ?? k.id}`;
+export const hrefKontenBawaan: HrefKonten = (jenis, k) => `/${jenis}/${k.slug ?? k.id}`;
+const hrefBawaan = hrefKontenBawaan;
 
 export function keBerita(k: KontenPortal, href: HrefKonten = hrefBawaan): NewsItem {
   return {
@@ -137,32 +140,46 @@ export interface PengumumanPortalProps extends Umum {
   prioritas?: string;
   /** Sertakan yang sudah lewat masa berlaku. */
   kedaluwarsa?: boolean;
+  /** ID atau slug kategori. */
+  kategori?: string;
+  /** daftar (bawaan), kartu, ringkas, sorotan, linimasa. */
+  variant?: AnnouncementVariant;
+  /** Teks saat kosong. */
+  empty?: React.ReactNode;
 }
 
-/** Pengumuman dari `portal.getPengumuman`: tersemat di atas, prioritas berwarna, masa berlaku. */
-export function PengumumanPortal({ situs, turunan, jumlah = 5, href = hrefBawaan, className, prioritas, kedaluwarsa }: PengumumanPortalProps) {
+/** Ubah pengumuman portal ke AnnouncementItem (sematan di atas, cuplikan dari ringkasan/isi). */
+export function kePengumuman(k: KontenPortal & Record<string, any>, href: HrefKonten = hrefBawaan): AnnouncementItem {
+  return {
+    id: k.id,
+    title: k.judul,
+    href: href('pengumuman', k),
+    number: k.nomor,
+    priority: k.prioritas ?? undefined,
+    date: k.terbit_pada,
+    until: k.berlaku_sampai,
+    pinned: !!k.sematkan,
+    excerpt: k.ringkasan || (k.isi ? teksPolos(k.isi).slice(0, 220) : undefined),
+    category: k.kategori?.nama,
+    attachment: Boolean(k.lampiran || k.lampiran_media_id),
+    source: k.situs && typeof k.situs === 'object' && k.situs.jenis !== 'universitas' ? (k.situs.singkatan ?? k.situs.nama) : undefined,
+  };
+}
+
+/** Pengumuman dari `portal.getPengumuman`: tersemat di atas, prioritas berwarna, masa berlaku, lima varian tampilan. */
+export function PengumumanPortal({ situs, turunan, jumlah = 5, href = hrefBawaan, className, prioritas, kedaluwarsa, kategori, variant, empty }: PengumumanPortalProps) {
   const q = {
     situs,
     turunan: turunan ? '1' : undefined,
     per_page: jumlah,
     prioritas,
+    kategori,
     kedaluwarsa: kedaluwarsa ? '1' : undefined,
   };
   const { data, loading, error, refetch } = useSiakadQuery<KontenPortal[]>(['portal-pengumuman', q], (s, signal) => s.portal.getPengumuman(q, { signal }) as never, { staleTime: 120_000 });
   if (error) return <Galat error={error} refetch={refetch} />;
-  const items: AnnouncementItem[] = (data ?? [])
-    .map((k) => ({
-      id: k.id,
-      title: k.judul,
-      href: href('pengumuman', k),
-      number: k.nomor,
-      priority: k.prioritas ?? undefined,
-      date: k.terbit_pada,
-      until: k.berlaku_sampai,
-      pinned: !!k.sematkan,
-    }))
-    .sort((a, b) => Number(b.pinned) - Number(a.pinned));
-  return <AnnouncementList className={className} loading={loading && !data} items={items} />;
+  const items = (data ?? []).map((k) => kePengumuman(k, href)).sort((a, b) => Number(b.pinned) - Number(a.pinned));
+  return <AnnouncementList className={className} variant={variant} loading={loading && !data} items={items} empty={empty} />;
 }
 
 // ================================================================ Agenda

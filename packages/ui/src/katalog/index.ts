@@ -11,3 +11,4 @@ export * from './kelola';
 export * from './modul';
 export * from './wizard';
 export { IkonKatalog } from './ikon';
+export * from './formulir-fitur';

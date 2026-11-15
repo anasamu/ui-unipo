@@ -5,7 +5,8 @@ import { cn } from '../lib/cn';
 import { Button, Skeleton } from '../components/actions';
 import { Alert, Avatar } from '../components/display';
 import { Field, Input, Textarea } from '../components/forms';
-import { Combobox, Select } from '../components/select';
+import { Combobox, OptionContent } from '../components/select';
+import { Pilihan } from '../components/formulir';
 import { FormGrid, Wizard, WizardReview, type WizardStep } from '../components/wizard';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { KodeLaporan } from '../components/galat';
@@ -60,7 +61,8 @@ const kelompokDari = (kolom: string): Kelompok => (Object.keys(KELOMPOK) as Kelo
 
 const ALASAN: Record<string, string> = { kosong: 'Belum diisi', tidak_sah: 'Format belum sesuai', ganda: 'Sama dengan data orang lain' };
 
-const PETUNJUK: Record<
+/** Petunjuk isian data induk (NIK, NISN, RT/RW, kode pos, HP, …): keterangan, inputMode, panjang, dan penyaring karakter. */
+export const PETUNJUK_ISIAN: Record<
   string,
   {
     description?: string;
@@ -89,10 +91,55 @@ const PETUNJUK: Record<
   kecamatan: { span: true },
 };
 
-interface Wilayah {
+export interface Wilayah {
   kode: string;
   nama: string;
   kabupaten?: string;
+}
+
+export interface PilihKecamatanProps {
+  /** Kode wilayah kecamatan PDDikti. */
+  value?: string | null;
+  /** Teks awal untuk nilai yang sudah ada, mis. "Kec. Marisa, Kab. Pohuwato". */
+  labelAwal?: string | null;
+  onValueChange?: (kode: string | null, label: string | null) => void;
+  id?: string;
+  disabled?: boolean;
+  className?: string;
+}
+
+/** Cari kecamatan PDDikti (GET /v1/kelengkapan/referensi/wilayah, publik): ketik nama kecamatan atau kabupaten. */
+export function PilihKecamatan({ value, labelAwal, onValueChange, id, disabled, className }: PilihKecamatanProps) {
+  const siakad = useSiakad();
+  const awal = React.useMemo<Wilayah | null>(() => {
+    if (!value) return null;
+    const [nama, kabupaten] = String(labelAwal ?? value).split(/,\s*/);
+    return { kode: value, nama, kabupaten };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const [wil, setWil] = React.useState<Wilayah | null>(awal);
+  const load = React.useCallback(
+    async (q: string, signal: AbortSignal) => (await siakad.request<Wilayah[]>({ method: 'GET', path: '/v1/kelengkapan/referensi/wilayah', query: { q }, public: true }, { signal })).data,
+    [siakad],
+  );
+  return (
+    <Combobox<Wilayah>
+      id={id}
+      disabled={disabled}
+      className={className}
+      loadItems={load}
+      minQueryLength={3}
+      hintText="Ketik minimal 3 huruf nama kecamatan atau kabupaten."
+      placeholder="Cari kecamatan"
+      value={value ? wil : null}
+      itemToString={(w) => w.nama}
+      itemKey={(w) => w.kode}
+      renderItem={(w) => <OptionContent title={w.nama} meta={w.kabupaten} />}
+      onValueChange={(w) => {
+        setWil(w);
+        onValueChange?.(w?.kode ?? null, w ? `${w.nama}${w.kabupaten ? `, ${w.kabupaten}` : ''}` : null);
+      }}
+    />
+  );
 }
 
 function IsianKelengkapan({
@@ -108,13 +155,7 @@ function IsianKelengkapan({
   error?: string;
   jenisTinggal: Array<{ value: string; label: string }>;
 }) {
-  const siakad = useSiakad();
-  const p = PETUNJUK[isian.kolom] ?? {};
-  const [wil, setWil] = React.useState<Wilayah | null>(null);
-  const loadWil = React.useCallback(
-    async (q: string, signal: AbortSignal) => (await siakad.request<Wilayah[]>({ method: 'GET', path: '/v1/kelengkapan/referensi/wilayah', query: { q }, public: true }, { signal })).data,
-    [siakad],
-  );
+  const p = PETUNJUK_ISIAN[isian.kolom] ?? {};
   const desc = (
     <>
       {isian.alasan !== 'kosong' && <span className="u-kl-alasan">{ALASAN[isian.alasan] ?? isian.alasan}. </span>}
@@ -122,29 +163,8 @@ function IsianKelengkapan({
     </>
   );
   let control: React.ReactNode;
-  if (isian.kolom === 'kecamatan')
-    control = (
-      <Combobox<Wilayah>
-        loadItems={loadWil}
-        minQueryLength={3}
-        hintText="Ketik minimal 3 huruf nama kecamatan atau kabupaten."
-        placeholder="Cari kecamatan"
-        value={wil}
-        itemToString={(w) => w.nama}
-        itemKey={(w) => w.kode}
-        renderItem={(w) => (
-          <span style={{ display: 'grid' }}>
-            <span>{w.nama}</span>
-            <span style={{ fontSize: 12, color: 'var(--u-muted-foreground)' }}>{w.kabupaten}</span>
-          </span>
-        )}
-        onValueChange={(w) => {
-          setWil(w);
-          onChange(w?.kode ?? '', w ? `${w.nama}${w.kabupaten ? `, ${w.kabupaten}` : ''}` : undefined);
-        }}
-      />
-    );
-  else if (isian.kolom === 'jenis_tinggal') control = <Select options={jenisTinggal} value={value || null} onValueChange={(v) => onChange(v ?? '', jenisTinggal.find((o) => o.value === v)?.label)} />;
+  if (isian.kolom === 'kecamatan') control = <PilihKecamatan value={value || null} onValueChange={(k, l) => onChange(k ?? '', l ?? undefined)} />;
+  else if (isian.kolom === 'jenis_tinggal') control = <Pilihan options={jenisTinggal} value={value || null} onValueChange={(v) => onChange(v ?? '', jenisTinggal.find((o) => o.value === v)?.label)} />;
   else if (p.multiline) control = <Textarea rows={2} value={value} onChange={(e) => onChange(e.target.value)} />;
   else
     control = (

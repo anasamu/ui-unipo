@@ -438,6 +438,10 @@ const ROUTES: Array<[RegExp, (u: URL, init?: RequestInit) => unknown]> = [
 ];
 
 /** Rute tambahan dari halaman demo lain (tabel, status layanan, kalender, …). */
+/** Balasan rute: lanjut ke rute berikutnya yang cocok. */
+export const LEWATI = Symbol('lewati');
+/** Balasan rute: langsung ke server tiruan katalog (validasi 422 dari skema, simpan di memori). */
+export const KE_CADANGAN = Symbol('ke-cadangan');
 export function tambahRute(pola: RegExp, balas: (u: URL, init?: RequestInit) => unknown) {
   ROUTES.unshift([pola, balas]);
 }
@@ -452,12 +456,18 @@ export const mockFetch: typeof fetch = async (input, init) => {
   const u = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
   await new Promise((r) => setTimeout(r, 180 + Math.random() * 220));
   if (init?.signal?.aborted) throw new DOMException('Dibatalkan', 'AbortError');
-  const route = ROUTES.find(([re]) => re.test(u.pathname));
-  const balas = route?.[1] ?? cadangan;
-  if (!balas) return new Response(JSON.stringify({ error: { message: `Contoh belum ada untuk ${u.pathname}` } }), { status: 404, headers: { 'content-type': 'application/json' } });
-  const out = (await balas(u, init)) as { __status?: number; __mentah?: Uint8Array<ArrayBuffer> } & Record<string, unknown>;
-  if (out?.__mentah) return new Response(out.__mentah, { status: 200, headers: { 'content-type': 'application/octet-stream' } });
-  const { __status = 200, ...body } = out ?? {};
+  let out: unknown = LEWATI;
+  for (const [re, balas] of ROUTES) {
+    if (!re.test(u.pathname)) continue;
+    out = await balas(u, init);
+    if (out !== LEWATI) break;
+  }
+  if ((out === LEWATI || out === KE_CADANGAN) && cadangan) out = await cadangan(u, init);
+  if (out === LEWATI || out === KE_CADANGAN)
+    return new Response(JSON.stringify({ error: { message: `Contoh belum ada untuk ${u.pathname}` } }), { status: 404, headers: { 'content-type': 'application/json' } });
+  if ((out as { __mentah?: Uint8Array<ArrayBuffer> })?.__mentah)
+    return new Response((out as { __mentah: Uint8Array<ArrayBuffer> }).__mentah, { status: 200, headers: { 'content-type': 'application/octet-stream' } });
+  const { __status = 200, ...body } = (out ?? {}) as { __status?: number } & Record<string, unknown>;
   return new Response(JSON.stringify(body), { status: __status, headers: { 'content-type': 'application/json' } });
 };
 

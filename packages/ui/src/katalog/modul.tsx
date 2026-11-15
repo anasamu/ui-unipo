@@ -19,6 +19,7 @@ import { useKatalog, useModulKatalog, useModulTerlihat } from './katalog';
 import { DetailBaris, NilaiSel } from './tampil';
 import type { Baris, ModulIndeks, Operasi } from './tipe';
 import { Field } from '../components/forms';
+import { GridForm } from '../components/formulir';
 import { DataTable } from '../components/data-table';
 
 // ================================================================ Menu
@@ -72,23 +73,19 @@ export function DaftarModul({ grup, onPilih, href, className }: DaftarModulProps
           <div className="u-daftar-modul-kisi">
             {modul.map((m, i) => (
               <Animasi key={m.key} jenis="masuk" tunda={i} pemicu="terlihat">
-              <Card
-                interactive
-                className="u-kartu-modul"
-                render={href ? <a href={href(m.key)} /> : <button type="button" onClick={() => onPilih?.(m)} />}
-              >
-                <IkonKotak nada={ADEGAN[m.key]?.nada ?? ADEGAN[m.group]?.nada} ukuran="lg">
-                  <IkonKatalog nama={m.icon} />
-                </IkonKotak>
-                <span className="u-kartu-modul-teks">
-                  <b>{m.title}</b>
-                  <small>{m.desc}</small>
-                  <span className="u-kartu-modul-meta">
-                    {m.sumber.length} data · {m.jumlahOperasi} operasi
+                <Card interactive className="u-kartu-modul" render={href ? <a href={href(m.key)} /> : <button type="button" onClick={() => onPilih?.(m)} />}>
+                  <IkonKotak nada={ADEGAN[m.key]?.nada ?? ADEGAN[m.group]?.nada} ukuran="lg">
+                    <IkonKatalog nama={m.icon} />
+                  </IkonKotak>
+                  <span className="u-kartu-modul-teks">
+                    <b>{m.title}</b>
+                    <small>{m.desc}</small>
+                    <span className="u-kartu-modul-meta">
+                      {m.sumber.length} data · {m.jumlahOperasi} operasi
+                    </span>
                   </span>
-                </span>
-                <ChevronRight className="u-kartu-modul-panah" aria-hidden />
-              </Card>
+                  <ChevronRight className="u-kartu-modul-panah" aria-hidden />
+                </Card>
               </Animasi>
             ))}
           </div>
@@ -134,7 +131,11 @@ export function HalamanModul({ modul: key, sumber: sumberProp, onSumberChange, o
     if (!perTag.has(t)) perTag.set(t, []);
     perTag.get(t)!.push({ id: s.id, title: s.title });
   }
-  if (mandiri.length) perTag.set('Operasi lain', mandiri.map((o) => ({ id: `op:${o.id}`, title: judulOperasi({ sum: o.title, path: o.id }), op: true })));
+  if (mandiri.length)
+    perTag.set(
+      'Operasi lain',
+      mandiri.map((o) => ({ id: `op:${o.id}`, title: judulOperasi({ sum: o.title, path: o.id }), op: true })),
+    );
   return (
     <div className={cn('u-halaman-modul', className)}>
       <header className="u-halaman-modul-head">
@@ -150,7 +151,7 @@ export function HalamanModul({ modul: key, sumber: sumberProp, onSumberChange, o
           <h1>{info.title}</h1>
           <p>{info.desc}</p>
         </div>
-        <Ilustrasi nama={ADEGAN[info.key] ? info.key : info.group} lebar={150} className="u-halaman-modul-ilus" />
+        <Ilustrasi nama={ADEGAN[info.key] ? info.key : info.group} lebar={150} tokoh={false} className="u-halaman-modul-ilus" />
       </header>
       <div className="u-halaman-modul-isi">
         <nav className="u-halaman-modul-nav" aria-label={`Data ${info.title}`}>
@@ -171,7 +172,19 @@ export function HalamanModul({ modul: key, sumber: sumberProp, onSumberChange, o
           ))}
         </nav>
         <div className="u-halaman-modul-konten">
-          {st.loading ? <Skeleton height={320} /> : st.error ? <GalatApi error={st.error} /> : pertama?.startsWith('op:') ? op ? <FormOperasi op={op} key={op.id} /> : null : pertama ? <KelolaSumber key={pertama} sumber={pertama} /> : <Empty title="Belum ada data di modul ini" bordered />}
+          {st.loading ? (
+            <Skeleton height={320} />
+          ) : st.error ? (
+            <GalatApi error={st.error} />
+          ) : pertama?.startsWith('op:') ? (
+            op ? (
+              <FormOperasi op={op} key={op.id} />
+            ) : null
+          ) : pertama ? (
+            <KelolaSumber key={pertama} sumber={pertama} />
+          ) : (
+            <Empty title="Belum ada data di modul ini" bordered />
+          )}
         </div>
       </div>
     </div>
@@ -201,7 +214,14 @@ export function FormOperasi({ op, nilaiPath, onSelesai }: { op: Operasi; nilaiPa
     try {
       const query: Record<string, unknown> = { ...nilaiPath };
       for (const p of params) if (nilaiP[p.nm] !== undefined && nilaiP[p.nm] !== '') query[p.nm] = nilaiP[p.nm];
-      const r = await siakad.request({ method: op.m, path: op.path, query: query as never, body: body ?? (op.m === 'POST' ? {} : undefined), multipart: typeof FormData !== 'undefined' && body instanceof FormData, public: Boolean(op.pub) });
+      const r = await siakad.request({
+        method: op.m,
+        path: op.path,
+        query: query as never,
+        body: body ?? (op.m === 'POST' ? {} : undefined),
+        multipart: typeof FormData !== 'undefined' && body instanceof FormData,
+        public: Boolean(op.pub),
+      });
       setHasil({ data: r.data, meta: r.meta });
       onSelesai?.(r.data);
     } catch (e) {
@@ -216,10 +236,7 @@ export function FormOperasi({ op, nilaiPath, onSelesai }: { op: Operasi; nilaiPa
         <div>
           <h2>{judulOperasi(op)}</h2>
           <p>
-            <Badge variant={op.m === 'GET' ? 'info' : op.m === 'DELETE' ? 'danger' : 'primary'}>
-              {op.m}
-            </Badge>{' '}
-            <span className="u-mono">{op.path}</span>
+            <Badge variant={op.m === 'GET' ? 'info' : op.m === 'DELETE' ? 'danger' : 'primary'}>{op.m}</Badge> <span className="u-mono">{op.path}</span>
           </p>
           {op.ds && <p className="u-form-operasi-ds">{op.ds}</p>}
         </div>
@@ -232,7 +249,7 @@ export function FormOperasi({ op, nilaiPath, onSelesai }: { op: Operasi; nilaiPa
         </div>
       </header>
       {params.length > 0 && (
-        <div className="u-formulir-skema" data-columns={2}>
+        <GridForm kolom={2} className="u-formulir-skema">
           {params.map((p) => (
             <Field key={p.nm} label={labelKolom(p.nm)} required={Boolean(p.rq)} description={p.ds} error={galatP[p.nm] ? rapikanGalat(galatP[p.nm]) : undefined}>
               <IsianSkema
@@ -247,7 +264,7 @@ export function FormOperasi({ op, nilaiPath, onSelesai }: { op: Operasi; nilaiPa
               />
             </Field>
           ))}
-        </div>
+        </GridForm>
       )}
       {op.b && <FormulirSkema skema={op.b.s} form={form} />}
       <div className="u-form-operasi-aksi">
@@ -293,7 +310,15 @@ interface ButirFitur {
 }
 
 /** Kotak cari semua fitur (modul, sumber data, operasi) di katalog; cocok untuk palet perintah ⌘K. */
-export function PencarianFitur({ onPilih, placeholder = 'Cari fitur: beasiswa, KRS, peminjaman ruang…', className }: { onPilih: (b: { modul: string; sumber?: string; operasi?: string }) => void; placeholder?: string; className?: string }) {
+export function PencarianFitur({
+  onPilih,
+  placeholder = 'Cari fitur: beasiswa, KRS, peminjaman ruang…',
+  className,
+}: {
+  onPilih: (b: { modul: string; sumber?: string; operasi?: string }) => void;
+  placeholder?: string;
+  className?: string;
+}) {
   const grup = useModulTerlihat();
   const items = React.useMemo<ButirFitur[]>(
     () =>

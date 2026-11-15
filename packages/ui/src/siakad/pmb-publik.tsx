@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import { Pilihan } from '../components/formulir';
 import {
   ArrowRight,
   Award,
@@ -401,10 +402,16 @@ export function IkonKeunggulan({ nama }: { nama?: string | null }) {
 // ================================================================ Hook data
 export const useGelombangPmb = () => useSiakadQuery<GelombangPmb[]>(['pmb-info', 'gelombang'], (s, signal) => s.pmb.getInfoGelombang({}, { signal }) as never, { staleTime: 60_000 });
 export const useGelombangDetailPmb = (id?: string | number | null) =>
-  useSiakadQuery<GelombangDetailPmb>(['pmb-info', 'gelombang', String(id)], (s, signal) => s.pmb.getInfoGelombangById(id!, {}, { signal }) as never, { enabled: id != null && id !== '', staleTime: 60_000 });
+  useSiakadQuery<GelombangDetailPmb>(['pmb-info', 'gelombang', String(id)], (s, signal) => s.pmb.getInfoGelombangById(id!, {}, { signal }) as never, {
+    enabled: id != null && id !== '',
+    staleTime: 60_000,
+  });
 export const useJalurPmb = () => useSiakadQuery<JalurPmb[]>(['pmb-info', 'jalur'], (s, signal) => s.pmb.getInfoJalur({}, { signal }) as never, { staleTime: 300_000 });
 export const usePengumumanPmb = (q: { page?: number; per_page?: number; gelombang_id?: number } = {}) =>
-  useSiakadQuery<PengumumanPmb[]>(['pmb-info', 'pengumuman', q], (s, signal) => s.pmb.getInfoPengumuman({ ...q, gelombang_id: q.gelombang_id ? String(q.gelombang_id) : undefined }, { signal }) as never);
+  useSiakadQuery<PengumumanPmb[]>(
+    ['pmb-info', 'pengumuman', q],
+    (s, signal) => s.pmb.getInfoPengumuman({ ...q, gelombang_id: q.gelombang_id ? String(q.gelombang_id) : undefined }, { signal }) as never,
+  );
 export const usePengumumanDetailPmb = (slug?: string) =>
   useSiakadQuery<PengumumanPmb>(['pmb-info', 'pengumuman', slug], (s, signal) => s.pmb.getInfoPengumumanBySlug(slug!, {}, { signal }) as never, { enabled: !!slug });
 export const useLandingPmb = () => useSiakadQuery<LandingPmb>(['pmb-info', 'landing'], (s, signal) => s.pmb.getInfoLanding({}, { signal }) as never, { staleTime: 300_000 });
@@ -449,7 +456,8 @@ export function useDataLandingPmb() {
         );
       }),
     );
-    if (!m.size) info.forEach((i) => m.set(i.kode_prodi, { kode_prodi: i.kode_prodi, nama_prodi: i.nama_prodi ?? i.kode_prodi, jenjang: null, kode_fakultas: null, kuota: null, jumlah_peminat: 0, info: i }));
+    if (!m.size)
+      info.forEach((i) => m.set(i.kode_prodi, { kode_prodi: i.kode_prodi, nama_prodi: i.nama_prodi ?? i.kode_prodi, jenjang: null, kode_fakultas: null, kuota: null, jumlah_peminat: 0, info: i }));
     return [...m.values()].sort((a, b) => (a.nama_prodi ?? '').localeCompare(b.nama_prodi ?? ''));
   }, [detail.data, landing.data]);
   const adaBiaya = new Set((detail.data ?? []).filter((d) => d.biaya.length).map((d) => d.id));
@@ -471,7 +479,21 @@ export function useDataLandingPmb() {
 
 // ================================================================ Tombol daftar
 /** Tombol utama: "Daftar sekarang" bagi pengunjung, "Buka dasbor saya" bagi pendaftar yang sudah masuk. */
-export function TombolDaftarPmb({ gelombang, label, size = 'lg', variant = 'primary', fullWidth, className }: { gelombang?: GelombangPmb; label?: React.ReactNode; size?: 'md' | 'lg' | 'xl'; variant?: 'primary' | 'secondary' | 'outline' | 'soft'; fullWidth?: boolean; className?: string }) {
+export function TombolDaftarPmb({
+  gelombang,
+  label,
+  size = 'lg',
+  variant = 'primary',
+  fullWidth,
+  className,
+}: {
+  gelombang?: GelombangPmb;
+  label?: React.ReactNode;
+  size?: 'md' | 'lg' | 'xl';
+  variant?: 'primary' | 'secondary' | 'outline' | 'soft';
+  fullWidth?: boolean;
+  className?: string;
+}) {
   const { pendaftar, rute } = usePmb();
   const href = pendaftar ? rute.dasbor : rute.daftar(gelombang?.sedang_buka ? gelombang.id : undefined);
   return (
@@ -577,7 +599,12 @@ export function HeroPmb({ hero: h, gelombang: g, biaya, jalur = [], jumlahProdi 
           loading={loading}
           className="u-pmb-fakta"
           items={[
-            { icon: <CalendarDays aria-hidden />, label: g?.sedang_buka ? 'Pendaftaran dibuka' : 'Pendaftaran', value: g ? `s.d. ${tanggalPmb(g.pendaftaran.selesai)}` : 'Segera diumumkan', hint: g ? (sisa != null ? `${g.nama} · tinggal ${sisa} hari` : g.nama) : undefined },
+            {
+              icon: <CalendarDays aria-hidden />,
+              label: g?.sedang_buka ? 'Pendaftaran dibuka' : 'Pendaftaran',
+              value: g ? `s.d. ${tanggalPmb(g.pendaftaran.selesai)}` : 'Segera diumumkan',
+              hint: g ? (sisa != null ? `${g.nama} · tinggal ${sisa} hari` : g.nama) : undefined,
+            },
             { icon: <Wallet aria-hidden />, label: 'Biaya formulir', value: rupiahAtauGratis(nominal), hint: g ? 'Bayar lewat VA atau QRIS' : undefined },
             { icon: <Route aria-hidden />, label: 'Jalur masuk', value: jalur.length ? `${jalur.length} jalur` : '-', hint: jalur.slice(0, 3).join(', ') || undefined },
             { icon: <GraduationCap aria-hidden />, label: 'Program studi', value: jumlahProdi ? `${jumlahProdi} prodi` : '-', hint: g ? `Pilih hingga ${g.maks_pilihan} prodi` : undefined },
@@ -598,7 +625,9 @@ export function SekilasPmb({ landing, id = 'sekilas' }: { landing?: LandingPmb; 
     <Section id={id} className="u-pmb-bagian" eyebrow={`Mengenal ${kampus.singkatan}`} title={`Kenapa kuliah di ${kampus.singkatan}?`}>
       <Stack gap={8}>
         {!!p.statistik?.length && <StatStrip items={p.statistik.map((s) => ({ value: s.nilai, label: s.label }))} />}
-        {!!p.keunggulan?.length && <FeatureGrid columns={p.keunggulan.length % 3 === 0 ? 3 : 2} items={p.keunggulan.map((k) => ({ icon: <IkonKeunggulan nama={k.ikon} />, title: k.judul, text: k.teks ?? undefined }))} />}
+        {!!p.keunggulan?.length && (
+          <FeatureGrid columns={p.keunggulan.length % 3 === 0 ? 3 : 2} items={p.keunggulan.map((k) => ({ icon: <IkonKeunggulan nama={k.ikon} />, title: k.judul, text: k.teks ?? undefined }))} />
+        )}
         {!!p.galeri?.length && <Gallery items={p.galeri.map((g) => ({ src: g.gambar, caption: g.judul ?? undefined, alt: g.judul ?? '' }))} />}
       </Stack>
     </Section>
@@ -614,7 +643,8 @@ function statusJadwal(j: JadwalGelombangPmb, kini: number): 'done' | 'active' | 
 /** Jadwal gelombang ke butir garis waktu (pendaftaran ditambahkan bila tidak ada di jadwal). */
 export function jadwalKeLinimasa(g: GelombangDetailPmb | GelombangPmb, jadwal: JadwalGelombangPmb[] = []): TimelineItem[] {
   const j = [...jadwal];
-  if (!j.some((x) => x.tahap === 'pendaftaran') && g.pendaftaran.mulai) j.unshift({ tahap: 'pendaftaran', judul: 'Pendaftaran online', mulai: g.pendaftaran.mulai, selesai: g.pendaftaran.selesai, lokasi: null, keterangan: null });
+  if (!j.some((x) => x.tahap === 'pendaftaran') && g.pendaftaran.mulai)
+    j.unshift({ tahap: 'pendaftaran', judul: 'Pendaftaran online', mulai: g.pendaftaran.mulai, selesai: g.pendaftaran.selesai, lokasi: null, keterangan: null });
   if (!jadwal.length) {
     if (g.perlu_tes && g.ujian.mulai) j.push({ tahap: 'tes', judul: 'Ujian seleksi', mulai: g.ujian.mulai, selesai: g.ujian.selesai, lokasi: null, keterangan: null });
     if (g.pengumuman_mulai) j.push({ tahap: 'pengumuman', judul: 'Pengumuman hasil', mulai: g.pengumuman_mulai, selesai: null, lokasi: null, keterangan: null });
@@ -692,7 +722,13 @@ export function JalurJadwalPmb({ jalur = [], gelombang = [], loading, id = 'jalu
   const [pilihG, setPilihG] = React.useState<number | null>(null);
   const g = tersaring.find((x) => x.id === pilihG) ?? tersaring[0];
   return (
-    <Section id={id} className="u-pmb-bagian" eyebrow="Jalur & jadwal" title="Jalur masuk dan tanggal penting" description="Setiap jalur punya syarat dan tahapan sendiri. Pilih jalur untuk melihat gelombang dan jadwalnya.">
+    <Section
+      id={id}
+      className="u-pmb-bagian"
+      eyebrow="Jalur & jadwal"
+      title="Jalur masuk dan tanggal penting"
+      description="Setiap jalur punya syarat dan tahapan sendiri. Pilih jalur untuk melihat gelombang dan jadwalnya."
+    >
       <Grid min={220} gap={4}>
         {loading && [1, 2, 3, 4].map((i) => <Skeleton key={i} height={150} />)}
         {jalur.map((j, i) => {
@@ -725,19 +761,26 @@ export function JalurJadwalPmb({ jalur = [], gelombang = [], loading, id = 'jalu
           );
         })}
       </Grid>
-      <Split id="gelombang" className="u-pmb-gelombang-split" asideWidth={460} breakpoint={960} gap={8} aside={
-        <Stack gap={3}>
-          <div>
-            <Text as="div" weight="bold" size="lg">
-              Jadwal penting
-            </Text>
-            <Text size="sm" tone="muted">
-              {g ? g.nama : 'Pilih gelombang'}
-            </Text>
-          </div>
-          {g ? <LinimasaGelombang g={g} /> : <Empty title="Pilih gelombang" />}
-        </Stack>
-      }>
+      <Split
+        id="gelombang"
+        className="u-pmb-gelombang-split"
+        asideWidth={460}
+        breakpoint={960}
+        gap={8}
+        aside={
+          <Stack gap={3}>
+            <div>
+              <Text as="div" weight="bold" size="lg">
+                Jadwal penting
+              </Text>
+              <Text size="sm" tone="muted">
+                {g ? g.nama : 'Pilih gelombang'}
+              </Text>
+            </div>
+            {g ? <LinimasaGelombang g={g} /> : <Empty title="Pilih gelombang" />}
+          </Stack>
+        }
+      >
         <Stack gap={3}>
           <Text as="div" weight="bold" size="lg">
             Gelombang {pilihJalur ? jalur.find((j) => j.id === pilihJalur)?.nama : 'pendaftaran'}
@@ -887,7 +930,9 @@ export function ProdiPmb({ prodi = [], loading, id = 'prodi', batas = 8 }: { pro
       description="Pilih program studi untuk melihat keunggulan, prospek karier, dan gelar lulusannya."
       actions={
         <Cluster gap={2}>
-          {daftarJenjang.length > 1 && <SegmentedControl value={jenjang} onValueChange={(v) => setJenjang(v)} options={[{ value: 'semua', label: 'Semua' }, ...daftarJenjang.map((j) => ({ value: j, label: j }))]} />}
+          {daftarJenjang.length > 1 && (
+            <SegmentedControl value={jenjang} onValueChange={(v) => setJenjang(v)} options={[{ value: 'semua', label: 'Semua' }, ...daftarJenjang.map((j) => ({ value: j, label: j }))]} />
+          )}
           <InputGroup start={<Search aria-hidden />} className="u-pmb-cari">
             <Input value={cari} onChange={(e) => setCari(e.target.value)} placeholder="Cari prodi atau karier…" aria-label="Cari program studi" />
           </InputGroup>
@@ -955,7 +1000,13 @@ export function SimulasiBiayaPmb({ gelombang = [], simulasi, loading, id = 'biay
   const bisaCicil = item.filter((b, i) => b.bisa_dicicil && (b.wajib || opsional[kunci(b, i)]));
 
   return (
-    <Section id={id} className="u-pmb-bagian" eyebrow="Biaya" title="Rincian dan simulasi biaya" description="Komponen biaya sesuai ketetapan panitia untuk setiap gelombang. Pilih gelombang dan program studi untuk melihat perkiraan biaya awal.">
+    <Section
+      id={id}
+      className="u-pmb-bagian"
+      eyebrow="Biaya"
+      title="Rincian dan simulasi biaya"
+      description="Komponen biaya sesuai ketetapan panitia untuk setiap gelombang. Pilih gelombang dan program studi untuk melihat perkiraan biaya awal."
+    >
       {loading && <Skeleton height={380} />}
       {!loading && !g && <Empty bordered title="Biaya diumumkan bersama gelombang" description="Simulasi tersedia setelah panitia membuka gelombang pendaftaran." />}
       {g && (
@@ -1018,7 +1069,14 @@ export function SimulasiBiayaPmb({ gelombang = [], simulasi, loading, id = 'biay
                   </label>
                   <label className="u-pmb-label">
                     <span>Program studi</span>
-                    <Select value={kodeProdi || null} onValueChange={setProdi} placeholder={d.loading ? 'Memuat…' : 'Belum ada prodi'} disabled={!daftarProdi.length} options={daftarProdi.map((p) => ({ value: p.kode_prodi, label: hurufJudul(p.nama_prodi ?? p.kode_prodi) }))} />
+                    <Pilihan
+                      tampilan={daftarProdi.length > 8 ? 'cari' : 'daftar'}
+                      value={kodeProdi || null}
+                      onValueChange={setProdi}
+                      placeholder={d.loading ? 'Memuat…' : 'Belum ada prodi'}
+                      disabled={!daftarProdi.length}
+                      options={daftarProdi.map((p) => ({ value: p.kode_prodi, label: hurufJudul(p.nama_prodi ?? p.kode_prodi) }))}
+                    />
                   </label>
                 </Grid>
                 <Stack gap={3}>
@@ -1044,10 +1102,16 @@ export function SimulasiBiayaPmb({ gelombang = [], simulasi, loading, id = 'biay
                       return (
                         <li key={k} data-mati={!aktif || undefined}>
                           <label>
-                            {b.wajib ? <BadgeCheck aria-hidden className="u-pmb-wajib" /> : <Checkbox checked={aktif} onCheckedChange={(c) => setOpsional({ ...opsional, [k]: !!c })} aria-label={`Sertakan ${b.nama}`} />}
+                            {b.wajib ? (
+                              <BadgeCheck aria-hidden className="u-pmb-wajib" />
+                            ) : (
+                              <Checkbox checked={aktif} onCheckedChange={(c) => setOpsional({ ...opsional, [k]: !!c })} aria-label={`Sertakan ${b.nama}`} />
+                            )}
                             <span>
                               <strong>{b.nama}</strong>
-                              <small>{[b.wajib ? 'Wajib saat daftar ulang' : 'Opsional', b.kode_prodi && 'khusus prodi ini', b.bisa_dicicil && 'bisa dicicil', b.keterangan].filter(Boolean).join(' · ')}</small>
+                              <small>
+                                {[b.wajib ? 'Wajib saat daftar ulang' : 'Opsional', b.kode_prodi && 'khusus prodi ini', b.bisa_dicicil && 'bisa dicicil', b.keterangan].filter(Boolean).join(' · ')}
+                              </small>
                             </span>
                           </label>
                           <span className="u-pmb-nominal">{formatRupiah(b.nominal)}</span>
@@ -1075,11 +1139,7 @@ export function SimulasiBiayaPmb({ gelombang = [], simulasi, loading, id = 'biay
                           <button key={p.nama} type="button" className="u-pmb-potongan" aria-pressed={potongan === v} onClick={() => setPotongan(v)}>
                             <span>
                               {p.nama}
-                              {p.persen > 0 && (
-                                <Badge variant="warning">
-                                  -{p.persen}%
-                                </Badge>
-                              )}
+                              {p.persen > 0 && <Badge variant="warning">-{p.persen}%</Badge>}
                             </span>
                             {p.keterangan && <small>{p.keterangan}</small>}
                           </button>
@@ -1122,7 +1182,17 @@ export function PengumumanTerbaruPmb({ jumlah = 4, id = 'pengumuman' }: { jumlah
   const { rute } = usePmb();
   const q = usePengumumanPmb({ per_page: jumlah });
   return (
-    <Section id={id} className="u-pmb-bagian" eyebrow="Pengumuman" title="Informasi resmi panitia" actions={<TautanPmb href={rute.pengumuman()} className="u-pmb-tautan">Semua pengumuman <ArrowRight aria-hidden /></TautanPmb>}>
+    <Section
+      id={id}
+      className="u-pmb-bagian"
+      eyebrow="Pengumuman"
+      title="Informasi resmi panitia"
+      actions={
+        <TautanPmb href={rute.pengumuman()} className="u-pmb-tautan">
+          Semua pengumuman <ArrowRight aria-hidden />
+        </TautanPmb>
+      }
+    >
       {q.error ? (
         <Alert variant="danger">{pesanGalat(q.error)}</Alert>
       ) : (
@@ -1196,35 +1266,42 @@ export function KabarKampusPmb({ id = 'kabar' }: { id?: string }) {
         ) : undefined
       }
     >
-      <Split breakpoint={960} asideWidth={320} aside={
-        agenda.length ? (
-          <Stack gap={3}>
-            <Text weight="semibold">
-              <CalendarDays aria-hidden className="u-pmb-ikon-teks" /> Agenda mendatang
-            </Text>
-            {agenda.map((a) => (
-              <a key={a.id} href={a.tautan_baca ?? '#'} target="_blank" rel="noopener" className="u-pmb-agenda">
-                <span className="u-pmb-agenda-tgl">
-                  <strong>{keDate(a.mulai)?.getDate() ?? '-'}</strong>
-                  <small>{keDate(a.mulai) ? BULAN[keDate(a.mulai)!.getMonth()] : ''}</small>
-                </span>
-                <span>
-                  <strong>{a.judul}</strong>
-                  {a.lokasi && (
-                    <small>
-                      <MapPin aria-hidden /> {a.lokasi}
-                    </small>
-                  )}
-                </span>
-              </a>
-            ))}
-          </Stack>
-        ) : null
-      }>
+      <Split
+        breakpoint={960}
+        asideWidth={320}
+        aside={
+          agenda.length ? (
+            <Stack gap={3}>
+              <Text weight="semibold">
+                <CalendarDays aria-hidden className="u-pmb-ikon-teks" /> Agenda mendatang
+              </Text>
+              {agenda.map((a) => (
+                <a key={a.id} href={a.tautan_baca ?? '#'} target="_blank" rel="noopener" className="u-pmb-agenda">
+                  <span className="u-pmb-agenda-tgl">
+                    <strong>{keDate(a.mulai)?.getDate() ?? '-'}</strong>
+                    <small>{keDate(a.mulai) ? BULAN[keDate(a.mulai)!.getMonth()] : ''}</small>
+                  </span>
+                  <span>
+                    <strong>{a.judul}</strong>
+                    {a.lokasi && (
+                      <small>
+                        <MapPin aria-hidden /> {a.lokasi}
+                      </small>
+                    )}
+                  </span>
+                </a>
+              ))}
+            </Stack>
+          ) : null
+        }
+      >
         <Grid min={240} gap={4}>
           {loading && [1, 2].map((i) => <NewsCardSkeleton key={i} />)}
           {berita.map((b) => (
-            <NewsCard key={b.id} item={{ id: b.id, title: b.judul, excerpt: b.ringkasan ?? undefined, href: b.tautan_baca ?? '#', image: b.gambar?.url ?? undefined, date: b.terbit_pada ?? undefined }} />
+            <NewsCard
+              key={b.id}
+              item={{ id: b.id, title: b.judul, excerpt: b.ringkasan ?? undefined, href: b.tautan_baca ?? '#', image: b.gambar?.url ?? undefined, date: b.terbit_pada ?? undefined }}
+            />
           ))}
           {!loading && !berita.length && <Empty icon={<Newspaper aria-hidden />} title="Belum ada berita" />}
         </Grid>
@@ -1240,7 +1317,16 @@ export function KontakPanitiaPmb({ bantuan, judul = 'Hubungi panitia PMB' }: { b
   const k = kontakBantuanPmb(bantuan, kampus);
   return (
     <Card>
-      <CardHeader title={judul} description={k.jam ? <><Clock aria-hidden className="u-pmb-ikon-teks" /> {k.jam}</> : undefined} />
+      <CardHeader
+        title={judul}
+        description={
+          k.jam ? (
+            <>
+              <Clock aria-hidden className="u-pmb-ikon-teks" /> {k.jam}
+            </>
+          ) : undefined
+        }
+      />
       <CardContent>
         <Stack gap={2}>
           {k.tautanWa && (
@@ -1287,7 +1373,11 @@ export function AsistenPmb({ faq = [], bantuan }: { faq?: FaqPmb[]; bantuan?: Ba
   const tombol = (q?: string) => (
     <Cluster gap={2}>
       {k.wa && (
-        <Button size="xs" className="u-pmb-wa" render={<a href={`https://wa.me/${k.wa}?text=${encodeURIComponent(q ? `${k.pesan}\n\nPertanyaan: ${q}` : k.pesan)}`} target="_blank" rel="noopener noreferrer" />}>
+        <Button
+          size="xs"
+          className="u-pmb-wa"
+          render={<a href={`https://wa.me/${k.wa}?text=${encodeURIComponent(q ? `${k.pesan}\n\nPertanyaan: ${q}` : k.pesan)}`} target="_blank" rel="noopener noreferrer" />}
+        >
           <MessageCircle aria-hidden /> Tanya via WhatsApp
         </Button>
       )}
@@ -1432,7 +1522,15 @@ export function LandingPmbLengkap() {
   ];
   return (
     <div className="u-pmb-landing">
-      <HeroPmb hero={p?.hero} gelombang={d.utama} biaya={d.biayaTermurah} jalur={d.jalur.map((j) => j.nama)} jumlahProdi={d.prodi.length} galeri={p?.galeri} loading={d.memuat.gelombang || d.memuat.landing} />
+      <HeroPmb
+        hero={p?.hero}
+        gelombang={d.utama}
+        biaya={d.biayaTermurah}
+        jalur={d.jalur.map((j) => j.nama)}
+        jumlahProdi={d.prodi.length}
+        galeri={p?.galeri}
+        loading={d.memuat.gelombang || d.memuat.landing}
+      />
       <div className="u-pmb-bar-bagian">
         <SectionNav items={bagian} variant="bar" />
       </div>
@@ -1464,7 +1562,14 @@ export function DetailGelombangPmb({ id }: { id: string | number }) {
   if (q.error)
     return (
       <Container padY={10}>
-        <Alert variant="danger" actions={<Button size="sm" variant="outline" onClick={q.refetch}>Coba lagi</Button>}>
+        <Alert
+          variant="danger"
+          actions={
+            <Button size="sm" variant="outline" onClick={q.refetch}>
+              Coba lagi
+            </Button>
+          }
+        >
           {pesanGalat(q.error)}
         </Alert>
       </Container>
@@ -1485,7 +1590,11 @@ export function DetailGelombangPmb({ id }: { id: string | number }) {
         back={<TautanPmb href={`${rute.beranda}#gelombang`}>Semua gelombang</TautanPmb>}
         eyebrow={`Jalur ${g.jalur?.nama ?? '-'} · Tahun akademik ${labelTahunPmb(g.tahun_akademik)}`}
         title={g.nama}
-        badge={<Badge variant={st.variant} dot>{st.label}</Badge>}
+        badge={
+          <Badge variant={st.variant} dot>
+            {st.label}
+          </Badge>
+        }
         description={g.deskripsi ?? undefined}
         actions={
           g.sedang_buka ? (
@@ -1495,41 +1604,59 @@ export function DetailGelombangPmb({ id }: { id: string | number }) {
           ) : undefined
         }
       />
-      <Split breakpoint={960} asideWidth={380} gap={8} aside={
-        <Stack gap={6}>
-          <Card>
-            <CardHeader title={<><CalendarDays aria-hidden className="u-pmb-ikon-teks" /> Jadwal</>} />
-            <CardContent>
-              <Timeline items={jadwalKeLinimasa(g, g.jadwal)} />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader title={<><Wallet aria-hidden className="u-pmb-ikon-teks" /> Rincian biaya</>} description={`Pembayaran: ${rentangPmb(g.pembayaran.mulai, g.pembayaran.selesai)}`} />
-            <CardContent>
-              <ul className="u-pmb-rincian">
-                <li>
-                  <span>Formulir pendaftaran</span>
-                  <span className="u-pmb-nominal">{rupiahAtauGratis(g.biaya_pendaftaran ?? 0)}</span>
-                </li>
-                {g.biaya.map((b, i) => (
-                  <li key={i}>
-                    <span>
-                      {b.nama}
-                      <small>{[b.bisa_dicicil && 'bisa dicicil', !b.wajib && 'opsional'].filter(Boolean).join(' · ')}</small>
-                    </span>
-                    <span className="u-pmb-nominal">{formatRupiah(b.nominal)}</span>
+      <Split
+        breakpoint={960}
+        asideWidth={380}
+        gap={8}
+        aside={
+          <Stack gap={6}>
+            <Card>
+              <CardHeader
+                title={
+                  <>
+                    <CalendarDays aria-hidden className="u-pmb-ikon-teks" /> Jadwal
+                  </>
+                }
+              />
+              <CardContent>
+                <Timeline items={jadwalKeLinimasa(g, g.jadwal)} />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader
+                title={
+                  <>
+                    <Wallet aria-hidden className="u-pmb-ikon-teks" /> Rincian biaya
+                  </>
+                }
+                description={`Pembayaran: ${rentangPmb(g.pembayaran.mulai, g.pembayaran.selesai)}`}
+              />
+              <CardContent>
+                <ul className="u-pmb-rincian">
+                  <li>
+                    <span>Formulir pendaftaran</span>
+                    <span className="u-pmb-nominal">{rupiahAtauGratis(g.biaya_pendaftaran ?? 0)}</span>
                   </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-          {g.kontak_panitia && (
-            <Alert variant="neutral" icon={<Phone aria-hidden />}>
-              {g.kontak_panitia}
-            </Alert>
-          )}
-        </Stack>
-      }>
+                  {g.biaya.map((b, i) => (
+                    <li key={i}>
+                      <span>
+                        {b.nama}
+                        <small>{[b.bisa_dicicil && 'bisa dicicil', !b.wajib && 'opsional'].filter(Boolean).join(' · ')}</small>
+                      </span>
+                      <span className="u-pmb-nominal">{formatRupiah(b.nominal)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+            {g.kontak_panitia && (
+              <Alert variant="neutral" icon={<Phone aria-hidden />}>
+                {g.kontak_panitia}
+              </Alert>
+            )}
+          </Stack>
+        }
+      >
         <Stack gap={8}>
           <Stack gap={3}>
             <Text as="div" weight="semibold" size="lg">
@@ -1577,8 +1704,16 @@ export function DetailGelombangPmb({ id }: { id: string | number }) {
                   </Text>
                 </div>
               ))}
-              {g.perlu_rapor && <div className="u-pmb-kotak" data-garis="putus">Nilai rapor semester 1-5 diisi di formulir.</div>}
-              {g.perlu_prestasi && <div className="u-pmb-kotak" data-garis="putus">Daftar prestasi beserta sertifikat diisi di formulir.</div>}
+              {g.perlu_rapor && (
+                <div className="u-pmb-kotak" data-garis="putus">
+                  Nilai rapor semester 1-5 diisi di formulir.
+                </div>
+              )}
+              {g.perlu_prestasi && (
+                <div className="u-pmb-kotak" data-garis="putus">
+                  Daftar prestasi beserta sertifikat diisi di formulir.
+                </div>
+              )}
             </Grid>
           </Stack>
         </Stack>
@@ -1597,7 +1732,18 @@ export function DaftarPengumumanPmb({ perHalaman = 10 }: { perHalaman?: number }
   return (
     <Container size="md" padY={10}>
       <PageHeader eyebrow="Pengumuman" title="Informasi resmi panitia PMB" />
-      {q.error && <Alert variant="danger" actions={<Button size="sm" variant="outline" onClick={q.refetch}>Coba lagi</Button>}>{pesanGalat(q.error)}</Alert>}
+      {q.error && (
+        <Alert
+          variant="danger"
+          actions={
+            <Button size="sm" variant="outline" onClick={q.refetch}>
+              Coba lagi
+            </Button>
+          }
+        >
+          {pesanGalat(q.error)}
+        </Alert>
+      )}
       <AnnouncementList
         loading={q.loading}
         empty={<Empty icon={<Megaphone aria-hidden />} title="Belum ada pengumuman" />}
@@ -1623,7 +1769,12 @@ export function DetailPengumumanPmb({ slug }: { slug: string }) {
       )}
       {q.data && (
         <>
-          <PageHeader back={<TautanPmb href={rute.pengumuman()}>Pengumuman</TautanPmb>} eyebrow={formatDate(q.data.terbit_at, 'long')} title={q.data.judul} badge={q.data.penting ? <Badge variant="danger">Penting</Badge> : undefined} />
+          <PageHeader
+            back={<TautanPmb href={rute.pengumuman()}>Pengumuman</TautanPmb>}
+            eyebrow={formatDate(q.data.terbit_at, 'long')}
+            title={q.data.judul}
+            badge={q.data.penting ? <Badge variant="danger">Penting</Badge> : undefined}
+          />
           <KontenHtml html={q.data.isi} />
         </>
       )}

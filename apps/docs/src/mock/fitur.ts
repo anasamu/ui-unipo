@@ -1,4 +1,5 @@
 // Data contoh untuk widget fitur (kalender, portal, LMS, CBT, PMB). Bentuknya mengikuti respons API SIAKAD.
+import { peranDemo } from './profil';
 import { tambahRute } from './siakad';
 
 const now = new Date();
@@ -569,9 +570,7 @@ let kurang = [...KURANG_AWAL];
 const kelengkapan = () => {
   const w = kurang.filter((k) => k.wajib).length;
   return {
-    entitas: 'mahasiswa',
-    kunci: '2023010045',
-    nama: 'NURUL FADILAH',
+    ...(peranDemo() === 'dosen' ? { entitas: 'dosen', kunci: '0912088301', nama: 'RAHMAT PAKAYA' } : { entitas: 'mahasiswa', kunci: '2304110001', nama: 'NURUL AINI HASAN' }),
     kode_prodi: '55201',
     lengkap: w === 0,
     perlu_wizard: kurang.some((k) => k.wajib && k.bisa_diisi_sendiri),

@@ -375,6 +375,246 @@
     transform var(--u-duration-fast) var(--u-ease-out);
 }
 
+.u-news-meta [data-segera] {
+  color: var(--u-danger);
+  font-weight: var(--u-weight-medium);
+}
+// Varian kartu
+.u-announce-kartu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  gap: 0.875rem;
+  > .u-announce-item {
+    display: flex;
+    border: 1px solid var(--u-border);
+    border-top: 3px solid var(--tone);
+    border-radius: var(--u-radius);
+    background: var(--u-card);
+    &[data-priority='biasa'] {
+      border-top-color: var(--u-border);
+    }
+    &:has(> a:hover) {
+      border-color: color-mix(in oklab, var(--tone) 40%, var(--u-border));
+    }
+  }
+}
+.u-announce-kartu-isi {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  color: inherit;
+  text-decoration: none;
+  &:focus-visible {
+    @include focus-ring;
+    border-radius: var(--u-radius);
+  }
+  .u-announce-title {
+    font-size: var(--u-text-base);
+  }
+  .u-news-meta {
+    margin-top: auto;
+    padding-top: 0.25rem;
+  }
+}
+.u-announce-kartu-atas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  &:empty {
+    display: none;
+  }
+  .u-announce-flag {
+    margin: 0;
+  }
+}
+.u-announce-kategori,
+.u-announce-sematan {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.0625rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: var(--u-weight-semibold);
+  color: var(--u-muted-foreground);
+  background: var(--u-muted);
+  svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+}
+.u-announce-sematan {
+  color: var(--u-primary);
+  background: color-mix(in oklab, var(--u-primary) 10%, var(--u-card));
+}
+.u-announce-cuplikan {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: var(--u-text-sm);
+  line-height: 1.55;
+  color: var(--u-muted-foreground);
+}
+.u-announce-nomor {
+  font-family: var(--u-font-mono);
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
+}
+// Varian ringkas
+.u-announce-ringkas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  > .u-announce-item + .u-announce-item {
+    border-top: 1px dashed var(--u-border);
+  }
+}
+.u-announce-ringkas-isi {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 0.625rem;
+  padding: 0.5rem 0.25rem;
+  color: inherit;
+  text-decoration: none;
+  .u-announce-title {
+    font-weight: var(--u-weight-medium);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  time {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  &:is(a):hover .u-announce-title {
+    color: var(--u-primary);
+  }
+  &:focus-visible {
+    @include focus-ring;
+    border-radius: 6px;
+  }
+}
+.u-announce-titik {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--tone);
+  transform: translateY(-1px);
+  .u-announce-item[data-priority='biasa'] & {
+    background: color-mix(in oklab, var(--u-muted-foreground) 50%, transparent);
+  }
+}
+// Varian sorotan
+.u-announce-sorotan {
+  display: grid;
+  gap: 0.75rem;
+  > .u-announce-item {
+    border: 0;
+  }
+}
+.u-announce-sorotan-utama {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.125rem 1.25rem;
+  border: 1px solid color-mix(in oklab, var(--tone) 30%, var(--u-border));
+  border-radius: calc(var(--u-radius) + 4px);
+  background: radial-gradient(120% 140% at 0% 0%, color-mix(in oklab, var(--tone) 14%, transparent), transparent 60%), var(--u-card);
+  color: inherit;
+  text-decoration: none;
+  .u-announce-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 14px;
+    svg {
+      width: 1.375rem;
+      height: 1.375rem;
+    }
+  }
+  .u-announce-body {
+    gap: 0.5rem;
+  }
+  .u-announce-title {
+    font-size: var(--u-text-lg);
+    line-height: 1.35;
+    text-wrap: balance;
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+.u-announce-baca {
+  flex: none;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-semibold);
+  color: var(--u-primary);
+  svg {
+    width: 1rem;
+    height: 1rem;
+    transition: transform var(--u-duration-fast) var(--u-ease-out);
+  }
+  a:hover > & svg {
+    transform: translateX(2px);
+  }
+}
+@media (max-width: 560px) {
+  .u-announce-sorotan-utama {
+    flex-wrap: wrap;
+    .u-announce-body {
+      flex-basis: calc(100% - 4rem);
+    }
+  }
+  .u-announce-baca {
+    margin-left: 4rem;
+  }
+}
+// Varian linimasa
+.u-announce-linimasa {
+  display: grid;
+  gap: 1rem;
+  section {
+    display: grid;
+    gap: 0.25rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--u-border);
+  }
+  h4 {
+    position: relative;
+    margin: 0;
+    font-size: var(--u-text-xs);
+    font-weight: var(--u-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--u-muted-foreground);
+    &::before {
+      content: '';
+      position: absolute;
+      left: calc(-1rem - 6px);
+      top: 0.25em;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--u-card);
+      border: 2px solid var(--u-primary);
+    }
+  }
+}
+
 // ================================================================ Acara
 .u-event {
   position: relative;

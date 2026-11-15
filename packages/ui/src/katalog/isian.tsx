@@ -1,10 +1,11 @@
 'use client';
 import * as React from 'react';
 import { Upload } from 'lucide-react';
-import { Tag } from '../components/actions';
 import { DatePicker } from '../components/calendar';
 import { Field, Input, Switch, Textarea } from '../components/forms';
-import { Select } from '../components/select';
+import { Pilihan, BagianForm, GridForm, IsianDaftar } from '../components/formulir';
+export { IsianDaftar } from '../components/formulir';
+import type { SelectOption } from '../components/select';
 import { cn } from '../lib/cn';
 import { PilihEntitas, SUMBER_ENTITAS, type SumberEntitas } from '../siakad/pilih';
 import { PilihBerkas } from '../siakad/pilih-berkas';
@@ -93,6 +94,23 @@ const keTanggal = (s: unknown) => {
 };
 const dariTanggal = (d: Date | null) => (d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '');
 
+/**
+ * Opsi enum dengan label dari keterangan skema bila ditulis "A wajib, B pilihan, C …" (pola backend SIAKAD);
+ * selain itu label dari nilai (`paruh_waktu` → "Paruh waktu").
+ */
+const LABEL_DARI_KET = new WeakSet<Skema>();
+export function opsiEnum(s: Skema): SelectOption<string>[] {
+  const nilai = (s.e ?? []).filter((x) => x !== null).map(String);
+  const peta: Record<string, string> = {};
+  for (const bagian of (s.ds ?? '').split(/[,;]\s*/)) {
+    const m = /^\s*([A-Za-z0-9_]+)\s*(?:=|:|-|\s)\s*(.+?)\s*\.?$/.exec(bagian);
+    if (m && nilai.includes(m[1]) && !peta[m[1]]) peta[m[1]] = m[2].charAt(0).toUpperCase() + m[2].slice(1);
+  }
+  const lengkap = nilai.length > 0 && nilai.every((x) => peta[x]);
+  if (lengkap) LABEL_DARI_KET.add(s);
+  return nilai.map((x) => ({ value: x, label: lengkap ? (x.length <= 2 ? `${peta[x]} (${x})` : peta[x]) : labelNilai(x) }));
+}
+
 /** Kontrol untuk satu properti skema: pilih-cari, pilihan, tanggal, angka, saklar, berkas, daftar, JSON, atau teks. */
 export function IsianSkema({ nama, skema: s, value: v, onValueChange: set, onBlur, id, disabled, invalid, query }: IsianSkemaProps) {
   const j = jenisIsian(nama, s);
@@ -120,7 +138,7 @@ export function IsianSkema({ nama, skema: s, value: v, onValueChange: set, onBlu
       );
     case 'enum':
       return (
-        <Select<string>
+        <Pilihan
           id={id}
           value={teks(v) || null}
           onValueChange={(x) => {
@@ -129,7 +147,7 @@ export function IsianSkema({ nama, skema: s, value: v, onValueChange: set, onBlu
           }}
           disabled={disabled}
           placeholder="Pilih…"
-          options={s.e!.filter((x) => x !== null).map((x) => ({ value: String(x), label: labelNilai(x) }))}
+          options={opsiEnum(s)}
         />
       );
     case 'tanggal':
@@ -146,7 +164,7 @@ export function IsianSkema({ nama, skema: s, value: v, onValueChange: set, onBlu
           onValueChange={set}
           disabled={disabled}
           angka={s.i?.t === 'integer' || s.i?.t === 'number'}
-          enumNilai={s.i?.e?.map(String)}
+          enumNilai={s.i?.e?.map(String) ?? daftarDariKeterangan(s.ds)}
         />
       );
     case 'berkas':
@@ -188,64 +206,10 @@ export function IsianSkema({ nama, skema: s, value: v, onValueChange: set, onBlu
   }
 }
 
-/** Daftar nilai pendek (tag): Enter atau koma menambah. */
-export function IsianDaftar({
-  value,
-  onValueChange,
-  id,
-  disabled,
-  angka,
-  enumNilai,
-}: {
-  value: string[];
-  onValueChange: (v: string[]) => void;
-  id?: string;
-  disabled?: boolean;
-  angka?: boolean;
-  enumNilai?: string[];
-}) {
-  const [draf, setDraf] = React.useState('');
-  const tambah = (t: string) => {
-    const x = t.trim().replace(/,$/, '');
-    if (!x || value.includes(x) || (angka && Number.isNaN(Number(x))) || (enumNilai && !enumNilai.includes(x))) return;
-    onValueChange([...value, x]);
-    setDraf('');
-  };
-  if (enumNilai) {
-    return (
-      <div className="u-isian-daftar" id={id}>
-        {enumNilai.map((x) => (
-          <Tag key={x} active={value.includes(x)} render={<button type="button" disabled={disabled} />} onClick={() => onValueChange(value.includes(x) ? value.filter((y) => y !== x) : [...value, x])}>
-            {labelNilai(x)}
-          </Tag>
-        ))}
-      </div>
-    );
-  }
-  return (
-    <div className="u-isian-daftar">
-      {value.map((x) => (
-        <Tag key={x} onRemove={disabled ? undefined : () => onValueChange(value.filter((y) => y !== x))}>
-          {x}
-        </Tag>
-      ))}
-      <Input
-        id={id}
-        value={draf}
-        disabled={disabled}
-        inputMode={angka ? 'numeric' : undefined}
-        placeholder={value.length ? 'Tambah…' : 'Ketik lalu Enter'}
-        onChange={(e) => (e.target.value.endsWith(',') ? tambah(e.target.value) : setDraf(e.target.value))}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            tambah(draf);
-          } else if (e.key === 'Backspace' && !draf && value.length) onValueChange(value.slice(0, -1));
-        }}
-        onBlur={() => tambah(draf)}
-      />
-    </div>
-  );
+/** Keterangan berupa daftar kode ("kuliah, responsi, tutorial, …") = pilihan tetap untuk isian daftar. */
+function daftarDariKeterangan(ds?: string): string[] | undefined {
+  const xs = (ds ?? '').split(/,\s*/).map((x) => x.trim());
+  return xs.length >= 3 && xs.every((x) => /^[a-z][a-z0-9_]*$/.test(x)) ? xs : undefined;
 }
 
 /** Objek/array JSON sebagai teks yang diurai saat keluar dari isian. */
@@ -291,6 +255,13 @@ export interface UseFormulirSkemaOpsi {
  * State formulir dari skema: nilai, galat per isian (diperiksa saat keluar isian, dihapus saat diketik),
  * dan `kirim()` yang memvalidasi semua isian lalu membentuk body seperti backend.
  */
+const normal = (v: unknown) =>
+  v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length)
+    ? ''
+    : typeof v === 'object' && !(typeof FileList !== 'undefined' && v instanceof FileList)
+      ? JSON.stringify(v)
+      : String(v);
+
 export function useFormulirSkema(skema: Skema | undefined, { data, nilai: tambahan }: UseFormulirSkemaOpsi = {}) {
   const ubah = Boolean(data);
   const awal = React.useMemo(() => ({ ...nilaiAwal(skema, data), ...tambahan }), [skema, data, JSON.stringify(tambahan ?? {})]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -337,10 +308,21 @@ export function useFormulirSkema(skema: Skema | undefined, { data, nilai: tambah
       if (g) setGalat(g);
       return Boolean(g);
     },
-    berubah: () => validasiBody(skema, nilai, { ubah, awal }).berubah.length > 0,
+    /** Ada isian yang berbeda dari nilai awal (kosong, null, dan tidak diisi dianggap sama). */
+    berubah: () => Object.keys({ ...awal, ...nilai }).some((k) => normal(nilai[k]) !== normal(awal[k])),
   };
 }
 export type FormulirSkemaState = ReturnType<typeof useFormulirSkema>;
+
+/** Satu bagian formulir skema: judul, keterangan, dan isian yang masuk ke bagian ini (urutannya diikuti). */
+export interface BagianSkema {
+  judul: React.ReactNode;
+  keterangan?: React.ReactNode;
+  ikon?: React.ReactNode;
+  kolom: string[];
+  /** Kolom grid bagian ini. Bawaan ikut `columns`. */
+  columns?: 1 | 2 | 3;
+}
 
 export interface FormulirSkemaProps {
   skema: Skema | undefined;
@@ -349,10 +331,27 @@ export interface FormulirSkemaProps {
   kolom?: string[];
   /** Sembunyikan isian ini (mis. kolom induk yang sudah terisi). */
   sembunyi?: string[];
+  /**
+   * Kelompokkan isian per bagian (Identitas, Beban studi, …). Isian skema yang tidak disebut masuk bagian
+   * "Lainnya" di akhir, kecuali `sisa={false}`.
+   */
+  bagian?: BagianSkema[];
+  /** Judul bagian untuk isian yang tidak disebut di `bagian`; false untuk menyembunyikannya. */
+  sisa?: React.ReactNode | false;
   /** Jumlah kolom grid di layar lebar. */
-  columns?: 1 | 2;
+  columns?: 1 | 2 | 3;
+  /** Isian yang selalu selebar bagian. */
+  lebar?: string[];
   /** Ganti kontrol isian tertentu. */
   render?: Record<string, (p: IsianSkemaProps) => React.ReactNode>;
+  /** Jadikan isian teks sebagai pilihan dari daftar ini (tombol, daftar, atau cari sesuai jumlah). */
+  opsi?: Record<string, SelectOption<string>[]>;
+  /** Label isian pengganti nama kolom. */
+  label?: Record<string, React.ReactNode>;
+  /** Keterangan isian pengganti keterangan skema. */
+  keterangan?: Record<string, React.ReactNode>;
+  /** Sisipkan konten selebar bagian setelah isian ini (mis. ringkasan SKS setelah isian SKS terakhir). */
+  setelah?: Record<string, React.ReactNode | ((nilai: NilaiForm) => React.ReactNode)>;
   /** Saringan pilih-cari per isian. */
   query?: Record<string, Record<string, string | number | boolean | undefined>>;
   disabled?: boolean;
@@ -362,47 +361,114 @@ export interface FormulirSkemaProps {
 /**
  * Formulir dari skema katalog: label dari nama kolom, tanda wajib dari `required`, kontrol dari tipe, dan
  * galat yang sama dengan backend. Kunci data lain (NIM, NIDN, ID tabel) selalu pilih-cari, bukan ketik ID.
+ * Dengan `bagian`, isian dikelompokkan dalam bagian berjudul; grid menyesuaikan lebar panel (1 kolom di ponsel).
  */
-export function FormulirSkema({ skema, form, kolom, sembunyi, columns = 2, render, query, disabled, className }: FormulirSkemaProps) {
+export function FormulirSkema({
+  skema,
+  form,
+  kolom,
+  sembunyi,
+  bagian,
+  sisa = 'Lainnya',
+  columns = 2,
+  lebar: lebarPaksa,
+  render,
+  opsi,
+  label,
+  keterangan,
+  setelah,
+  query,
+  disabled,
+  className,
+}: FormulirSkemaProps) {
   const wajib = new Set(skema?.rq ?? []);
   if (!form.ubah && unggahWajib(skema)) wajib.add('berkas_id');
   let props = isianSkema(skema);
   if (kolom) props = kolom.map((k) => [k, skema?.pr?.[k]] as [string, Skema]).filter(([, s]) => s && !penandaKolom(s).baca);
   if (sembunyi) props = props.filter(([k]) => !sembunyi.includes(k));
   if (!props.length) return <p className="u-field-description">Tidak ada isian.</p>;
+  const peta = new Map(props);
+
+  const isian = ([k, s]: [string, Skema], cols: number) => {
+    const j = jenisIsian(k, s);
+    const lebar = cols === 1 || lebarPaksa?.includes(k) || ['teks-panjang', 'json', 'file', 'berkas', 'daftar'].includes(j);
+    const p: IsianSkemaProps = {
+      nama: k,
+      skema: s,
+      value: form.nilai[k],
+      onValueChange: (v) => form.set(k, v),
+      onBlur: () => form.periksa(k),
+      id: `isian-${k}`,
+      disabled,
+      invalid: Boolean(form.galat[k]),
+      query: query?.[k],
+    };
+    const tanda = penandaKolom(s);
+    const ket =
+      keterangan?.[k] ??
+      ([
+        (j === 'enum' && (opsiEnum(s), LABEL_DARI_KET.has(s))) || (j === 'daftar' && !s.i?.e && daftarDariKeterangan(s.ds)) ? null : keteranganIsian(s),
+        tanda.kelola ? 'Hanya pengelola' : null,
+        s.max && j !== 'kode' && (j === 'teks' || j === 'teks-panjang') ? `Maksimal ${s.max} karakter` : null,
+      ]
+        .filter(Boolean)
+        .join('. ') ||
+        undefined);
+    const kontrol = render?.[k] ? (
+      render[k](p)
+    ) : opsi?.[k] ? (
+      <Pilihan
+        id={p.id}
+        options={opsi[k]}
+        value={teks(p.value) || null}
+        required={wajib.has(k)}
+        disabled={disabled}
+        onValueChange={(x) => {
+          p.onValueChange(x ?? '');
+          p.onBlur?.();
+        }}
+      />
+    ) : (
+      <IsianSkema {...p} />
+    );
+    return (
+      <React.Fragment key={k}>
+        <Field
+          label={label?.[k] ?? labelKolom(k)}
+          required={wajib.has(k) && !form.ubah}
+          error={form.galat[k] ? rapikanGalat(form.galat[k]) : undefined}
+          description={ket}
+          className={lebar ? 'u-formulir-lebar' : undefined}
+        >
+          {kontrol}
+        </Field>
+        {setelah?.[k] != null && (
+          <div className="u-form-lebar">{typeof setelah[k] === 'function' ? (setelah[k] as (n: NilaiForm) => React.ReactNode)(form.nilai) : (setelah[k] as React.ReactNode)}</div>
+        )}
+      </React.Fragment>
+    );
+  };
+
+  if (!bagian?.length) {
+    return (
+      <GridForm kolom={columns} className={cn('u-formulir-skema', className)}>
+        {props.map((x) => isian(x, columns))}
+      </GridForm>
+    );
+  }
+  const disebut = new Set(bagian.flatMap((b) => b.kolom));
+  const lain = props.filter(([k]) => !disebut.has(k));
+  const daftar = [...bagian.map((b) => ({ ...b, isi: b.kolom.filter((k) => peta.has(k)).map((k) => [k, peta.get(k)!] as [string, Skema]) }))];
+  if (lain.length && sisa !== false) daftar.push({ judul: sisa, kolom: [], isi: lain });
   return (
-    <div className={cn('u-formulir-skema', className)} data-columns={columns}>
-      {props.map(([k, s]) => {
-        const j = jenisIsian(k, s);
-        const lebar = columns === 1 || ['teks-panjang', 'json', 'file', 'berkas', 'daftar'].includes(j);
-        const p: IsianSkemaProps = {
-          nama: k,
-          skema: s,
-          value: form.nilai[k],
-          onValueChange: (v) => form.set(k, v),
-          onBlur: () => form.periksa(k),
-          id: `isian-${k}`,
-          disabled,
-          invalid: Boolean(form.galat[k]),
-          query: query?.[k],
-        };
-        const tanda = penandaKolom(s);
-        const ket = [keteranganIsian(s), tanda.kelola ? 'Hanya pengelola' : null, s.max && j !== 'kode' && (j === 'teks' || j === 'teks-panjang') ? `Maksimal ${s.max} karakter` : null]
-          .filter(Boolean)
-          .join('. ');
-        return (
-          <Field
-            key={k}
-            label={labelKolom(k)}
-            required={wajib.has(k) && !form.ubah}
-            error={form.galat[k] ? rapikanGalat(form.galat[k]) : undefined}
-            description={ket || undefined}
-            className={lebar ? 'u-formulir-lebar' : undefined}
-          >
-            {render?.[k] ? render[k](p) : <IsianSkema {...p} />}
-          </Field>
-        );
-      })}
+    <div className={cn('u-formulir-skema u-formulir-berbagian', className)}>
+      {daftar
+        .filter((b) => b.isi.length)
+        .map((b, i) => (
+          <BagianForm key={i} judul={b.judul} keterangan={b.keterangan} ikon={b.ikon} kolom={b.columns ?? columns}>
+            {b.isi.map((x) => isian(x, b.columns ?? columns))}
+          </BagianForm>
+        ))}
     </div>
   );
 }

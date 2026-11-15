@@ -15,7 +15,8 @@ import { useUnggahBerkas } from '../siakad/berkas';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakad, useSiakadQuery } from '../siakad/provider';
 import { useSiakadTable } from '../siakad/tabel';
 import { berkasPusat, isiPath, judulBaris, judulOperasi, keabsahanAksi, labelKolom, labelNilai, nilaiKunci, paramPath, pilihKolom, punyaScope } from './aturan';
-import { FormulirSkema, sumberDariAcuan, useFormulirSkema } from './isian';
+import { FormulirSkema, sumberDariAcuan, useFormulirSkema, type FormulirSkemaProps } from './isian';
+import { PanelForm } from '../components/formulir';
 import { useKatalog, useSumber, type SumberState } from './katalog';
 import { AlurStatus, DetailBaris, NilaiSel } from './tampil';
 import type { Baris, Operasi, Skema } from './tipe';
@@ -307,7 +308,7 @@ export function AksiSumber({
 }
 
 // ================================================================ Formulir tambah/ubah
-export interface FormulirSumberProps {
+export interface FormulirSumberProps extends Pick<FormulirSkemaProps, 'bagian' | 'sisa' | 'columns' | 'lebar' | 'render' | 'opsi' | 'label' | 'keterangan' | 'setelah' | 'query' | 'kolom'> {
   sumber: string;
   /** Baris yang diubah; kosong = tambah. */
   baris?: Baris | null;
@@ -320,10 +321,44 @@ export interface FormulirSumberProps {
   onTersimpan?: (b: Baris) => void;
   /** Tampil sebagai panel samping (bawaan) atau dialog. */
   tampilan?: 'sheet' | 'dialog';
+  /** Judul panel pengganti "Tambah …"/"Ubah …". */
+  judul?: React.ReactNode;
+  /** Keterangan di bawah judul. */
+  deskripsi?: React.ReactNode;
+  /** Isian tambahan yang disembunyikan selain kolom induk. */
+  sembunyi?: string[];
+  /** Ubah body sebelum dikirim (mis. hitung total SKS). Logika validasi tetap dari skema. */
+  olahBody?: (body: Record<string, unknown>, nilai: Record<string, unknown>) => Record<string, unknown>;
+  size?: 'md' | 'lg' | 'xl';
+  /** Konten di atas isian (mis. ringkasan baris induk). */
+  kepala?: React.ReactNode;
+  /** Label tombol simpan pengganti "Tambah …"/"Simpan perubahan". */
+  labelSimpan?: React.ReactNode;
 }
 
-/** Panel tambah/ubah satu sumber data dengan validasi backend dan galat 422 per isian. */
-export function FormulirSumber({ sumber: id, baris, induk, nilai, open, onOpenChange, trigger, onTersimpan, tampilan = 'sheet' }: FormulirSumberProps) {
+/**
+ * Panel tambah/ubah satu sumber data dengan validasi backend dan galat 422 per isian. Isian bisa dikelompokkan
+ * per bagian; panel menandai perubahan yang belum disimpan dan meminta konfirmasi sebelum membuangnya.
+ */
+export function FormulirSumber({
+  sumber: id,
+  baris,
+  induk,
+  nilai,
+  open,
+  onOpenChange,
+  trigger,
+  onTersimpan,
+  tampilan = 'sheet',
+  judul,
+  deskripsi,
+  sembunyi,
+  olahBody,
+  size = 'lg',
+  kepala,
+  labelSimpan,
+  ...tata
+}: FormulirSumberProps) {
   const st = useSumber(id);
   const siakad = useSiakad();
   const toast = useToast();
@@ -331,63 +366,43 @@ export function FormulirSumber({ sumber: id, baris, induk, nilai, open, onOpenCh
   const op = st.op(ubah ? st.sumber?.update : st.sumber?.create);
   const skema = op?.b?.s;
   const form = useFormulirSkema(skema, { data: baris ?? undefined, nilai });
-  const [galat, setGalat] = React.useState<unknown>(null);
-  const [sibuk, setSibuk] = React.useState(false);
-  const [inner, setInner] = React.useState(false);
-  const isOpen = open ?? inner;
-  const setOpen = (o: boolean) => {
-    setInner(o);
-    onOpenChange?.(o);
-    if (!o) setGalat(null);
-  };
   if (!op) return null;
   const nama = st.sumber?.title.toLowerCase() ?? 'data';
-  const W = tampilan === 'sheet' ? Sheet : Dialog;
   return (
-    <W
-      open={isOpen}
-      onOpenChange={setOpen}
+    <PanelForm
+      open={open}
+      onOpenChange={(o) => {
+        onOpenChange?.(o);
+        if (!o) form.reset();
+      }}
       trigger={trigger}
-      size="lg"
-      title={ubah ? `Ubah ${nama}` : `Tambah ${nama}`}
-      description={ubah ? judulBaris(baris, st.sumber?.key) : op.ds?.replace(/(Pengelola modul|Pemilik data( atau pengelola)?|Admin modul)\.\s*/, '') || undefined}
-      footer={
-        <>
-          <DialogClose render={<Button variant="ghost" />}>Batal</DialogClose>
-          <Button
-            loading={sibuk}
-            onClick={async () => {
-              const body = form.kirim();
-              if (!body) return;
-              if (ubah && body && !(body instanceof FormData) && !Object.keys(body).length) {
-                setOpen(false);
-                return;
-              }
-              setSibuk(true);
-              setGalat(null);
-              try {
-                const nilaiPath = ubah ? nilaiPathBaris(st.sumber, baris!, induk) : { ...induk };
-                const r = await jalankan(siakad, op, nilaiPath, body);
-                toast.add({ title: ubah ? 'Perubahan tersimpan' : `${st.sumber?.title} ditambahkan`, type: 'success' });
-                invalidateSiakad('katalog:');
-                setOpen(false);
-                if (!ubah) form.reset();
-                onTersimpan?.((r.data as Baris) ?? {});
-              } catch (e) {
-                if (!form.galatServer(e)) setGalat(e);
-              } finally {
-                setSibuk(false);
-              }
-            }}
-          >
-            {ubah ? 'Simpan perubahan' : `Tambah ${nama}`}
-          </Button>
-        </>
-      }
+      size={size}
+      tampilan={tampilan}
+      title={judul ?? (ubah ? `Ubah ${nama}` : `Tambah ${nama}`)}
+      description={deskripsi ?? (ubah ? judulBaris(baris, st.sumber?.key) : op.ds?.replace(/(Pengelola modul|Pemilik data( atau pengelola)?|Admin modul)\.\s*/, '') || undefined)}
+      berubah={form.berubah()}
+      labelSimpan={labelSimpan ?? (ubah ? 'Simpan perubahan' : `Tambah ${nama}`)}
+      onSimpan={async () => {
+        let body = form.kirim();
+        if (!body) return false;
+        if (olahBody && !(body instanceof FormData)) body = olahBody(body, form.nilai);
+        if (ubah && body && !(body instanceof FormData) && !Object.keys(body).length) return;
+        try {
+          const nilaiPath = ubah ? nilaiPathBaris(st.sumber, baris!, induk) : { ...induk };
+          const r = await jalankan(siakad, op, nilaiPath, body);
+          toast.add({ title: ubah ? 'Perubahan tersimpan' : `${st.sumber?.title} ditambahkan`, type: 'success' });
+          invalidateSiakad('katalog:');
+          form.reset();
+          onTersimpan?.((r.data as Baris) ?? {});
+        } catch (e) {
+          if (form.galatServer(e)) return 'Periksa isian yang ditandai.';
+          throw e;
+        }
+      }}
     >
-      {galat ? <GalatApi error={galat} title="Gagal menyimpan" /> : null}
-      <FormulirSkema skema={skema} form={form} sembunyi={Object.keys(induk ?? {})} />
-    </W>
+      {kepala}
+      <FormulirSkema skema={skema} form={form} sembunyi={[...Object.keys(induk ?? {}), ...(sembunyi ?? [])]} {...tata} />
+    </PanelForm>
   );
 }
 

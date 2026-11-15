@@ -1,5 +1,73 @@
 # Catatan perubahan
 
+## 1.18.0 (2026-11-15)
+
+- **Bahan formulir tambah/ubah** (`unipo-ui`):
+  - `Pilihan`: satu pilihan dari daftar yang memilih bentuknya sendiri: tombol untuk 2–4 opsi pendek, daftar tarik-turun untuk 5–8, isian cari untuk lebih dari 8 (`tampilan` untuk memaksa). `opsiDariPeta` mengubah peta `{kode: label}` dari API menjadi opsi.
+  - `IsianTanggal`: pemilih tanggal yang menerima dan mengembalikan `YYYY-MM-DD` seperti body API.
+  - `BagianForm` dan `GridForm`: bagian berjudul + ikon, grid 1–3 kolom yang mengikuti lebar panel (bukan layar), isian selebar bagian lewat `className="u-form-lebar"`.
+  - `PanelForm`: cangkang tambah/ubah (panel samping atau dialog; lembar bawah 94% layar di ponsel) dengan penanda "Perubahan belum disimpan", konfirmasi sebelum perubahan dibuang, Enter dan Ctrl/⌘+Enter untuk simpan, serta kotak galat + kode laporan.
+  - `IsianDaftar` (tag, kini juga di `unipo-ui`) dan `HitungKarakter`.
+- **Formulir dari skema** (`unipo-ui/katalog`):
+  - Enum memakai `Pilihan`; labelnya diambil dari keterangan backend bila ditulis "A wajib, B pilihan, …". Isian daftar yang keterangannya berisi kode menjadi tag pilihan ganda.
+  - `FormulirSkema` mendapat `bagian`, `lebar`, `opsi`, `label`, `keterangan`, `setelah`, dan grid yang benar-benar dua kolom di panel lebar (sebelumnya kueri kontainer tidak pernah aktif).
+  - `FormulirSumber` memakai `PanelForm` dan meneruskan tata letak (`bagian`, `render`, `opsi`, …) serta `judul`, `deskripsi`, `labelSimpan`, `olahBody`, `size`.
+  - Formulir per fitur: `FormKurikulum` (identitas, masa berlaku, beban studi dengan ringkasan SKS, rumusan, integrasi PDDikti) dan `FormMataKuliahKurikulum` (jenis, bobot SKS dengan tombol +/− dan total otomatis, bentuk pembelajaran, koordinator dari daftar dosen). Aturan wajib dan validasinya tetap dari skema backend.
+- **Profil dan layanan** (`unipo-ui/siakad`):
+  - `FormProfilSaya` (`POST /v1/profil/saya`): nama panggilan, judul, bio dengan hitungan karakter, keahlian, tautan akademik (LinkedIn, ORCID, Scholar, SINTA, Scopus, Garuda, ResearchGate, GitHub, situs), email alternatif; validasi sama dengan backend.
+  - `DataPribadiSaya`: ubah data memakai `PanelForm` dengan kontrol sesuai jenis (kecamatan dicari, jenis tinggal dipilih, NIK/RT/RW/kode pos hanya angka); pengajuan tanggal lahir dan jenis kelamin memakai pemilih.
+  - `RiwayatProfilSaya`: tanggal memakai pemilih, pilihan memakai `Pilihan`, "masih bekerja/aktif/studi" berupa saklar yang mematikan tanggal selesai.
+  - `PilihKecamatan` dan `PETUNJUK_ISIAN` diekspor dari kelengkapan data. `PilihProdi` dan `PilihTahunAkademik` menjadi isian cari bila opsinya banyak.
+  - Biodata PMB, `ModalAjukanLayanan`, dan pilihan prodi pendaftaran memakai `Pilihan` dan `IsianTanggal`.
+- Halaman docs **Formulir tambah/ubah per fitur** di menu Per kegunaan.
+
+## 1.17.0 (2026-11-15)
+
+- **Beranda per peran** (`unipo-ui/siakad`): `BerandaSaya` menyusun beranda dari peran akun yang masuk. Mahasiswa mendapat profil akademik, KRS semester ini, tagihan, serta aksi cepat yang membuka modal fitur (ambil KRS, cek kesiapan lulus, daftar wisuda, ajukan layanan). Dosen mendapat profil, jadwal mengajar, dan mahasiswa PA. Tendik mendapat data kepegawaian. Semua peran mendapat pengingat kelengkapan data, pengumuman untuk akun, dan kalender akademik. Bagian-bagiannya juga diekspor: `SapaanBeranda`, `AksiCepat` (petak yang bisa membuka modal, tautan, atau fungsi), dan `TagihanSaya`.
+- **Docs disusun per kegunaan**: menu baru **Per kegunaan** di urutan kedua berisi **Peta kegunaan** (cari "saya ingin…" → komponen, impor, endpoint, scope, halaman contoh) dan **Beranda per peran**. Kategori modul fitur (Profil, Portal & landing, Akademik, PMB, LMS, …) kini tampil sebelum komponen dasar. Menu "Fitur API" (CRUD generik dari katalog) dipindah ke paling bawah dengan nama **Referensi API**.
+
+## 1.16.0 (2026-11-15)
+
+- **Kerangka situs** (`unipo-ui`):
+  - `Footer`: identitas + kontak (alamat dengan tautan peta, telepon, WhatsApp, email, jam layanan) + media sosial, kolom tautan, pita ajakan, baris hak cipta + tautan kecil + tombol kembali ke atas. Varian `gelap` (tetap gelap di kedua mode), `terang`, `ringkas`.
+  - `PitaPengumuman`: pita di atas navbar, warna dan ikon sesuai prioritas (darurat, penting, biasa), berganti otomatis (berhenti saat disorot dan bila pengguna memilih gerak minimal), bisa ditutup dan diingat sampai isinya berubah.
+  - `TopbarKontak`: isi prop `topbar` Navbar (telepon, email, jam layanan, tautan cepat, slot bahasa).
+  - `AnnouncementList` kini punya `variant`: `daftar` (bawaan), `kartu`, `ringkas`, `sorotan`, `linimasa`; item bisa membawa cuplikan, kategori, lampiran, dan penerbit; masa berlaku tampil sebagai sisa hari ("Berakhir 3 hari lagi").
+  - `SocialLinks` mengenal LinkedIn, Threads, dan saluran WhatsApp.
+- **Kerangka portal dari `/v1/portal`** (`unipo-ui/siakad`):
+  - `KerangkaPortal`: pita pengumuman + `NavbarPortal` (menu utama dan mega menu) dengan pita kontak + isi + kaki halaman + popup dalam satu komponen.
+  - `FooterPortal`: kontak dan media sosial dari profil situs, kolom dari menu lokasi `footer`, kolom tautan cepat per grup (`/v1/portal/tautan`).
+  - `TopbarPortal` (menu lokasi `atas` + kontak), `PitaPengumumanPortal` (pengumuman darurat/penting yang masih berlaku + banner posisi `pita`), `PopupPengumumanPortal` (banner posisi `popup`, sekali per pengunjung).
+  - `PengumumanPortal` mendapat `variant` dan `kategori`; `PengumumanSaya` (`/v1/portal/pengumuman/saya`, sesuai kelompok, prodi, angkatan akun); `DetailPengumumanPortal` (isi HTML disaring, nomor, masa berlaku, penerbit, lampiran); pembantu `kePengumuman`, `kontakSitus`, `sosialSitus`.
+- Halaman docs **Kerangka portal: menu, footer, pengumuman** dengan data tiruan.
+
+## 1.15.0 (2026-11-15)
+
+- **Modul profil per peran** (`unipo-ui/siakad`), semua lewat SDK dan akun yang masuk (tanpa ketik NIM/NIDN):
+  - `ModulProfilSaya`: kepala profil + tab yang disusun dari peran akun (`GET /v1/profil/saya`). Mahasiswa: data pribadi, orang tua & wali, akademik + riwayat studi, keuangan/UKT, riwayat. Dosen: kepegawaian, mahasiswa PA, jadwal mengajar, penelitian & PkM, riwayat. Tendik: kepegawaian, riwayat. Prop `tab` membatasi atau mengurutkan tab.
+  - `KepalaProfilSaya`: foto, nama, NIM/NIDN/NIP, prodi atau unit, kelengkapan profil, ringkasan per peran.
+  - `DataPribadiSaya`: data per kelompok dari `data_pribadi[]`; kolom yang `bisa_diubah` disimpan langsung (`POST /v1/profil/saya/data-pribadi`), kolom yang `bisa_diajukan` lewat permohonan perubahan dengan alasan (`POST /v1/profil/permohonan`). Galat per field dari server tampil di field-nya.
+  - `OrangTuaWali`: ayah, ibu, wali (`GET /v1/profil/saya/keluarga`, endpoint baru di SIAKAD).
+  - `RiwayatProfilSaya` (`jenis`: pendidikan, pekerjaan, prestasi, organisasi): linimasa + tambah/ubah/hapus lewat `/v1/profil/{jenis}`.
+  - `KeuanganMahasiswa`: ringkasan tagihan/dibayar/sisa, invoice aktif, rincian per semester dan riwayat pembayaran (`GET /v1/keuangan/mahasiswa/{nim}`).
+  - `KepegawaianSaya`: data pegawai, jabatan fungsional, pangkat/golongan, pendidikan, sertifikasi (`GET /v1/sdm/saya` + `/v1/sdm/pegawai/{id}/{jenis}`).
+  - `PenelitianDosen`: rekap per tahun, kegiatan penelitian/PkM, luaran (`GET /v1/lppm/peneliti/{nidn}`).
+- Halaman docs **Modul profil** (kategori Profil) dengan pengalih peran mahasiswa/dosen/tendik dan data tiruan.
+
+## 1.14.0 (2026-11-15)
+
+- **Ilustrasi per fitur dengan tokoh** (`unipo-ui`): `Ilustrasi` kini punya tokoh yang bisa diatur: gaya rambut/penutup kepala (`gaya`: cepol, pendek, hijab, peci), ekspresi (`ekspresi`: datar, senang, sedih, kaget, bingung), aksesori (`aksesori`: toga, jubah wisuda + selempang, jas, ransel, kacamata, headset, dan satu barang di tangan: laptop, kaca pembesar, dokumen, ijazah, ponsel, buku, kunci, piala, kartu), serta tokoh kedua (`teman`) untuk adegan berdua. Warna baru lewat variabel CSS (`--u-ilus-jubah`, `-emas`, `-hijab`, `-peci`, `-ransel`, `-benda`, `-kulit-sawo`, `-baju-kedua`).
+  - 26 adegan fitur (`ILUSTRASI_FITUR`): kelulusan-saya, wisuda, yudisium, e-learning, keamanan, salah-password, ganti-password, verifikasi, pendaftaran, maba, pencarian-mahasiswa, mahasiswa, dosen, tendik, wali-mahasiswa, bimbingan, krs, jadwal, presensi, nilai, skripsi, pembayaran, surat-layanan, cuti-akademik, pengumuman, obrolan.
+  - Keadaan baru (`ILUSTRASI_KEADAAN`): sesi-habis, tidak-ditemukan, akses-ditolak, offline. Keadaan lama mendapat ekspresi dan barang yang cocok (galat sedih, cari dengan kaca pembesar, terkunci dengan kunci).
+  - Ilustrasi kepala halaman modul katalog tetap tanpa tokoh (`tokoh={false}`).
+- **Modal per fitur** (`unipo-ui`): `ModalFitur` (ilustrasi di atas judul, aksi async, kotak galat dengan kode laporan/request_id, `wajib` untuk modal yang tidak bisa ditutup) dan preset `ModalSesiHabis`, `ModalSalahPassword` (sisa percobaan, akun terkunci sampai jam tertentu, lupa password), `ModalAksesDitolak` (scope yang dibutuhkan), `ModalBerhasil`, serta `RincianModal`.
+- **Modal terhubung SDK** (`unipo-ui/siakad`):
+  - `ModalAjukanLayanan`: katalog `GET /v1/layanan/jenis` (syarat, biaya, lama proses), isian tambahan sesuai jenis (teks, panjang, angka, tanggal, pilihan), `POST /v1/layanan/permohonan` dengan pemohon dari akun yang masuk; galat per field dari server tampil di field-nya; layar nomor permohonan + perkiraan selesai.
+  - `ModalCekKelulusan`: `GET /v1/kelulusan/mahasiswa/{nim}/syarat` (IPK, predikat, SKS terhadap batas prodi, syarat wisuda, syarat tambahan prodi, status akhir bila sudah lulus) dengan ilustrasi yang berganti sesuai hasil.
+  - `ModalDaftarWisuda` dan `ModalAmbilKrs` membungkus `PendaftaranWisuda` dan `AmbilKrs`; NIM diambil dari akun yang masuk.
+  - `PenjagaSesiSiakad` + `laporSesiHabis()`/`pulihkanSesi()`/`useSesiHabis()`: balasan 401 dari `useSiakadQuery` memunculkan `ModalSesiHabis` di seluruh aplikasi.
+- Halaman docs **Modal per fitur** dan halaman **Ilustrasi** (adegan fitur, atur tokoh sendiri) dengan data tiruan.
+
 ## 1.13.3 (2026-11-15)
 
 - Lencana menu `Sidebar` yang diisi `<Badge>` tidak lagi dibungkus pil kedua (tampil terpotong); di mode rail tetap jadi titik.
@@ -141,7 +209,7 @@
   - Catatan bimbingan per bagian: pembimbing menambah catatan, mahasiswa menandai sudah diperbaiki.
   - Pratinjau naskah utuh siap cetak (setiap bab di halaman baru).
   - Komponennya dikendalikan, karena SIAKAD belum punya API untuk menyimpan naskah.
-- `EditorBlok` punya prop `tipe` untuk membatasi blok yang bisa disisipkan. Hook `useSisipDiKaret` menyisipkan teks di posisi kursor terakhir, walau fokus sempat pindah ke tempat lain. 
+- `EditorBlok` punya prop `tipe` untuk membatasi blok yang bisa disisipkan. Hook `useSisipDiKaret` menyisipkan teks di posisi kursor terakhir, walau fokus sempat pindah ke tempat lain.
 
 ## 1.4.0 (2026-11-15)
 
