@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.21.0 (2026-11-15)
+
+- 
+
 ## 1.20.0 (2026-11-15)
 
 - **Tema dinamis untuk semua aplikasi** (`unipo-ui/siakad`, API SIAKAD `/v1/tema`):

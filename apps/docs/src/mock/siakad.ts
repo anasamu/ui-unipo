@@ -466,7 +466,7 @@ export const mockFetch: typeof fetch = async (input, init) => {
   if (out === LEWATI || out === KE_CADANGAN)
     return new Response(JSON.stringify({ error: { message: `Contoh belum ada untuk ${u.pathname}` } }), { status: 404, headers: { 'content-type': 'application/json' } });
   if ((out as { __mentah?: Uint8Array<ArrayBuffer> })?.__mentah)
-    return new Response((out as { __mentah: Uint8Array<ArrayBuffer> }).__mentah, { status: 200, headers: { 'content-type': 'application/octet-stream' } });
+    return new Response((out as { __mentah: Uint8Array<ArrayBuffer> }).__mentah, { status: 200, headers: { 'content-type': (out as { __tipe?: string }).__tipe ?? 'application/octet-stream' } });
   const { __status = 200, ...body } = (out ?? {}) as { __status?: number } & Record<string, unknown>;
   return new Response(JSON.stringify(body), { status: __status, headers: { 'content-type': 'application/json' } });
 };
