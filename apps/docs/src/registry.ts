@@ -56,6 +56,7 @@ export const CATEGORIES = [
   'Tabel data',
   'Akademik',
   'Portal & landing',
+  'Editor',
   'Kalender akademik',
   'Profil',
   'PMB',

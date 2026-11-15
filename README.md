@@ -41,6 +41,20 @@ import { KelolaSumber, HalamanModul, WizardSumber, KatalogProvider } from 'unipo
 
 Ikon kampus, `IkonKotak`, dan `Ilustrasi` per modul ada di `unipo-ui/ikon`; animasi per fitur (`Animasi`, `animasiFitur()`) dan target platform (`setelPlatform({ platform: 'mobile', os: 'ios' })`) di `unipo-ui`.
 
+## Editor berita (`unipo-ui/editor`)
+
+Editor blok gaya Gutenberg dengan format blok yang sama dengan `Blok.php` di SIAKAD.
+
+```tsx
+import { EditorBerita, TampilBlok, validasiBlok } from 'unipo-ui/editor';
+
+<EditorBerita
+  nilaiAwal={{ judul: '', blok: [] }}
+  unggah={async (file) => ({ url: await unggahFotoBerita(file) })} // atau pilihMedia={…} untuk pustaka media humas
+  aksi={(n, cek) => <Button disabled={cek.some((c) => c.wajib && !c.ok)} onClick={() => simpan({ ...n, blok: validasiBlok(n.blok) })}>Terbitkan</Button>}
+/>
+```
+
 ## Rilis
 
 Rilis ke npm berjalan otomatis lewat GitHub Actions (`.github/workflows/rilis.yml`):

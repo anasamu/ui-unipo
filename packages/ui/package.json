@@ -1,6 +1,6 @@
 {
   "name": "unipo-ui",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "type": "module",
   "sideEffects": [
     "*.css",
@@ -26,7 +26,7 @@
     "@base-ui/react": "1.9.0",
     "lucide-react": "1.73.0",
     "country-flag-icons": "1.6.20",
-    "unipo-ui-tokens": "1.3.0"
+    "unipo-ui-tokens": "1.4.0"
   },
   "devDependencies": {
     "sass": "1.108.2",
@@ -85,6 +85,16 @@
       "require": {
         "types": "./dist/ikon.d.cts",
         "default": "./dist/ikon.cjs"
+      }
+    },
+    "./editor": {
+      "import": {
+        "types": "./dist/editor.d.ts",
+        "default": "./dist/editor.js"
+      },
+      "require": {
+        "types": "./dist/editor.d.cts",
+        "default": "./dist/editor.cjs"
       }
     },
     "./tema": {

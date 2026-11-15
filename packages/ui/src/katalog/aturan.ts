@@ -96,6 +96,7 @@ export function paramPath(path: string): string[] {
 // ================================================================ Jenis isian
 export type JenisIsian =
   | 'file'
+  | 'berkas'
   | 'boolean'
   | 'enum'
   | 'bulat'
@@ -113,13 +114,15 @@ export type JenisIsian =
   | 'acuan'
   | 'teks';
 
-const PANJANG = /(^isi|konten|deskripsi|keterangan|catatan|uraian|ringkasan|abstrak|alamat|tujuan|alasan|pesan|komentar|saran|tanggapan|_html$|teks|body|narasi|temuan|rekomendasi|syarat|ketentuan|kronologi|tindak_lanjut|hasil)/i;
+const PANJANG =
+  /(^isi|konten|deskripsi|keterangan|catatan|uraian|ringkasan|abstrak|alamat|tujuan|alasan|pesan|komentar|saran|tanggapan|_html$|teks|body|narasi|temuan|rekomendasi|syarat|ketentuan|kronologi|tindak_lanjut|hasil)/i;
 const TELEPON = /^(telepon|telp|hp|no_hp|nomor_hp|no_telp|whatsapp|wa|no_wa|kontak_hp|telepon_.+|hp_.+)$/i;
 export const POLA_KODE = '^[A-Za-z0-9._\\-/]+$';
 const POLA_JAM = '^\\d{2}:\\d{2}$';
 
 /** Jenis isian untuk satu properti skema; menentukan kontrol dan aturan validasi. */
 export function jenisIsian(nama: string, s: Skema): JenisIsian {
+  if (berkasPusat(nama, s)) return 'berkas';
   if (s.f === 'binary' || (s.t === 'array' && s.i?.f === 'binary')) return 'file';
   if (s.rf && (!s.t || s.t === 'string' || s.t === 'integer')) return 'acuan';
   if (s.t === 'boolean') return 'boolean';
@@ -141,11 +144,24 @@ export function jenisIsian(nama: string, s: Skema): JenisIsian {
 
 /** Properti yang bisa diisi (bukan hanya baca), urut seperti di skema. */
 export function isianSkema(skema: Skema | undefined): Array<[string, Skema]> {
-  return Object.entries(skema?.pr ?? {}).filter(([, s]) => !penandaKolom(s).baca);
+  const semua = Object.entries(skema?.pr ?? {}).filter(([, s]) => !penandaKolom(s).baca);
+  // Unggahan dengan alternatif `berkas_id`: cukup satu isian berkas (unggah bertahap ke /v1/berkas atau pilih
+  // dari "Berkas saya"); field file mentah, base64, dan nama file disembunyikan.
+  return punyaBerkasPusat(skema) ? semua.filter(([k, s]) => !(s.f === 'binary' || (s.t === 'array' && s.i?.f === 'binary') || ALT_BERKAS.includes(k))) : semua;
 }
 
+/** `berkas_id` berisi UUID berkas terpusat /v1/berkas (bukan berkas modul lain seperti /v1/integrasi/berkas). */
+export function berkasPusat(nama: string, s: Skema): boolean {
+  return nama === 'berkas_id' && s.f === 'uuid' && /\/v1\/berkas\b/.test(s.ds ?? '');
+}
+const ALT_BERKAS = ['berkas_base64', 'file_base64', 'nama_file'];
+const punyaBerkasPusat = (skema: Skema | undefined) => Object.entries(skema?.pr ?? {}).some(([k, s]) => berkasPusat(k, s));
+/** Endpoint unggah: berkas mentah ada di skema, jadi `berkas_id` wajib diisi bila memakai berkas terpusat. */
+export const unggahWajib = (skema: Skema | undefined) => punyaBerkasPusat(skema) && Object.values(skema?.pr ?? {}).some((s) => s.f === 'binary' || (s.t === 'array' && s.i?.f === 'binary'));
+
 // ================================================================ Validasi (cermin PusatData\Aturan)
-const kosong = (v: unknown) => v === undefined || v === null || (typeof v === 'string' && v.trim() === '') || (typeof FileList !== 'undefined' && v instanceof FileList && v.length === 0) || (Array.isArray(v) && v.length === 0);
+const kosong = (v: unknown) =>
+  v === undefined || v === null || (typeof v === 'string' && v.trim() === '') || (typeof FileList !== 'undefined' && v instanceof FileList && v.length === 0) || (Array.isArray(v) && v.length === 0);
 
 function tanggalSah(v: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
@@ -283,6 +299,7 @@ export function validasiBody(skema: Skema | undefined, nilai: NilaiForm, opsi: O
   const { ubah = false, awal, multipart = false } = opsi;
   const galat: GalatForm = {};
   const wajib = new Set(skema?.rq ?? []);
+  if (!ubah && unggahWajib(skema)) wajib.add('berkas_id');
   const out: Record<string, unknown> = {};
   const berubah: string[] = [];
   for (const [k, s] of isianSkema(skema)) {
@@ -333,7 +350,10 @@ export function keNilaiApi(j: JenisIsian, s: Skema, v: unknown): unknown {
       return typeof v === 'string' ? JSON.parse(v) : v;
     case 'daftar': {
       const arr = Array.isArray(v) ? v : String(v).split(',');
-      return arr.map((x) => String(x).trim()).filter(Boolean).map((x) => (s.i?.t === 'integer' || s.i?.t === 'number' ? Number(x) : x));
+      return arr
+        .map((x) => String(x).trim())
+        .filter(Boolean)
+        .map((x) => (s.i?.t === 'integer' || s.i?.t === 'number' ? Number(x) : x));
     }
     case 'waktu': {
       const t = String(v).replace('T', ' ');
@@ -434,7 +454,8 @@ const PRIORITAS = [
   /(tanggal|tgl|mulai|selesai|batas)/i,
   /(status|aktif)/i,
 ];
-const ABAIKAN = /(^uuid$|password|secret|hash|token|_html$|^isi$|^isi_|^konten|^body$|^blok|deskripsi|keterangan|catatan|^meta|created_by|updated_by|diubah_oleh|dibuat_oleh|deleted|^syarat|^updated_at$)/i;
+const ABAIKAN =
+  /(^uuid$|password|secret|hash|token|_html$|^isi$|^isi_|^konten|^body$|^blok|deskripsi|keterangan|catatan|^meta|created_by|updated_by|diubah_oleh|dibuat_oleh|deleted|^syarat|^updated_at$)/i;
 
 /** Pilih kolom tabel dari skema dan isi baris: kunci/nama dulu, lalu jenis, unit, tanggal, status. */
 export function pilihKolom(skema: Skema | undefined, baris: Baris[] = [], maks = 6): { semua: string[]; awal: string[] } {
@@ -475,9 +496,15 @@ export function nilaiKunci(b: Baris, kunci = 'id'): string | undefined {
 
 type Nada = 'neutral' | 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'info';
 const NADA: Array<[RegExp, Nada]> = [
-  [/^(aktif|a|buka|disetujui|setuju|terverifikasi|valid|lulus|selesai|terbit|diterbitkan|lunas|publik|published|diterima|tersedia|hadir|h|berlaku|sah|ditetapkan|sukses|berhasil|dibayar|tervalidasi|approved|done|ok)$/i, 'success'],
+  [
+    /^(aktif|a|buka|disetujui|setuju|terverifikasi|valid|lulus|selesai|terbit|diterbitkan|lunas|publik|published|diterima|tersedia|hadir|h|berlaku|sah|ditetapkan|sukses|berhasil|dibayar|tervalidasi|approved|done|ok)$/i,
+    'success',
+  ],
   [/^(draf|draft|baru|diajukan|menunggu|pending|review|diproses|proses|seleksi|berjalan|dijadwalkan|terjadwal|dipinjam|antre|antrean|cuti|c|izin|i|sakit|s|revisi|perbaikan|verifikasi)$/i, 'warning'],
-  [/^(ditolak|tolak|batal|dibatalkan|gagal|kedaluwarsa|expired|nonaktif|non-aktif|n|d|do|drop out|keluar|hilang|rusak|alpa|blokir|diblokir|dicabut|ditutup|tutup|terlambat|denda|failed|rejected)$/i, 'danger'],
+  [
+    /^(ditolak|tolak|batal|dibatalkan|gagal|kedaluwarsa|expired|nonaktif|non-aktif|n|d|do|drop out|keluar|hilang|rusak|alpa|blokir|diblokir|dicabut|ditutup|tutup|terlambat|denda|failed|rejected)$/i,
+    'danger',
+  ],
   [/^(arsip|diarsipkan|inaktif|nonaktif sementara|dihapus|musnah|l)$/i, 'neutral'],
 ];
 /** Warna lencana untuk nilai status yang umum dipakai API SIAKAD. */

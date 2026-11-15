@@ -22,3 +22,5 @@ export * from './log';
 export * from './pilih';
 export * from './pemeliharaan';
 export * from './berkas';
+export * from './media-editor';
+export * from './pilih-berkas';
