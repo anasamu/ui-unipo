@@ -16,6 +16,7 @@
 - `KalenderAkademik` menerima kegiatan dari luar (`tambahan`, `labelJenis`, `warnaJenis`, `onRentangChange`). Klik kegiatan tetap memilih tanggalnya walau `onKegiatanClick` diisi.
 - `Stepper align="center"`: penanda dan teks langkah di tengah, garis penghubung antarpenanda (simetris untuk landing).
 - `Ilustrasi tokoh`: tampilkan tokoh orang (`jalan`, `tunjuk`, `duduk`) pada adegan apa pun, atau `false` untuk menyembunyikannya.
+- `Hero`: media berupa `Ilustrasi` tampil tanpa kotak abu-abu, menyatu dengan latar halaman (terang dan gelap).
 - Sampul kelas (`SampulKelas`) hanya memakai warna `--u-chart-1` sampai `--u-chart-6`, jadi tidak lagi hitam.
 - Halaman docs **LMS mahasiswa** dengan data contoh.
 
