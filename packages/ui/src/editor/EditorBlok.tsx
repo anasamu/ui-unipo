@@ -7,7 +7,7 @@ import { formatBytes } from '../lib/format';
 import { Dialog } from '../components/overlays';
 import { EditorCtx, type MediaEditor, type MintaFokus, type OpsiPilihMedia, type PolaBlok } from './konteks';
 import { Kanvas } from './Kanvas';
-import type { Blok } from './tipe';
+import type { Blok, TipeBlok } from './tipe';
 
 const MAKS_RIWAYAT = 100;
 
@@ -311,6 +311,8 @@ export interface EditorBlokProps {
   kepala?: React.ReactNode;
   /** Mode baca: tanpa bilah, tidak bisa diketik. */
   baca?: boolean;
+  /** Batasi tipe blok yang bisa disisipkan, mis. untuk surat. */
+  tipe?: TipeBlok[];
   className?: string;
 }
 
@@ -319,7 +321,7 @@ export interface EditorBlokProps {
  * seret untuk memindah, bilah format (tebal, miring, tautan, sorot, kode), dan Ctrl+Z / Ctrl+Shift+Z.
  * Format blok sama dengan Blok.php di SIAKAD.
  */
-export function EditorBlok({ blok, set, urung, ulang, pilih: pilihProp, setPilih: setPilihProp, pilihMedia: pilihMediaProp, unggah, sumberMedia, pola, kepala, baca, className }: EditorBlokProps) {
+export function EditorBlok({ blok, set, urung, ulang, pilih: pilihProp, setPilih: setPilihProp, pilihMedia: pilihMediaProp, unggah, sumberMedia, pola, kepala, baca, tipe, className }: EditorBlokProps) {
   const [fokus, setFokus] = React.useState<MintaFokus | null>(null);
   const [pilihSendiri, setPilihSendiri] = React.useState<string | null>(null);
   const pilih = pilihProp !== undefined ? pilihProp : pilihSendiri;
@@ -347,7 +349,7 @@ export function EditorBlok({ blok, set, urung, ulang, pilih: pilihProp, setPilih
     return () => document.removeEventListener('keydown', tombol);
   }, [urung, ulang, pilih, setPilih]);
 
-  const ctx = React.useMemo(() => ({ pilih, setPilih, fokus, setFokus, pilihMedia, pola, baca: Boolean(baca) }), [pilih, setPilih, fokus, pilihMedia, pola, baca]);
+  const ctx = React.useMemo(() => ({ pilih, setPilih, fokus, setFokus, pilihMedia, pola, baca: Boolean(baca), tipe }), [pilih, setPilih, fokus, pilihMedia, pola, baca, tipe]);
 
   return (
     <EditorCtx.Provider value={ctx}>

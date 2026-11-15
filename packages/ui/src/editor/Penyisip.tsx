@@ -28,7 +28,7 @@ export const blokPola = (p: PolaBlok): Blok[] => rapikan(p.blok).map(salinBaru);
 
 /** Popover penyisip: tab Blok (cari + kisi per grup) dan tab Pola. Posisi di bawah elemen jangkar. */
 export function Penyisip({ jangkar, pilih, tutup, tanpaKolom }: { jangkar: HTMLElement | null; pilih: (b: Blok[]) => void; tutup: () => void; tanpaKolom?: boolean }) {
-  const { pola } = useEditor();
+  const { pola, tipe: boleh } = useEditor();
   const [tab, setTab] = React.useState<'blok' | 'pola'>('blok');
   const [q, setQ] = React.useState('');
   const ref = React.useRef<HTMLDivElement>(null);
@@ -56,7 +56,8 @@ export function Penyisip({ jangkar, pilih, tutup, tanpaKolom }: { jangkar: HTMLE
     };
   }, [jangkar, tutup]);
 
-  const tipe = saringTipe(q, tanpaKolom ? SEMUA.filter((t) => t !== 'kolom') : SEMUA);
+  const dasar = boleh ?? SEMUA;
+  const tipe = saringTipe(q, tanpaKolom ? dasar.filter((t) => t !== 'kolom') : dasar);
   const grupPola = React.useMemo(() => {
     const m = new Map<string, PolaBlok[]>();
     (pola ?? []).filter((p) => !q || `${p.nama} ${p.kategori}`.toLowerCase().includes(q.toLowerCase())).forEach((p) => m.set(p.kategori, [...(m.get(p.kategori) ?? []), p]));

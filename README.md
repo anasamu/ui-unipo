@@ -55,6 +55,15 @@ import { EditorBerita, TampilBlok, validasiBlok } from 'unipo-ui/editor';
 />
 ```
 
+Editor dokumen untuk surat, templat surat, dan skripsi ada di entri yang sama:
+
+```tsx
+import { EditorTemplatSurat, LembarSurat, EditorSkripsi, naskahKosong } from 'unipo-ui/editor';
+import { BuatSuratDariTemplat, KelolaTemplatSurat } from 'unipo-ui/siakad'; // terhubung /v1/arsip
+
+<BuatSuratDariTemplat onSelesai={(surat) => buka(surat.uuid)} />
+```
+
 ## Rilis
 
 Rilis ke npm berjalan otomatis lewat GitHub Actions (`.github/workflows/rilis.yml`):

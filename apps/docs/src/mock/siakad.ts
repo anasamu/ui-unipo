@@ -374,8 +374,14 @@ const ROUTES: Array<[RegExp, (u: URL, init?: RequestInit) => unknown]> = [
   ],
   [
     /\/v1\/arsip\/surat-keluar$/,
-    (u) =>
-      halaman(
+    (u, init) =>
+      init?.method === 'POST'
+        ? (() => {
+            // Konsep surat baru dari wizard BuatSuratDariTemplat (isi dari templat sudah diisi di browser).
+            const b = JSON.parse(String(init.body ?? '{}'));
+            return { __status: 201, data: { id: 900 + Math.floor(Math.random() * 99), uuid: crypto.randomUUID(), status: 'draf', nomor_surat: null, ...b } };
+          })()
+        : halaman(
         SURAT_KELUAR.filter(
           (r) =>
             cocok(u.searchParams.get('q'), r.perihal, r.nomor_surat, r.tujuan_ringkas) &&

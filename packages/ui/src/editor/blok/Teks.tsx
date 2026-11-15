@@ -24,7 +24,8 @@ export function Paragraf({ b, ubah, ops }: PropsBlok) {
   const teks: string = b.data.teks ?? '';
   const polos = polosDari(teks);
   const garis = /^\/[\p{L}\d-]{0,24}$/u.test(polos) ? polos.slice(1) : null;
-  const tipe = garis !== null ? saringTipe(garis) : [];
+  const { tipe: boleh } = useEditor();
+  const tipe = garis !== null ? saringTipe(garis, boleh) : [];
   const [aktif, setAktif] = useState(0);
   useEffect(() => setAktif(0), [garis]);
 
