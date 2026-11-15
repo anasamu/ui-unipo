@@ -289,6 +289,21 @@ const antara = (u: URL, v?: string | null) =>
   (!u.searchParams.get('dari') || (v ?? '') >= u.searchParams.get('dari')!) && (!u.searchParams.get('sampai') || (v ?? '') <= u.searchParams.get('sampai')!);
 
 const ROUTES: Array<[RegExp, (u: URL, init?: RequestInit) => unknown]> = [
+  [
+    /\/v1\/infra\/status$/,
+    () => ({
+      data: {
+        status: 'sebagian_terganggu',
+        diperbarui_at: new Date().toISOString(),
+        layanan: [
+          { kode: 'siakad', nama: 'SIAKAD', jenis: 'monolith', status: 'sehat', latensi_ms: 182, diperiksa_at: '2026-11-15 13:40:00', berubah_at: '2026-11-10 08:00:00', uptime_24j: 100 },
+          { kode: 'sso', nama: 'Login SSO', jenis: 'layanan', status: 'sehat', latensi_ms: 95, diperiksa_at: '2026-11-15 13:40:00', berubah_at: '2026-11-12 21:15:00', uptime_24j: 99.7 },
+          { kode: 'lms', nama: 'LMS e-learning', jenis: 'layanan', status: 'terganggu', latensi_ms: 2350, diperiksa_at: '2026-11-15 13:40:00', berubah_at: '2026-11-15 13:20:00', uptime_24j: 98.6 },
+          { kode: 'pmb', nama: 'PMB online', jenis: 'frontend', status: 'sehat', latensi_ms: 140, diperiksa_at: '2026-11-15 13:40:00', berubah_at: '2026-11-14 07:30:00', uptime_24j: 100 },
+        ],
+      },
+    }),
+  ],
   [/\/v1\/health$/, () => ({ data: { status: 'ok', database: 'ok', waktu_server: new Date().toISOString() } })],
   [
     /\/v1\/integrasi\/status$/,

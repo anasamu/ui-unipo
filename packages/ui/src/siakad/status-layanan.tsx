@@ -1,7 +1,7 @@
 'use client';
 import * as React from 'react';
 import { Cloud, CreditCard, Database, Globe, HardDrive, KeyRound, Mail, MessageCircle, ShieldCheck, Video } from 'lucide-react';
-import { ServiceList, ServiceStatusPanel, type ServiceCheck, type ServiceInfo } from '../components/status';
+import { ServiceList, ServiceStatusPanel, StatusBanner, type ServiceCheck, type ServiceInfo, type ServiceState } from '../components/status';
 import { useOptionalSiakad, useSiakadQuery } from './provider';
 
 export interface StatusLayananProps {
@@ -84,4 +84,78 @@ export function IntegrasiAktif({ className }: { className?: string }) {
     };
   });
   return <ServiceList className={className} services={services} />;
+}
+
+// ================================================================ Registri layanan kampus (Pustikom » Infrastruktur)
+/** Satu baris GET /v1/infra/status. */
+export interface StatusLayananKampusItem {
+  kode: string;
+  nama: string;
+  jenis: string;
+  status: 'sehat' | 'terganggu' | 'mati' | 'tidak_diketahui';
+  latensi_ms: number | null;
+  diperiksa_at: string | null;
+  berubah_at: string | null;
+  uptime_24j: number | null;
+}
+export interface StatusLayananKampusData {
+  status: 'normal' | 'sebagian_terganggu' | 'gangguan' | 'tidak_diketahui';
+  layanan: StatusLayananKampusItem[];
+  diperbarui_at: string;
+}
+
+const STATUS_KAMPUS: Record<StatusLayananKampusItem['status'], ServiceState> = { sehat: 'ok', terganggu: 'degraded', mati: 'down', tidak_diketahui: 'checking' };
+const UMUM_KAMPUS: Record<StatusLayananKampusData['status'], ServiceState> = { normal: 'ok', sebagian_terganggu: 'degraded', gangguan: 'down', tidak_diketahui: 'checking' };
+
+export interface StatusLayananKampusProps {
+  /** Hanya tampilkan layanan dengan kode ini (mis. ['siakad', 'sso', 'lms']). Bawaan semua. */
+  kode?: string[];
+  /** Sembunyikan spanduk ringkasan di atas daftar. */
+  tanpaSpanduk?: boolean;
+  /** Hanya spanduk (cocok untuk banner gangguan di atas aplikasi); tidak tampil apa pun saat normal. */
+  hanyaGangguan?: boolean;
+  /** Tautan per layanan, mis. ke halaman status lengkap. */
+  href?: (kode: string) => string | undefined;
+  className?: string;
+}
+
+/**
+ * Status semua aplikasi dan layanan kampus dari registri Pustikom (GET /v1/infra/status, publik, health check tiap
+ * beberapa menit oleh cron SIAKAD): spanduk ringkasan + daftar layanan dengan latensi dan uptime 24 jam.
+ * Dengan `hanyaGangguan`, hanya spanduk yang muncul saat ada layanan terganggu atau mati.
+ */
+export function StatusLayananKampus({ kode, tanpaSpanduk, hanyaGangguan, href, className }: StatusLayananKampusProps) {
+  const { data, loading, error } = useSiakadQuery<StatusLayananKampusData>(
+    ['infra', 'status'],
+    (s, signal) => s.request<StatusLayananKampusData>({ method: 'GET', path: '/v1/infra/status', public: true }, { signal }),
+    { staleTime: 60_000 },
+  );
+  const layanan = (data?.layanan ?? []).filter((l) => !kode || kode.includes(l.kode));
+  const buruk = layanan.filter((l) => l.status === 'mati' || l.status === 'terganggu');
+  const umum: ServiceState = kode ? (layanan.some((l) => l.status === 'mati') ? 'down' : buruk.length ? 'degraded' : layanan.length ? 'ok' : 'checking') : UMUM_KAMPUS[data?.status ?? 'tidak_diketahui'];
+  const waktu = data?.diperbarui_at ? new Date(data.diperbarui_at) : null;
+  const catatan = buruk.length ? buruk.map((l) => `${l.nama} ${l.status === 'mati' ? 'tidak tersedia' : 'melambat'}`).join(' · ') : undefined;
+
+  if (hanyaGangguan) {
+    if (loading || error || !buruk.length) return null;
+    return <StatusBanner className={className} status={umum} note={catatan} checkedAt={waktu} />;
+  }
+  if (error) return <StatusBanner className={className} status="off" title="Status layanan tidak bisa dimuat" note={error instanceof Error ? error.message : undefined} />;
+  const services: ServiceInfo[] = loading
+    ? [{ key: 'memuat', name: 'Memuat status…', status: 'checking' }]
+    : layanan.map((l) => ({
+        key: l.kode,
+        name: l.nama,
+        icon: <Globe />,
+        status: STATUS_KAMPUS[l.status],
+        latency: l.latensi_ms,
+        description: [l.uptime_24j !== null ? `Uptime 24 jam ${l.uptime_24j}%` : null, l.berubah_at ? `status sejak ${new Date(l.berubah_at.replace(' ', 'T')).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}` : null].filter(Boolean).join(' · ') || undefined,
+        href: href?.(l.kode),
+      }));
+  return (
+    <div className={className} style={{ display: 'grid', gap: 12 }}>
+      {!tanpaSpanduk && !loading && <StatusBanner status={umum} note={catatan} checkedAt={waktu} />}
+      <ServiceList services={services} />
+    </div>
+  );
 }

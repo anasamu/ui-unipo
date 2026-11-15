@@ -1,6 +1,6 @@
 import { Activity, Database, Globe, KeyRound, RefreshCw } from 'lucide-react';
 import { Button, LatencyIndicator, ServiceList, ServiceStatusBadge, ServiceStatusPanel, StatusBanner, type ServiceInfo } from 'unipo-ui';
-import { IntegrasiAktif, StatusLayananUnipo } from 'unipo-ui/siakad';
+import { IntegrasiAktif, StatusLayananKampus, StatusLayananUnipo } from 'unipo-ui/siakad';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
@@ -9,9 +9,11 @@ export const meta: DemoMeta = {
   layout: 'normal',
   order: 1,
   description: 'Komponen halaman status: spanduk keseluruhan, daftar layanan dengan ikon, alamat, waktu tanggap, dan lencana, bilah ketersediaan harian, serta pemeriksa otomatis dengan tombol Periksa ulang. Versi SIAKAD memeriksa gerbang API dan database lewat GET /v1/health.',
-  importLine: "import { ServiceStatusPanel, StatusBanner, ServiceList } from 'unipo-ui';\nimport { StatusLayananUnipo, IntegrasiAktif } from 'unipo-ui/siakad';",
+  importLine: "import { ServiceStatusPanel, StatusBanner, ServiceList } from 'unipo-ui';\nimport { StatusLayananUnipo, StatusLayananKampus, IntegrasiAktif } from 'unipo-ui/siakad';",
   demos: {
     Siakad: 'StatusLayananUnipo (system.health)',
+    Kampus: 'StatusLayananKampus (registri Pustikom, /v1/infra/status)',
+    Gangguan: 'StatusLayananKampus hanyaGangguan: banner di atas aplikasi',
     Spanduk: 'StatusBanner untuk setiap keadaan',
     Riwayat: 'ServiceList dengan bilah ketersediaan 30 hari',
     Pemeriksa: 'ServiceStatusPanel dengan pemeriksa sendiri',
@@ -24,11 +26,21 @@ export const meta: DemoMeta = {
     ['ServiceInfo.history', '{ date, status, note }[]', 'Riwayat harian untuk UptimeBar.'],
     ['ServiceCheck.check', '(signal) => Promise', 'Lempar galat bila gagal; latensi diukur otomatis.'],
     ['intervalMs', 'number', 'Periksa ulang otomatis (bawaan 60 detik, 0 = mati).'],
+    ['StatusLayananKampus.kode', 'string[]', 'Hanya layanan dengan kode ini; bawaan semua layanan di registri Pustikom.'],
+    ['StatusLayananKampus.hanyaGangguan', 'boolean', 'Hanya spanduk, dan hanya saat ada layanan terganggu/mati.'],
   ],
 };
 
 export function Siakad() {
   return <StatusLayananUnipo extra={[{ key: 'sso', name: 'Login SSO & konsol', url: 'data:application/json,{}', description: 'https://sso.unipo.ac.id', icon: <KeyRound /> }]} />;
+}
+
+export function Kampus() {
+  return <StatusLayananKampus />;
+}
+
+export function Gangguan() {
+  return <StatusLayananKampus hanyaGangguan kode={['lms']} />;
 }
 
 export function Spanduk() {
