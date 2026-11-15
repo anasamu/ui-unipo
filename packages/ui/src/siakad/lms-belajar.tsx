@@ -359,6 +359,8 @@ export interface RuteLms {
   hasilKuis: (percobaanId: number, kuisId?: number) => string;
   forum: (id: number, kelasId?: number) => string;
   utas: (id: number) => string;
+  /** Cara pindah halaman setelah aksi (mulai kuis, kirim kuis, utas baru, klik notifikasi). Bawaan window.location.assign; isi dengan navigate() router SPA. */
+  pindah?: (href: string) => void;
 }
 export const RUTE_LMS: RuteLms = {
   kelas: (id, tab) => (tab && tab !== 'materi' ? `/kelas/${id}/${tab}` : `/kelas/${id}`),
@@ -377,6 +379,8 @@ export function LmsRuteProvider({ rute, children }: { rute?: Partial<RuteLms>; c
   return <RuteCtx.Provider value={v}>{children}</RuteCtx.Provider>;
 }
 export const useRuteLms = () => React.useContext(RuteCtx);
+/** Pindah halaman lewat `rute.pindah` bila ada, selain itu memuat alamat baru. */
+const pindahKe = (rute: RuteLms, href: string): void => (rute.pindah ? rute.pindah(href) : window.location.assign(href));
 
 /** Rute halaman untuk satu item kelas. */
 export function ruteItemLms(i: ItemTopikLms, rute: RuteLms = RUTE_LMS, kelasId?: number): string {
@@ -486,6 +490,8 @@ function Galat({ q, judul }: { q: Pick<QueryState<unknown>, 'error' | 'refetch'>
     </div>
   );
 }
+/** Kotak galat hasil query LMS: pesan, kode laporan (request_id), dan tombol muat ulang. 403/404 tampil sebagai "Tidak tersedia". */
+export const GalatLms = Galat;
 const muatDari = (q: QueryState<unknown>) => q.loading && !q.data;
 const segarkan = () => invalidateSiakad('lms');
 
@@ -1627,7 +1633,7 @@ export function HalamanKuisLms({ kuisId, onMulai, className }: { kuisId: number;
       } catch {
         /* abaikan */
       }
-      window.location.assign(rute.kerjakanKuis(kuisId));
+      pindahKe(rute, rute.kerjakanKuis(kuisId));
     }
   };
   const tekan = () => (k.berkata_sandi && !berjalan ? setMinta(true) : mulai());
@@ -1860,7 +1866,7 @@ export function RuangKuisLms({
       segarkan();
       const hasil = { ...(r.data as unknown as PercobaanKuis), kuis_id: kuisId };
       if (onSelesai) onSelesai(hasil);
-      else window.location.assign(rute.hasilKuis(p.id, kuisId));
+      else pindahKe(rute, rute.hasilKuis(p.id, kuisId));
     } catch (e) {
       setGalat(e);
       setMengirim(false);
@@ -1898,7 +1904,7 @@ export function RuangKuisLms({
           {pesanGalat(galat, { kode: false })}
           <KodeLaporan error={galat} />
         </Alert>
-        <Button variant="outline" onClick={() => (onKeluar ? onKeluar() : window.location.assign(rute.kuis(kuisId)))}>
+        <Button variant="outline" onClick={() => (onKeluar ? onKeluar() : pindahKe(rute, rute.kuis(kuisId)))}>
           <ArrowLeft /> Kembali
         </Button>
       </div>
@@ -2321,7 +2327,7 @@ export function UtasForumLms({ forumId, kelasId, onUtasDibuat, className }: { fo
           ))}
         </ul>
       )}
-      <UtasBaruLms forumId={forumId} open={baru} onOpenChange={setBaru} onDibuat={(p) => (onUtasDibuat ? onUtasDibuat(p) : window.location.assign(rute.utas(p.id)))} />
+      <UtasBaruLms forumId={forumId} open={baru} onOpenChange={setBaru} onDibuat={(p) => (onUtasDibuat ? onUtasDibuat(p) : pindahKe(rute, rute.utas(p.id)))} />
     </article>
   );
 }
@@ -3068,7 +3074,7 @@ export function DaftarNotifikasiLms({
     if (!x.dibaca_at) void baca({ id: [x.id] });
     const href = ruteDariTautanLms(x.tautan, x.kelas_id, rute);
     if (onPilih) onPilih(x, href);
-    else if (href) window.location.assign(href);
+    else if (href) pindahKe(rute, href);
   };
   return (
     <div className={cn('u-lmsb-notif', className)}>
@@ -3283,7 +3289,7 @@ export function KalenderLms({ onBuka, className }: { onBuka?: (href: string) => 
         onKegiatanClick={(e) => {
           if (!e.href || !String(e.id ?? '').startsWith('lms-')) return;
           if (onBuka) onBuka(e.href);
-          else window.location.assign(e.href);
+          else pindahKe(rute, e.href);
         }}
       />
     </div>

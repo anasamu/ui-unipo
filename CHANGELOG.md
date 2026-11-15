@@ -12,8 +12,9 @@
   - Beranda: `KelasDaringMendatang`, `TenggatLms`, `JadwalHariIniLms`, `TugasKuisSayaLms` (lintas kelas), `DaftarNotifikasiLms` (tandai dibaca).
   - Publik: `KatalogKelasTerbuka`/`KartuKelasTerbuka` dari `/v1/lms/terbuka` (tanpa token, untuk landing page) dan `GabungKelasKodeLms`.
   - `KalenderLms`: tenggat tugas, kuis, pertemuan, dan kelas daring digabung dengan kalender akademik SIAKAD.
-  - `LmsRuteProvider`/`RUTE_LMS` mengatur alamat halaman yang dipakai tautan; hook data `useKontenKelas`, `useTugasLms`, `useKuisLms`, `useSemuaKelasLms`, dan lainnya ikut diekspor.
+  - `LmsRuteProvider`/`RUTE_LMS` mengatur alamat halaman yang dipakai tautan, dan `rute.pindah` meneruskan perpindahan halaman (mulai kuis, selesai kuis, buka utas) ke router SPA; `GalatLms` menampilkan galat dengan kode laporan. Hook data `useKontenKelas`, `useTugasLms`, `useKuisLms`, `useSemuaKelasLms`, dan lainnya ikut diekspor.
 - `KalenderAkademik` menerima kegiatan dari luar (`tambahan`, `labelJenis`, `warnaJenis`, `onRentangChange`). Klik kegiatan tetap memilih tanggalnya walau `onKegiatanClick` diisi.
+- Sampul kelas (`SampulKelas`) hanya memakai warna `--u-chart-1` sampai `--u-chart-6`, jadi tidak lagi hitam.
 - Halaman docs **LMS mahasiswa** dengan data contoh.
 
 ## 1.8.0 (2026-11-15)
