@@ -1,5 +1,20 @@
 # Catatan perubahan
 
+## 1.22.0 (2026-11-15)
+
+- **Presensi QR** (`unipo-ui/siakad`, API SIAKAD `/v1/presensi`): presensi kuliah mahasiswa, dosen mengajar, kerja dosen/tendik lewat titik kiosk, dan kegiatan (rapat, seminar, upacara, ormawa).
+  - `KelolaSesiPresensi`: daftar sesi (saring status, satu kelas lewat `idj` atau `lmsKelasId`), buat sesi, dan `DetailSesiPresensi` (buka, tutup, sahkan/gabung, batal, ganti kode; tab layar QR, daftar hadir, pindai kartu, izin, jejak pindaian).
+  - `LayarQrPresensi`: QR berganti untuk proyektor (layar penuh), bilah waktu, kode cadangan, hitungan hadir, pemindai terbaru. `useQrBerganti` mengambil QR baru tepat saat berganti.
+  - `PindaiPresensi`: kamera (BarcodeDetector, atau jsQR di Safari iOS) atau kode 6 huruf, dengan lokasi dan ID perangkat; menerima token dari tautan `?t=`. Juga untuk QR titik kerja (masuk/pulang). `KameraPindaiQr` bisa dipakai terpisah.
+  - `KartuQrSaya` + `PindaiKartuPresensi` (petugas meja registrasi), `DaftarHadirSesi` (koreksi status, isi yang belum, tanda curiga), `PresensiSaya`, `ModulPresensiSaya`.
+  - `PengajuanIzinPresensi` (surat lewat `PilihBerkas`), `DaftarIzinPresensi` (saya/penyetuju, setujui/tolak).
+  - `LayarKioskPresensi` (token aplikasi `presensi:kiosk`), `KelolaTitikPresensi` + `FormTitikPresensi`.
+  - `FormSesiPresensi`: kuliah (kelas dari `SUMBER_KELAS_KULIAH`) atau kegiatan (undangan dipilih dari data, petugas, unit), lokasi + radius, terlambat, kode cadangan, perangkat ganda.
+  - Gambar QR: `KodeQrSiakad` dengan gaya `presensi` per bagian (dari 1.21.0), digambar di browser tanpa panggilan server tiap pergantian; `renderQr` untuk menggambar sendiri.
+  - Bantuan: `pesanGalatPresensi`, `idPerangkatPresensi`, `ambilLokasiPresensi`, `tokenPresensiDariUrl`.
+- Ketergantungan baru `jsqr` (dimuat hanya bila peramban tidak punya BarcodeDetector).
+- Halaman docs **Presensi QR** (Per kegunaan) dengan server tiruan; entri Presensi di Peta kegunaan.
+
 ## 1.21.0 (2026-11-15)
 
 - 
