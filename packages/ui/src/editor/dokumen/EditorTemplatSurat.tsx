@@ -1,11 +1,12 @@
 import * as React from 'react';
-import { FlaskConical } from 'lucide-react';
+import { Eye, FlaskConical } from 'lucide-react';
+import { Button } from '../../components/actions';
+import { Dialog } from '../../components/overlays';
 import { Field, Input, Switch, Textarea } from '../../components/forms';
 import type { PilihMedia, SumberMedia } from '../EditorBlok';
 import type { MediaEditor, OpsiPilihMedia, PolaBlok } from '../konteks';
-import type { Blok } from '../tipe';
-import { EditorDokumen } from './EditorDokumen';
-import { LembarSurat, type KopSurat, type PenandatanganSurat, type UkuranKertas } from './LembarSurat';
+import { MARGIN_SIAP, PengolahDokumen } from '../pengolah/PengolahDokumen';
+import { KopLembar, LembarSurat, type KopSurat, type PenandatanganSurat, type UkuranKertas } from './LembarSurat';
 import { isiTemplat, penandaIsian, type PenandaTemplat } from './templat';
 
 /** Kolom templat surat di /v1/arsip/template. */
@@ -117,6 +118,7 @@ export function EditorTemplatSurat({
   const isian = React.useMemo(() => penandaIsian(isi).map((p) => penanda?.find((x) => x.nama === p.nama) ?? p), [isi, penanda]);
   const tampilGalat = (k: keyof GalatTemplatSurat) => (sentuh[k] ? galat[k] : undefined);
 
+  const hariIni = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
   const panel = (
     <>
       <section className="u-dok-isian">
@@ -139,6 +141,29 @@ export function EditorTemplatSurat({
           </p>
         )}
       </section>
+      <section>
+        <Dialog
+          size="lg"
+          title="Pratinjau dengan data uji"
+          description="Penanda diisi seperti di server; yang belum diisi ditandai kuning."
+          trigger={
+            <Button variant="outline" size="sm" fullWidth>
+              <Eye />
+              Pratinjau surat jadi
+            </Button>
+          }
+        >
+          <LembarSurat
+            kertas={kertas}
+            kop={kop}
+            nomor=""
+            perihal={perihal || null}
+            tanggal={hariIni}
+            isi={isiTemplat(isi, uji, { unit, surat: { perihal, tanggal_surat: hariIni }, tandaiKosong: true })}
+            penandatangan={penandatangan}
+          />
+        </Dialog>
+      </section>
       {isian.length > 0 && (
         <section>
           <h3 className="u-eb-panel-judul">
@@ -157,38 +182,48 @@ export function EditorTemplatSurat({
     </>
   );
 
-  const hariIni = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const [kertasAktif, setKertasAktif] = React.useState<UkuranKertas>(kertas);
+  React.useEffect(() => setKertasAktif(kertas), [kertas]);
+  const [margin, setMargin] = React.useState(MARGIN_SIAP.dinas.margin);
+  const unggahGambar = React.useMemo(
+    () => (unggah ? async (f: File) => unggah(f, { jenis: 'gambar' }).then((m) => ({ url: m.url, nama: m.nama })) : undefined),
+    [unggah],
+  );
+  void pilihMedia;
+  void sumberMedia;
+  void pola;
 
   return (
-    <EditorDokumen
+    <PengolahDokumen
       className={className}
       nilaiAwal={nilaiAwal?.isi ?? ''}
-      onChange={(h: string, _b: Blok[]) => {
+      onChange={(h) => {
         setIsi(h);
         setSentuh((s) => (s.isi ? s : { ...s, isi: true }));
       }}
       penanda={penanda}
-      penandaBawaan
-      kertas={kertas}
+      kertas={kertasAktif}
+      onKertasChange={setKertasAktif}
+      margin={margin}
+      onMarginChange={setMargin}
+      kop={kop ? <KopLembar kop={kop} /> : undefined}
+      kaki={
+        penandatangan ? (
+          <div className="u-lembar-ttd">
+            <p>{penandatangan.jabatan},</p>
+            <div className="u-lembar-ttd-ruang" />
+            <p className="u-lembar-ttd-nama">{penandatangan.nama}</p>
+            {penandatangan.nomorInduk && <p>{penandatangan.nomorInduk}</p>}
+          </div>
+        ) : undefined
+      }
+      unggah={unggahGambar}
+      judul={nama || 'Templat baru'}
       status={status}
       tinggi={tinggi}
-      pilihMedia={pilihMedia}
-      unggah={unggah}
-      sumberMedia={sumberMedia}
-      pola={pola}
-      panelDokumen={panel}
-      aksi={aksi ? () => aksi(nilai, galat) : undefined}
-      pratinjau={(h) => (
-        <LembarSurat
-          kertas={kertas}
-          kop={kop}
-          nomor=""
-          perihal={perihal || null}
-          tanggal={hariIni}
-          isi={isiTemplat(h, uji, { unit, surat: { perihal, tanggal_surat: hariIni }, tandaiKosong: true })}
-          penandatangan={penandatangan}
-        />
-      )}
+      panel={panel}
+      panelJudul="Templat"
+      aksi={aksi ? aksi(nilai, galat) : undefined}
     />
   );
 }

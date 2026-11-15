@@ -59,6 +59,22 @@ export interface LembarSuratProps {
 
 const kopObjek = (k: LembarSuratProps['kop']): k is KopSurat => Boolean(k && typeof k === 'object' && 'instansi' in (k as object));
 
+/** Kop surat (logo, instansi, unit, alamat, kontak) dengan garis ganda di bawahnya; juga untuk PengolahDokumen. */
+export function KopLembar({ kop, className }: { kop: KopSurat | React.ReactNode; className?: string }) {
+  if (!kopObjek(kop)) return <header className={cn('u-lembar-kop', className)}>{kop as React.ReactNode}</header>;
+  return (
+    <header className={cn('u-lembar-kop', className)}>
+      {kop.logo && <img src={kop.logo} alt="" className="u-lembar-logo" />}
+      <div>
+        <p className="u-lembar-instansi">{kop.instansi}</p>
+        {kop.unit && <p className="u-lembar-unit">{kop.unit}</p>}
+        {kop.alamat && <p className="u-lembar-alamat">{kop.alamat}</p>}
+        {kop.kontak && <p className="u-lembar-alamat">{kop.kontak}</p>}
+      </div>
+    </header>
+  );
+}
+
 /**
  * Satu lembar surat dinas siap cetak: kop, nomor/lampiran/perihal, tanggal, tujuan, isi, tanda tangan, dan
  * tembusan. Ukuran kertas A4/F4/Letter dengan margin surat dinas; `window.print()` mencetak lembarnya saja bila
@@ -73,20 +89,7 @@ export function LembarSurat({ kop, nomor, lampiran, perihal, sifat, tanggal, tem
 
   return (
     <article className={cn('u-lembar', className)} data-kertas={kertas} data-bayangan={bayangan || undefined}>
-      {kop &&
-        (kopObjek(kop) ? (
-          <header className="u-lembar-kop">
-            {kop.logo && <img src={kop.logo} alt="" className="u-lembar-logo" />}
-            <div>
-              <p className="u-lembar-instansi">{kop.instansi}</p>
-              {kop.unit && <p className="u-lembar-unit">{kop.unit}</p>}
-              {kop.alamat && <p className="u-lembar-alamat">{kop.alamat}</p>}
-              {kop.kontak && <p className="u-lembar-alamat">{kop.kontak}</p>}
-            </div>
-          </header>
-        ) : (
-          <header className="u-lembar-kop">{kop as React.ReactNode}</header>
-        ))}
+      {kop && <KopLembar kop={kop} />}
 
       {(nomor || perihal || tgl) && (
         <div className="u-lembar-kepala">
