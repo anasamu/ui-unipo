@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.13.1 (2026-11-15)
+
+- `Split` bersarang tidak lagi tertukar: aturan `side="start"` dan `sticky` kini hanya berlaku untuk anak langsung. Sebelumnya bagian FAQ landing PMB (Split di dalam Split dengan sidebar kiri) menaruh kartu kontak di kolom lebar dan FAQ di kolom sempit.
+
 ## 1.13.0 (2026-11-15)
 
 - **Obrolan terenkripsi end-to-end** (`unipo-ui/siakad`) di atas `/v1/obrolan` SIAKAD, untuk semua peran: mahasiswa, dosen, tendik, maba, panitia, dan pendaftar PMB (lewat aplikasi PMB). Pengganti chat lama yang menyimpan teks polos.
