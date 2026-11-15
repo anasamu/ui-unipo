@@ -164,7 +164,7 @@ export function StrukturPortal({ situs, grup, turunan, susun = strukturDariPorta
   return <StrukturOrganisasi data={data} varian={varian} {...rest} />;
 }
 
-// ================================================================ TestimoniPmb
+// ================================================================ TestimoniLandingPmb
 
 /** Baris `pmb_testimoni` dari `GET /v1/pmb/info/landing`. */
 export interface BarisTestimoniPmb {
@@ -206,13 +206,13 @@ export function keTestimoni(b: BarisTestimoniPmb): ItemTestimoni {
   };
 }
 
-export interface TestimoniPmbProps extends Omit<TestimoniProps, 'items' | 'loading'> {
+export interface TestimoniLandingPmbProps extends Omit<TestimoniProps, 'items' | 'loading'> {
   /** Hanya testimoni prodi tertentu. */
   kodeProdi?: string;
 }
 
 /** Testimoni dari landing PMB (`GET /v1/pmb/info/landing`, publik), lengkap dengan rating dan video. */
-export function TestimoniPmb({ kodeProdi, filter = true, ...rest }: TestimoniPmbProps) {
+export function TestimoniLandingPmb({ kodeProdi, filter = true, ...rest }: TestimoniLandingPmbProps) {
   const q = useSiakadQuery<{ testimoni?: BarisTestimoniPmb[] }>(['pmb-landing'], (s, signal) => s.pmb.getInfoLanding(undefined, { signal }) as never, { staleTime: 300_000 });
   const items = React.useMemo(() => (q.data?.testimoni ?? []).filter((t) => !kodeProdi || t.kode_prodi === kodeProdi).map(keTestimoni), [q.data, kodeProdi]);
   if (q.error) return <Galat error={q.error} refetch={q.refetch} />;

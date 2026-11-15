@@ -25,6 +25,8 @@ export * from './components/charts';
 export * from './components/pemeliharaan';
 export * from './components/modal';
 export * from './components/animasi';
+export * from './components/tata-letak';
+export * from './components/landing';
 export * from './ikon/unipo';
 export * from './ikon/kotak';
 export * from './ikon/ilustrasi';

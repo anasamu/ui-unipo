@@ -2,7 +2,7 @@ import { tambahRute } from './siakad';
 
 /**
  * Struktur organisasi portal (/v1/portal/struktur) dan testimoni landing PMB (/v1/pmb/info/landing) untuk demo
- * SambutanPortal, StrukturPortal, dan TestimoniPmb. Nama dan isi rekaan.
+ * SambutanPortal, StrukturPortal, dan TestimoniLandingPmb. Nama dan isi rekaan.
  */
 const foto = (n: number) => ({ url: `contoh/potret-${n}.svg`, alt: null });
 const SAMBUTAN_REKTOR = [

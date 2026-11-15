@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { NilaiBintang, RingkasanRating, Testimoni, type ItemTestimoni } from 'unipo-ui';
-import { TestimoniPmb } from 'unipo-ui/siakad';
+import { TestimoniLandingPmb } from 'unipo-ui/siakad';
 import type { DemoMeta } from '../registry';
 import { TESTIMONI_PMB } from '../mock/profil-kampus';
 
@@ -11,8 +11,8 @@ export const meta: DemoMeta = {
   order: 6,
   badge: 'baru',
   description:
-    'Testimoni alumni, mahasiswa, orang tua, dan mitra dengan rating bintang, dalam tujuh varian: kisi, masonry, carousel, sorotan, kutipan bergantian, marquee berjalan, dan daftar. Ada tab filter per kelompok, ringkasan rating dengan sebaran bintang, video testimoni, dan isian bintang untuk formulir ulasan. TestimoniPmb mengambil data dari landing PMB.',
-  importLine: "import { Testimoni, KartuTestimoni, NilaiBintang, RingkasanRating } from 'unipo-ui';\nimport { TestimoniPmb } from 'unipo-ui/siakad';",
+    'Testimoni alumni, mahasiswa, orang tua, dan mitra dengan rating bintang, dalam tujuh varian: kisi, masonry, carousel, sorotan, kutipan bergantian, marquee berjalan, dan daftar. Ada tab filter per kelompok, ringkasan rating dengan sebaran bintang, video testimoni, dan isian bintang untuk formulir ulasan. TestimoniLandingPmb mengambil data dari landing PMB.',
+  importLine: "import { Testimoni, KartuTestimoni, NilaiBintang, RingkasanRating } from 'unipo-ui';\nimport { TestimoniLandingPmb } from 'unipo-ui/siakad';",
   demos: {
     Kisi: 'varian="kisi" + filter kelompok + ringkasan rating',
     Carousel: 'varian="carousel": geser, tombol, titik halaman, putar otomatis 6 detik',
@@ -21,7 +21,7 @@ export const meta: DemoMeta = {
     Marquee: 'varian="marquee": dua baris berjalan, berhenti saat disorot',
     Masonry: 'varian="masonry" dan varian="daftar"',
     Rating: 'NilaiBintang (tampilan dan isian) dan RingkasanRating',
-    DariPmb: 'TestimoniPmb: dari GET /v1/pmb/info/landing',
+    DariPmb: 'TestimoniLandingPmb: dari GET /v1/pmb/info/landing',
   },
   props: [
     ['items', 'ItemTestimoni[]', '{ nama, isi, peran?, unit?, instansi?, foto?, rating?, kategori?, video_url?, terverifikasi? }'],
@@ -36,7 +36,7 @@ export const meta: DemoMeta = {
     ['RingkasanRating', '{ items? | distribusi?, varian? }', "Rata-rata + sebaran bintang 5..1. varian 'ringkas' untuk satu baris."],
   ],
   notes: [
-    'TestimoniPmb memakai testimoni aktif dari landing PMB (pmb_testimoni, dikelola panitia PMB). Kategori ditebak dari kolom peran: alumni, mahasiswa, orang tua, dosen, atau mitra.',
+    'TestimoniLandingPmb memakai testimoni aktif dari landing PMB (pmb_testimoni, dikelola panitia PMB). Kategori ditebak dari kolom peran: alumni, mahasiswa, orang tua, dosen, atau mitra.',
     'Video (YouTube, Vimeo, atau berkas https .mp4) diputar di dialog. Untuk YouTube dipakai youtube-nocookie.com.',
     'Marquee berhenti saat disorot, saat ada fokus keyboard di dalamnya, atau lewat tombol jeda. Dengan prefers-reduced-motion, marquee berubah menjadi baris yang bisa digeser.',
     'Foto contoh di halaman ini berupa ilustrasi, bukan foto orang sungguhan.',
@@ -109,5 +109,5 @@ export function Rating() {
 }
 
 export function DariPmb() {
-  return <TestimoniPmb varian="carousel" ringkasan />;
+  return <TestimoniLandingPmb varian="carousel" ringkasan />;
 }

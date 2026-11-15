@@ -1,11 +1,13 @@
 'use client';
 import * as React from 'react';
-import { Check, GraduationCap } from 'lucide-react';
-import { Alert } from '../components/display';
+import { Check, GraduationCap, Medal, Plus, Trash2 } from 'lucide-react';
+import { cn } from '../lib/cn';
+import { Alert, Empty, Table, TableContainer } from '../components/display';
 import { DatePicker, parseISODate, toISODate } from '../components/calendar';
 import { Field, Input, RadioGroup, Textarea } from '../components/forms';
 import { Select } from '../components/select';
-import { Skeleton } from '../components/actions';
+import { Badge, Button, Skeleton } from '../components/actions';
+import { Dialog } from '../components/overlays';
 import { FormGrid, Wizard, WizardReview, type ReviewSection, type WizardStep } from '../components/wizard';
 import { formatDate } from '../lib/format';
 import { CariPerguruanTinggi, CariSekolah } from './cari';
@@ -19,6 +21,8 @@ export interface FormulirPmb {
   asal_sekolah?: Isian;
   orang_tua?: { ayah?: Isian; ibu?: Isian; wali?: Isian };
   pilihan?: string[];
+  sumber_informasi?: string | null;
+  kode_referal?: string | null;
 }
 export type Opsi = { kode: string; nama: string };
 /** Referensi kode dari `GET /v1/pmb/info/referensi-formulir` (tabel r_kode SIAKAD). */
@@ -70,6 +74,9 @@ export function IsianDataDiri({ value: v, onChange, ref_, errors = {} }: BagianP
       </Field>
       <Field label="Kewarganegaraan" error={errors.warga_negara}>
         <Select options={opsi(ref_.warga_negara)} value={teks(v.warga_negara) || null} onValueChange={(x) => onChange({ warga_negara: x })} />
+      </Field>
+      <Field label="Status sipil" optional error={errors.status_sipil}>
+        <Select options={opsi(ref_.status_sipil)} value={teks(v.status_sipil) || null} onValueChange={(x) => onChange({ status_sipil: x })} />
       </Field>
       <Field label="Nomor HP (WhatsApp)" required error={errors.hp} description="Untuk informasi seleksi dan pembayaran.">
         <Input value={teks(v.hp)} onChange={(e) => onChange({ hp: e.target.value.replace(/[^\d+]/g, '') })} inputMode="tel" autoComplete="tel" placeholder="08xx" />
@@ -148,6 +155,9 @@ export function IsianAsalSekolah({ value: v, onChange, ref_, errors = {} }: Bagi
               onValueChange={(x) => onChange({ tahun_lulus: x ? Number(x) : null })}
             />
           </Field>
+          <Field label="NIS" optional error={errors.nis_asal}>
+            <Input value={teks(v.nis_asal)} onChange={(e) => onChange({ nis_asal: e.target.value })} />
+          </Field>
           <Field label="Nilai rata-rata ijazah" optional>
             <Input value={teks(v.nilai_un)} onChange={(e) => onChange({ nilai_un: e.target.value.replace(/[^\d.,]/g, '') })} inputMode="decimal" placeholder="mis. 85,40" />
           </Field>
@@ -178,12 +188,18 @@ export function IsianAsalSekolah({ value: v, onChange, ref_, errors = {} }: Bagi
   );
 }
 
-function IsianSatuOrtu({ label, value: v, onChange, ref_ }: BagianProps & { label: string }) {
+function IsianSatuOrtu({ label, value: v, onChange, ref_, wali }: BagianProps & { label: string; wali?: boolean }) {
   return (
     <>
       <p className="u-form-section-title">{label}</p>
-      <Field label={`Nama ${label.toLowerCase()}`} required style={{ gridColumn: '1 / -1' }}>
-        <Input value={teks(v.nama)} onChange={(e) => onChange({ nama: e.target.value })} />
+      <Field label={`Nama ${label.toLowerCase().replace(' (opsional)', '')}`} required={!wali} style={{ gridColumn: '1 / -1' }}>
+        <Input value={teks(v.nama)} onChange={(e) => onChange({ nama: e.target.value })} maxLength={50} />
+      </Field>
+      <Field label="Tanggal lahir" optional>
+        <DatePicker value={v.tanggal_lahir ? parseISODate(String(v.tanggal_lahir)) : null} onValueChange={(d) => onChange({ tanggal_lahir: d ? toISODate(d) : null })} max={new Date()} />
+      </Field>
+      <Field label="Agama" optional>
+        <Select options={opsi(ref_.agama)} value={teks(v.agama) || null} onValueChange={(x) => onChange({ agama: x })} />
       </Field>
       <Field label="Pendidikan terakhir">
         <Select options={opsi(ref_.pendidikan)} value={teks(v.pendidikan) || null} onValueChange={(x) => onChange({ pendidikan: x })} />
@@ -194,18 +210,41 @@ function IsianSatuOrtu({ label, value: v, onChange, ref_ }: BagianProps & { labe
       <Field label="Penghasilan per bulan">
         <Select options={opsi(ref_.penghasilan)} value={teks(v.penghasilan) || null} onValueChange={(x) => onChange({ penghasilan: x })} />
       </Field>
+      {!wali && (
+        <Field label="Status" optional>
+          <Select options={opsi(ref_.hidup)} value={teks(v.hidup) || null} onValueChange={(x) => onChange({ hidup: x })} />
+        </Field>
+      )}
       <Field label="Nomor HP" optional>
         <Input value={teks(v.hp)} onChange={(e) => onChange({ hp: e.target.value.replace(/[^\d+]/g, '') })} inputMode="tel" />
+      </Field>
+      <Field label="Alamat" optional>
+        <Input value={teks(v.alamat)} onChange={(e) => onChange({ alamat: e.target.value })} maxLength={50} />
+      </Field>
+      <Field label="Kota / kabupaten" optional>
+        <Input value={teks(v.kota)} onChange={(e) => onChange({ kota: e.target.value })} maxLength={20} />
+      </Field>
+      <Field label="Provinsi" optional>
+        <Input value={teks(v.propinsi)} onChange={(e) => onChange({ propinsi: e.target.value })} maxLength={20} />
       </Field>
     </>
   );
 }
 
-export function IsianOrangTua({ value, onChange, ref_ }: { value: NonNullable<FormulirPmb['orang_tua']>; onChange: (v: NonNullable<FormulirPmb['orang_tua']>) => void; ref_: ReferensiFormulir }) {
+/** Data ayah dan ibu, opsional wali (`wali`) bila tidak tinggal bersama orang tua. */
+export function IsianOrangTua({ value, onChange, ref_, wali }: { value: NonNullable<FormulirPmb['orang_tua']>; onChange: (v: NonNullable<FormulirPmb['orang_tua']>) => void; ref_: ReferensiFormulir; wali?: boolean }) {
+  const hub = wali ? (['ayah', 'ibu', 'wali'] as const) : (['ayah', 'ibu'] as const);
   return (
     <FormGrid>
-      {(['ayah', 'ibu'] as const).map((h) => (
-        <IsianSatuOrtu key={h} label={h === 'ayah' ? 'Ayah' : 'Ibu'} value={value[h] ?? {}} ref_={ref_} onChange={(p) => onChange({ ...value, [h]: { ...(value[h] ?? {}), ...p } })} />
+      {hub.map((h) => (
+        <IsianSatuOrtu
+          key={h}
+          wali={h === 'wali'}
+          label={h === 'ayah' ? 'Ayah' : h === 'ibu' ? 'Ibu' : 'Wali (opsional)'}
+          value={value[h] ?? {}}
+          ref_={ref_}
+          onChange={(p) => onChange({ ...value, [h]: { ...(value[h] ?? {}), ...p } })}
+        />
       ))}
     </FormGrid>
   );
@@ -273,42 +312,256 @@ export interface WizardPendaftaranPmbProps {
   onDiajukan?: (hasil: { no_pmb?: string | null; status?: string }) => void;
   /** Kontak panitia di bawah daftar langkah. */
   kontak?: React.ReactNode;
+  /** Langkah aktif menurut id (prodi, pribadi, alamat, asal, ortu, prestasi, rapor, tinjau), mis. dari `?langkah=`. */
+  langkah?: string | null;
+  onLangkahChange?: (id: string) => void;
+  /** Kode referal bawaan (mis. dari tautan ?ref=) bila formulir belum punya. */
+  kodeReferal?: string | null;
+  /** Kunci formulir (mis. email belum diverifikasi) dengan pesan ini. */
+  kunci?: React.ReactNode;
   className?: string;
 }
 
+interface PrestasiPmb {
+  id: number;
+  nama: string;
+  bidang: string | null;
+  tingkat: string;
+  peringkat: string | null;
+  tahun: number | null;
+  penyelenggara: string | null;
+  berkas_id: number | null;
+}
 interface Pendaftaran {
   id: string;
   no_pmb: string | null;
   status: string;
+  catatan_verifikasi?: string | null;
+  sumber_informasi?: string | null;
   gelombang: { id: number; nama: string; jalur?: string | null };
   formulir: FormulirPmb;
   pilihan: Array<{ urut: number; kode_prodi: string; nama_prodi?: string | null }>;
   kelengkapan: Record<string, string> | [];
+  prestasi?: PrestasiPmb[];
+  rapor?: Array<{ semester: number; mapel: string; nilai: number }>;
+  berkas?: Array<{ id: number; jenis: string; nama_asli: string }>;
+}
+const judulKata = (x?: string | null) => (x ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+/** Daftar prestasi pendaftar + tambah/hapus lewat `pmb.postSayaPendaftaranByIdPrestasi`. */
+export function IsianPrestasiPmb({ id, prestasi, sertifikat = [], kunci, onBerubah }: { id: string; prestasi: PrestasiPmb[]; sertifikat?: Array<{ id: number; nama_asli: string }>; kunci?: boolean; onBerubah: () => void }) {
+  const siakad = useSiakad();
+  const kosong = { nama: '', bidang: 'akademik', tingkat: 'kabupaten', peringkat: '', tahun: '', penyelenggara: '', berkas_id: '' };
+  const [buka, setBuka] = React.useState(false);
+  const [f, setF] = React.useState(kosong);
+  const [galat, setGalat] = React.useState<string | null>(null);
+  const [proses, setProses] = React.useState(false);
+  const tambah = async () => {
+    setProses(true);
+    setGalat(null);
+    try {
+      await siakad.pmb.postSayaPendaftaranByIdPrestasi(id, {
+        nama: f.nama,
+        bidang: f.bidang,
+        tingkat: f.tingkat,
+        peringkat: f.peringkat || undefined,
+        tahun: f.tahun ? Number(f.tahun) : undefined,
+        penyelenggara: f.penyelenggara || undefined,
+        berkas_id: f.berkas_id ? Number(f.berkas_id) : undefined,
+      } as never);
+      setBuka(false);
+      setF(kosong);
+      onBerubah();
+    } catch (e) {
+      setGalat(pesanGalat(e));
+    } finally {
+      setProses(false);
+    }
+  };
+  const hapus = async (pid: number) => {
+    try {
+      await siakad.pmb.deleteSayaPendaftaranByIdPrestasiByPrestasi(id, pid);
+      onBerubah();
+    } catch (e) {
+      setGalat(pesanGalat(e));
+    }
+  };
+  const BIDANG = ['akademik', 'olahraga', 'seni', 'keagamaan', 'organisasi', 'lainnya'];
+  const TINGKAT = ['sekolah', 'kabupaten', 'provinsi', 'nasional', 'internasional'];
+  return (
+    <div className="u-pmb-prestasi">
+      {galat && !buka && <Alert variant="danger">{galat}</Alert>}
+      {prestasi.length === 0 ? (
+        <Empty icon={<Medal aria-hidden />} title="Belum ada prestasi" description="Tambahkan prestasi akademik atau non-akademik yang pernah diraih." bordered />
+      ) : (
+        <ul className="u-pmb-prestasi-list">
+          {prestasi.map((x) => (
+            <li key={x.id}>
+              <Medal aria-hidden />
+              <span>
+                <strong>{x.nama}</strong>
+                <small>{[x.peringkat, judulKata(x.bidang), x.penyelenggara, x.tahun].filter(Boolean).join(' · ')}</small>
+              </span>
+              <Badge variant="secondary">{judulKata(x.tingkat)}</Badge>
+              {!kunci && (
+                <Button size="sm" variant="ghost" iconOnly aria-label={`Hapus ${x.nama}`} onClick={() => void hapus(x.id)}>
+                  <Trash2 />
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {!kunci && (
+        <Button variant="outline" size="sm" onClick={() => setBuka(true)}>
+          <Plus aria-hidden /> Tambah prestasi
+        </Button>
+      )}
+      <Dialog
+        open={buka}
+        onOpenChange={setBuka}
+        title="Tambah prestasi"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setBuka(false)}>
+              Batal
+            </Button>
+            <Button loading={proses} disabled={!f.nama.trim()} onClick={() => void tambah()}>
+              Simpan prestasi
+            </Button>
+          </>
+        }
+      >
+        {galat && <Alert variant="danger">{galat}</Alert>}
+        <FormGrid>
+          <Field label="Nama lomba / prestasi" required style={{ gridColumn: '1 / -1' }}>
+            <Input value={f.nama} onChange={(e) => setF({ ...f, nama: e.target.value })} maxLength={200} />
+          </Field>
+          <Field label="Bidang">
+            <Select options={BIDANG.map((v) => ({ value: v, label: judulKata(v) }))} value={f.bidang} onValueChange={(v) => setF({ ...f, bidang: v ?? 'akademik' })} />
+          </Field>
+          <Field label="Tingkat" required>
+            <Select options={TINGKAT.map((v) => ({ value: v, label: judulKata(v) }))} value={f.tingkat} onValueChange={(v) => setF({ ...f, tingkat: v ?? 'kabupaten' })} />
+          </Field>
+          <Field label="Peringkat" optional>
+            <Input value={f.peringkat} onChange={(e) => setF({ ...f, peringkat: e.target.value })} placeholder="Juara 1" />
+          </Field>
+          <Field label="Tahun" optional>
+            <Input value={f.tahun} onChange={(e) => setF({ ...f, tahun: e.target.value.replace(/\D/g, '').slice(0, 4) })} inputMode="numeric" />
+          </Field>
+          <Field label="Penyelenggara" optional style={{ gridColumn: '1 / -1' }}>
+            <Input value={f.penyelenggara} onChange={(e) => setF({ ...f, penyelenggara: e.target.value })} maxLength={150} />
+          </Field>
+          {sertifikat.length > 0 && (
+            <Field label="Bukti sertifikat" optional description="Unggah sertifikat dulu di menu Berkas." style={{ gridColumn: '1 / -1' }}>
+              <Select options={sertifikat.map((b) => ({ value: String(b.id), label: b.nama_asli }))} value={f.berkas_id || null} onValueChange={(v) => setF({ ...f, berkas_id: v ?? '' })} />
+            </Field>
+          )}
+        </FormGrid>
+      </Dialog>
+    </div>
+  );
+}
+
+const SEMESTER_RAPOR = [1, 2, 3, 4, 5];
+/** Tabel nilai rapor semester 1-5 per mata pelajaran (skala 0-100) dengan rata-rata per baris. */
+export function IsianRaporPmb({ value, onChange, kunci }: { value: { mapel: string[]; nilai: Record<string, string> }; onChange: (v: { mapel: string[]; nilai: Record<string, string> }) => void; kunci?: boolean }) {
+  const { mapel, nilai } = value;
+  const rata = (m: string) => {
+    const a = SEMESTER_RAPOR.map((x) => Number(nilai[`${m}|${x}`])).filter((x) => x > 0);
+    return a.length ? (a.reduce((x, y) => x + y, 0) / a.length).toFixed(1) : '-';
+  };
+  return (
+    <div className="u-pmb-rapor">
+      <TableContainer>
+        <Table density="compact">
+          <thead>
+            <tr>
+              <th>Mata pelajaran</th>
+              {SEMESTER_RAPOR.map((x) => (
+                <th key={x}>Smt {x}</th>
+              ))}
+              <th>Rata-rata</th>
+              <th aria-label="Aksi" />
+            </tr>
+          </thead>
+          <tbody>
+            {mapel.map((m, i) => (
+              <tr key={i}>
+                <td>
+                  <Input size="sm" value={m} disabled={kunci} aria-label={`Mata pelajaran ${i + 1}`} onChange={(e) => onChange({ mapel: mapel.map((y, j) => (j === i ? e.target.value : y)), nilai })} />
+                </td>
+                {SEMESTER_RAPOR.map((x) => (
+                  <td key={x}>
+                    <Input
+                      size="sm"
+                      className="u-pmb-rapor-nilai"
+                      value={nilai[`${m}|${x}`] ?? ''}
+                      disabled={kunci}
+                      inputMode="decimal"
+                      aria-label={`${m || 'Mapel'} semester ${x}`}
+                      onChange={(e) => onChange({ mapel, nilai: { ...nilai, [`${m}|${x}`]: e.target.value.replace(/[^\d.]/g, '').slice(0, 5) } })}
+                    />
+                  </td>
+                ))}
+                <td className="u-pmb-rapor-rata">{rata(m)}</td>
+                <td>
+                  {!kunci && (
+                    <Button size="sm" variant="ghost" iconOnly aria-label="Hapus mata pelajaran" onClick={() => onChange({ mapel: mapel.filter((_, j) => j !== i), nilai })}>
+                      <Trash2 />
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </TableContainer>
+      {!kunci && (
+        <Button variant="ghost" size="sm" onClick={() => onChange({ mapel: [...mapel, ''], nilai })}>
+          <Plus aria-hidden /> Tambah mata pelajaran
+        </Button>
+      )}
+    </div>
+  );
 }
 
 /**
  * Wizard formulir PMB yang tersambung ke SIAKAD: memuat draf `pmb.getSayaPendaftaranById`, menyimpan tiap langkah
- * dengan `pmb.patchSayaPendaftaranById` (hanya bagian langkah itu), lalu `pmb.postSayaPendaftaranByIdAjukan`.
- * Galat validasi server ditampilkan di field terkait.
+ * dengan `pmb.patchSayaPendaftaranById` (hanya bagian langkah itu), prestasi/rapor bila jalur memintanya, lalu
+ * `pmb.postSayaPendaftaranByIdAjukan`. Galat validasi server ditampilkan di field terkait. Setelah diajukan
+ * formulir terkunci dan tampil sebagai ringkasan.
  */
-export function WizardPendaftaranPmb({ id, onDiajukan, kontak, className }: WizardPendaftaranPmbProps) {
+export function WizardPendaftaranPmb({ id, onDiajukan, kontak, langkah, onLangkahChange, kodeReferal, kunci: kunciLuar, className }: WizardPendaftaranPmbProps) {
   const siakad = useSiakad();
   const det = useSiakadQuery<Pendaftaran>(['pmb-pendaftaran', id], (s, signal) => s.pmb.getSayaPendaftaranById(id, {}, { signal }) as never, { staleTime: 0 });
   const ref = useReferensiFormulir();
   const gelId = det.data?.gelombang.id;
-  const gel = useSiakadQuery<{ maks_pilihan?: number; prodi: ProdiGelombang[] }>(['pmb-gelombang', gelId], (s, signal) => s.pmb.getInfoGelombangById(gelId!, {}, { signal }) as never, {
-    enabled: !!gelId,
-    staleTime: 600_000,
-  });
+  const gel = useSiakadQuery<{ maks_pilihan?: number; prodi: ProdiGelombang[]; perlu_rapor?: boolean; perlu_prestasi?: boolean }>(
+    ['pmb-info', 'gelombang', String(gelId)],
+    (s, signal) => s.pmb.getInfoGelombangById(gelId!, {}, { signal }) as never,
+    { enabled: !!gelId, staleTime: 600_000 },
+  );
 
   const [f, setF] = React.useState<FormulirPmb | null>(null);
+  const [rapor, setRapor] = React.useState<{ mapel: string[]; nilai: Record<string, string> } | null>(null);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
-  const [step, setStep] = React.useState(0);
+  const [stepIn, setStepIn] = React.useState(0);
   const [savedAt, setSavedAt] = React.useState<Date | null>(null);
   const [selesai, setSelesai] = React.useState<string | null>(null);
   React.useEffect(() => {
-    if (det.data && !f) setF({ ...det.data.formulir, pilihan: det.data.formulir.pilihan ?? det.data.pilihan.map((p) => p.kode_prodi) });
-  }, [det.data, f]);
+    if (det.data && !f)
+      setF({
+        ...det.data.formulir,
+        pilihan: det.data.formulir.pilihan ?? det.data.pilihan.map((p) => p.kode_prodi),
+        sumber_informasi: det.data.formulir.sumber_informasi ?? det.data.sumber_informasi ?? null,
+        kode_referal: det.data.formulir.kode_referal ?? kodeReferal ?? null,
+      });
+    if (det.data && !rapor) {
+      const r = det.data.rapor ?? [];
+      setRapor({ mapel: r.length ? [...new Set(r.map((x) => x.mapel))] : ['Matematika', 'Bahasa Indonesia', 'Bahasa Inggris'], nilai: Object.fromEntries(r.map((x) => [`${x.mapel}|${x.semester}`, String(x.nilai)])) });
+    }
+  }, [det.data, f, rapor, kodeReferal]);
 
   if (det.error)
     return (
@@ -316,7 +569,7 @@ export function WizardPendaftaranPmb({ id, onDiajukan, kontak, className }: Wiza
         {pesanGalat(det.error)}
       </Alert>
     );
-  if (!f || !ref.data)
+  if (!f || !ref.data || !det.data || !rapor)
     return (
       <div className="u-wizard" aria-busy>
         <Skeleton style={{ height: 420, borderRadius: 16 }} />
@@ -329,7 +582,10 @@ export function WizardPendaftaranPmb({ id, onDiajukan, kontak, className }: Wiza
       </Alert>
     );
 
+  const d = det.data;
   const r = ref.data;
+  const bisaUbah = d.status === 'draf' || d.status === 'perlu_perbaikan';
+  const terkunci = !bisaUbah || !!kunciLuar;
   const ubah = <K extends keyof FormulirPmb>(k: K, patch: Partial<NonNullable<FormulirPmb[K]>>) => {
     setF((x) => ({ ...x, [k]: Array.isArray(patch) ? patch : { ...((x?.[k] as object) ?? {}), ...patch } }));
     setErrors((e) => {
@@ -338,19 +594,46 @@ export function WizardPendaftaranPmb({ id, onDiajukan, kontak, className }: Wiza
       return n;
     });
   };
-  const simpan = (bagian: keyof FormulirPmb) => async () => {
+  const tanganiGalat = (e: unknown) => {
+    const err = e as { status?: number; details?: Record<string, unknown> };
+    const fields = err.status === 422 && err.details && Object.keys(err.details).length ? err.details : null;
+    if (fields) {
+      setErrors(Object.fromEntries(Object.entries(fields).map(([k, v]) => [k.split('.').pop()!, String(v)])));
+      return 'Periksa kembali isian yang ditandai.';
+    }
+    return pesanGalat(e);
+  };
+  const kirimPatch = async (body: Record<string, unknown>) => {
+    if (terkunci) return;
     try {
-      await siakad.pmb.patchSayaPendaftaranById(id, { [bagian]: f[bagian] } as never);
+      await siakad.pmb.patchSayaPendaftaranById(id, body as never);
       setSavedAt(new Date());
       setErrors({});
     } catch (e) {
-      const err = e as { status?: number; details?: Record<string, unknown> };
-      const fields = err.status === 422 && err.details && Object.keys(err.details).length ? err.details : null;
-      if (fields) {
-        setErrors(Object.fromEntries(Object.entries(fields).map(([k, v]) => [k.split('.').pop()!, String(v)])));
-        return 'Periksa kembali isian yang ditandai.';
-      }
-      return pesanGalat(e);
+      return tanganiGalat(e);
+    }
+  };
+  const simpan = (bagian: keyof FormulirPmb) => () => kirimPatch({ [bagian]: f[bagian] });
+  const simpanProdi = () => {
+    const body: Record<string, unknown> = { sumber_informasi: f.sumber_informasi || null };
+    if (!d.no_pmb) body.pilihan = f.pilihan;
+    if (f.kode_referal?.trim()) body.kode_referal = f.kode_referal.trim().toUpperCase();
+    return kirimPatch(body);
+  };
+  const simpanRapor = async () => {
+    if (terkunci) return;
+    const nilai: Array<{ mapel: string; semester: number; nilai: number }> = [];
+    rapor.mapel.forEach((m) =>
+      SEMESTER_RAPOR.forEach((x) => {
+        const v = rapor.nilai[`${m}|${x}`];
+        if (m.trim() && v) nilai.push({ mapel: m.trim(), semester: x, nilai: Number(v) });
+      }),
+    );
+    try {
+      await siakad.pmb.putSayaPendaftaranByIdRapor(id, { nilai } as never);
+      setSavedAt(new Date());
+    } catch (e) {
+      return tanganiGalat(e);
     }
   };
 
@@ -367,18 +650,35 @@ export function WizardPendaftaranPmb({ id, onDiajukan, kontak, className }: Wiza
     asal_sekolah: !(s.nama_sekolah || s.nama_asal_pt) ? 'Asal sekolah belum diisi.' : null,
     orang_tua: !(o.ayah?.nama || o.ibu?.nama) ? 'Isi minimal nama ayah atau ibu.' : null,
   };
+  const perluPrestasi = !!gel.data?.perlu_prestasi || (d.prestasi?.length ?? 0) > 0;
+  const perluRapor = !!gel.data?.perlu_rapor || (d.rapor?.length ?? 0) > 0;
+  const sertifikat = (d.berkas ?? []).filter((b) => b.jenis.startsWith('sertifikat'));
 
   const steps: WizardStep[] = [
     {
       id: 'prodi',
       title: 'Program studi',
-      description: det.data!.gelombang.nama + (det.data!.gelombang.jalur ? ` · ${det.data!.gelombang.jalur}` : ''),
+      description: d.gelombang.nama + (d.gelombang.jalur ? ` · ${d.gelombang.jalur}` : ''),
       content: gel.loading ? (
         <Skeleton style={{ height: 240 }} />
       ) : (
-        <PilihanProdi prodi={prodi} value={f.pilihan ?? []} maks={gel.data?.maks_pilihan ?? 2} onChange={(v) => setF((x) => ({ ...x, pilihan: v }))} />
+        <div style={{ display: 'grid', gap: '1.5rem' }}>
+          {d.no_pmb ? (
+            <Alert variant="info">Pilihan program studi tidak bisa diubah setelah pendaftaran diajukan.</Alert>
+          ) : (
+            <PilihanProdi prodi={prodi} value={f.pilihan ?? []} maks={gel.data?.maks_pilihan ?? 2} onChange={(v) => setF((x) => ({ ...x, pilihan: v }))} />
+          )}
+          <FormGrid>
+            <Field label="Dari mana Anda mengetahui PMB ini?" optional error={errors.sumber_informasi}>
+              <Select options={opsi(r.sumber_informasi)} value={f.sumber_informasi || null} onValueChange={(v) => setF((x) => ({ ...x, sumber_informasi: v }))} />
+            </Field>
+            <Field label="Kode referal" optional error={errors.kode_referal} description="Dari sekolah, alumni, atau agen promosi.">
+              <Input value={f.kode_referal ?? ''} onChange={(e) => setF((x) => ({ ...x, kode_referal: e.target.value.toUpperCase() }))} maxLength={30} className="u-pmb-kode" />
+            </Field>
+          </FormGrid>
+        </div>
       ),
-      onNext: async () => kurang.pilihan ?? (await simpan('pilihan')()),
+      onNext: async () => (d.no_pmb ? await simpanProdi() : (kurang.pilihan ?? (await simpanProdi()))),
       error: !!errors.pilihan,
     },
     {
@@ -399,43 +699,90 @@ export function WizardPendaftaranPmb({ id, onDiajukan, kontak, className }: Wiza
     {
       id: 'ortu',
       title: 'Orang tua',
-      description: 'Data ayah dan ibu',
-      content: <IsianOrangTua value={o} ref_={r} onChange={(x) => setF((y) => ({ ...y, orang_tua: x }))} />,
+      description: 'Ayah, ibu, dan wali',
+      content: <IsianOrangTua wali value={o} ref_={r} onChange={(x) => setF((y) => ({ ...y, orang_tua: x }))} />,
       onNext: simpan('orang_tua'),
     },
+    ...(perluPrestasi
+      ? [
+          {
+            id: 'prestasi',
+            title: 'Prestasi',
+            description: 'Lomba dan penghargaan',
+            optional: !gel.data?.perlu_prestasi,
+            content: <IsianPrestasiPmb id={id} prestasi={d.prestasi ?? []} sertifikat={sertifikat} kunci={terkunci} onBerubah={det.refetch} />,
+          } satisfies WizardStep,
+        ]
+      : []),
+    ...(perluRapor
+      ? [
+          {
+            id: 'rapor',
+            title: 'Nilai rapor',
+            description: 'Semester 1-5',
+            content: <IsianRaporPmb value={rapor} onChange={setRapor} kunci={terkunci} />,
+            onNext: simpanRapor,
+          } satisfies WizardStep,
+        ]
+      : []),
     {
       id: 'tinjau',
       title: 'Tinjau & ajukan',
       description: 'Pastikan semua benar',
-      content: <PmbReview f={f} r={r} prodi={prodi} kurang={kurang} server={Array.isArray(det.data!.kelengkapan) ? {} : det.data!.kelengkapan} go={setStep} />,
+      content: <PmbReview f={f} r={r} prodi={prodi} kurang={kurang} server={Array.isArray(d.kelengkapan) ? {} : d.kelengkapan} go={(n) => setStepIn(n)} />,
     },
   ];
+  const idx = langkah ? steps.findIndex((x) => x.id === langkah || (langkah === 'sekolah' && x.id === 'asal')) : -1;
+  const step = idx >= 0 ? idx : stepIn;
+  const gantiStep = (n: number) => {
+    setStepIn(n);
+    onLangkahChange?.(steps[n]?.id ?? 'prodi');
+  };
+
+  if (terkunci && !bisaUbah)
+    return (
+      <div className={cn('u-pmb-formulir-kunci', className)}>
+        <Alert variant="info" title="Formulir sudah diajukan">
+          Formulir tidak bisa diubah lagi. Hubungi panitia bila ada data yang salah.
+        </Alert>
+        <PmbReview f={f} r={r} prodi={prodi} kurang={kurang} server={{}} />
+      </div>
+    );
 
   return (
-    <Wizard
-      className={className}
-      steps={steps}
-      step={step}
-      onStepChange={setStep}
-      savedAt={savedAt}
-      title="Formulir pendaftaran"
-      description="Isian tersimpan otomatis tiap langkah. Anda bisa melanjutkan kapan saja."
-      aside={kontak}
-      finishLabel="Ajukan pendaftaran"
-      onFinish={async () => {
-        const k = Object.values(kurang).find(Boolean);
-        if (k) return k;
-        try {
-          const res = await siakad.pmb.postSayaPendaftaranByIdAjukan(id);
-          const d = res.data as { no_pmb?: string | null; status?: string };
-          invalidateSiakad('pmb');
-          setSelesai(d.no_pmb ?? '-');
-          onDiajukan?.(d);
-        } catch (e) {
-          return pesanGalat(e);
-        }
-      }}
-    />
+    <div className={cn('u-pmb-formulir', className)}>
+      {d.status === 'perlu_perbaikan' && (
+        <Alert variant="warning" title="Panitia meminta perbaikan">
+          {d.catatan_verifikasi ?? 'Periksa kembali isian dan berkas Anda, lalu ajukan ulang.'}
+        </Alert>
+      )}
+      {kunciLuar && <Alert variant="warning">{kunciLuar}</Alert>}
+      <Wizard
+        steps={steps}
+        step={Math.min(step, steps.length - 1)}
+        onStepChange={gantiStep}
+        savedAt={savedAt}
+        freeNavigation
+        title="Formulir pendaftaran"
+        description="Isian tersimpan tiap langkah. Anda bisa melanjutkan kapan saja."
+        aside={kontak}
+        finishLabel={d.status === 'perlu_perbaikan' ? 'Ajukan ulang' : 'Ajukan pendaftaran'}
+        onFinish={async () => {
+          if (kunciLuar) return typeof kunciLuar === 'string' ? kunciLuar : 'Formulir belum bisa diajukan.';
+          const k = Object.values(kurang).find(Boolean);
+          if (k) return k;
+          try {
+            const res = await siakad.pmb.postSayaPendaftaranByIdAjukan(id);
+            const hasil = res.data as { no_pmb?: string | null; status?: string };
+            invalidateSiakad('pmb');
+            setSelesai(hasil.no_pmb ?? '-');
+            onDiajukan?.(hasil);
+          } catch (e) {
+            return tanganiGalat(e);
+          }
+        }}
+      />
+    </div>
   );
 }
 
@@ -452,22 +799,27 @@ function PmbReview({
   prodi: ProdiGelombang[];
   kurang: Record<string, string | null>;
   server: Record<string, string>;
-  go: (n: number) => void;
+  go?: (n: number) => void;
 }) {
   const p = f.pribadi ?? {};
   const a = f.alamat ?? {};
   const s = f.asal_sekolah ?? {};
   const o = f.orang_tua ?? {};
+  const ke = (n: number) => (go ? () => go(n) : undefined);
   const sections: ReviewSection[] = [
     {
       title: 'Program studi',
-      onEdit: () => go(0),
+      onEdit: ke(0),
       missing: kurang.pilihan,
-      items: (f.pilihan ?? []).map((k, i) => ({ label: `Pilihan ${i + 1}`, value: prodi.find((x) => x.kode_prodi === k)?.nama_prodi ?? k })),
+      items: [
+        ...(f.pilihan ?? []).map((k, i) => ({ label: `Pilihan ${i + 1}`, value: prodi.find((x) => x.kode_prodi === k)?.nama_prodi ?? k })),
+        { label: 'Sumber informasi', value: nama(r.sumber_informasi, f.sumber_informasi) },
+        { label: 'Kode referal', value: f.kode_referal },
+      ],
     },
     {
       title: 'Data diri',
-      onEdit: () => go(1),
+      onEdit: ke(1),
       missing: kurang.pribadi,
       items: [
         { label: 'Nama', value: p.nama },
@@ -480,7 +832,7 @@ function PmbReview({
     },
     {
       title: 'Alamat',
-      onEdit: () => go(2),
+      onEdit: ke(2),
       missing: kurang.alamat,
       items: [
         { label: 'Alamat', value: [a.alamat, a.rt && `RT ${a.rt}`, a.rw && `RW ${a.rw}`].filter(Boolean).join(', ') },
@@ -490,7 +842,7 @@ function PmbReview({
     },
     {
       title: 'Asal sekolah',
-      onEdit: () => go(3),
+      onEdit: ke(3),
       missing: kurang.asal_sekolah,
       items: [
         { label: 'Sekolah/PT asal', value: s.nama_sekolah ?? s.nama_asal_pt },
@@ -499,11 +851,12 @@ function PmbReview({
     },
     {
       title: 'Orang tua',
-      onEdit: () => go(4),
+      onEdit: ke(4),
       missing: kurang.orang_tua,
       items: [
         { label: 'Ayah', value: o.ayah?.nama },
         { label: 'Ibu', value: o.ibu?.nama },
+        ...(o.wali?.nama ? [{ label: 'Wali', value: o.wali.nama }] : []),
         { label: 'Pekerjaan ayah', value: nama(r.pekerjaan, o.ayah?.pekerjaan) },
         { label: 'Pekerjaan ibu', value: nama(r.pekerjaan, o.ibu?.pekerjaan) },
       ],
