@@ -22,3 +22,4 @@ export * from './log';
 export * from './pilih';
 export * from './pemeliharaan';
 export * from './berkas';
+export * from './media-editor';

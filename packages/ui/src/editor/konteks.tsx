@@ -15,6 +15,9 @@ export interface MediaEditor {
   nama?: string;
   /** Ukuran dalam byte (blok berkas). */
   ukuran?: number | null;
+  mime?: string | null;
+  /** Gambar kecil untuk kisi pustaka (bawaan `url`). */
+  pratinjau?: string | null;
 }
 
 export interface OpsiPilihMedia {

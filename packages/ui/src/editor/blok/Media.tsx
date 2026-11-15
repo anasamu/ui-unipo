@@ -37,7 +37,7 @@ export function Gambar({ b, ubah }: PropsBlok) {
   };
   if (!b.data.url) {
     return <Penampung ikon={<IkonGambar aria-hidden />} judul="Gambar" petunjuk="Unggah foto, pilih dari pustaka media, atau tempel URL. JPG/PNG/WebP, lebar ideal 1600 px."
-      aksi={<Button size="sm" onClick={() => void ambil()}><Upload aria-hidden />Pilih media</Button>} url={(u) => ubah({ url: u })} />;
+      aksi={<Button size="sm" onClick={() => void ambil()}><Upload aria-hidden />Pilih gambar</Button>} url={(u) => ubah({ url: u })} />;
   }
   const lebar = ['lebar', 'penuh'].includes(b.data.lebar) ? ` ub-lebar-${b.data.lebar}` : '';
   return (
@@ -106,7 +106,7 @@ export function Berkas({ b, ubah }: PropsBlok) {
     if (m) ubah({ url: m.url, nama: b.data.nama || m.judul || m.nama || '', ukuran: m.ukuran ?? null, media_id: m.id });
   };
   if (!b.data.url) {
-    return <Penampung ikon={<FileDown aria-hidden />} judul="Berkas" petunjuk="Lampirkan PDF/dokumen untuk diunduh pembaca." aksi={<Button size="sm" onClick={() => void ambil()}><Upload aria-hidden />Pilih media</Button>} url={(u) => ubah({ url: u })} />;
+    return <Penampung ikon={<FileDown aria-hidden />} judul="Berkas" petunjuk="Lampirkan PDF/dokumen untuk diunduh pembaca." aksi={<Button size="sm" onClick={() => void ambil()}><Upload aria-hidden />Pilih berkas</Button>} url={(u) => ubah({ url: u })} />;
   }
   return (
     <div className="ub-berkas">

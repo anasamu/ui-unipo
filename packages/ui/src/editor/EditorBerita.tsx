@@ -3,7 +3,7 @@ import { AlertTriangle, CheckCircle2, Eye, Info, ListTree, PanelRight, PenLine, 
 import { cn } from '../lib/cn';
 import { Button } from '../components/actions';
 import { Dialog, Tooltip } from '../components/overlays';
-import { EditorBlok, useRiwayatBlok, type PilihMedia } from './EditorBlok';
+import { EditorBlok, useRiwayatBlok, type PilihMedia, type SumberMedia } from './EditorBlok';
 import { PengaturanBlok } from './blok';
 import type { MediaEditor, OpsiPilihMedia, PolaBlok } from './konteks';
 import { blokKeHtml, daftarIsiBlok, waktuBaca } from './render';
@@ -85,6 +85,8 @@ export interface EditorBeritaProps {
   minKata?: number;
   pilihMedia?: PilihMedia;
   unggah?: (file: File, opsi: OpsiPilihMedia) => Promise<MediaEditor>;
+  /** Berkas yang sudah ada di sistem (tab Pustaka: cari + pilih), mis. `useMediaPortal(situs).sumber`. */
+  sumberMedia?: SumberMedia;
   pola?: PolaBlok[];
   /** Teks status simpan, mis. "Tersimpan 10.42". */
   status?: React.ReactNode;
@@ -113,6 +115,7 @@ export function EditorBerita({
   minKata = 80,
   pilihMedia,
   unggah,
+  sumberMedia,
   pola,
   status,
   tanpaRingkasan,
@@ -207,7 +210,7 @@ export function EditorBerita({
               <TampilBlok blok={r.blok} />
             </article>
           ) : (
-            <EditorBlok blok={r.blok} set={r.set} urung={r.urung} ulang={r.ulang} pilih={pilih} setPilih={setPilih} pilihMedia={pilihMedia} unggah={unggah} pola={pola} kepala={kepala} />
+            <EditorBlok blok={r.blok} set={r.set} urung={r.urung} ulang={r.ulang} pilih={pilih} setPilih={setPilih} pilihMedia={pilihMedia} unggah={unggah} sumberMedia={sumberMedia} pola={pola} kepala={kepala} />
           )}
         </div>
 

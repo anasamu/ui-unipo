@@ -1,6 +1,19 @@
 import * as React from 'react';
 import { Alert, Button, CodeBlock, Field, Select, Textarea } from 'unipo-ui';
-import { blokKeHtml, EditorBerita, EditorBlok, GalatBlok, TampilBlok, useRiwayatBlok, validasiBlok, type Blok, type MediaEditor, type OpsiPilihMedia, type PolaBlok } from 'unipo-ui/editor';
+import {
+  blokKeHtml,
+  EditorBerita,
+  EditorBlok,
+  GalatBlok,
+  TampilBlok,
+  useRiwayatBlok,
+  validasiBlok,
+  type Blok,
+  type MediaEditor,
+  type OpsiPilihMedia,
+  type PolaBlok,
+  type SumberMedia,
+} from 'unipo-ui/editor';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
@@ -11,7 +24,7 @@ export const meta: DemoMeta = {
   badge: 'baru',
   description:
     'Editor blok untuk berita, pengumuman, dan halaman portal. Ketik langsung, tekan / untuk memilih blok, pakai pintasan Markdown (##, -, 1., >, ---), seret blok untuk memindah, dan atur blok terpilih di panel samping. Format blok sama persis dengan Blok.php di SIAKAD, jadi isi bisa dikirim apa adanya ke /v1/humas dan /v1/portal.',
-  importLine: "import { EditorBerita, EditorBlok, TampilBlok, blokKeHtml, validasiBlok } from 'unipo-ui/editor';\nimport 'unipo-ui/css';",
+  importLine: "import { EditorBerita, EditorBlok, TampilBlok, blokKeHtml, validasiBlok } from 'unipo-ui/editor';\nimport { useMediaPortal } from 'unipo-ui/siakad';\nimport 'unipo-ui/css';",
   demos: {
     Berita: 'Editor berita lengkap: judul, ringkasan, panel Dokumen/Blok, cek terbit, pratinjau',
     Kanvas: 'Kanvas blok saja (untuk halaman portal, deskripsi prodi, pengumuman)',
@@ -26,6 +39,7 @@ export const meta: DemoMeta = {
     ['EditorBerita.tinggi', 'number | string', 'Tinggi tetap; isi dan panel bergulir sendiri. Tanpa ini editor memanjang dan bilah atas menempel.'],
     ['EditorBerita.cekTambahan', '(n) => CekTerbit[]', 'Cek terbit sendiri. `wajib: true` menahan tombol Terbitkan.'],
     ['pilihMedia', '(opsi) => Promise<MediaEditor[] | null>', 'Pemilih media sendiri, mis. pustaka media humas. Tanpa ini dipakai dialog URL/unggah bawaan.'],
+    ['sumberMedia', 'SumberMedia', 'Tab Pustaka di pemilih bawaan: cari dan pilih berkas yang sudah ada di sistem. Pakai useMediaPortal(situs).sumber dari unipo-ui/siakad.'],
     ['unggah', '(file, opsi) => Promise<MediaEditor>', 'Unggah untuk dialog bawaan, mis. ke /v1/berkas lewat unggahKeBerkas.'],
     ['pola', 'PolaBlok[]', 'Pola siap pakai di tab Pola penyisip (dari /v1/humas/pola).'],
     ['EditorBlok', 'blok, set, urung, ulang, baca', 'Kanvas saja. Pasangkan dengan useRiwayatBlok untuk urung/ulang.'],
@@ -35,6 +49,7 @@ export const meta: DemoMeta = {
   notes: [
     '17 tipe blok: paragraf, judul, daftar, kutipan, sorotan, kode, gambar, galeri, video, berkas, peta, tombol, pemisah, spasi, kolom, tabel, akordion.',
     'Pintasan: Ctrl+B/I/K di teks terpilih, Ctrl+Z dan Ctrl+Shift+Z untuk urung/ulang, Enter memecah paragraf, Backspace di awal blok menggabungkan dengan blok sebelumnya, Esc melepas pilihan.',
+    'Gambar, galeri, dan blok berkas bisa melampirkan berkas yang sudah ada di sistem (tab Pustaka: cari lalu pilih, klik dua kali untuk langsung memakai), unggah berkas baru, atau tempel alamat. Dengan useMediaPortal(situs), keduanya memakai pustaka media portal yang URL-nya permanen dan id-nya tersimpan sebagai media_id blok.',
     'Tampilan isi memakai kelas ub-* yang mengikuti token tema, jadi pratinjau di editor, halaman portal, dan mode gelap tampil sama.',
   ],
 };
@@ -48,6 +63,30 @@ let urutan = 0;
 const unggahTiruan = async (file: File, _opsi: OpsiPilihMedia): Promise<MediaEditor> => {
   await new Promise((r) => setTimeout(r, 600));
   return { url: CONTOH[urutan++ % CONTOH.length], nama: file.name, ukuran: file.size, alt: '' };
+};
+
+/**
+ * Pustaka tiruan untuk tab "Pustaka media" (cari + pilih berkas yang sudah ada di sistem). Di aplikasi pakai
+ * `useMediaPortal(situs)` dari unipo-ui/siakad, yang membaca /v1/portal/kelola/media.
+ */
+const PUSTAKA: MediaEditor[] = [
+  { id: 101, url: 'contoh/kampus.jpg', judul: 'Apel pembukaan PKKMB', alt: 'Mahasiswa baru berbaris di halaman kampus', mime: 'image/jpeg', ukuran: 42925 },
+  { id: 102, url: 'contoh/wisuda.jpg', judul: 'Wisuda periode II', alt: 'Wisudawan melempar toga', mime: 'image/jpeg', ukuran: 36532 },
+  { id: 103, url: 'contoh/lab.jpg', judul: 'Laboratorium terpadu', alt: 'Ruang laboratorium komputer', mime: 'image/jpeg', ukuran: 36990 },
+  { id: 201, url: 'contoh/panduan-krs.pdf', judul: 'Panduan pengisian KRS 2026', nama: 'panduan-krs.pdf', mime: 'application/pdf', ukuran: 1_284_000 },
+  { id: 202, url: 'contoh/kalender-akademik.pdf', judul: 'Kalender akademik 2026/2027', nama: 'kalender-akademik.pdf', mime: 'application/pdf', ukuran: 412_000 },
+  { id: 203, url: 'contoh/sk-beasiswa.docx', judul: 'SK penerima beasiswa', nama: 'sk-beasiswa.docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ukuran: 88_000 },
+];
+const pustakaTiruan: SumberMedia = {
+  nama: 'Pustaka media',
+  cari: async (q, opsi) => {
+    await new Promise((r) => setTimeout(r, 300));
+    const k = q.toLowerCase();
+    const data = PUSTAKA.filter((m) => (opsi.jenis === 'dokumen' ? !m.mime?.startsWith('image/') : m.mime?.startsWith('image/'))).filter(
+      (m) => !k || `${m.judul} ${m.nama ?? ''} ${m.alt ?? ''}`.toLowerCase().includes(k),
+    );
+    return { data, adaLagi: false };
+  },
 };
 
 const POLA: PolaBlok[] = [
@@ -133,6 +172,7 @@ export function Berita() {
       onChange={() => setTersimpan('Ada perubahan')}
       status={tersimpan}
       unggah={unggahTiruan}
+      sumberMedia={pustakaTiruan}
       pola={POLA}
       cekTambahan={() => [{ ok: Boolean(kategori), teks: 'Kategori dipilih', wajib: true }]}
       panelDokumen={
@@ -177,7 +217,7 @@ export function Kanvas() {
           Ulangi
         </Button>
       </div>
-      <EditorBlok blok={r.blok} set={r.set} urung={r.urung} ulang={r.ulang} unggah={unggahTiruan} />
+      <EditorBlok blok={r.blok} set={r.set} urung={r.urung} ulang={r.ulang} unggah={unggahTiruan} sumberMedia={pustakaTiruan} />
     </div>
   );
 }
