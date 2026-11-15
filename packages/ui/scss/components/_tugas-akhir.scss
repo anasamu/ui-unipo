@@ -1,0 +1,484 @@
+// ================================================================ Tugas akhir (siakad/tugas-akhir.tsx)
+// Pengajuan judul, berkas pendukung, validasi dosen PA/prodi, progres sampai wisuda, syarat yudisium/wisuda.
+
+.u-ta {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.u-ta-kartu {
+  display: grid;
+  gap: 0.875rem;
+  padding: 1rem 1.25rem;
+  min-width: 0;
+}
+.u-ta-judul-kartu {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  svg {
+    width: 1rem;
+    height: 1rem;
+    color: var(--u-muted-foreground);
+  }
+}
+.u-ta-redup {
+  color: var(--u-muted-foreground);
+  font-size: 0.875rem;
+  margin: 0;
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    vertical-align: -2px;
+  }
+}
+.u-ta-kepala {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+  align-items: flex-start;
+  > div:first-child {
+    min-width: 0;
+    flex: 1 1 18rem;
+  }
+}
+.u-ta-judul-pengajuan {
+  margin: 0.5rem 0 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.u-ta-aksi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+.u-ta-bagian {
+  display: grid;
+  gap: 0.5rem;
+  h4 {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+}
+.u-ta-form {
+  display: grid;
+  gap: 0.875rem;
+}
+.u-ta-form-kisi {
+  display: grid;
+  gap: 0.875rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+.u-ta-putuskan {
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg, 12px);
+  padding: 1rem;
+  background: var(--u-muted, transparent);
+  h4 {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+}
+.u-ta-naskah {
+  display: grid;
+  gap: 0.75rem;
+  h4 {
+    margin: 0 0 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--u-muted-foreground);
+  }
+  p {
+    margin: 0;
+    white-space: pre-line;
+    line-height: 1.6;
+  }
+}
+.u-ta-catatan {
+  margin: 0.25rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--u-border-strong, var(--u-border));
+  white-space: pre-line;
+  font-size: 0.875rem;
+}
+
+// Progres
+.u-ta-progres {
+  display: grid;
+  gap: 1rem;
+}
+.u-ta-langkah,
+.u-ta-validasi {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+.u-ta-langkah > li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.5rem 1fr;
+  gap: 0.75rem;
+  padding-bottom: 0.875rem;
+  &:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: calc(0.75rem - 1px);
+    top: 1.625rem;
+    bottom: 0.125rem;
+    width: 2px;
+    background: var(--u-border);
+  }
+  &[data-status='selesai']:not(:last-child)::before {
+    background: var(--u-success, #16a34a);
+  }
+}
+.u-ta-langkah-ikon {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--u-muted-foreground);
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  [data-status='selesai'] > & {
+    color: var(--u-success, #16a34a);
+  }
+  [data-status='berjalan'] > &,
+  [data-status='menunggu'] > & {
+    color: var(--u-primary);
+  }
+  [data-status='perlu_tindakan'] > & {
+    color: var(--u-warning, #d97706);
+  }
+  [data-status='ditolak'] > & {
+    color: var(--u-danger, #dc2626);
+  }
+}
+.u-ta-langkah-isi {
+  min-width: 0;
+}
+.u-ta-langkah-kepala {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  strong {
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+}
+.u-ta-langkah-ket {
+  margin: 0.125rem 0 0;
+  color: var(--u-muted-foreground);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+.u-ta-validasi > li {
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--u-border);
+  display: grid;
+  gap: 0.25rem;
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+// Berkas
+.u-ta-berkas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  > li {
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-md, 8px);
+    padding: 0.625rem 0.75rem;
+    display: grid;
+    gap: 0.5rem;
+  }
+}
+.u-ta-berkas-kepala {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+}
+.u-ta-berkas-ikon {
+  flex: none;
+  color: var(--u-muted-foreground);
+  svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+  [data-lengkap] & {
+    color: var(--u-success, #16a34a);
+  }
+}
+.u-ta-berkas-nama {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.125rem;
+  strong {
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+  span {
+    color: var(--u-muted-foreground);
+    font-size: 0.8125rem;
+  }
+}
+.u-ta-wajib {
+  color: var(--u-danger, #dc2626) !important;
+  font-weight: 500;
+  font-size: 0.75rem !important;
+}
+.u-ta-unggah {
+  position: relative;
+  flex: none;
+  cursor: pointer;
+  input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+  }
+  input:focus-visible + .u-btn {
+    outline: 2px solid var(--u-ring, var(--u-primary));
+    outline-offset: 2px;
+  }
+  input:disabled + .u-btn {
+    opacity: 0.6;
+  }
+}
+.u-ta-berkas-file {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 1.75rem;
+  display: grid;
+  gap: 0.25rem;
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    font-size: 0.875rem;
+    > svg {
+      flex: none;
+      width: 1rem;
+      height: 1rem;
+      color: var(--u-muted-foreground);
+    }
+  }
+}
+.u-ta-tautan {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--u-primary);
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: inherit;
+  &:hover {
+    text-decoration: underline;
+  }
+}
+.u-ta-kirim {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  border-radius: var(--u-radius-md, 8px);
+  background: var(--u-muted, transparent);
+}
+.u-ta-riwayat {
+  font-size: 0.875rem;
+  summary {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--u-muted-foreground);
+    svg {
+      width: 0.875rem;
+      height: 0.875rem;
+    }
+  }
+  ul {
+    margin: 0.5rem 0 0;
+    padding-left: 1.25rem;
+    display: grid;
+    gap: 0.375rem;
+  }
+}
+
+// Daftar validasi
+.u-ta-saring {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  > :first-child {
+    flex: 1 1 16rem;
+  }
+  > :nth-child(2) {
+    flex: 0 1 14rem;
+  }
+}
+.u-ta-daftar {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg, 12px);
+  overflow: hidden;
+  li + li {
+    border-top: 1px solid var(--u-border);
+  }
+  button {
+    all: unset;
+    box-sizing: border-box;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    &:hover {
+      background: var(--u-muted, rgba(0, 0, 0, 0.03));
+    }
+    &:focus-visible {
+      outline: 2px solid var(--u-ring, var(--u-primary));
+      outline-offset: -2px;
+    }
+  }
+}
+.u-ta-daftar-utama {
+  flex: 1 1 18rem;
+  min-width: 0;
+  display: grid;
+  gap: 0.125rem;
+  strong {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+}
+.u-ta-daftar-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+// Pengaturan
+.u-ta-saklar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  cursor: pointer;
+  > span {
+    display: grid;
+    gap: 0.125rem;
+  }
+}
+.u-ta-saklar-kecil {
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+.u-ta-atur-berkas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  li {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: minmax(10rem, 1.2fr) minmax(10rem, 1fr) auto auto;
+    align-items: center;
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr auto;
+      > :nth-child(1),
+      > :nth-child(2) {
+        grid-column: 1 / -1;
+      }
+    }
+  }
+}
+
+// Syarat kelulusan
+.u-ta-ringkas-syarat {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  > div {
+    display: grid;
+    gap: 0.25rem;
+    justify-items: start;
+  }
+}
+.u-ta-syarat {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--u-border);
+    &:last-child {
+      border-bottom: 0;
+    }
+    > svg {
+      flex: none;
+      width: 1.125rem;
+      height: 1.125rem;
+      margin-top: 0.125rem;
+      color: var(--u-danger, #dc2626);
+    }
+    &[data-ok] > svg {
+      color: var(--u-success, #16a34a);
+    }
+  }
+}
+.u-ta-syarat-isi {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.125rem;
+}
+.u-ta-tolak {
+  color: var(--u-danger, #dc2626);
+  font-size: 0.8125rem;
+}
+.u-ta-file {
+  font-size: 0.875rem;
+  max-width: 100%;
+}

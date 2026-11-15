@@ -1,5 +1,15 @@
 # Catatan perubahan
 
+## 1.25.0 (2026-11-15)
+
+- **Tugas akhir dan syarat kelulusan** (`unipo-ui/siakad`, API SIAKAD `/v1/ta` dan `/v1/kelulusan`):
+  - `PengajuanJudulSaya`: mahasiswa menyimpan konsep judul (judul, judul Inggris, bidang, jenis penelitian, latar belakang, rumusan, metode, usulan pembimbing lewat `PilihEntitas`), melampirkan berkas per jenis yang diminta prodi (surat pengajuan judul, draf proposal, transkrip, lainnya), mengajukan, memperbaiki saat diminta revisi, membatalkan, dan memantau langkah validasi serta riwayat.
+  - `DaftarValidasiJudul` + `DetailPengajuanJudul`: dosen PA dan pengelola prodi melihat pengajuan (tab Menunggu saya, Mahasiswa PA saya, Semua di prodi), membuka berkas, lalu menyetujui, meminta revisi, atau menolak dengan catatan. Persetujuan terakhir menetapkan pembimbing dan judul final.
+  - `ProgresTugasAkhir`: progres dari pengajuan judul, pembimbing, bimbingan, seminar proposal, ujian, yudisium, sampai wisuda.
+  - `PengaturanPengajuanJudul`: buka/tutup pengajuan online, alur validasi (dosen PA lalu prodi, atau langsung prodi), usulan pembimbing, petunjuk, dan daftar berkas wajib/opsional.
+  - `SyaratKelulusanSaya`: syarat yudisium dan wisuda dari data akademik dan syarat tambahan prodi; mahasiswa mengirim bukti (keterangan + berkas) untuk syarat manual/unggah dan melihat alasan bila ditolak.
+  - Hook `useTugasAkhirSaya`; tipe `PengajuanTa`, `PengaturanTa`, `ProgresTa`, `ValidasiTa`.
+
 ## 1.24.0 (2026-11-15)
 
 - **Pengolah dokumen ala Word** (`unipo-ui/editor`): `PengolahDokumen` dengan pita menu (Beranda, Sisipkan, Tata letak, Tinjau, plus pita Tabel/Gambar saat dipilih), kertas A4/F4/Letter dengan margin nyata dan perkiraan batas halaman, kop/data surat/tanda tangan tetap di kertas, chip penanda `{{nama}}`, tabel bergaris atau polos, gambar dan kode QR lewat unggah berkas, cari & ganti, zoom, cetak, dan pintasan keyboard. Keluarannya HTML berkelas `ub-*` (`KELAS_PENGOLAH`) yang lolos saringan SIAKAD dan diterjemahkan ke PDF. Ekspor `KERTAS`, `MARGIN_SIAP`, `KopLembar`, `htmlPengolah`, `penandaKeChip`.
