@@ -1,5 +1,13 @@
 # Catatan perubahan
 
+## 1.12.0 (2026-11-15)
+
+- **Sambutan pimpinan** (`unipo-ui`): `SambutanPimpinan` untuk rektor, dekan, kaprodi, atau kepala unit dengan tujuh varian: klasik (foto + tanda tangan), terpisah (foto setengah panel), sorot (panel gelap, kutipan besar), kutipan, kartu (sidebar), minimal (artikel), dan video (YouTube, Vimeo, atau mp4 di dialog). Ringkas paragraf dengan "Baca selengkapnya" atau `tautan`; HTML dari server dibaca sebagai teks (`htmlKeParagraf`, tanpa innerHTML).
+- **Testimoni & rating** (`unipo-ui`): `Testimoni` dengan tujuh varian (kisi, masonry, carousel, sorotan, kutipan bergantian, marquee, daftar), tab filter per kelompok (alumni, mahasiswa, orang tua, mitra), ringkasan rating, lencana terverifikasi, dan video. `NilaiBintang` (tampilan pecahan atau isian keyboard), `RingkasanRating` (rata-rata + sebaran bintang), `KartuTestimoni`, `hitungRating`. Nama sengaja berbeda dari `Testimonial`/`Rating` blok landing PMB.
+- **Struktur organisasi** (`unipo-ui`): `StrukturOrganisasi` dengan empat varian: bagan berjenjang (garis komando dan garis koordinasi putus-putus, lipat cabang dengan jumlah bawahan, perbesar/perkecil, otomatis menjadi pohon di layar sempit), pohon, kartu per grup, dan tabel jabatan. Cari jabatan/nama menyorot hasil dan membuka cabangnya, jabatan lowong ditandai, klik node membuka detail. `strukturDariDaftar()` mengubah daftar `{ id, induk_id }` menjadi pohon.
+- Versi terhubung SIAKAD (`unipo-ui/siakad`): `SambutanPortal` (baris `portal_struktur` yang punya sambutan, atau pengaturan situs `sambutan` + pimpinan resmi `m_pimpinan`/`m_fakultas`), `StrukturPortal` (`GET /v1/portal/struktur`, dengan `strukturDariPortal()` atau `susun` sendiri), dan `TestimoniPmb` (`GET /v1/pmb/info/landing`, kategori ditebak dari peran lewat `kategoriPeran()`).
+- `Avatar`: foto yang tidak persegi (mis. potret 4:5) kini tetap terpotong bulat sesuai ukuran avatar.
+
 ## 1.10.0 (2026-11-15)
 
 - **Manajer berkas** (`unipo-ui/siakad`): `ManajerBerkas`, pengelola dokumen seperti Google Drive di atas `/v1/berkas` dan `/v1/berkas/folder` (butuh SIAKAD dengan tabel `berkas_folder`).

@@ -29,3 +29,4 @@ export * from './alur';
 export * from './ai';
 export * from './akun';
 export * from './manajer-berkas';
+export * from './profil-kampus';

@@ -13,6 +13,7 @@ import './mock/akademik';
 import './mock/pilih';
 import './mock/katalog';
 import './mock/berkas';
+import './mock/profil-kampus';
 import './mock/surat';
 import './mock/alur';
 import './mock/ai';
