@@ -504,16 +504,24 @@ export function HeroPmb({ hero: h, gelombang: g, biaya, jalur = [], jumlahProdi 
   const foto = h?.gambar || galeri?.[0]?.gambar || null;
   const ket = h?.gambar ? null : galeri?.[0]?.judul;
   const nominal = biaya ?? g?.biaya_pendaftaran;
+  // Lencana tidak mengulang tahun bila panitia sudah menuliskannya.
+  const dasar = h?.lencana || 'Penerimaan Mahasiswa Baru';
+  const lencana = tahun && !dasar.includes(tahun) ? `${dasar} ${tahun}` : dasar;
   return (
     <div className="u-pmb-hero">
       <Container>
         <Hero
-          eyebrow={`${h?.lencana || 'Penerimaan Mahasiswa Baru'}${tahun ? ` ${tahun}` : ''}`}
+          eyebrow={g?.sedang_buka ? undefined : lencana}
           announcement={
             g?.sedang_buka ? (
-              <Badge variant="success" dot>
-                {g.nama} dibuka{sisa != null ? ` · tinggal ${sisa} hari` : ''}
-              </Badge>
+              <>
+                <Badge variant="success" dot>
+                  {tahun ? `PMB ${tahun}` : 'PMB'}
+                </Badge>
+                <span>
+                  {g.nama} dibuka{sisa != null ? ` · tinggal ${sisa} hari` : ''}
+                </span>
+              </>
             ) : undefined
           }
           title={
