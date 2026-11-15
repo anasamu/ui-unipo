@@ -25,6 +25,7 @@ import './mock/profil';
 import './mock/kerangka-portal';
 import './mock/formulir';
 import './mock/aturan';
+import './mock/qr-dokumen';
 import { ssoDemo } from './mock/aplikasi';
 import { App } from './App';
 

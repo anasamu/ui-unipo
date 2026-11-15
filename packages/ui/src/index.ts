@@ -38,3 +38,4 @@ export * from './components/platform';
 export * from './components/sambutan';
 export * from './components/testimoni';
 export * from './components/struktur-organisasi';
+export * from './components/kode-qr';
