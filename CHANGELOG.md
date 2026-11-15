@@ -1,5 +1,18 @@
 # Catatan perubahan
 
+## 1.10.0 (2026-11-15)
+
+- **Manajer berkas** (`unipo-ui/siakad`): `ManajerBerkas`, pengelola dokumen seperti Google Drive di atas `/v1/berkas` dan `/v1/berkas/folder` (butuh SIAKAD dengan tabel `berkas_folder`).
+  - Pohon folder dan subfolder (keyboard: panah, Enter), breadcrumb, tampilan kisi (gambar mini untuk foto) atau daftar, ringkasan ruang penyimpanan.
+  - Seret file atau seluruh folder dari komputer untuk mengunggah (subfolder ikut dibuat), dengan antrean unggah: progres per file, batal, ulangi, unggah bertahap otomatis untuk file besar, dan pemeriksaan jenis/ukuran sebelum dikirim.
+  - Seret berkas atau folder ke folder lain, ke pohon, atau ke breadcrumb untuk memindah. Pilih banyak (Ctrl/Cmd+klik, Shift+klik, Ctrl+A), menu klik kanan, F2 ganti nama, Delete hapus.
+  - Cari di folder ini beserta subfoldernya, filter jenis (gambar, PDF, dokumen, spreadsheet, presentasi, arsip, video, audio), urutkan (terbaru, nama, ukuran).
+  - Folder baru dengan warna, ganti nama, pindah, hapus (berkas di dalamnya ke sampah). Hapus berkas selalu soft delete; berkas yang masih dipakai data modul ditolak dengan pesan server.
+  - Pratinjau gambar, PDF, video, dan audio beserta detail berkas; unduh lewat tautan sementara.
+  - Mode pemilih (`pilih`, `onPilih`) untuk lampiran formulir, mode baca saja, dan ruang folder per `modul` (mis. arsip).
+  - Pendukung: `useFolderBerkas()`, `useAksiBerkas()`, `validasiNamaFolder()` (aturan sama dengan server), `jenisBerkas()`, `JENIS_BERKAS`, `WARNA_FOLDER`.
+- `useSaatInvalidasi(prefix, fn)`: jalankan fungsi setiap `invalidateSiakad(prefix)` dipanggil, untuk data yang dimuat sendiri.
+
 ## 1.8.1 (2026-11-15)
 
 - `MenuAkun`/`KartuAkun`: jalur mengikuti rute profile.unipo.ac.id. Ubah profil dan Ganti foto ke `/profil`, Ganti password ke `/akun` (sebelumnya `/keamanan`, yang tidak ada), item baru **Data pribadi** (`/data-pribadi`), dan bilah kelengkapan menuju Data pribadi.
