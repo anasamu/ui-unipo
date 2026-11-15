@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.22.1 (2026-11-15)
+
+- **Obrolan:** layar Grup baru dan Obrolan baru di `ChatMengambang`/`KotakObrolan` tidak lagi menggencet kolom cari, saringan peran, dan tombol "Buat grup" saat daftar pengguna panjang. Sekarang hanya daftar pengguna yang bergulir.
+
 ## 1.22.0 (2026-11-15)
 
 - **Presensi QR** (`unipo-ui/siakad`, API SIAKAD `/v1/presensi`): presensi kuliah mahasiswa, dosen mengajar, kerja dosen/tendik lewat titik kiosk, dan kegiatan (rapat, seminar, upacara, ormawa).

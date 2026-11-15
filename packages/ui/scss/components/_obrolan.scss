@@ -77,6 +77,15 @@
   padding: 0.75rem;
   overflow-y: auto;
 }
+// Layar obrolan baru / grup baru: kepala (kolom cari, saringan, terpilih, nama grup, tombol) tidak boleh tergencet;
+// hanya daftar pengguna yang mengisi sisa tinggi dan bergulir sendiri.
+.u-ob-sisi-badan > * {
+  flex-shrink: 0;
+}
+.u-ob-sisi-badan > .u-ob-pengguna {
+  flex: 1 1 auto;
+  min-height: 12rem;
+}
 .u-ob-sisi-alert {
   margin: 0.5rem 0.75rem 0;
 }
@@ -365,6 +374,14 @@
   gap: 0.5rem;
   min-width: 0;
   min-height: 0;
+  > * {
+    flex-shrink: 0;
+  }
+  > .u-ob-pengguna-daftar {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
 }
 .u-ob-saring,
 .u-ob-terpilih {

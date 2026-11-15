@@ -1,6 +1,6 @@
 {
   "name": "unipo-ui",
-  "version": "1.22.0",
+  "version": "1.22.1",
   "type": "module",
   "sideEffects": [
     "*.css",
@@ -28,7 +28,7 @@
     "jsqr": "1.4.0",
     "lucide-react": "1.73.0",
     "qrcode-generator": "2.0.4",
-    "unipo-ui-tokens": "1.22.0"
+    "unipo-ui-tokens": "1.22.1"
   },
   "devDependencies": {
     "@date-fns/tz": "1.5.0",
