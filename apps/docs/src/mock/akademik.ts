@@ -323,7 +323,7 @@ tambahRute(/\/v1\/portal\/situs\/[^/]+$/, (u) => {
 
 let id = 100;
 const mn = (label: string, url?: string, anak: unknown[] = [], tipe = 'url') => ({ id: ++id, label, tipe, url: url ?? null, tab_baru: 0, anak });
-const MENU_UTAMA = [
+export const MENU_UTAMA = [
   mn('Beranda', '/'),
   mn('Profil', undefined, [mn('Sejarah', '/profil/sejarah'), mn('Visi dan misi', '/profil/visi-misi'), mn('Struktur organisasi', '/profil/struktur'), mn('Akreditasi', '/profil/akreditasi')]),
   mn('Akademik', undefined, [

@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { ArrowRight, ArrowUpRight, Clock, Eye, MapPin, Megaphone, Pin, Users, Video } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Clock, Eye, MapPin, Megaphone, Paperclip, Pin, Siren, Users, Video } from 'lucide-react';
 import { cn, dataFlag } from '../lib/cn';
 import { formatCompact, formatDate, formatRelative } from '../lib/format';
 import { Skeleton } from './actions';
@@ -197,20 +197,125 @@ export interface AnnouncementItem {
   date?: string | null;
   until?: string | null;
   pinned?: boolean;
+  /** Cuplikan isi (varian kartu dan sorotan). */
+  excerpt?: React.ReactNode;
+  /** Nama kategori (Akademik, Keuangan, …). */
+  category?: React.ReactNode;
+  /** Ada lampiran (ikon klip). */
+  attachment?: boolean;
+  /** Nama situs/unit penerbit (pengumuman lintas fakultas). */
+  source?: React.ReactNode;
 }
 const PRIORITAS: Record<string, string> = {
   penting: 'Penting',
   darurat: 'Darurat',
 };
 
-/** Daftar pengumuman: ikon prioritas, nomor surat, berlaku sampai, dan sematan. */
-export function AnnouncementList({ items, loading, className, empty }: { items: AnnouncementItem[]; loading?: boolean; className?: string; empty?: React.ReactNode }) {
+/**
+ * daftar (bawaan): ikon prioritas, nomor surat, berlaku sampai. kartu: grid kartu dengan cuplikan dan sisa hari.
+ * ringkas: satu baris per pengumuman untuk sidebar/dasbor. sorotan: pengumuman teratas besar, sisanya daftar.
+ * linimasa: dikelompokkan per tanggal terbit.
+ */
+export type AnnouncementVariant = 'daftar' | 'kartu' | 'ringkas' | 'sorotan' | 'linimasa';
+
+export interface AnnouncementListProps {
+  items: AnnouncementItem[];
+  loading?: boolean;
+  variant?: AnnouncementVariant;
+  className?: string;
+  empty?: React.ReactNode;
+}
+
+const tgl = (d: string) => d.replace(' ', 'T');
+
+/** Sisa hari sampai `until` (null bila tidak ada atau sudah lewat). */
+function sisaHari(until?: string | null): number | null {
+  if (!until) return null;
+  const ms = new Date(tgl(until)).getTime() - Date.now();
+  if (Number.isNaN(ms) || ms < 0) return null;
+  return Math.floor(ms / 86_400_000);
+}
+
+function Tautan({ a, className, children }: { a: AnnouncementItem; className: string; children: React.ReactNode }) {
+  const Tag = a.href ? 'a' : 'div';
+  return (
+    <Tag className={className} {...(a.href ? { href: a.href } : {})}>
+      {children}
+    </Tag>
+  );
+}
+
+function Flag({ a }: { a: AnnouncementItem }) {
+  return a.priority && PRIORITAS[a.priority] ? <span className="u-announce-flag">{PRIORITAS[a.priority]}</span> : null;
+}
+
+function Meta({ a, number = true }: { a: AnnouncementItem; number?: boolean }) {
+  const sisa = sisaHari(a.until);
+  return (
+    <span className="u-news-meta">
+      {a.source && <span>{a.source}</span>}
+      {number && a.number && <span>{a.number}</span>}
+      {a.date && <span>{formatDate(tgl(a.date), 'medium')}</span>}
+      {a.until && (
+        <span data-segera={dataFlag(sisa != null && sisa <= 3)}>
+          <Clock aria-hidden />
+          {sisa == null ? `Berlaku s.d. ${formatDate(a.until, 'medium')}` : sisa === 0 ? 'Berakhir hari ini' : `Berakhir ${sisa} hari lagi`}
+        </span>
+      )}
+      {a.attachment && (
+        <span>
+          <Paperclip aria-hidden />
+          Lampiran
+        </span>
+      )}
+    </span>
+  );
+}
+
+function Baris({ a }: { a: AnnouncementItem }) {
+  return (
+    <li className="u-announce-item" data-priority={a.priority ?? 'biasa'} data-pinned={dataFlag(a.pinned)}>
+      <Tautan a={a} className="u-announce-link">
+        <span className="u-announce-icon" aria-hidden>
+          {a.pinned ? <Pin /> : a.priority === 'darurat' ? <Siren /> : <Megaphone />}
+        </span>
+        <span className="u-announce-body">
+          <span className="u-announce-title">
+            <Flag a={a} />
+            {a.title}
+          </span>
+          <Meta a={a} />
+        </span>
+        {a.href && <ArrowUpRight className="u-announce-arrow" aria-hidden />}
+      </Tautan>
+    </li>
+  );
+}
+
+function kelompokTanggal(items: AnnouncementItem[]): Array<[string, AnnouncementItem[]]> {
+  const hari = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const kini = hari(new Date());
+  const map = new Map<string, AnnouncementItem[]>();
+  for (const a of items) {
+    let label = 'Tanpa tanggal';
+    if (a.date) {
+      const t = new Date(tgl(a.date));
+      const selisih = Math.round((kini - hari(t)) / 86_400_000);
+      label = selisih === 0 ? 'Hari ini' : selisih === 1 ? 'Kemarin' : selisih > 1 && selisih < 7 ? 'Minggu ini' : new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(t);
+    }
+    map.set(label, [...(map.get(label) ?? []), a]);
+  }
+  return [...map.entries()];
+}
+
+/** Daftar pengumuman dengan lima varian tampilan: daftar, kartu, ringkas, sorotan, dan linimasa. */
+export function AnnouncementList({ items, loading, variant = 'daftar', className, empty }: AnnouncementListProps) {
   if (loading)
     return (
-      <ul className={cn('u-announce', className)} aria-busy>
-        {Array.from({ length: 4 }, (_, i) => (
+      <ul className={cn('u-announce', className)} data-variant={variant} aria-busy>
+        {Array.from({ length: variant === 'ringkas' ? 5 : 4 }, (_, i) => (
           <li key={i} className="u-announce-item">
-            <Skeleton style={{ width: 36, height: 36, borderRadius: 10 }} />
+            {variant !== 'ringkas' && <Skeleton style={{ width: 36, height: 36, borderRadius: 10 }} />}
             <div style={{ flex: 1, display: 'grid', gap: 6 }}>
               <Skeleton style={{ height: 14, width: '80%' }} />
               <Skeleton style={{ height: 12, width: '40%' }} />
@@ -220,37 +325,107 @@ export function AnnouncementList({ items, loading, className, empty }: { items: 
       </ul>
     );
   if (!items.length) return <div className="u-agenda-empty">{empty ?? 'Belum ada pengumuman.'}</div>;
+
+  if (variant === 'kartu')
+    return (
+      <ul className={cn('u-announce-kartu', className)}>
+        {items.map((a) => (
+          <li key={a.id} className="u-announce-item" data-priority={a.priority ?? 'biasa'} data-pinned={dataFlag(a.pinned)}>
+            <Tautan a={a} className="u-announce-kartu-isi">
+              <span className="u-announce-kartu-atas">
+                {a.pinned && (
+                  <span className="u-announce-sematan">
+                    <Pin aria-hidden /> Disematkan
+                  </span>
+                )}
+                <Flag a={a} />
+                {a.category && <span className="u-announce-kategori">{a.category}</span>}
+              </span>
+              <span className="u-announce-title">{a.title}</span>
+              {a.excerpt && <span className="u-announce-cuplikan">{a.excerpt}</span>}
+              {a.number && <span className="u-announce-nomor">{a.number}</span>}
+              <Meta a={a} number={false} />
+            </Tautan>
+          </li>
+        ))}
+      </ul>
+    );
+
+  if (variant === 'ringkas')
+    return (
+      <ul className={cn('u-announce-ringkas', className)}>
+        {items.map((a) => (
+          <li key={a.id} className="u-announce-item" data-priority={a.priority ?? 'biasa'} data-pinned={dataFlag(a.pinned)}>
+            <Tautan a={a} className="u-announce-ringkas-isi">
+              <span className="u-announce-titik" aria-hidden />
+              <span className="u-announce-title">
+                <Flag a={a} />
+                {a.title}
+              </span>
+              {a.date && <time dateTime={tgl(a.date)}>{new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(tgl(a.date)))}</time>}
+            </Tautan>
+          </li>
+        ))}
+      </ul>
+    );
+
+  if (variant === 'sorotan') {
+    const [utama, ...lain] = items;
+    return (
+      <div className={cn('u-announce-sorotan', className)}>
+        <div className="u-announce-item" data-priority={utama!.priority ?? 'biasa'}>
+          <Tautan a={utama!} className="u-announce-sorotan-utama">
+            <span className="u-announce-icon" aria-hidden>
+              {utama!.priority === 'darurat' ? <Siren /> : <Megaphone />}
+            </span>
+            <span className="u-announce-body">
+              <span className="u-announce-kartu-atas">
+                <Flag a={utama!} />
+                {utama!.category && <span className="u-announce-kategori">{utama!.category}</span>}
+              </span>
+              <span className="u-announce-title">{utama!.title}</span>
+              {utama!.excerpt && <span className="u-announce-cuplikan">{utama!.excerpt}</span>}
+              <Meta a={utama!} />
+            </span>
+            {utama!.href && (
+              <span className="u-announce-baca">
+                Baca <ArrowRight aria-hidden />
+              </span>
+            )}
+          </Tautan>
+        </div>
+        {lain.length > 0 && (
+          <ul className="u-announce">
+            {lain.map((a) => (
+              <Baris key={a.id} a={a} />
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
+  if (variant === 'linimasa')
+    return (
+      <div className={cn('u-announce-linimasa', className)}>
+        {kelompokTanggal(items).map(([label, isi]) => (
+          <section key={label}>
+            <h4>{label}</h4>
+            <ul className="u-announce">
+              {isi.map((a) => (
+                <Baris key={a.id} a={a} />
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    );
+
   return (
     <ul className={cn('u-announce', className)}>
-      {items.map((a) => {
-        const Tag = a.href ? 'a' : 'div';
-        return (
-          <li key={a.id} className="u-announce-item" data-priority={a.priority ?? 'biasa'} data-pinned={dataFlag(a.pinned)}>
-            <Tag className="u-announce-link" {...(a.href ? { href: a.href } : {})}>
-              <span className="u-announce-icon" aria-hidden>
-                {a.pinned ? <Pin /> : <Megaphone />}
-              </span>
-              <span className="u-announce-body">
-                <span className="u-announce-title">
-                  {a.priority && PRIORITAS[a.priority] && <span className="u-announce-flag">{PRIORITAS[a.priority]}</span>}
-                  {a.title}
-                </span>
-                <span className="u-news-meta">
-                  {a.number && <span>{a.number}</span>}
-                  {a.date && <span>{formatDate(a.date.replace(' ', 'T'), 'medium')}</span>}
-                  {a.until && (
-                    <span>
-                      <Clock aria-hidden />
-                      Berlaku s.d. {formatDate(a.until, 'medium')}
-                    </span>
-                  )}
-                </span>
-              </span>
-              {a.href && <ArrowUpRight className="u-announce-arrow" aria-hidden />}
-            </Tag>
-          </li>
-        );
-      })}
+      {items.map((a) => (
+        <Baris key={a.id} a={a} />
+      ))}
     </ul>
   );
 }

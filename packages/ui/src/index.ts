@@ -28,6 +28,7 @@ export * from './components/modal-fitur';
 export * from './components/animasi';
 export * from './components/tata-letak';
 export * from './components/landing';
+export * from './components/kaki-situs';
 export * from './ikon/unipo';
 export * from './ikon/kotak';
 export * from './ikon/ilustrasi';

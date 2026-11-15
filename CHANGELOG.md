@@ -1,5 +1,20 @@
 # Catatan perubahan
 
+## 1.16.0 (2026-11-15)
+
+- **Kerangka situs** (`unipo-ui`):
+  - `Footer`: identitas + kontak (alamat dengan tautan peta, telepon, WhatsApp, email, jam layanan) + media sosial, kolom tautan, pita ajakan, baris hak cipta + tautan kecil + tombol kembali ke atas. Varian `gelap` (tetap gelap di kedua mode), `terang`, `ringkas`.
+  - `PitaPengumuman`: pita di atas navbar, warna dan ikon sesuai prioritas (darurat, penting, biasa), berganti otomatis (berhenti saat disorot dan bila pengguna memilih gerak minimal), bisa ditutup dan diingat sampai isinya berubah.
+  - `TopbarKontak`: isi prop `topbar` Navbar (telepon, email, jam layanan, tautan cepat, slot bahasa).
+  - `AnnouncementList` kini punya `variant`: `daftar` (bawaan), `kartu`, `ringkas`, `sorotan`, `linimasa`; item bisa membawa cuplikan, kategori, lampiran, dan penerbit; masa berlaku tampil sebagai sisa hari ("Berakhir 3 hari lagi").
+  - `SocialLinks` mengenal LinkedIn, Threads, dan saluran WhatsApp.
+- **Kerangka portal dari `/v1/portal`** (`unipo-ui/siakad`):
+  - `KerangkaPortal`: pita pengumuman + `NavbarPortal` (menu utama dan mega menu) dengan pita kontak + isi + kaki halaman + popup dalam satu komponen.
+  - `FooterPortal`: kontak dan media sosial dari profil situs, kolom dari menu lokasi `footer`, kolom tautan cepat per grup (`/v1/portal/tautan`).
+  - `TopbarPortal` (menu lokasi `atas` + kontak), `PitaPengumumanPortal` (pengumuman darurat/penting yang masih berlaku + banner posisi `pita`), `PopupPengumumanPortal` (banner posisi `popup`, sekali per pengunjung).
+  - `PengumumanPortal` mendapat `variant` dan `kategori`; `PengumumanSaya` (`/v1/portal/pengumuman/saya`, sesuai kelompok, prodi, angkatan akun); `DetailPengumumanPortal` (isi HTML disaring, nomor, masa berlaku, penerbit, lampiran); pembantu `kePengumuman`, `kontakSitus`, `sosialSitus`.
+- Halaman docs **Kerangka portal: menu, footer, pengumuman** dengan data tiruan.
+
 ## 1.15.0 (2026-11-15)
 
 - **Modul profil per peran** (`unipo-ui/siakad`), semua lewat SDK dan akun yang masuk (tanpa ketik NIM/NIDN):

@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { CalendarDays, ChevronDown, Globe, MapPin, Mail, MessageCircle, MessagesSquare, Music2, PlayCircle, Quote, SendHorizontal, Sparkles, Star, X } from 'lucide-react';
+import { AtSign, CalendarDays, ChevronDown, Globe, MapPin, Mail, MessageCircle, MessagesSquare, Music2, PlayCircle, Quote, SendHorizontal, Sparkles, Star, X } from 'lucide-react';
 import { cn, dataFlag } from '../lib/cn';
 import { Badge, Button, Skeleton } from './actions';
 import { Animasi, TitikMengetik } from './animasi';
@@ -364,6 +364,12 @@ const IkonYoutube = svg(
   </>,
 );
 const IkonX = svg(<path d="M4 4l16 16M20 4 4 20" />);
+const IkonLinkedin = svg(
+  <>
+    <rect x="3" y="3" width="18" height="18" rx="3" />
+    <path d="M8 10.5V16M8 7.5v.01M11.5 16v-5.5M11.5 13c0-1.7 1-2.6 2.3-2.6s2.2.8 2.2 2.6V16" />
+  </>,
+);
 const SOSIAL: Record<string, { label: string; Ikon: React.ComponentType<React.SVGProps<SVGSVGElement>> }> = {
   instagram: { label: 'Instagram', Ikon: IkonInstagram },
   facebook: { label: 'Facebook', Ikon: IkonFacebook },
@@ -371,11 +377,14 @@ const SOSIAL: Record<string, { label: string; Ikon: React.ComponentType<React.SV
   tiktok: { label: 'TikTok', Ikon: Music2 as never },
   x: { label: 'X', Ikon: IkonX },
   twitter: { label: 'X', Ikon: IkonX },
+  linkedin: { label: 'LinkedIn', Ikon: IkonLinkedin },
+  threads: { label: 'Threads', Ikon: AtSign as never },
   whatsapp: { label: 'WhatsApp', Ikon: MessageCircle as never },
+  whatsapp_channel: { label: 'Saluran WhatsApp', Ikon: MessageCircle as never },
   email: { label: 'Email', Ikon: Mail as never },
   website: { label: 'Situs web', Ikon: Globe as never },
 };
-/** Deret tombol ikon media sosial. `jenis`: instagram, facebook, youtube, tiktok, x, whatsapp, email, website. */
+/** Deret tombol ikon media sosial. `jenis`: instagram, facebook, youtube, tiktok, x, linkedin, threads, whatsapp, whatsapp_channel, email, website. */
 export function SocialLinks({ items, className }: { items: Array<{ jenis: string; url: string }>; className?: string }) {
   if (!items.length) return null;
   return (
@@ -422,7 +431,19 @@ export interface ChatWidgetProps {
 type Pesan = { dari: 'bot' | 'saya'; isi: React.ReactNode; aksi?: React.ReactNode };
 
 /** Tombol mengambang + jendela tanya jawab (asisten FAQ, bantuan cepat). Escape menutup, fokus ke kotak tulis. */
-export function ChatWidget({ title = 'Tanya jawab', subtitle, greeting = 'Halo! Ada yang bisa dibantu?', suggestions = [], onAsk, footer, launcherLabel = 'Tanya', open: openProp, onOpenChange, eventName, className }: ChatWidgetProps) {
+export function ChatWidget({
+  title = 'Tanya jawab',
+  subtitle,
+  greeting = 'Halo! Ada yang bisa dibantu?',
+  suggestions = [],
+  onAsk,
+  footer,
+  launcherLabel = 'Tanya',
+  open: openProp,
+  onOpenChange,
+  eventName,
+  className,
+}: ChatWidgetProps) {
   const [inner, setInner] = React.useState(false);
   const open = openProp ?? inner;
   const setOpen = React.useCallback(
@@ -547,7 +568,31 @@ export function ChatWidget({ title = 'Tanya jawab', subtitle, greeting = 'Halo! 
 }
 
 // ================================================================ Pencocok FAQ sederhana
-const KATA_UMUM = new Set(['yang', 'dan', 'di', 'ke', 'dari', 'apa', 'apakah', 'bagaimana', 'saya', 'bisa', 'untuk', 'ini', 'itu', 'cara', 'ada', 'atau', 'dengan', 'kapan', 'harus', 'mau', 'ingin', 'tidak', 'berapa']);
+const KATA_UMUM = new Set([
+  'yang',
+  'dan',
+  'di',
+  'ke',
+  'dari',
+  'apa',
+  'apakah',
+  'bagaimana',
+  'saya',
+  'bisa',
+  'untuk',
+  'ini',
+  'itu',
+  'cara',
+  'ada',
+  'atau',
+  'dengan',
+  'kapan',
+  'harus',
+  'mau',
+  'ingin',
+  'tidak',
+  'berapa',
+]);
 const polosFaq = (h: string) => h.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ');
 const kataKunci = (s: string) =>
   polosFaq(s)
