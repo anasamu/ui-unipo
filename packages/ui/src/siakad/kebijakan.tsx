@@ -51,10 +51,15 @@ export const LABEL_JENIS_DOKUMEN: Record<string, string> = {
   lainnya: 'Lainnya',
 };
 
-/** Dokumen publik SPMI; `unit` = kode atau id unit SPMI, `turunan` ikut unit di bawahnya. */
-export function useDokumenKebijakan(q: { unit?: string | number | null; turunan?: boolean; jenis?: string | null; q?: string | null } = {}) {
+/**
+ * Dokumen publik SPMI; `unit` = kode atau id unit SPMI, `turunan` ikut unit di bawahnya. Aplikasi yang hanya tahu kode
+ * SIAKAD memakai `fakultas` (kode fakultas) atau `prodi` (kode prodi); `unit` didahulukan bila ketiganya diisi.
+ */
+export function useDokumenKebijakan(q: { unit?: string | number | null; fakultas?: string | null; prodi?: string | null; turunan?: boolean; jenis?: string | null; q?: string | null } = {}) {
   const query: Record<string, string | number> = {};
   if (q.unit != null && q.unit !== '') query.unit = q.unit;
+  else if (q.fakultas) query.fakultas = q.fakultas;
+  else if (q.prodi) query.prodi = q.prodi;
   if (q.turunan) query.turunan = 1;
   if (q.jenis) query.jenis = q.jenis;
   if (q.q) query.q = q.q;
@@ -64,6 +69,10 @@ export function useDokumenKebijakan(q: { unit?: string | number | null; turunan?
 export interface KebijakanUnitProps {
   /** Kode atau id unit SPMI (mis. "bauk"). Kosong = semua unit. */
   unit?: string | number | null;
+  /** Kode fakultas SIAKAD (mis. "05"), dipakai bila `unit` kosong. Butuh SIAKAD yang mengenal parameter `fakultas`. */
+  fakultas?: string | null;
+  /** Kode prodi SIAKAD, dipakai bila `unit` dan `fakultas` kosong. */
+  prodi?: string | null;
   /** Ikut unit di bawahnya (fakultas ikut prodi). Bawaan true. */
   turunan?: boolean;
   /** Batasi jenis, mis. ['sop', 'kebijakan']. */
@@ -76,7 +85,7 @@ export interface KebijakanUnitProps {
 }
 
 /** Daftar SOP/kebijakan/SK unit yang berlaku, dengan pencarian dan saring jenis. */
-export function KebijakanUnit({ unit, turunan = true, jenis, judul = 'SOP dan kebijakan', deskripsi = 'Aturan yang berlaku dan sudah disahkan. Dokumen dikelola lewat SPMI.', tautanDokumen, className }: KebijakanUnitProps) {
+export function KebijakanUnit({ unit, fakultas, prodi, turunan = true, jenis, judul = 'SOP dan kebijakan', deskripsi = 'Aturan yang berlaku dan sudah disahkan. Dokumen dikelola lewat SPMI.', tautanDokumen, className }: KebijakanUnitProps) {
   const [cari, setCari] = React.useState('');
   const [tunda, setTunda] = React.useState('');
   const [pilih, setPilih] = React.useState<string>('');
@@ -84,7 +93,7 @@ export function KebijakanUnit({ unit, turunan = true, jenis, judul = 'SOP dan ke
     const t = setTimeout(() => setTunda(cari.trim()), 300);
     return () => clearTimeout(t);
   }, [cari]);
-  const q = useDokumenKebijakan({ unit, turunan, q: tunda.length >= 2 ? tunda : null });
+  const q = useDokumenKebijakan({ unit, fakultas, prodi, turunan, q: tunda.length >= 2 ? tunda : null });
   const semua = (q.data ?? []).filter((d) => !jenis || jenis.includes(d.jenis));
   const adaJenis = [...new Set(semua.map((d) => d.jenis))];
   const daftar = pilih ? semua.filter((d) => d.jenis === pilih) : semua;
