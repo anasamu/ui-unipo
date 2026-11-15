@@ -23,10 +23,10 @@ export const meta: DemoMeta = {
   props: [
     ['pengguna', 'AkunPengguna', '{ nama, username, level, peran, unit, email, foto, status }. Baris kedua: "username · peran".'],
     ['varian', "'pil' | 'nama' | 'avatar' | 'ikon' | 'sidebar'", 'Bentuk pemicu MenuAkun. Sidebar membuka menu ke atas.'],
-    ['item', "Array<'profil' | 'ubah' | 'foto' | 'password' | 'keamanan'>", 'Item bawaan. Bawaan: profil, ubah, keamanan.'],
+    ['item', "Array<'profil' | 'ubah' | 'data' | 'foto' | 'password' | 'keamanan'>", 'Item bawaan. Bawaan: profil, ubah, keamanan.'],
     ['profilUrl / ssoUrl', 'string', 'Bawaan https://profile.unipo.ac.id dan https://sso.unipo.ac.id.'],
-    ['tautan', 'Partial<TautanAkun>', 'Ganti jalur: profil, ubahProfil, foto, password, keamanan, keluar.'],
-    ['kelengkapan', 'number', 'Persen data wajib. Di bawah 100 tampil bilah "Lengkapi profil" yang menuju halaman ubah profil.'],
+    ['tautan', 'Partial<TautanAkun>', 'Ganti jalur: profil, ubahProfil, dataPribadi, foto, password, keamanan, keluar.'],
+    ['kelengkapan', 'number', 'Persen data wajib. Di bawah 100 tampil bilah "Lengkapi profil" yang menuju /data-pribadi.'],
     ['peranLain / onGantiPeran', 'Array<{ kode, label, aktif }>', 'Untuk akun dengan beberapa peran.'],
     ['tema / onTema', "'terang' | 'gelap' | 'sistem'", 'Pilihan tema di dalam menu.'],
     ['menu', 'MenuEntry[]', 'Item tambahan sebelum tombol keluar.'],
@@ -36,7 +36,7 @@ export const meta: DemoMeta = {
   ],
   notes: [
     'MenuAkunSiakad dan KartuAkunSiakad butuh scope profil:read. Pas foto diambil dari /v1/profil/saya/foto dengan token lalu ditampilkan sebagai object URL. Selama memuat atau bila scope belum ada, isi `cadangan` dari sesi SSO.',
-    'Jalur bawaan aplikasi Profil: / (profil), /data-pribadi (ubah), /keamanan (password). Bila rute profile.unipo.ac.id berbeda, ganti lewat `tautan` atau `tautanAkun()`.',
+    'Jalur bawaan sesuai rute profile.unipo.ac.id: / (profil saya), /profil (ubah profil, bio, pas foto), /data-pribadi (data pribadi), /akun (akun dan ganti password). Keamanan akun (sesi dan perangkat) ada di SSO /akun. Ganti lewat `tautan` atau `tautanAkun()` bila perlu.',
   ],
 };
 
@@ -71,7 +71,7 @@ export function Lengkap() {
     <MenuAkun
       pengguna={DOSEN}
       varian="pil"
-      item={['profil', 'ubah', 'foto', 'password', 'keamanan']}
+      item={['profil', 'ubah', 'data', 'foto', 'password', 'keamanan']}
       kelengkapan={64}
       peranLain={[
         { kode: 'dosen', label: 'Dosen', aktif: peran === 'dosen' },

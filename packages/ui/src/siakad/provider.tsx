@@ -61,6 +61,19 @@ export function invalidateSiakad(prefix = '') {
   listeners.forEach((l) => l(prefix));
 }
 
+/** Jalankan `fn` setiap kali invalidateSiakad dipanggil dengan `prefix` ini (atau tanpa prefix), untuk data yang dimuat sendiri. */
+export function useSaatInvalidasi(prefix: string, fn: () => void) {
+  const ref = React.useRef(fn);
+  ref.current = fn;
+  React.useEffect(() => {
+    const l = (p: string) => {
+      if (!p || p === prefix) ref.current();
+    };
+    listeners.add(l);
+    return () => void listeners.delete(l);
+  }, [prefix]);
+}
+
 export interface QueryState<T> {
   data: T | undefined;
   meta: Meta | undefined;
@@ -125,14 +138,12 @@ export function useSiakadQuery<T>(key: ReadonlyArray<unknown>, fn: (siakad: Siak
       const lepas = () => jalan.delete(k);
       p.then(lepas, lepas);
     }
-    p
-      .then((result) => {
-        if (!ctrl.signal.aborted) setState({ result, loading: false, error: null });
-      })
-      .catch((e: Error) => {
-        if ((e as { status?: number })?.status === 503) laporPemeliharaan({ message: e.message, until: null });
-        if (!ctrl.signal.aborted && e?.name !== 'AbortError') setState((s) => ({ ...s, loading: false, error: e }));
-      });
+    p.then((result) => {
+      if (!ctrl.signal.aborted) setState({ result, loading: false, error: null });
+    }).catch((e: Error) => {
+      if ((e as { status?: number })?.status === 503) laporPemeliharaan({ message: e.message, until: null });
+      if (!ctrl.signal.aborted && e?.name !== 'AbortError') setState((s) => ({ ...s, loading: false, error: e }));
+    });
     return () => ctrl.abort();
   }, [k, siakad, enabled, staleTime, nonce]);
 

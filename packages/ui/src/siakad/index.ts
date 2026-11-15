@@ -29,5 +29,8 @@ export * from './surat';
 export * from './alur';
 export * from './ai';
 export * from './akun';
+export * from './manajer-berkas';
+export * from './profil-kampus';
+export * from './obrolan';
 export * from './pmb-maba';
 export * from './lms-belajar';

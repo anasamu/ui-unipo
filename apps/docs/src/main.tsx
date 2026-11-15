@@ -14,9 +14,11 @@ import './mock/akademik';
 import './mock/pilih';
 import './mock/katalog';
 import './mock/berkas';
+import './mock/profil-kampus';
 import './mock/surat';
 import './mock/alur';
 import './mock/ai';
+import './mock/obrolan';
 import { ssoDemo } from './mock/aplikasi';
 import { App } from './App';
 

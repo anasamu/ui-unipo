@@ -298,7 +298,21 @@ tambahRute(/\/v1\/jadwal$/, (u) => {
 
 // ---------------------------------------------------------------- Portal: situs, menu, FAQ
 const SITUS: Record<string, Record<string, unknown>> = {
-  univ: { id: 1, kode: 'univ', jenis: 'universitas', nama: 'Universitas Pohuwato', singkatan: 'UNIPO', tagline: 'Unggul, Berkarakter, Berdaya Saing', domain: 'unipo.ac.id', logo: null },
+  univ: {
+    id: 1,
+    kode: 'univ',
+    jenis: 'universitas',
+    nama: 'Universitas Pohuwato',
+    singkatan: 'UNIPO',
+    tagline: 'Unggul, Berkarakter, Berdaya Saing',
+    domain: 'unipo.ac.id',
+    logo: null,
+    pengaturan: {
+      sambutan:
+        '<p>Assalamualaikum warahmatullahi wabarakatuh. Selamat datang di laman resmi Universitas Pohuwato.</p><p>Kami terus memperkuat mutu pembelajaran, penelitian, dan pengabdian agar lulusan siap bersaing.</p>',
+    },
+    siakad: { pimpinan: [{ jabatan: 'Rektor', nidn: '0912037801', nama: 'Dr. Rahmat Hidayat, M.Pd.' }] },
+  },
   tracer: { id: 7, kode: 'tracer', jenis: 'unit', nama: 'Tracer Study', tagline: 'Universitas Pohuwato', domain: 'alumni.unipo.ac.id', logo: null },
   fikom: { id: 3, kode: 'fikom', jenis: 'fakultas', nama: 'Fakultas Ilmu Komputer', singkatan: 'FIKOM', tagline: 'Universitas Pohuwato', logo: null },
 };

@@ -1,5 +1,25 @@
 # Catatan perubahan
 
+## 1.13.0 (2026-11-15)
+
+- **Obrolan terenkripsi end-to-end** (`unipo-ui/siakad`) di atas `/v1/obrolan` SIAKAD, untuk semua peran: mahasiswa, dosen, tendik, maba, panitia, dan pendaftar PMB (lewat aplikasi PMB). Pengganti chat lama yang menyimpan teks polos.
+  - Enkripsi di browser (WebCrypto): kunci perangkat ECDH + ECDSA P-256 di IndexedDB, kunci AES-256-GCM per pesan yang dibungkus (ECDH efemeral + HKDF-SHA256 + AES-KW) untuk setiap perangkat aktif anggota, tanda tangan perangkat pengirim, lampiran dienkripsi sebelum diunggah. Server hanya menyimpan ciphertext dan menolak pesan yang tidak dibungkus untuk tepat semua perangkat aktif.
+  - `ChatMengambang`: tombol di pojok dengan lencana belum dibaca, panel daftar + ruang (layar penuh di ponsel). `KotakObrolan`: halaman obrolan dua kolom yang menjadi satu kolom di layar sempit.
+  - `DaftarPengguna`: cari pengguna (nama, NIM/NIDN) dengan saringan peran dan status daring, kontak terakhir, pilih banyak untuk grup. `DaftarObrolan`: cuplikan pesan terakhir yang didekripsi di browser, belum dibaca, sedang mengetik, sematan, bisu, arsip.
+  - `RuangObrolan`: gelembung berkelompok dengan pemisah tanggal, balas dengan kutipan, ubah (panah atas), hapus untuk semua, reaksi emoji, tanda terkirim/diterima/dibaca, sedang mengetik, lampiran gambar dan berkas (seret, tempel, atau pilih), pesan menghilang, kirim ulang pesan gagal, peringatan kunci kontak berubah, draf per ruang.
+  - Info ruang: nomor keamanan 60 angka (`NomorKeamanan`), pesan menghilang, bisu, sematkan, anggota grup (tambah, keluarkan, admin), blokir, keluar grup. `PengaturanObrolan`: perangkat tertaut (cabut), cadangan kunci dengan sandi (PBKDF2 600.000 iterasi) dan pulihkan di browser baru, privasi (status daring, tanda dibaca), daftar blokir.
+  - Realtime long-poll `GET /v1/obrolan/peristiwa` yang dipakai bersama semua komponen di halaman (`useObrolan()`), menyambung ulang otomatis.
+  - `TombolObrolan` dan `bukaObrolan(pemilik)` untuk membuka obrolan dari kartu profil atau daftar dosen wali. `kriptoObrolan` untuk aplikasi atau bot lain yang memakai protokol yang sama.
+- Halaman docs **Obrolan terenkripsi** dengan server tiruan; kontak tiruannya memegang kunci perangkat sungguhan, membuka pesan Anda, lalu membalas dengan pesan terenkripsi.
+
+## 1.12.0 (2026-11-15)
+
+- **Sambutan pimpinan** (`unipo-ui`): `SambutanPimpinan` untuk rektor, dekan, kaprodi, atau kepala unit dengan tujuh varian: klasik (foto + tanda tangan), terpisah (foto setengah panel), sorot (panel gelap, kutipan besar), kutipan, kartu (sidebar), minimal (artikel), dan video (YouTube, Vimeo, atau mp4 di dialog). Ringkas paragraf dengan "Baca selengkapnya" atau `tautan`; HTML dari server dibaca sebagai teks (`htmlKeParagraf`, tanpa innerHTML).
+- **Testimoni & rating** (`unipo-ui`): `Testimoni` dengan tujuh varian (kisi, masonry, carousel, sorotan, kutipan bergantian, marquee, daftar), tab filter per kelompok (alumni, mahasiswa, orang tua, mitra), ringkasan rating, lencana terverifikasi, dan video. `NilaiBintang` (tampilan pecahan atau isian keyboard), `RingkasanRating` (rata-rata + sebaran bintang), `KartuTestimoni`, `hitungRating`. Nama sengaja berbeda dari `Testimonial`/`Rating` blok landing PMB.
+- **Struktur organisasi** (`unipo-ui`): `StrukturOrganisasi` dengan empat varian: bagan berjenjang (garis komando dan garis koordinasi putus-putus, lipat cabang dengan jumlah bawahan, perbesar/perkecil, otomatis menjadi pohon di layar sempit), pohon, kartu per grup, dan tabel jabatan. Cari jabatan/nama menyorot hasil dan membuka cabangnya, jabatan lowong ditandai, klik node membuka detail. `strukturDariDaftar()` mengubah daftar `{ id, induk_id }` menjadi pohon.
+- Versi terhubung SIAKAD (`unipo-ui/siakad`): `SambutanPortal` (baris `portal_struktur` yang punya sambutan, atau pengaturan situs `sambutan` + pimpinan resmi `m_pimpinan`/`m_fakultas`), `StrukturPortal` (`GET /v1/portal/struktur`, dengan `strukturDariPortal()` atau `susun` sendiri), dan `TestimoniLandingPmb` (`GET /v1/pmb/info/landing`, kategori ditebak dari peran lewat `kategoriPeran()`).
+- `Avatar`: foto yang tidak persegi (mis. potret 4:5) kini tetap terpotong bulat sesuai ukuran avatar.
+
 ## 1.11.0 (2026-11-15)
 
 - **Tata letak** (`unipo-ui`): `Container`, `Stack`, `Cluster`, `Grid`, `Split` (kolom utama + samping lekat), `PageHeader`, `Text`, `Heading`, `KontenHtml`, `teksPolos()`. Aplikasi tidak perlu Tailwind atau CSS tata letak sendiri.
@@ -8,6 +28,19 @@
 - **Dasbor pendaftar PMB** (`unipo-ui/siakad`, `/v1/pmb/saya/*`): `PendaftaranAktifPmbProvider` + `PemilihPendaftaranPmb`, `DasborPendaftarPmb` (kartu tahap, tugas yang kurang, tagihan, jadwal tes), `PilihGelombangPendaftarPmb`, `FormulirPendaftarPmb`, `BerkasPendaftarPmb`, `PembayaranPendaftarPmb` (pilih metode, VA/QRIS/tautan bayar, unggah bukti transfer), `UjianPendaftarPmb` + `RuangUjianPmb` (token CBT), `KartuPesertaPmb` (siap cetak, QR), `HasilSeleksiPmb`, `NotifikasiPendaftarPmbDaftar` + `useJumlahNotifikasiPmb`, `AkunPendaftarPmbHalaman` (ubah data, ganti password dengan meter kekuatan), `BannerVerifikasiEmailPmb`.
 - **Formulir PMB lebih lengkap**: `WizardPendaftaranPmb` kini memuat sumber informasi, kode referal, wali, langkah prestasi (`IsianPrestasiPmb`) dan nilai rapor (`IsianRaporPmb`) sesuai pengaturan gelombang, mode tinjau saat formulir terkunci, dan alur perbaikan dari panitia. Isian data diri, asal sekolah (NIS), dan orang tua (tanggal lahir, agama, HP, alamat) ditambah.
 - **CBT**: `LembarUjian` punya `basePath` (dipakai PMB `/v1/pmb/saya/.../ujian`), antrean jawaban luring yang dikirim ulang saat online, log pengawasan (pindah tab, keluar layar penuh, salin-tempel, koneksi putus), dan ajakan layar penuh.
+
+## 1.10.0 (2026-11-15)
+
+- **Manajer berkas** (`unipo-ui/siakad`): `ManajerBerkas`, pengelola dokumen seperti Google Drive di atas `/v1/berkas` dan `/v1/berkas/folder` (butuh SIAKAD dengan tabel `berkas_folder`).
+  - Pohon folder dan subfolder (keyboard: panah, Enter), breadcrumb, tampilan kisi (gambar mini untuk foto) atau daftar, ringkasan ruang penyimpanan.
+  - Seret file atau seluruh folder dari komputer untuk mengunggah (subfolder ikut dibuat), dengan antrean unggah: progres per file, batal, ulangi, unggah bertahap otomatis untuk file besar, dan pemeriksaan jenis/ukuran sebelum dikirim.
+  - Seret berkas atau folder ke folder lain, ke pohon, atau ke breadcrumb untuk memindah. Pilih banyak (Ctrl/Cmd+klik, Shift+klik, Ctrl+A), menu klik kanan, F2 ganti nama, Delete hapus.
+  - Cari di folder ini beserta subfoldernya, filter jenis (gambar, PDF, dokumen, spreadsheet, presentasi, arsip, video, audio), urutkan (terbaru, nama, ukuran).
+  - Folder baru dengan warna, ganti nama, pindah, hapus (berkas di dalamnya ke sampah). Hapus berkas selalu soft delete; berkas yang masih dipakai data modul ditolak dengan pesan server.
+  - Pratinjau gambar, PDF, video, dan audio beserta detail berkas; unduh lewat tautan sementara.
+  - Mode pemilih (`pilih`, `onPilih`) untuk lampiran formulir, mode baca saja, dan ruang folder per `modul` (mis. arsip).
+  - Pendukung: `useFolderBerkas()`, `useAksiBerkas()`, `validasiNamaFolder()` (aturan sama dengan server), `jenisBerkas()`, `JENIS_BERKAS`, `WARNA_FOLDER`.
+- `useSaatInvalidasi(prefix, fn)`: jalankan fungsi setiap `invalidateSiakad(prefix)` dipanggil, untuk data yang dimuat sendiri.
 
 ## 1.9.0 (2026-11-15)
 
@@ -29,6 +62,10 @@
 - Sampul kelas (`SampulKelas`) hanya memakai warna `--u-chart-1` sampai `--u-chart-6`, jadi tidak lagi hitam.
 - Halaman docs **LMS mahasiswa** dengan data contoh.
 
+## 1.8.1 (2026-11-15)
+
+- `MenuAkun`/`KartuAkun`: jalur mengikuti rute profile.unipo.ac.id. Ubah profil dan Ganti foto ke `/profil`, Ganti password ke `/akun` (sebelumnya `/keamanan`, yang tidak ada), item baru **Data pribadi** (`/data-pribadi`), dan bilah kelengkapan menuju Data pribadi.
+
 ## 1.8.0 (2026-11-15)
 
 - **Komponen AI** (`unipo-ui/siakad`) di atas `POST /v1/integrasi/ai/teks` SIAKAD. Kunci API penyedia tetap di server; browser hanya memakai token SIAKAD (scope `integrasi:ai`).
@@ -43,7 +80,7 @@
   - `PemakaianAi`: rekap permintaan dan token per hari, aplikasi, dan model dari `/v1/integrasi/ai/pemakaian`.
 - Halaman docs **Komponen AI** (kategori baru AI) dengan data contoh untuk semua komponen.
 - **Menu dan kartu akun** (`unipo-ui`), isi yang sama dengan menu akun di sso.unipo.ac.id dan terhubung ke profile.unipo.ac.id:
-  - `MenuAkun`: kepala berisi foto, nama, dan "username · peran"; item Profil saya, Ubah profil, Ganti foto, Ganti password (aplikasi Profil), Keamanan akun (SSO), item tambahan, lalu Keluar dari semua aplikasi. Lima bentuk pemicu: `pil` (seperti SSO), `nama`, `avatar`, `ikon`, `sidebar` (menu terbuka ke atas). Opsional: bilah **Lengkapi profil** dari persen kelengkapan, pilihan peran, dan pilihan tema.
+  - `MenuAkun`: kepala berisi foto, nama, dan "username · peran"; item Profil saya (`/`), Ubah profil (`/profil`), Data pribadi (`/data-pribadi`), Ganti foto, Ganti password (`/akun`) di aplikasi Profil, Keamanan akun (SSO), item tambahan, lalu Keluar dari semua aplikasi. Lima bentuk pemicu: `pil` (seperti SSO), `nama`, `avatar`, `ikon`, `sidebar` (menu terbuka ke atas). Opsional: bilah **Lengkapi profil** dari persen kelengkapan, pilihan peran, dan pilihan tema.
   - `KartuAkun`: varian `baris`, `kartu`, `sampul`, dan `tengah`, dengan kelengkapan profil, statistik kecil, dan tombol Ubah profil + Keamanan akun.
   - `tautanAkun()` / `TautanAkun`: jalur bawaan aplikasi Profil dan SSO yang bisa diganti per aplikasi.
   - `unipo-ui/siakad`: `useAkunSaya()`, `MenuAkunSiakad`, `KartuAkunSiakad` mengisi nama, NIM/NIDN, peran, prodi, pas foto (`/v1/profil/saya/foto`), dan kelengkapan dari `GET /v1/profil/saya`.

@@ -1,7 +1,7 @@
 'use client';
 import * as React from 'react';
 import { Menu as BaseMenu } from '@base-ui/react/menu';
-import { ChevronDown, ChevronsUpDown, Check, IdCard, KeyRound, LogOut, Monitor, Moon, PenLine, ShieldCheck, Sun, UserRound, Users } from 'lucide-react';
+import { ChevronDown, ChevronsUpDown, Camera, Check, IdCard, KeyRound, LogOut, Monitor, Moon, PenLine, ShieldCheck, Sun, UserRound, Users } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Avatar, type AvatarSize } from './display';
 import type { MenuEntry } from './overlays';
@@ -28,6 +28,7 @@ export interface AkunPengguna {
 export interface TautanAkun {
   profil: string;
   ubahProfil: string;
+  dataPribadi: string;
   foto: string;
   password: string;
   keamanan: string;
@@ -42,9 +43,10 @@ export function tautanAkun(profilUrl: string = PROFIL_URL, ssoUrl: string = SSO_
   const s = ssoUrl.replace(/\/+$/, '');
   return {
     profil: `${p}/`,
-    ubahProfil: `${p}/data-pribadi`,
-    foto: `${p}/?ubah=foto`,
-    password: `${p}/keamanan`,
+    ubahProfil: `${p}/profil`,
+    dataPribadi: `${p}/data-pribadi`,
+    foto: `${p}/profil`,
+    password: `${p}/akun`,
     keamanan: `${s}/akun`,
     keluar: `${s}/logout`,
     ...ganti,
@@ -61,7 +63,7 @@ export type TemaAkun = 'terang' | 'gelap' | 'sistem';
 // ================================================================ Menu akun
 
 export type VarianMenuAkun = 'pil' | 'nama' | 'avatar' | 'sidebar' | 'ikon';
-export type ItemMenuAkun = 'profil' | 'ubah' | 'foto' | 'password' | 'keamanan';
+export type ItemMenuAkun = 'profil' | 'ubah' | 'data' | 'foto' | 'password' | 'keamanan';
 
 export interface MenuAkunProps {
   pengguna: AkunPengguna;
@@ -102,7 +104,8 @@ export interface MenuAkunProps {
 const LABEL_ITEM: Record<ItemMenuAkun, { label: string; ikon: React.ReactNode; kunci: keyof TautanAkun }> = {
   profil: { label: 'Profil saya', ikon: <UserRound />, kunci: 'profil' },
   ubah: { label: 'Ubah profil', ikon: <PenLine />, kunci: 'ubahProfil' },
-  foto: { label: 'Ganti foto', ikon: <IdCard />, kunci: 'foto' },
+  data: { label: 'Data pribadi', ikon: <IdCard />, kunci: 'dataPribadi' },
+  foto: { label: 'Ganti foto', ikon: <Camera />, kunci: 'foto' },
   password: { label: 'Ganti password', ikon: <KeyRound />, kunci: 'password' },
   keamanan: { label: 'Keamanan akun', ikon: <ShieldCheck />, kunci: 'keamanan' },
 };
@@ -215,7 +218,7 @@ export function MenuAkun({
                 {pengguna.unit && <small>{pengguna.unit}</small>}
               </div>
             </div>
-            {belumLengkap && <Kelengkapan persen={kelengkapan!} href={t.ubahProfil} tabBaru={tabBaru} />}
+            {belumLengkap && <Kelengkapan persen={kelengkapan!} href={t.dataPribadi} tabBaru={tabBaru} />}
             <BaseMenu.Separator className="u-menu-separator" />
             {item.map((k) => (
               <BaseMenu.LinkItem key={k} href={t[LABEL_ITEM[k].kunci]} className="u-menu-item" {...target}>
@@ -357,7 +360,7 @@ export function KartuAkun({ pengguna, varian = 'kartu', profilUrl, ssoUrl, tauta
         </div>
       </div>
       {p != null && (
-        <a className="u-akun-lengkap" href={t.ubahProfil} {...target} data-penuh={p >= 100 ? '' : undefined}>
+        <a className="u-akun-lengkap" href={t.dataPribadi} {...target} data-penuh={p >= 100 ? '' : undefined}>
           <span className="u-akun-lengkap-teks">
             <span>{p >= 100 ? 'Profil lengkap' : 'Kelengkapan profil'}</span>
             <b>{p}%</b>
