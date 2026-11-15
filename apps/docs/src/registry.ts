@@ -57,6 +57,7 @@ export const CATEGORIES = [
   'Akademik',
   'Portal & landing',
   'Editor',
+  'AI',
   'Kalender akademik',
   'Profil',
   'PMB',

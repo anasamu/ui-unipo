@@ -15,6 +15,7 @@ import './mock/katalog';
 import './mock/berkas';
 import './mock/surat';
 import './mock/alur';
+import './mock/ai';
 import { ssoDemo } from './mock/aplikasi';
 import { App } from './App';
 
