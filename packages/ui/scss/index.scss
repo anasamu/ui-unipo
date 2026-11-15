@@ -39,6 +39,7 @@
 @use 'components/dokumen';
 @use 'components/pengolah';
 @use 'components/persuratan';
+@use 'components/tugas-akhir';
 @use 'components/alur';
 @use 'components/ai';
 @use 'components/akun';
@@ -47,6 +48,8 @@
 @use 'components/tema-aplikasi';
 @use 'components/kode-qr';
 @use 'components/presensi';
+@use 'components/laporan';
+@use 'components/gaji';
 @use 'components/obrolan';
 @use 'components/tata-letak';
 @use 'components/landing';

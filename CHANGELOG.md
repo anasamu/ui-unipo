@@ -7,6 +7,21 @@
   - `AlurKegiatanLppm`: alur hibah internal (draf, diajukan, review, penetapan, pelaksanaan, selesai) sebagai `Stepper`; hibah eksternal/mandiri hanya pelaksanaan dan selesai.
 - **Aturan penelitian**: `KategoriAturan` bertambah `penelitian` (titik `lppm.usulan.ajukan`, `lppm.laporan.ajukan`, `lppm.luaran.ajukan`), label "Penelitian & PkM" di `KelolaAturan`, saringan, dan `FormAturan`.
 
+## 1.25.0 (2026-11-15)
+
+- **Laporan dan statistik bersama** (`unipo-ui`), untuk laporan di semua aplikasi: `KerangkaLaporan` (judul, filter, tombol Cetak/PDF yang hanya mencetak laporan itu, CSV, kepala cetak, catatan, tanda tangan), `TabelLaporan` berjenjang (grup, subtotal, total, format akuntansi), `TabelRekap` (batang proporsi, baris total, klik baris), `PilihPeriode` (preset bulan/triwulan/tahun/tahun akademik), `StatistikRingkas`, `KepalaCetak`, `TandaTanganLaporan`, `unduhCsv` (titik koma + BOM untuk Excel), `formatAkuntansi`, `formatNilai`, `labelPeriode`, `rentangPreset`, dan `terbilang` di `lib/format`.
+- **Payroll gaji dosen dan tendik** (`unipo-ui/siakad`, API `/v1/gaji`), dipakai BAUK dan aplikasi SDM: `RekapGaji` (per pegawai/unit/komponen, peringatan, rekening), `SlipGaji` (cetak, terbilang, iuran universitas, QR verifikasi), `DaftarSlipSaya` dan `PajakGajiSaya` (pegawai), `StatistikGaji`, `VerifikasiSlipGaji` (publik), `PilihPeriodeGaji`, hooks `useRekapGaji`, `useStatistikGaji`, `useSlipGaji`, `useGajiSaya`, `usePajakGajiSaya`.
+- **Keuangan universitas** (`unipo-ui/siakad`, API `/v1/keu`): `LaporanKeuangan` (posisi keuangan, aktivitas, arus kas, neraca saldo, dengan pembanding), `KasUnit`, `TransparansiBiaya`, `StatistikKeuangan`, beserta hooks-nya.
+- **SOP dan kebijakan unit** (`KebijakanUnit`, `useDokumenKebijakan`) dari `/v1/spmi/publik/dokumen` untuk transparansi aturan di aplikasi bagian.
+- **Tugas akhir dan syarat kelulusan** (`unipo-ui/siakad`, API SIAKAD `/v1/ta` dan `/v1/kelulusan`):
+  - `PengajuanJudulSaya`: mahasiswa menyimpan konsep judul (judul, judul Inggris, bidang, jenis penelitian, latar belakang, rumusan, metode, usulan pembimbing lewat `PilihEntitas`), melampirkan berkas per jenis yang diminta prodi (surat pengajuan judul, draf proposal, transkrip, lainnya), mengajukan, memperbaiki saat diminta revisi, membatalkan, dan memantau langkah validasi serta riwayat.
+  - `DaftarValidasiJudul` + `DetailPengajuanJudul`: dosen PA dan pengelola prodi melihat pengajuan (tab Menunggu saya, Mahasiswa PA saya, Semua di prodi), membuka berkas, lalu menyetujui, meminta revisi, atau menolak dengan catatan. Persetujuan terakhir menetapkan pembimbing dan judul final.
+  - `ProgresTugasAkhir`: progres dari pengajuan judul, pembimbing, bimbingan, seminar proposal, ujian, yudisium, sampai wisuda.
+  - `PengaturanPengajuanJudul`: buka/tutup pengajuan online, alur validasi (dosen PA lalu prodi, atau langsung prodi), usulan pembimbing, petunjuk, dan daftar berkas wajib/opsional.
+  - `SyaratKelulusanSaya`: syarat yudisium dan wisuda dari data akademik dan syarat tambahan prodi; mahasiswa mengirim bukti (keterangan + berkas) untuk syarat manual/unggah dan melihat alasan bila ditolak.
+  - Pilihan pembimbing memakai `SUMBER_DOSEN_TA` (GET `/v1/ta/dosen`), jadi mahasiswa tanpa scope `dosen:read` tetap bisa mengusulkan pembimbing.
+  - Hook `useTugasAkhirSaya`; tipe `PengajuanTa`, `PengaturanTa`, `ProgresTa`, `ValidasiTa`.
+
 ## 1.24.0 (2026-11-15)
 
 - **Pengolah dokumen ala Word** (`unipo-ui/editor`): `PengolahDokumen` dengan pita menu (Beranda, Sisipkan, Tata letak, Tinjau, plus pita Tabel/Gambar saat dipilih), kertas A4/F4/Letter dengan margin nyata dan perkiraan batas halaman, kop/data surat/tanda tangan tetap di kertas, chip penanda `{{nama}}`, tabel bergaris atau polos, gambar dan kode QR lewat unggah berkas, cari & ganti, zoom, cetak, dan pintasan keyboard. Keluarannya HTML berkelas `ub-*` (`KELAS_PENGOLAH`) yang lolos saringan SIAKAD dan diterjemahkan ke PDF. Ekspor `KERTAS`, `MARGIN_SIAP`, `KopLembar`, `htmlPengolah`, `penandaKeChip`.

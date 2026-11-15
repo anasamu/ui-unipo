@@ -93,3 +93,31 @@ export function formatPersen(n: number | null | undefined, digits = 1): string {
   if (n == null || Number.isNaN(n)) return '–';
   return `${formatNumber(n, { maximumFractionDigits: digits })}%`;
 }
+
+const SATUAN = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'];
+function terbilangBulat(n: number): string {
+  if (n < 12) return SATUAN[n]!;
+  if (n < 20) return `${terbilangBulat(n - 10)} belas`;
+  if (n < 100) return `${terbilangBulat(Math.floor(n / 10))} puluh ${terbilangBulat(n % 10)}`.trim();
+  if (n < 200) return `seratus ${terbilangBulat(n - 100)}`.trim();
+  if (n < 1000) return `${terbilangBulat(Math.floor(n / 100))} ratus ${terbilangBulat(n % 100)}`.trim();
+  if (n < 2000) return `seribu ${terbilangBulat(n - 1000)}`.trim();
+  const skala: Array<[number, string]> = [
+    [1e12, 'triliun'],
+    [1e9, 'miliar'],
+    [1e6, 'juta'],
+    [1e3, 'ribu'],
+  ];
+  for (const [b, nama] of skala) {
+    if (n >= b) return `${terbilangBulat(Math.floor(n / b))} ${nama} ${terbilangBulat(n % b)}`.trim();
+  }
+  return '';
+}
+
+/** Angka dalam kata bahasa Indonesia, mis. 1250000 -> "satu juta dua ratus lima puluh ribu rupiah". */
+export function terbilang(n: number | null | undefined, satuan: string | null = 'rupiah'): string {
+  if (n == null || !Number.isFinite(n)) return '';
+  const bulat = Math.round(Math.abs(n));
+  const kata = bulat === 0 ? 'nol' : terbilangBulat(bulat).replace(/\s+/g, ' ');
+  return `${n < 0 ? 'minus ' : ''}${kata}${satuan ? ` ${satuan}` : ''}`;
+}
