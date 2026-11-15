@@ -39,3 +39,4 @@ export * from './components/sambutan';
 export * from './components/testimoni';
 export * from './components/struktur-organisasi';
 export * from './components/kode-qr';
+export * from './components/laporan';
