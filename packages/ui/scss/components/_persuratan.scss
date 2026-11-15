@@ -1,0 +1,323 @@
+// ================================================================ Persuratan (siakad/persuratan.tsx)
+// Pengaturan nomor surat, editor surat keluar (kepala/kaki di kertas PengolahDokumen), catat arsip surat lama.
+
+.u-psr {
+  display: grid;
+  gap: 1rem;
+}
+.u-psr-alat {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+.u-psr-kisi {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+.u-psr-kartu {
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md, 8px);
+  padding: 0.75rem 1rem;
+  background: var(--u-surface, var(--u-background));
+  min-width: 0;
+  p {
+    margin: 0;
+  }
+}
+.u-psr-kartu-label {
+  font-size: 0.75rem;
+  color: var(--u-muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.u-psr-kartu-nomor {
+  font-family: var(--u-font-mono, ui-monospace, monospace);
+  font-weight: 600;
+  font-size: 1rem;
+  margin: 0.25rem 0 !important;
+  overflow-wrap: anywhere;
+}
+.u-psr-kartu-meta,
+.u-psr-meta,
+.u-psr-redup {
+  font-size: 0.8125rem;
+  color: var(--u-muted-foreground);
+  margin: 0;
+}
+.u-psr-daftar {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md, 8px);
+  > li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    > div {
+      flex: 1;
+      min-width: 0;
+    }
+    + li {
+      border-top: 1px solid var(--u-border);
+    }
+  }
+}
+.u-psr-format {
+  margin: 0;
+  font-family: var(--u-font-mono, ui-monospace, monospace);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+.u-psr-aksi {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+// ---------------------------------------------------------------- Form format nomor
+.u-psr-form {
+  display: grid;
+  gap: 1rem;
+}
+.u-psr-input-format {
+  font-family: var(--u-font-mono, ui-monospace, monospace);
+}
+.u-psr-token {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: -0.5rem;
+  button {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.375rem;
+    border: 1px solid var(--u-border);
+    border-radius: 999px;
+    background: var(--u-background);
+    color: var(--u-foreground);
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    &:hover {
+      border-color: var(--u-primary);
+      background: var(--u-primary-soft);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--u-primary);
+      outline-offset: 2px;
+    }
+    code {
+      font-size: 0.75rem;
+      color: var(--u-primary);
+    }
+    span {
+      color: var(--u-muted-foreground);
+    }
+  }
+}
+.u-psr-contoh {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--u-radius-md, 8px);
+  background: var(--u-muted, #f2f3f5);
+  span {
+    font-size: 0.75rem;
+    color: var(--u-muted-foreground);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  b {
+    font-family: var(--u-font-mono, ui-monospace, monospace);
+    overflow-wrap: anywhere;
+  }
+}
+
+// ---------------------------------------------------------------- Editor surat keluar
+.u-psr-judul {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.u-psr-kepala {
+  margin-bottom: 1em;
+  table {
+    width: 100%;
+  }
+  td {
+    padding: 0 0.25em 0 0;
+    vertical-align: top;
+  }
+}
+.u-psr-nomor-nanti {
+  color: var(--u-muted-foreground);
+  border-bottom: 1px dashed currentColor;
+}
+.u-psr-kepada {
+  margin: 1em 0 0;
+}
+.u-psr-kaki {
+  margin-top: 1.5em;
+}
+.u-psr-ttd {
+  width: 45%;
+  margin-left: auto;
+  p {
+    margin: 0;
+  }
+  &[data-posisi='kiri'] {
+    margin-left: 0;
+  }
+  &[data-posisi='tengah'] {
+    margin: 0 auto;
+    text-align: center;
+  }
+}
+.u-psr-ttd-ruang {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.4cm;
+  small {
+    font-family: system-ui, sans-serif;
+    font-size: 8pt;
+    color: #5c6170;
+  }
+}
+.u-psr-qr {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2cm;
+  height: 2cm;
+  border: 1px dashed #9aa0ac;
+  font-family: system-ui, sans-serif;
+  font-size: 9pt;
+  color: #5c6170;
+}
+.u-psr-ttd-nama {
+  font-weight: 700;
+  text-decoration: underline;
+}
+.u-psr-tembusan {
+  margin-top: 1.5em;
+  font-size: 0.92em;
+  ol {
+    margin: 0;
+    padding-left: 1.5em;
+  }
+}
+.u-psr-panel {
+  display: grid;
+  gap: 0.875rem;
+  section {
+    display: grid;
+    gap: 0.5rem;
+  }
+}
+.u-psr-sub {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.u-psr-nomor-info {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--u-radius-md, 8px);
+  background: var(--u-primary-soft);
+  font-size: 0.8125rem;
+  svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.125rem;
+    color: var(--u-primary);
+  }
+  b {
+    font-family: var(--u-font-mono, ui-monospace, monospace);
+    overflow-wrap: anywhere;
+  }
+}
+
+// ---------------------------------------------------------------- Catat arsip surat lama
+.u-psr-catat {
+  display: grid;
+  gap: 1rem;
+}
+.u-psr-unggah {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 1rem;
+  border: 1.5px dashed var(--u-border);
+  border-radius: var(--u-radius-md, 8px);
+  background: var(--u-surface, var(--u-background));
+  &[data-galat] {
+    border-color: var(--u-danger, #b42318);
+  }
+  > svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: var(--u-primary);
+  }
+  p {
+    margin: 0.125rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--u-muted-foreground);
+  }
+  ul,
+  .u-field-error {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: 0.25rem;
+  }
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    > span {
+      flex: none;
+      font-size: 0.6875rem;
+      padding: 0.125rem 0.5rem;
+      border-radius: 999px;
+      background: var(--u-muted, #f2f3f5);
+      color: var(--u-muted-foreground);
+    }
+    small {
+      margin-left: auto;
+      flex: none;
+      color: var(--u-muted-foreground);
+    }
+  }
+  @media (max-width: 560px) {
+    grid-template-columns: auto 1fr;
+    > .u-btn,
+    > button {
+      grid-column: 1 / -1;
+    }
+  }
+}
+.u-psr-catat-aksi {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}

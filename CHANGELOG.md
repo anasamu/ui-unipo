@@ -1,5 +1,15 @@
 # Catatan perubahan
 
+## 1.24.0 (2026-11-15)
+
+- **Pengolah dokumen ala Word** (`unipo-ui/editor`): `PengolahDokumen` dengan pita menu (Beranda, Sisipkan, Tata letak, Tinjau, plus pita Tabel/Gambar saat dipilih), kertas A4/F4/Letter dengan margin nyata dan perkiraan batas halaman, kop/data surat/tanda tangan tetap di kertas, chip penanda `{{nama}}`, tabel bergaris atau polos, gambar dan kode QR lewat unggah berkas, cari & ganti, zoom, cetak, dan pintasan keyboard. Keluarannya HTML berkelas `ub-*` (`KELAS_PENGOLAH`) yang lolos saringan SIAKAD dan diterjemahkan ke PDF. Ekspor `KERTAS`, `MARGIN_SIAP`, `KopLembar`, `htmlPengolah`, `penandaKeChip`.
+- `EditorTemplatSurat` kini memakai `PengolahDokumen` dan punya tombol "Pratinjau surat jadi".
+- **Persuratan** (`unipo-ui/siakad`, API `/v1/arsip`):
+  - `PengaturanPenomoran`: nomor berikutnya per jenis penomoran, daftar format unit, form format dengan penanda yang bisa diklik dan contoh langsung (`usePratinjauNomor`, memakai `?format=` tanpa menyentuh nomor urut).
+  - `EditorSuratKeluar`: surat keluar ditulis langsung di kertas dengan kop, kertas, margin, dan tanda tangan dari templat dokumen efektif unit; panel data (templat, perihal, sifat, jenis, klasifikasi, tujuan/tembusan, isian penanda) dan perkiraan nomor.
+  - `CatatArsipSurat`: mencatat surat lama (masuk atau keluar) dengan unggah file, nomor, tanggal, perihal, pengirim/tujuan, klasifikasi, sifat, keamanan, dan lokasi simpan fisik.
+  - Pendukung: `KopTemplatDokumen`, `tataLetakDariTemplat`, `useKlasifikasiArsip`, `useJenisNaskahArsip`, `useLokasiArsip`, `TOKEN_NOMOR`, `bersihTujuan`.
+
 ## 1.23.0 (2026-11-16)
 
 - **Aturan kepegawaian** (API SIAKAD `/v1/aturan` kategori `kepegawaian`, titik `sdm.cuti.ajukan`, `sdm.riwayat.ajukan`, `sdm.presensi.catat`, `sdm.kinerja.ajukan`, `sdm.usulan.ajukan`), dipakai aplikasi SDM sdm.unipo.ac.id:

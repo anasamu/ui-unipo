@@ -9,3 +9,4 @@ export { EditorBlok, useRiwayatBlok, usePemilihMediaBawaan, type EditorBlokProps
 export { EditorBerita, TampilBlok, DaftarCek, cekTerbitBerita, type EditorBeritaProps, type NilaiBerita, type CekTerbit } from './EditorBerita';
 export * from './render';
 export * from './dokumen';
+export * from './pengolah';

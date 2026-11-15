@@ -685,7 +685,7 @@ export function tujuanLengkap(t: TujuanSuratInput): boolean {
 }
 
 /** Buang kolom yang bukan milik jenisnya (server menolak campuran). */
-function bersihTujuan(t: TujuanSuratInput): TujuanSuratInput {
+export function bersihTujuan(t: TujuanSuratInput): TujuanSuratInput {
   const umum = { jenis: t.jenis, jabatan: t.jabatan?.trim() || undefined, tembusan: t.tembusan || undefined };
   switch (t.jenis) {
     case 'unit':

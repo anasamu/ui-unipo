@@ -44,3 +44,4 @@ export * from './tema-aplikasi';
 export * from './qr';
 export * from './dokumen-terbit';
 export * from './presensi';
+export * from './persuratan';
