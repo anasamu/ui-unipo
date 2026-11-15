@@ -13,6 +13,7 @@ export * from './pmb';
 export * from './pmb-publik';
 export * from './kelengkapan';
 export * from './dasbor';
+export * from './lppm';
 export * from './kurikulum';
 export * from './lms';
 export * from './cbt';

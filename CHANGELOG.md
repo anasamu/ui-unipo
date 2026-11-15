@@ -1,5 +1,12 @@
 # Catatan perubahan
 
+## 1.26.0 (2026-11-16)
+
+- **Penelitian & PkM** (API SIAKAD `/v1/lppm`), dipakai aplikasi LP2M lp2m.unipo.ac.id dan dasbor fakultas:
+  - `StatusKegiatanLppm`, `StatusVerifikasiLuaran`, `PersetujuanFakultasLppm`: lencana status kegiatan, verifikasi luaran, dan persetujuan fakultas (`LABEL_STATUS_LPPM`, `NADA_STATUS_LPPM`, `LABEL_VERIFIKASI_LUARAN`).
+  - `AlurKegiatanLppm`: alur hibah internal (draf, diajukan, review, penetapan, pelaksanaan, selesai) sebagai `Stepper`; hibah eksternal/mandiri hanya pelaksanaan dan selesai.
+- **Aturan penelitian**: `KategoriAturan` bertambah `penelitian` (titik `lppm.usulan.ajukan`, `lppm.laporan.ajukan`, `lppm.luaran.ajukan`), label "Penelitian & PkM" di `KelolaAturan`, saringan, dan `FormAturan`.
+
 ## 1.25.0 (2026-11-15)
 
 - **Laporan dan statistik bersama** (`unipo-ui`), untuk laporan di semua aplikasi: `KerangkaLaporan` (judul, filter, tombol Cetak/PDF yang hanya mencetak laporan itu, CSV, kepala cetak, catatan, tanda tangan), `TabelLaporan` berjenjang (grup, subtotal, total, format akuntansi), `TabelRekap` (batang proporsi, baris total, klik baris), `PilihPeriode` (preset bulan/triwulan/tahun/tahun akademik), `StatistikRingkas`, `KepalaCetak`, `TandaTanganLaporan`, `unduhCsv` (titik koma + BOM untuk Excel), `formatAkuntansi`, `formatNilai`, `labelPeriode`, `rentangPreset`, dan `terbilang` di `lib/format`.
