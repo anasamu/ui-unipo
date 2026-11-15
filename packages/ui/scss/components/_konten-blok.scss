@@ -1,0 +1,413 @@
+// ================================================================ Isi konten blok (ub-*)
+// HTML dari editor blok humas (EditorBlok/EditorBerita) dan dari kolom `isi` hasil render server SIAKAD
+// (app/Modules/Humas/Support/Blok.php). Bungkus dengan <div class="ub-konten">. Warna mengikuti token tema,
+// jadi mode gelap dan tema kampus ikut berlaku. Semua bisa diganti lewat --ub-*.
+.ub-konten {
+  --ub-teks: var(--u-foreground);
+  --ub-judul: var(--u-foreground);
+  --ub-redup: var(--u-muted-foreground);
+  --ub-garis: var(--u-border);
+  --ub-latar: var(--u-muted);
+  --ub-aksen: var(--u-primary);
+  --ub-aksen-lembut: color-mix(in oklab, var(--u-primary) 10%, var(--u-background));
+  --ub-sudut: calc(var(--u-radius-lg, 12px) + 2px);
+  color: color-mix(in oklab, var(--ub-teks) 86%, var(--u-background));
+  font-size: 1.0625rem;
+  line-height: 1.8;
+  overflow-wrap: break-word;
+  > * + * {
+    margin-top: 1.25em;
+  }
+  > :first-child {
+    margin-top: 0;
+  }
+  a {
+    color: var(--ub-aksen);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  mark {
+    background: color-mix(in oklab, var(--u-warning, #eab308) 30%, transparent);
+    color: inherit;
+    padding: 0 0.15em;
+    border-radius: 3px;
+  }
+  code {
+    font-family: var(--u-font-mono, ui-monospace, monospace);
+    font-size: 0.88em;
+    background: var(--ub-latar);
+    border: 1px solid var(--ub-garis);
+    padding: 0.1em 0.35em;
+    border-radius: 5px;
+  }
+  strong {
+    color: var(--ub-judul);
+    font-weight: 650;
+  }
+  figure {
+    margin-inline: 0;
+    margin-bottom: 0;
+  }
+  p,
+  ul,
+  ol,
+  blockquote,
+  pre {
+    margin-bottom: 0;
+  }
+}
+
+.ub-paragraf {
+  margin: 0;
+}
+.ub-pembuka {
+  font-size: 1.2em;
+  line-height: 1.7;
+  color: var(--ub-judul);
+}
+.ub-rata-tengah {
+  text-align: center;
+}
+.ub-rata-kanan {
+  text-align: right;
+}
+
+.ub-judul {
+  font-family: var(--u-font-heading, inherit);
+  color: var(--ub-judul);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  scroll-margin-top: 6rem;
+  margin-bottom: 0;
+}
+.ub-konten h2.ub-judul {
+  font-size: 1.5em;
+  margin-top: 1.8em;
+}
+.ub-konten h3.ub-judul {
+  font-size: 1.25em;
+  margin-top: 1.5em;
+}
+.ub-konten h4.ub-judul {
+  font-size: 1.08em;
+  margin-top: 1.3em;
+}
+
+.ub-daftar {
+  padding-left: 1.4em;
+  li + li {
+    margin-top: 0.35em;
+  }
+  li::marker {
+    color: var(--ub-aksen);
+  }
+}
+ul.ub-daftar {
+  list-style: disc;
+}
+ol.ub-daftar {
+  list-style: decimal;
+}
+
+.ub-kutipan {
+  margin-inline: 0;
+  border-left: 4px solid var(--ub-aksen);
+  padding: 0.2em 0 0.2em 1.1em;
+  color: var(--ub-judul);
+  font-style: italic;
+  p {
+    margin: 0;
+  }
+}
+.ub-kutipan-sumber {
+  display: block;
+  margin-top: 0.5em;
+  font-size: 0.85em;
+  font-style: normal;
+  color: var(--ub-redup);
+  &::before {
+    content: '— ';
+  }
+}
+.ub-kutipan-sorot {
+  border-left: 0;
+  text-align: center;
+  font-size: 1.35em;
+  line-height: 1.5;
+  padding: 1em 0;
+  border-top: 2px solid var(--ub-garis);
+  border-bottom: 2px solid var(--ub-garis);
+  font-family: var(--u-font-heading, inherit);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.ub-gambar img,
+.ub-galeri img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--ub-sudut);
+}
+.ub-gambar figcaption,
+.ub-galeri figcaption,
+.ub-video figcaption,
+.ub-tabel figcaption {
+  margin-top: 0.55em;
+  font-size: 0.85em;
+  line-height: 1.5;
+  color: var(--ub-redup);
+  text-align: center;
+}
+@media (min-width: 1024px) {
+  .ub-lebar-lebar {
+    margin-left: -4rem;
+    margin-right: -4rem;
+  }
+  .ub-lebar-penuh {
+    margin-left: calc(50% - 50vw + 2rem);
+    margin-right: calc(50% - 50vw + 2rem);
+  }
+}
+.ub-galeri {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.ub-galeri-item {
+  margin: 0;
+  img {
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: var(--u-radius-md, 10px);
+  }
+}
+@media (min-width: 640px) {
+  .ub-kolom-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .ub-kolom-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.ub-video-bingkai {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--ub-sudut);
+  overflow: hidden;
+  background: #0f172a;
+  iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+}
+.ub-peta .ub-video-bingkai {
+  aspect-ratio: 16 / 10;
+}
+
+.ub-tombol-grup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  &.ub-rata-tengah {
+    justify-content: center;
+  }
+  &.ub-rata-kanan {
+    justify-content: flex-end;
+  }
+}
+.ub-konten .ub-tombol {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.55rem 1.25rem;
+  border-radius: var(--u-radius-lg, 12px);
+  font-size: 0.95em;
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1.3;
+}
+.ub-konten .ub-tombol-utama {
+  background: var(--ub-aksen);
+  color: var(--u-primary-foreground, #fff);
+}
+.ub-konten .ub-tombol-garis {
+  border: 1.5px solid var(--ub-aksen);
+  color: var(--ub-aksen);
+}
+
+.ub-pemisah {
+  border: 0;
+  height: 1px;
+  background: var(--ub-garis);
+  margin: 2.2em auto;
+}
+.ub-pemisah-titik {
+  background: none;
+  height: auto;
+  text-align: center;
+  color: var(--ub-redup);
+  &::after {
+    content: '•  •  •';
+    letter-spacing: 0.5em;
+  }
+}
+.ub-spasi-kecil {
+  height: 1rem;
+}
+.ub-spasi-sedang {
+  height: 2.5rem;
+}
+.ub-spasi-besar {
+  height: 5rem;
+}
+
+.ub-kolom-grup {
+  display: grid;
+  gap: 1.5rem;
+}
+.ub-kolom > * + * {
+  margin-top: 1em;
+}
+@media (min-width: 768px) {
+  .ub-rasio-50-50 {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ub-rasio-33-67 {
+    grid-template-columns: 1fr 2fr;
+  }
+  .ub-rasio-67-33 {
+    grid-template-columns: 2fr 1fr;
+  }
+  .ub-rasio-33-33-33 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .ub-rasio-25-25-25-25 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.ub-tabel {
+  overflow-x: auto;
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92em;
+    line-height: 1.5;
+  }
+  th,
+  td {
+    border: 1px solid var(--ub-garis);
+    padding: 0.55em 0.8em;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: var(--ub-latar);
+    color: var(--ub-judul);
+    font-weight: 650;
+  }
+}
+
+.ub-kode {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: var(--u-radius-lg, 12px);
+  padding: 1em 1.2em;
+  overflow-x: auto;
+  font-size: 0.85em;
+  line-height: 1.6;
+  code {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: inherit;
+  }
+}
+
+.ub-sorotan {
+  --_n: var(--u-info);
+  border-radius: var(--ub-sudut);
+  padding: 1em 1.2em;
+  border: 1px solid color-mix(in oklab, var(--_n) 35%, transparent);
+  background: color-mix(in oklab, var(--_n) 8%, var(--u-background));
+  font-size: 0.96em;
+}
+.ub-sorotan-judul {
+  display: block;
+  margin-bottom: 0.25em;
+}
+.ub-sorotan-sukses {
+  --_n: var(--u-success);
+}
+.ub-sorotan-peringatan {
+  --_n: var(--u-warning);
+}
+.ub-sorotan-bahaya {
+  --_n: var(--u-danger);
+}
+
+.ub-berkas {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  flex-wrap: wrap;
+  border: 1px solid var(--ub-garis);
+  border-radius: var(--u-radius-lg, 12px);
+  padding: 0.8em 1em;
+  background: var(--ub-latar);
+  &::before {
+    content: '';
+    width: 1.6em;
+    height: 1.6em;
+    flex-shrink: 0;
+    background: var(--ub-aksen);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z'/%3E%3Cpath d='M14 2v4a2 2 0 0 0 2 2h4'/%3E%3Cpath d='M12 18v-6'/%3E%3Cpath d='m9 15 3 3 3-3'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+  }
+  a {
+    font-weight: 600;
+    text-decoration: none;
+  }
+}
+.ub-berkas-ukuran {
+  color: var(--ub-redup);
+  font-size: 0.82em;
+}
+
+.ub-akordion {
+  border: 1px solid var(--ub-garis);
+  border-radius: var(--ub-sudut);
+  overflow: hidden;
+  summary,
+  .ub-akordion-judul {
+    cursor: pointer;
+    padding: 0.85em 1.1em;
+    font-weight: 600;
+    color: var(--ub-judul);
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  summary::after {
+    content: '+';
+    float: right;
+    color: var(--ub-redup);
+    font-weight: 400;
+  }
+  details[open] summary::after {
+    content: '−';
+  }
+  details > div {
+    padding: 0 1.1em 1em;
+  }
+}
+.ub-akordion-item + .ub-akordion-item {
+  border-top: 1px solid var(--ub-garis);
+}
