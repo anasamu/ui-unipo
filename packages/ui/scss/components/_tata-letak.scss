@@ -82,13 +82,14 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--split-aside);
   align-items: start;
+  // Pakai > agar Split bersarang (mis. Split side="start" berisi Split side="end") tidak saling memengaruhi.
   &[data-side='start'] {
     grid-template-columns: var(--split-aside) minmax(0, 1fr);
-    .u-split-aside {
+    > .u-split-aside {
       order: -1;
     }
   }
-  .u-split-aside[data-sticky] {
+  > .u-split-aside[data-sticky] {
     position: sticky;
     top: calc(var(--u-sticky-top, 5rem));
   }
