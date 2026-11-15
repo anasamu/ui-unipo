@@ -7,7 +7,7 @@ const jumlahOp = INDEKS_KATALOG.modul.reduce((n, m) => n + m.jumlahOperasi, 0);
 
 export const meta: DemoMeta = {
   title: 'Katalog fitur API',
-  category: 'Fitur API',
+  category: 'Referensi API',
   layout: 'full',
   order: 1,
   badge: 'baru',

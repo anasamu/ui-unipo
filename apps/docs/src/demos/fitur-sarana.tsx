@@ -4,7 +4,7 @@ import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
   title: 'Sarana',
-  category: 'Fitur API',
+  category: 'Referensi API',
   layout: 'full',
   order: 17,
   badge: 'baru',

@@ -1,5 +1,10 @@
 # Catatan perubahan
 
+## 1.17.0 (2026-11-15)
+
+- **Beranda per peran** (`unipo-ui/siakad`): `BerandaSaya` menyusun beranda dari peran akun yang masuk. Mahasiswa mendapat profil akademik, KRS semester ini, tagihan, serta aksi cepat yang membuka modal fitur (ambil KRS, cek kesiapan lulus, daftar wisuda, ajukan layanan). Dosen mendapat profil, jadwal mengajar, dan mahasiswa PA. Tendik mendapat data kepegawaian. Semua peran mendapat pengingat kelengkapan data, pengumuman untuk akun, dan kalender akademik. Bagian-bagiannya juga diekspor: `SapaanBeranda`, `AksiCepat` (petak yang bisa membuka modal, tautan, atau fungsi), dan `TagihanSaya`.
+- **Docs disusun per kegunaan**: menu baru **Per kegunaan** di urutan kedua berisi **Peta kegunaan** (cari "saya ingin…" → komponen, impor, endpoint, scope, halaman contoh) dan **Beranda per peran**. Kategori modul fitur (Profil, Portal & landing, Akademik, PMB, LMS, …) kini tampil sebelum komponen dasar. Menu "Fitur API" (CRUD generik dari katalog) dipindah ke paling bawah dengan nama **Referensi API**.
+
 ## 1.16.0 (2026-11-15)
 
 - **Kerangka situs** (`unipo-ui`):

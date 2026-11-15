@@ -19,6 +19,7 @@ export * from './cbt';
 export * from './akademik';
 export * from './navigasi';
 export * from './kerangka-portal';
+export * from './beranda';
 export * from './aplikasi';
 export * from './log';
 export * from './pilih';

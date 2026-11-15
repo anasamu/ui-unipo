@@ -9,6 +9,7 @@ export function setPeranDemo(p: PeranDemo) {
   peran = p;
   pendengar.forEach((f) => f());
 }
+export const peranDemo = () => peran;
 export function dengarPeranDemo(f: () => void) {
   pendengar.add(f);
   return () => void pendengar.delete(f);
