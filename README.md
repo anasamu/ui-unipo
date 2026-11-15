@@ -64,6 +64,16 @@ import { BuatSuratDariTemplat, KelolaTemplatSurat } from 'unipo-ui/siakad'; // t
 <BuatSuratDariTemplat onSelesai={(surat) => buka(surat.uuid)} />
 ```
 
+## Alur akademik (`unipo-ui/siakad`)
+
+Widget alur bisnis yang langsung memanggil API SIAKAD: ambil KRS, persetujuan KRS dosen PA, input nilai, EDOM, dan pendaftaran wisuda.
+
+```tsx
+import { AmbilKrs, PersetujuanKrs, DaftarKelasNilai, InputNilaiKelas, IsiEdom, PendaftaranWisuda } from 'unipo-ui/siakad';
+
+<AmbilKrs nim={nim} onTersimpan={(h) => toast(`${h.tersimpan.length} MK tersimpan`)} />
+```
+
 ## Rilis
 
 Rilis ke npm berjalan otomatis lewat GitHub Actions (`.github/workflows/rilis.yml`):
