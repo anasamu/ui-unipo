@@ -155,10 +155,22 @@ function videoDari(src: string): string | null {
 }
 
 /** Ubah isi HTML konten lama (sebelum ada editor blok) menjadi blok supaya bisa disunting. */
+const BLOK_TAG = /^(P|H[1-6]|UL|OL|BLOCKQUOTE|PRE|HR|TABLE|FIGURE|DIV|DETAILS|SECTION|ARTICLE|IFRAME|IMG|DL)$/;
+const kelasDari = (el: Element, awal: string, pilihan: string[], bawaan: string) => pilihan.find((x) => el.classList.contains(`${awal}${x}`)) ?? bawaan;
+const rataDari = (el: Element) => kelasDari(el, 'ub-rata-', ['tengah', 'kanan'], 'kiri');
+
+/**
+ * HTML ke blok. Mengenali kembali HTML `ub-*` hasil blokKeHtml (perataan, paragraf pembuka, kolom, tabel, sorotan,
+ * spasi, tombol, galeri, berkas, akordion), jadi isi surat/templat yang disimpan server bisa disunting ulang tanpa
+ * kehilangan tata letak. HTML lain (impor lama) diubah sebaik mungkin.
+ */
 export function htmlKeBlok(html?: string | null): Blok[] {
   if (!html || !html.trim()) return [];
   const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
-  const akar = doc.body.firstElementChild as Element;
+  return uraiAnak(doc.body.firstElementChild as Element, false);
+}
+
+function uraiAnak(akar: Element, dalamKolom: boolean): Blok[] {
   const out: Blok[] = [];
   const paragrafLepas: string[] = [];
   const tutupLepas = () => {
@@ -178,40 +190,98 @@ export function htmlKeBlok(html?: string | null): Blok[] {
       return;
     }
     tutupLepas();
-    const tag = el.tagName;
-    const img = el.querySelector('img');
-    const iframe = tag === 'IFRAME' ? el : el.querySelector('iframe');
-    if (/^H[1-6]$/.test(tag)) out.push(baru('judul', { teks: sebaris(el), tingkat: Math.min(4, Math.max(2, Number(tag[1]))) }));
-    else if (tag === 'UL' || tag === 'OL') out.push(baru('daftar', { gaya: tag === 'OL' ? 'ol' : 'ul', item: Array.from(el.children).map(sebaris) }));
-    else if (tag === 'BLOCKQUOTE') {
-      const cite = el.querySelector('cite');
-      const sumber = cite?.textContent ?? '';
-      cite?.remove();
-      out.push(baru('kutipan', { teks: sebaris(el), sumber }));
-    } else if (tag === 'PRE') out.push(baru('kode', { teks: el.textContent ?? '' }));
-    else if (tag === 'HR') out.push(baru('pemisah'));
-    else if (tag === 'TABLE') {
-      const baris = Array.from(el.querySelectorAll('tr')).map((tr) => Array.from(tr.children).map((td) => td.textContent?.trim() ?? ''));
-      out.push(baru('tabel', { baris, kepala: !!el.querySelector('th'), keterangan: el.querySelector('caption')?.textContent ?? '' }));
-    } else if (iframe) {
-      const src = iframe.getAttribute('src') ?? '';
-      const v = videoDari(src);
-      if (v) out.push(baru('video', { url: v }));
-      else if (/google\.[a-z.]+\/maps/.test(src)) out.push(baru('peta', { url: src }));
-    } else if (img && (tag === 'FIGURE' || tag === 'IMG' || (tag === 'P' && !el.textContent?.trim()))) {
-      out.push(baru('gambar', { url: img.getAttribute('src') ?? '', alt: img.getAttribute('alt') ?? '', keterangan: el.querySelector('figcaption')?.textContent ?? '' }));
-    } else if (tag === 'DETAILS') {
-      const ringkas = el.querySelector('summary');
-      const judul = ringkas?.textContent ?? '';
-      ringkas?.remove();
-      out.push(baru('akordion', { item: [{ judul, isi: sebaris(el) }] }));
-    } else {
-      const t = sebaris(el);
-      if (t) out.push(baru('paragraf', { teks: t }));
-    }
+    out.push(...uraiSatu(el, dalamKolom));
   });
   tutupLepas();
   return out;
+}
+
+function uraiSatu(el: Element, dalamKolom: boolean): Blok[] {
+  const tag = el.tagName;
+  const k = el.classList;
+  if (k.contains('ub-kolom-grup')) {
+    const kolom = Array.from(el.children).filter((c) => c.classList.contains('ub-kolom'));
+    if (dalamKolom || !kolom.length) return kolom.flatMap((c) => uraiAnak(c, true));
+    const rasio = Object.keys(RASIO).find((r) => k.contains(`ub-rasio-${r}`)) ?? '50-50';
+    const b = baru('kolom', { rasio });
+    b.anak = kolom.map((c) => uraiAnak(c, true));
+    return [b];
+  }
+  if (k.contains('ub-spasi')) return [baru('spasi', { ukuran: kelasDari(el, 'ub-spasi-', ['kecil', 'besar'], 'sedang') })];
+  if (k.contains('ub-sorotan')) {
+    const isi = el.querySelector('.ub-sorotan-isi');
+    return [baru('sorotan', { gaya: kelasDari(el, 'ub-sorotan-', ['sukses', 'peringatan', 'bahaya'], 'info'), judul: el.querySelector('.ub-sorotan-judul')?.textContent ?? '', teks: isi ? sebaris(isi) : sebaris(el) })];
+  }
+  if (k.contains('ub-tombol-grup')) {
+    const tombol = Array.from(el.querySelectorAll('a')).map((a) => ({ label: a.textContent?.trim() ?? '', url: a.getAttribute('href') ?? '', gaya: a.classList.contains('ub-tombol-garis') ? 'garis' : 'utama' }));
+    return tombol.length ? [baru('tombol', { tombol, rata: rataDari(el) })] : [];
+  }
+  if (k.contains('ub-galeri')) {
+    const gambar = Array.from(el.querySelectorAll('figure, img')).filter((x) => x.tagName === 'FIGURE' || !x.closest('figure')).map((f) => {
+      const img = f.tagName === 'IMG' ? f : f.querySelector('img');
+      return { url: img?.getAttribute('src') ?? '', alt: img?.getAttribute('alt') ?? '', keterangan: f.querySelector('figcaption')?.textContent ?? '' };
+    }).filter((g) => g.url);
+    return [baru('galeri', { gambar, kolom: Number(kelasDari(el, 'ub-kolom-', ['2', '4'], '3')) })];
+  }
+  if (k.contains('ub-berkas')) {
+    const a = el.querySelector('a');
+    return a ? [baru('berkas', { url: a.getAttribute('href') ?? '', nama: a.textContent?.trim() ?? '' })] : [];
+  }
+  if (k.contains('ub-akordion')) {
+    const item = Array.from(el.querySelectorAll('details')).map((d) => {
+      const salin = d.cloneNode(true) as Element;
+      const judul = salin.querySelector('summary')?.textContent ?? '';
+      salin.querySelector('summary')?.remove();
+      return { judul, isi: sebaris(salin) };
+    });
+    return item.length ? [baru('akordion', { item })] : [];
+  }
+  const img = el.querySelector('img');
+  const iframe = tag === 'IFRAME' ? el : el.querySelector('iframe');
+  if (/^H[1-6]$/.test(tag)) return [baru('judul', { teks: sebaris(el), tingkat: Math.min(4, Math.max(2, Number(tag[1]))), rata: rataDari(el) })];
+  if (tag === 'UL' || tag === 'OL') return [baru('daftar', { gaya: tag === 'OL' ? 'ol' : 'ul', item: Array.from(el.children).map(sebaris) })];
+  if (tag === 'BLOCKQUOTE') {
+    const salin = el.cloneNode(true) as Element;
+    const cite = salin.querySelector('cite');
+    const sumber = cite?.textContent ?? '';
+    cite?.remove();
+    return [baru('kutipan', { teks: sebaris(salin), sumber, gaya: k.contains('ub-kutipan-sorot') ? 'sorot' : 'biasa' })];
+  }
+  if (tag === 'PRE') return [baru('kode', { teks: el.textContent ?? '' })];
+  if (tag === 'HR') return [baru('pemisah', { gaya: k.contains('ub-pemisah-titik') ? 'titik' : 'garis' })];
+  const tabel = tag === 'TABLE' ? el : tag === 'FIGURE' ? el.querySelector('table') : null;
+  if (tabel) {
+    const baris = Array.from(tabel.querySelectorAll('tr')).map((tr) => Array.from(tr.children).map((td) => sebaris(td)));
+    return [baru('tabel', { baris, kepala: !!tabel.querySelector('th'), keterangan: (el.querySelector('figcaption') ?? tabel.querySelector('caption'))?.textContent ?? '' })];
+  }
+  if (iframe) {
+    const src = iframe.getAttribute('src') ?? '';
+    const v = videoDari(src);
+    if (v) return [baru('video', { url: v, keterangan: el.querySelector('figcaption')?.textContent ?? '' })];
+    return /google\.[a-z.]+\/maps/.test(src) ? [baru('peta', { url: src })] : [];
+  }
+  if (img && (tag === 'FIGURE' || tag === 'IMG' || (tag === 'P' && !el.textContent?.trim()))) {
+    const a = img.closest('a');
+    return [
+      baru('gambar', {
+        url: img.getAttribute('src') ?? '',
+        alt: img.getAttribute('alt') ?? '',
+        keterangan: el.querySelector('figcaption')?.textContent ?? '',
+        lebar: kelasDari(el, 'ub-lebar-', ['lebar', 'penuh'], 'normal'),
+        tautan: a && a !== el ? (a.getAttribute('href') ?? '') : '',
+      }),
+    ];
+  }
+  if (tag === 'DETAILS') {
+    const salin = el.cloneNode(true) as Element;
+    const judul = salin.querySelector('summary')?.textContent ?? '';
+    salin.querySelector('summary')?.remove();
+    return [baru('akordion', { item: [{ judul, isi: sebaris(salin) }] })];
+  }
+  // Pembungkus (div/section) yang berisi blok: urai isinya.
+  if (tag !== 'P' && Array.from(el.children).some((c) => BLOK_TAG.test(c.tagName))) return uraiAnak(el, dalamKolom);
+  const t = sebaris(el);
+  return t ? [baru('paragraf', { teks: t, rata: rataDari(el), besar: k.contains('ub-pembuka') })] : [];
 }
 
 /** Semua blok (termasuk anak kolom) yang memenuhi syarat. */

@@ -8,3 +8,4 @@ export { PengaturanBlok, RENDER, BISA_UBAH, ubahTipe, urlPeta, type PropsBlok, t
 export { EditorBlok, useRiwayatBlok, usePemilihMediaBawaan, type EditorBlokProps, type PilihMedia, type SumberMedia } from './EditorBlok';
 export { EditorBerita, TampilBlok, DaftarCek, cekTerbitBerita, type EditorBeritaProps, type NilaiBerita, type CekTerbit } from './EditorBerita';
 export * from './render';
+export * from './dokumen';

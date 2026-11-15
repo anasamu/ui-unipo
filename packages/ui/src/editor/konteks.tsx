@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { TipeBlok } from './tipe';
 
 export interface MintaFokus {
   id: string;
@@ -43,6 +44,8 @@ export interface KonteksEditor {
   pilihMedia: (opsi?: OpsiPilihMedia) => Promise<MediaEditor[] | null>;
   pola: PolaBlok[] | undefined;
   baca: boolean;
+  /** Tipe blok yang boleh disisipkan (bawaan semua). */
+  tipe?: TipeBlok[];
 }
 
 export const EditorCtx = React.createContext<KonteksEditor>({
