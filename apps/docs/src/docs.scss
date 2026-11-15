@@ -627,3 +627,33 @@ body {
   gap: 0.5rem;
   flex-wrap: wrap;
 }
+
+// ---------------------------------------------------------------- demo obrolan (ChatMengambang dalam bingkai)
+.demo-ob-bingkai {
+  position: relative;
+  height: 760px;
+  overflow: hidden;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-xl);
+  background: var(--u-background);
+  // transform membuat position: fixed milik ChatMengambang relatif ke bingkai ini.
+  transform: translateZ(0);
+}
+.demo-ob-halaman {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+.demo-ob-garis {
+  height: 14px;
+  border-radius: 7px;
+  background: var(--u-muted);
+}
+.demo-ob-kartu {
+  height: 140px;
+  max-width: 560px;
+  border-radius: var(--u-radius-lg);
+  background: var(--u-muted);
+  opacity: 0.6;
+}

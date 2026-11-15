@@ -30,3 +30,4 @@ export * from './ai';
 export * from './akun';
 export * from './manajer-berkas';
 export * from './profil-kampus';
+export * from './obrolan';

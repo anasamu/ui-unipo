@@ -17,6 +17,7 @@ import './mock/profil-kampus';
 import './mock/surat';
 import './mock/alur';
 import './mock/ai';
+import './mock/obrolan';
 import { ssoDemo } from './mock/aplikasi';
 import { App } from './App';
 

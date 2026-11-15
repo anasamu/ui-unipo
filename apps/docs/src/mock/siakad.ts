@@ -382,16 +382,16 @@ const ROUTES: Array<[RegExp, (u: URL, init?: RequestInit) => unknown]> = [
             return { __status: 201, data: { id: 900 + Math.floor(Math.random() * 99), uuid: crypto.randomUUID(), status: 'draf', nomor_surat: null, ...b } };
           })()
         : halaman(
-        SURAT_KELUAR.filter(
-          (r) =>
-            cocok(u.searchParams.get('q'), r.perihal, r.nomor_surat, r.tujuan_ringkas) &&
-            eq(u, 'status', r.status) &&
-            eq(u, 'sifat', r.sifat) &&
-            antara(u, r.tanggal_surat) &&
-            (!u.searchParams.get('perlu_tindakan') || r.status === 'review'),
-        ),
-        u,
-      ),
+            SURAT_KELUAR.filter(
+              (r) =>
+                cocok(u.searchParams.get('q'), r.perihal, r.nomor_surat, r.tujuan_ringkas) &&
+                eq(u, 'status', r.status) &&
+                eq(u, 'sifat', r.sifat) &&
+                antara(u, r.tanggal_surat) &&
+                (!u.searchParams.get('perlu_tindakan') || r.status === 'review'),
+            ),
+            u,
+          ),
   ],
   [
     /\/v1\/arsip\/dokumen$/,
@@ -455,7 +455,8 @@ export const mockFetch: typeof fetch = async (input, init) => {
   const route = ROUTES.find(([re]) => re.test(u.pathname));
   const balas = route?.[1] ?? cadangan;
   if (!balas) return new Response(JSON.stringify({ error: { message: `Contoh belum ada untuk ${u.pathname}` } }), { status: 404, headers: { 'content-type': 'application/json' } });
-  const out = (await balas(u, init)) as { __status?: number } & Record<string, unknown>;
+  const out = (await balas(u, init)) as { __status?: number; __mentah?: Uint8Array<ArrayBuffer> } & Record<string, unknown>;
+  if (out?.__mentah) return new Response(out.__mentah, { status: 200, headers: { 'content-type': 'application/octet-stream' } });
   const { __status = 200, ...body } = out ?? {};
   return new Response(JSON.stringify(body), { status: __status, headers: { 'content-type': 'application/json' } });
 };

@@ -1,5 +1,21 @@
 # Catatan perubahan
 
+## 1.13.0 (2026-11-15)
+
+- 
+
+## 1.13.0 (2026-11-15)
+
+- **Obrolan terenkripsi end-to-end** (`unipo-ui/siakad`) di atas `/v1/obrolan` SIAKAD, untuk semua peran: mahasiswa, dosen, tendik, maba, panitia, dan pendaftar PMB (lewat aplikasi PMB). Pengganti chat lama yang menyimpan teks polos.
+  - Enkripsi di browser (WebCrypto): kunci perangkat ECDH + ECDSA P-256 di IndexedDB, kunci AES-256-GCM per pesan yang dibungkus (ECDH efemeral + HKDF-SHA256 + AES-KW) untuk setiap perangkat aktif anggota, tanda tangan perangkat pengirim, lampiran dienkripsi sebelum diunggah. Server hanya menyimpan ciphertext dan menolak pesan yang tidak dibungkus untuk tepat semua perangkat aktif.
+  - `ChatMengambang`: tombol di pojok dengan lencana belum dibaca, panel daftar + ruang (layar penuh di ponsel). `KotakObrolan`: halaman obrolan dua kolom yang menjadi satu kolom di layar sempit.
+  - `DaftarPengguna`: cari pengguna (nama, NIM/NIDN) dengan saringan peran dan status daring, kontak terakhir, pilih banyak untuk grup. `DaftarObrolan`: cuplikan pesan terakhir yang didekripsi di browser, belum dibaca, sedang mengetik, sematan, bisu, arsip.
+  - `RuangObrolan`: gelembung berkelompok dengan pemisah tanggal, balas dengan kutipan, ubah (panah atas), hapus untuk semua, reaksi emoji, tanda terkirim/diterima/dibaca, sedang mengetik, lampiran gambar dan berkas (seret, tempel, atau pilih), pesan menghilang, kirim ulang pesan gagal, peringatan kunci kontak berubah, draf per ruang.
+  - Info ruang: nomor keamanan 60 angka (`NomorKeamanan`), pesan menghilang, bisu, sematkan, anggota grup (tambah, keluarkan, admin), blokir, keluar grup. `PengaturanObrolan`: perangkat tertaut (cabut), cadangan kunci dengan sandi (PBKDF2 600.000 iterasi) dan pulihkan di browser baru, privasi (status daring, tanda dibaca), daftar blokir.
+  - Realtime long-poll `GET /v1/obrolan/peristiwa` yang dipakai bersama semua komponen di halaman (`useObrolan()`), menyambung ulang otomatis.
+  - `TombolObrolan` dan `bukaObrolan(pemilik)` untuk membuka obrolan dari kartu profil atau daftar dosen wali. `kriptoObrolan` untuk aplikasi atau bot lain yang memakai protokol yang sama.
+- Halaman docs **Obrolan terenkripsi** dengan server tiruan; kontak tiruannya memegang kunci perangkat sungguhan, membuka pesan Anda, lalu membalas dengan pesan terenkripsi.
+
 ## 1.12.0 (2026-11-15)
 
 - **Sambutan pimpinan** (`unipo-ui`): `SambutanPimpinan` untuk rektor, dekan, kaprodi, atau kepala unit dengan tujuh varian: klasik (foto + tanda tangan), terpisah (foto setengah panel), sorot (panel gelap, kutipan besar), kutipan, kartu (sidebar), minimal (artikel), dan video (YouTube, Vimeo, atau mp4 di dialog). Ringkas paragraf dengan "Baca selengkapnya" atau `tautan`; HTML dari server dibaca sebagai teks (`htmlKeParagraf`, tanpa innerHTML).
