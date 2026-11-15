@@ -97,6 +97,14 @@ export interface KalenderAkademikProps extends KalenderQuery {
   icsUrl?: string;
   /** Klik kegiatan; bawaan membuka panel tanggal itu. */
   onKegiatanClick?: (k: CalendarEvent) => void;
+  /** Kegiatan lain yang digabung ke kalender (mis. tenggat tugas LMS). */
+  tambahan?: CalendarEvent[];
+  /** Label jenis untuk kegiatan tambahan di legenda. */
+  labelJenis?: Record<string, string>;
+  /** Warna jenis untuk kegiatan tambahan (legenda dan grid). */
+  warnaJenis?: Record<string, string>;
+  /** Dipanggil saat rentang grid berubah (untuk memuat `tambahan`). */
+  onRentangChange?: (dari: string, sampai: string) => void;
   className?: string;
 }
 
@@ -104,16 +112,20 @@ export interface KalenderAkademikProps extends KalenderQuery {
  * Kalender akademik dari `kalender.getTerpadu`: grid bulan + panel agenda tanggal terpilih,
  * legenda yang bisa dipakai menyaring jenis kegiatan, dan tombol langganan .ics.
  */
-export function KalenderAkademik({ initialMonth, icsUrl, onKegiatanClick, className, ...q }: KalenderAkademikProps) {
+export function KalenderAkademik({ initialMonth, icsUrl, onKegiatanClick, tambahan, labelJenis, warnaJenis, onRentangChange, className, ...q }: KalenderAkademikProps) {
   const [month, setMonth] = React.useState(() => awalBulan(initialMonth ?? new Date()));
   const [selected, setSelected] = React.useState<string>(() => toISODate(new Date()));
   const [hidden, setHidden] = React.useState<string[]>([]);
   const [dari, sampai] = rentangGrid(month);
   const { data, loading, error, refetch } = useKalender(dari, sampai, q);
+  React.useEffect(() => onRentangChange?.(dari, sampai), [dari, sampai, onRentangChange]);
+  const label = React.useMemo(() => ({ ...JENIS_KEGIATAN, ...labelJenis }), [labelJenis]);
+  const urutanJenis = Object.keys(label);
+  const warna = React.useMemo(() => (warnaJenis ? { ...EVENT_COLORS, ...warnaJenis } : undefined), [warnaJenis]);
 
-  const events = React.useMemo(() => (data ?? []).map(keEvent), [data]);
+  const events = React.useMemo(() => [...(data ?? []).map(keEvent), ...(tambahan ?? [])].sort((a, b) => a.start.localeCompare(b.start)), [data, tambahan]);
   const visible = React.useMemo(() => events.filter((e) => !hidden.includes(e.kind ?? '')), [events, hidden]);
-  const kinds = React.useMemo(() => [...new Set(events.map((e) => e.kind ?? 'lainnya'))].sort((a, b) => Object.keys(JENIS_KEGIATAN).indexOf(a) - Object.keys(JENIS_KEGIATAN).indexOf(b)), [events]);
+  const kinds = React.useMemo(() => [...new Set(events.map((e) => e.kind ?? 'lainnya'))].sort((a, b) => urutanJenis.indexOf(a) - urutanJenis.indexOf(b)), [events]);
   const byDay = React.useMemo(() => eventsByDay(visible), [visible]);
   const hariIni = byDay.get(selected) ?? [];
   // Mendatang: 5 kegiatan berikutnya setelah tanggal terpilih (untuk panel saat tanggal kosong).
@@ -125,11 +137,15 @@ export function KalenderAkademik({ initialMonth, icsUrl, onKegiatanClick, classN
         <div style={{ display: 'grid', gap: '0.75rem', minWidth: 0 }}>
           <EventCalendar
             events={visible}
+            colors={warna}
             month={month}
             onMonthChange={setMonth}
             selected={selected}
             onSelect={(d) => setSelected(d)}
-            onEventClick={(e) => (onKegiatanClick ? onKegiatanClick(e) : setSelected(e.start.slice(0, 10) < dari ? dari : e.start.slice(0, 10)))}
+            onEventClick={(e) => {
+              onKegiatanClick?.(e);
+              setSelected(e.start.slice(0, 10) < dari ? dari : e.start.slice(0, 10));
+            }}
             loading={loading && !data}
             toolbar={
               icsUrl ? (
@@ -153,14 +169,14 @@ export function KalenderAkademik({ initialMonth, icsUrl, onKegiatanClick, classN
               <KodeLaporan error={error} />
             </Alert>
           )}
-          {kinds.length > 0 && <EventLegend kinds={kinds} labels={JENIS_KEGIATAN} hidden={hidden} onToggle={(k) => setHidden((h) => (h.includes(k) ? h.filter((x) => x !== k) : [...h, k]))} />}
+          {kinds.length > 0 && <EventLegend kinds={kinds} labels={label} colors={warna} hidden={hidden} onToggle={(k) => setHidden((h) => (h.includes(k) ? h.filter((x) => x !== k) : [...h, k]))} />}
         </div>
         <aside className="u-kalender-side" aria-label="Agenda tanggal terpilih">
           <h4>{formatEventRange(selected, null, true)}</h4>
           <p>{hariIni.length ? `${hariIni.length} kegiatan` : 'Tidak ada kegiatan di tanggal ini'}</p>
-          {hariIni.length > 0 && <AgendaList events={hariIni} onEventClick={onKegiatanClick} compact />}
+          {hariIni.length > 0 && <AgendaList events={hariIni} colors={warna} onEventClick={onKegiatanClick} compact />}
           <h4 className="u-kalender-sub">Berikutnya</h4>
-          <AgendaList events={mendatang} loading={loading && !data} onEventClick={onKegiatanClick} compact empty="Belum ada kegiatan terjadwal." />
+          <AgendaList events={mendatang} colors={warna} loading={loading && !data} onEventClick={onKegiatanClick} compact empty="Belum ada kegiatan terjadwal." />
         </aside>
       </div>
     </div>

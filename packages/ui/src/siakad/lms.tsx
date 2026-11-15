@@ -118,7 +118,10 @@ export function useKalenderLms(q: { dari?: string; sampai?: string; kelas_id?: n
 function Galat({ q }: { q: QueryState<unknown> }) {
   return (
     <div className="u-widget-error" role="alert">
-      <span>{pesanGalat(q.error, { kode: false })}<KodeLaporan error={q.error} /></span>
+      <span>
+        {pesanGalat(q.error, { kode: false })}
+        <KodeLaporan error={q.error} />
+      </span>
       <Button size="sm" variant="ghost" onClick={q.refetch}>
         <RefreshCw /> Muat ulang
       </Button>
@@ -167,8 +170,9 @@ function acak(seed: number) {
 /** Sampul kelas berupa pola geometris yang ditentukan dari ID kelas: tiap kelas punya warna dan bentuk tetap, tanpa foto. */
 export function SampulKelas({ seed, className }: { seed: number; className?: string }) {
   const r = acak(seed + 7);
-  const hue = Math.floor(r() * 8) + 1;
-  const hue2 = ((hue + 2) % 8) + 1;
+  // Hanya --u-chart-1..6 yang ada di token; nomor di luar itu membuat sampul hitam.
+  const hue = Math.floor(r() * 6) + 1;
+  const hue2 = ((hue + 1) % 6) + 1;
   const pola = Math.floor(r() * 3);
   const bentuk = Array.from({ length: 5 }, () => ({ x: r() * 320, y: r() * 120, s: 30 + r() * 70 }));
   return (

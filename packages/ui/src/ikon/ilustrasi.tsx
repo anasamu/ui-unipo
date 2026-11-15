@@ -50,7 +50,23 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/cn';
 import type { NadaIkon } from './kotak';
-import { IkonAkreditasi, IkonBeasiswa, IkonKampus, IkonKhs, IkonKkn, IkonKrs, IkonKtm, IkonOrmawa, IkonPenelitian, IkonPinjamRuang, IkonSinkronPddikti, IkonSkripsi, IkonSurat, IkonToga, IkonUkt } from './unipo';
+import {
+  IkonAkreditasi,
+  IkonBeasiswa,
+  IkonKampus,
+  IkonKhs,
+  IkonKkn,
+  IkonKrs,
+  IkonKtm,
+  IkonOrmawa,
+  IkonPenelitian,
+  IkonPinjamRuang,
+  IkonSinkronPddikti,
+  IkonSkripsi,
+  IkonSurat,
+  IkonToga,
+  IkonUkt,
+} from './unipo';
 
 type Ik = React.ComponentType<React.SVGProps<SVGSVGElement> & { size?: number | string; strokeWidth?: number }>;
 interface Adegan {
@@ -139,6 +155,8 @@ export interface IlustrasiProps extends Omit<React.SVGProps<SVGSVGElement>, 'chi
   ikon?: Ik;
   /** Teks alternatif; kosong = dekoratif. */
   label?: string;
+  /** Tampilkan tokoh orang (jalan, tunjuk, duduk) pada adegan apa pun; false menyembunyikannya. Bawaan mengikuti adegan. */
+  tokoh?: 'jalan' | 'tunjuk' | 'duduk' | false;
 }
 
 /**
@@ -146,13 +164,14 @@ export interface IlustrasiProps extends Omit<React.SVGProps<SVGSVGElement>, 'chi
  * melayang, dan tokoh untuk keadaan kosong/galat/sukses. Warna mengikuti tema dan mode gelap.
  *   <Ilustrasi nama="beasiswa" lebar={240} />
  */
-export function Ilustrasi({ nama, lebar = 240, bergerak = true, nada, ikon, label, className, style, ...rest }: IlustrasiProps) {
+export function Ilustrasi({ nama, lebar = 240, bergerak = true, nada, ikon, label, tokoh, className, style, ...rest }: IlustrasiProps) {
   const a = ADEGAN[nama] ?? { nada: 'primary' as const, ikon: Sparkles };
   const uid = React.useId().replace(/:/g, '');
   const Ikon = ikon ?? a.ikon;
   const Ikon2 = a.ikon2;
   const g = (n: string) => `${uid}-${n}`;
-  const ada = Boolean(a.tokoh);
+  const pose = tokoh === undefined ? a.tokoh : tokoh || undefined;
+  const ada = Boolean(pose);
   const kx = ada ? 128 : 78; // posisi kotak utama
   return (
     <svg
@@ -231,7 +250,7 @@ export function Ilustrasi({ nama, lebar = 240, bergerak = true, nada, ikon, labe
       </g>
 
       {/* Tokoh */}
-      {a.tokoh && <Tokoh pose={a.tokoh} g={g} />}
+      {pose && <Tokoh pose={pose} g={g} />}
     </svg>
   );
 }
