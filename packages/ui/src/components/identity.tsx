@@ -53,35 +53,90 @@ export interface AppLogoProps extends Omit<React.ComponentProps<'span'>, 'title'
   tagline?: React.ReactNode;
   /** Logo resmi (gambar). Bila diisi, menggantikan UnipoMark. */
   src?: string;
-  /** horizontal (bawaan), stacked (tanda di atas), mark (tanda saja), wordmark (teks saja). */
-  layout?: 'horizontal' | 'stacked' | 'mark' | 'wordmark';
+  /**
+   * horizontal (bawaan), stacked (tanda di tengah, teks di bawah), mark (tanda saja), wordmark (teks saja),
+   * full (gambar logo utuh apa adanya, tanpa teks; tanpa `src` sama dengan horizontal).
+   */
+  layout?: 'horizontal' | 'stacked' | 'mark' | 'wordmark' | 'full';
   shape?: MarkShape;
   tone?: LogoTone;
   size?: 'sm' | 'md' | 'lg' | 'xl';
-  /** Warna tanda khusus aplikasi (mis. PMB oranye, LMS hijau). */
+  /** Warna tanda khusus aplikasi (mis. PMB oranye, LMS hijau). Untuk logo gambar: warna pelat di belakang gambar. */
   color?: string;
   glyph?: React.ReactNode;
+  /**
+   * Cara gambar `src` mengisi bentuk: cover (memenuhi bentuk, bawaan tanpa `color`) atau contain (utuh dengan jarak,
+   * bawaan bila `color` diisi, cocok untuk logo PNG transparan).
+   */
+  fit?: 'cover' | 'contain';
+  /** Dipanggil bila gambar `src` gagal dimuat. */
+  onSrcError?: () => void;
 }
 
 const MARK_SIZE = { sm: 24, md: 32, lg: 40, xl: 56 };
 
 /** Logo aplikasi UNIPO dengan banyak varian: tata letak, bentuk, nada warna, ukuran. */
-export function AppLogo({ name = 'UNIPO', tagline, src, layout = 'horizontal', shape = 'square', tone = 'brand', size = 'md', color, glyph, className, ...props }: AppLogoProps) {
+export function AppLogo({ name = 'UNIPO', tagline, src, layout = 'horizontal', shape = 'square', tone = 'brand', size = 'md', color, glyph, fit, onSrcError, className, ...props }: AppLogoProps) {
   const px = MARK_SIZE[size];
+  const judul = typeof name === 'string' ? name : 'UNIPO';
+  const tata = layout === 'full' && !src ? 'horizontal' : layout;
+  if (layout === 'full' && src) {
+    return (
+      <span className={cn('u-app-logo', className)} data-layout="full" data-size={size} data-tone={tone} {...props}>
+        <img className="u-app-logo-full" src={src} alt={judul} height={px} onError={onSrcError} />
+      </span>
+    );
+  }
   const mark = src ? (
-    <img src={src} alt="" width={px} height={px} style={{ objectFit: 'contain' }} />
+    <LogoGambar src={src} size={px} shape={shape} tone={tone} color={color} fit={fit} title={judul} onGagal={onSrcError} />
   ) : (
-    <UnipoMark size={px} shape={shape} tone={tone} color={color} glyph={glyph} title={typeof name === 'string' ? name : 'UNIPO'} />
+    <UnipoMark size={px} shape={shape} tone={tone} color={color} glyph={glyph} title={judul} />
   );
   return (
-    <span className={cn('u-app-logo', className)} data-layout={layout} data-size={size} data-tone={tone} {...props}>
-      {layout !== 'wordmark' && mark}
-      {layout !== 'mark' && (
+    <span className={cn('u-app-logo', className)} data-layout={tata} data-size={size} data-tone={tone} {...props}>
+      {tata !== 'wordmark' && mark}
+      {tata !== 'mark' && (
         <span className="u-app-logo-text">
           <span className="u-app-logo-name">{name}</span>
           {tagline && <span className="u-app-logo-tagline">{tagline}</span>}
         </span>
       )}
+    </span>
+  );
+}
+
+// ================================================================ Logo gambar dalam bentuk tanda
+export interface LogoGambarProps extends Omit<React.ComponentProps<'span'>, 'title'> {
+  src: string;
+  size?: number;
+  shape?: MarkShape;
+  tone?: LogoTone;
+  /** Warna pelat di belakang gambar. */
+  color?: string;
+  fit?: 'cover' | 'contain';
+  title?: string;
+  /** Dipanggil bila gambar gagal dimuat (mis. untuk beralih ke logo cadangan). */
+  onGagal?: () => void;
+}
+
+/**
+ * Logo unggahan (PNG/JPG/WebP) yang dipotong mengikuti bentuk tanda UNIPO: square, circle, shield, atau plain.
+ * tone mono membuat gambar abu-abu, inverse memberi pelat putih untuk latar gelap.
+ */
+export function LogoGambar({ src, size = 32, shape = 'square', tone = 'brand', color, fit, title, onGagal, className, style, ...props }: LogoGambarProps) {
+  const cara = fit ?? (color || tone === 'inverse' ? 'contain' : 'cover');
+  return (
+    <span
+      className={cn('u-logo-gambar', className)}
+      data-shape={shape}
+      data-tone={tone}
+      data-fit={cara}
+      role="img"
+      aria-label={title}
+      style={{ width: size, height: size, ...(color ? { ['--u-logo-pelat' as string]: color } : {}), ...style }}
+      {...props}
+    >
+      <img src={src} alt="" width={size} height={size} draggable={false} onError={onGagal} />
     </span>
   );
 }
@@ -146,4 +201,121 @@ const APP_NAMES: Record<UnipoApp, string> = {
 /** Logo siap pakai untuk aplikasi di ekosistem UNIPO: <UnipoAppLogo app="pmb" />. */
 export function UnipoAppLogo({ app, tagline = 'Universitas Pohuwato', ...props }: { app: UnipoApp } & Omit<AppLogoProps, 'glyph'>) {
   return <AppLogo name={APP_NAMES[app]} tagline={tagline} glyph={APP_GLYPHS[app]} color={props.color ?? APP_COLORS[app]} {...props} />;
+}
+
+// ================================================================ Logo aplikasi terdaftar (Pustikom)
+const WARNA_INISIAL = ['#244ce6', '#0f8a6a', '#d9541e', '#6d4fd1', '#0e7490', '#c2416b', '#8a5a12', '#5b6b7f'];
+
+/** Inisial nama aplikasi sebagai glyph tanda (koordinat 0–32), untuk aplikasi tanpa logo dan tanpa glyph bawaan. */
+export function glyphInisial(nama: string): React.ReactNode {
+  const kata = nama
+    .replace(/[^\p{L}\p{N} ]/gu, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const teks = (kata.length > 1 ? kata[0]![0]! + kata[1]![0]! : (kata[0] ?? '?').slice(0, 2)).toUpperCase();
+  return (
+    <text
+      x="16"
+      y="16.5"
+      textAnchor="middle"
+      dominantBaseline="central"
+      fill="#fff"
+      fontSize={teks.length > 1 ? 12.5 : 15}
+      fontWeight={800}
+      fontFamily="var(--u-font-heading, inherit)"
+      letterSpacing="-0.02em"
+    >
+      {teks}
+    </text>
+  );
+}
+
+/** Warna tetap dari kode aplikasi, agar aplikasi tanpa logo tetap punya warna yang konsisten. */
+export function warnaAplikasi(kode: string): string {
+  if (kode in APP_COLORS) return APP_COLORS[kode as UnipoApp];
+  let h = 0;
+  for (const c of kode) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return WARNA_INISIAL[h % WARNA_INISIAL.length]!;
+}
+
+/** Alamat logo publik klien SSO (sso.unipo.ac.id/logos/<client_id>.png|webp|jpg), urut dari yang paling mungkin. */
+export function urlLogoSso(kode: string, ssoUrl = 'https://sso.unipo.ac.id'): string[] {
+  const id = kode.toLowerCase().replace(/-/g, '_');
+  if (!/^[a-z0-9_]{3,64}$/.test(id)) return [];
+  const dasar = ssoUrl.replace(/\/+$/, '');
+  return ['png', 'webp', 'jpg'].map((x) => `${dasar}/logos/${id}.${x}`);
+}
+
+const cacheLogo = new Map<string, string | null>();
+
+/** Muat calon logo satu per satu dan kembalikan yang pertama berhasil (null bila tidak ada). Hasil disimpan per sesi. */
+export function useLogoTersedia(calon: Array<string | null | undefined>): { src: string | null; memuat: boolean } {
+  const daftar = calon.filter((x): x is string => !!x);
+  const kunci = daftar.join('|');
+  const [hasil, setHasil] = React.useState<{ kunci: string; src: string | null } | null>(() => (cacheLogo.has(kunci) ? { kunci, src: cacheLogo.get(kunci)! } : null));
+  React.useEffect(() => {
+    if (cacheLogo.has(kunci)) {
+      setHasil({ kunci, src: cacheLogo.get(kunci)! });
+      return;
+    }
+    if (!daftar.length || typeof Image === 'undefined') {
+      setHasil({ kunci, src: null });
+      return;
+    }
+    let batal = false;
+    const coba = (i: number) => {
+      if (batal) return;
+      if (i >= daftar.length) {
+        cacheLogo.set(kunci, null);
+        setHasil({ kunci, src: null });
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        if (batal) return;
+        cacheLogo.set(kunci, daftar[i]!);
+        setHasil({ kunci, src: daftar[i]! });
+      };
+      img.onerror = () => coba(i + 1);
+      img.src = daftar[i]!;
+    };
+    coba(0);
+    return () => {
+      batal = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kunci]);
+  const ok = hasil?.kunci === kunci;
+  return { src: ok ? hasil!.src : null, memuat: !ok };
+}
+
+export interface LogoAplikasiProps extends Omit<AppLogoProps, 'glyph' | 'name' | 'src'> {
+  /** Kode aplikasi yang terdaftar di Pustikom (katalog RBAC / client ID SSO), mis. "pmb" atau "kuliahku". */
+  kode: string;
+  /** Nama tampilan. Bawaan: nama aplikasi bawaan UNIPO atau kode. */
+  name?: React.ReactNode;
+  /** Logo yang sudah diketahui, mis. `aplikasi.logo` dari useAplikasiTerpadu(). Dicoba lebih dulu. */
+  src?: string | null;
+  /**
+   * Alamat SSO untuk mengambil logo publik klien (`/logos/<client_id>.png`). Bawaan https://sso.unipo.ac.id;
+   * isi null agar hanya memakai `src`.
+   */
+  ssoUrl?: string | null;
+}
+
+/**
+ * Logo aplikasi yang terdaftar di Pustikom: bila aplikasinya punya logo unggahan (klien SSO / klien API), logo itu
+ * dipakai, dipotong mengikuti `shape` dan `tone` yang sama dengan logo vektor. Bila belum ada logo, dipakai glyph
+ * bawaan aplikasi UNIPO, atau inisial nama dengan warna tetap. Semua `layout` AppLogo berlaku, termasuk `full`.
+ */
+export function LogoAplikasi({ kode, name, src, ssoUrl = 'https://sso.unipo.ac.id', tagline = 'Universitas Pohuwato', color, ...props }: LogoAplikasiProps) {
+  const calon = React.useMemo(() => [src, ...(ssoUrl ? urlLogoSso(kode, ssoUrl) : [])], [src, kode, ssoUrl]);
+  const logo = useLogoTersedia(calon);
+  const bawaan = (kode.toLowerCase() in APP_GLYPHS ? kode.toLowerCase() : null) as UnipoApp | null;
+  const nama = name ?? (bawaan ? APP_NAMES[bawaan] : kode);
+  if (logo.src) return <AppLogo name={nama} tagline={tagline} src={logo.src} color={color} {...props} />;
+  const glyph = bawaan ? APP_GLYPHS[bawaan] : glyphInisial(typeof nama === 'string' ? nama : kode);
+  const layout = props.layout === 'full' ? 'horizontal' : props.layout;
+  return <AppLogo name={nama} tagline={tagline} glyph={glyph} color={color ?? warnaAplikasi(kode.toLowerCase())} {...props} layout={layout} data-memuat={logo.memuat || undefined} />;
 }

@@ -1,5 +1,11 @@
 # Catatan perubahan
 
+## 1.7.0 (2026-11-15)
+
+- **Logo unggahan ikut varian logo**: `AppLogo` dengan `src` kini memotong gambar mengikuti `shape` (square, circle, shield, plain) dan `tone` (mono jadi abu-abu, inverse memakai pelat putih). `color` menjadi warna pelat di belakang logo PNG transparan, dan `fit` mengatur gambar memenuhi bentuk (cover) atau utuh (contain). Tata letak baru `layout="full"` menampilkan gambar logo utuh (mis. logo dengan tulisan) tanpa teks tambahan. Komponen tanda gambarnya juga tersedia sendiri: `LogoGambar`.
+- **`LogoAplikasi`**: logo aplikasi yang terdaftar di Pustikom dari `kode`. Urutannya: `src` (mis. `aplikasi.logo` dari `useAplikasiTerpadu()`), logo unggahan klien SSO (`sso.unipo.ac.id/logos/<client_id>.png`), glyph bawaan aplikasi UNIPO, lalu inisial nama dengan warna tetap per kode. Semua tata letak, bentuk, dan nada AppLogo berlaku. Pendukungnya: `useLogoTersedia`, `urlLogoSso`, `glyphInisial`, `warnaAplikasi`.
+- Nama logo yang terlalu panjang kini dipotong dengan elipsis.
+
 ## 1.6.0 (2026-11-15)
 
 - **Alur akademik terhubung API** (`unipo-ui/siakad`): widget alur bisnis dengan aturan yang sama dengan halaman web SIAKAD. Pemeriksaan tetap diulang di server; tampilan memberi tahu lebih awal.
