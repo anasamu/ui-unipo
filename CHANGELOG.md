@@ -1,5 +1,15 @@
 # Catatan perubahan
 
+## 1.23.0 (2026-11-16)
+
+- **Aturan kepegawaian** (API SIAKAD `/v1/aturan` kategori `kepegawaian`, titik `sdm.cuti.ajukan`, `sdm.riwayat.ajukan`, `sdm.presensi.catat`, `sdm.kinerja.ajukan`, `sdm.usulan.ajukan`), dipakai aplikasi SDM sdm.unipo.ac.id:
+  - `KategoriAturan` bertambah `kepegawaian`; indikator pegawai dikelompokkan "Kepegawaian" di `PenyusunKondisi`.
+  - `FormAturan`: untuk titik bersubjek pegawai, cakupan berisi jenis pegawai (dosen/tendik), kategori (tetap/tidak tetap), status kepegawaian, dan unit kerja SDM (`/v1/sdm/master/unit`), menggantikan jenjang/angkatan/kelas. `ringkasCakupan` ikut menampilkannya.
+  - `FormPengecualianAturan` (prop `pegawai`) dan panel dispensasi: aturan kepegawaian memberi dispensasi ke pegawai atau dosen (dipilih lewat `PilihEntitas`).
+  - `UjiAturan`: pegawai contoh untuk titik `sdm.*`; konteks teks (mis. `jenis_cuti`) dan ya/tidak tidak lagi dipaksa angka.
+  - `SyaratSaya`: titik `sdm.*` memeriksa pegawai pemilik akun (atau prop `pegawaiId`), tanpa NIM.
+  - Label baru `LABEL_JENIS_PEGAWAI_ATURAN`, `LABEL_KATEGORI_PEGAWAI_ATURAN`, `LABEL_STATUS_KEPEGAWAIAN_ATURAN`.
+
 ## 1.22.1 (2026-11-15)
 
 - **Obrolan:** layar Grup baru dan Obrolan baru di `ChatMengambang`/`KotakObrolan` tidak lagi menggencet kolom cari, saringan peran, dan tombol "Buat grup" saat daftar pengguna panjang. Sekarang hanya daftar pengguna yang bergulir.
