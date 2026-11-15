@@ -20,6 +20,7 @@ import './mock/alur';
 import './mock/ai';
 import './mock/obrolan';
 import './mock/modal-fitur';
+import './mock/profil';
 import { ssoDemo } from './mock/aplikasi';
 import { App } from './App';
 

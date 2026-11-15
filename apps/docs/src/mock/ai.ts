@@ -1,5 +1,6 @@
 // Data contoh layanan AI (/v1/integrasi/ai): penyedia, jawaban teks/JSON per modul, pemakaian, simpan soal. Isi rekaan.
 import { tambahRute } from './siakad';
+import { balasProfilSaya } from './profil';
 
 const badan = (init?: RequestInit) => (init?.body ? JSON.parse(String(init.body)) : {}) as Record<string, any>;
 const tunggu = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -347,13 +348,5 @@ const FOTO =
   encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c084fc"/><stop offset="1" stop-color="#6d28d9"/></linearGradient></defs><rect width="96" height="96" fill="url(#g)"/><circle cx="48" cy="38" r="17" fill="#f5e9ff"/><path d="M16 96c4-20 18-30 32-30s28 10 32 30z" fill="#f5e9ff"/></svg>',
   );
-tambahRute(/\/v1\/profil\/saya$/, () => ({
-  data: {
-    akun: { username: '2304110001', nama: 'Nurul Aini Hasan', email: 'nurul.aini@mhs.unipo.ac.id', level: 'MAHASISWA', login_terakhir: '2026-11-15 08:12:00', bisa_ganti_password: true },
-    identitas: { peran: 'mahasiswa', peran_label: 'Mahasiswa', kunci: '2304110001', kunci_label: 'NIM', nama_prodi: 'Teknik Informatika', jenjang: 'S1', fakultas: 'Fakultas Teknik' },
-    profil: { nama_panggilan: 'Nurul', judul: null, punya_foto: true, foto_versi: 'a1b2c3d4' },
-    ringkasan: { pekerjaan: 0, pendidikan: 1, prestasi: 3, organisasi: 2, dokumen: 4 },
-    kelengkapan: { persen_wajib: 72, lengkap: false, kurang: [{ kolom: 'nik', label: 'NIK', wajib: true, bisa_diisi_sendiri: true }] },
-  },
-}));
+tambahRute(/\/v1\/profil\/saya$/, () => balasProfilSaya());
 tambahRute(/\/v1\/profil\/saya\/foto$/, () => ({ data: FOTO }));

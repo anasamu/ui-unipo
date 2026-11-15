@@ -35,3 +35,4 @@ export * from './obrolan';
 export * from './pmb-maba';
 export * from './lms-belajar';
 export * from './modal-fitur';
+export * from './profil-modul';

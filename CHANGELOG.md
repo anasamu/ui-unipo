@@ -1,5 +1,18 @@
 # Catatan perubahan
 
+## 1.15.0 (2026-11-15)
+
+- **Modul profil per peran** (`unipo-ui/siakad`), semua lewat SDK dan akun yang masuk (tanpa ketik NIM/NIDN):
+  - `ModulProfilSaya`: kepala profil + tab yang disusun dari peran akun (`GET /v1/profil/saya`). Mahasiswa: data pribadi, orang tua & wali, akademik + riwayat studi, keuangan/UKT, riwayat. Dosen: kepegawaian, mahasiswa PA, jadwal mengajar, penelitian & PkM, riwayat. Tendik: kepegawaian, riwayat. Prop `tab` membatasi atau mengurutkan tab.
+  - `KepalaProfilSaya`: foto, nama, NIM/NIDN/NIP, prodi atau unit, kelengkapan profil, ringkasan per peran.
+  - `DataPribadiSaya`: data per kelompok dari `data_pribadi[]`; kolom yang `bisa_diubah` disimpan langsung (`POST /v1/profil/saya/data-pribadi`), kolom yang `bisa_diajukan` lewat permohonan perubahan dengan alasan (`POST /v1/profil/permohonan`). Galat per field dari server tampil di field-nya.
+  - `OrangTuaWali`: ayah, ibu, wali (`GET /v1/profil/saya/keluarga`, endpoint baru di SIAKAD).
+  - `RiwayatProfilSaya` (`jenis`: pendidikan, pekerjaan, prestasi, organisasi): linimasa + tambah/ubah/hapus lewat `/v1/profil/{jenis}`.
+  - `KeuanganMahasiswa`: ringkasan tagihan/dibayar/sisa, invoice aktif, rincian per semester dan riwayat pembayaran (`GET /v1/keuangan/mahasiswa/{nim}`).
+  - `KepegawaianSaya`: data pegawai, jabatan fungsional, pangkat/golongan, pendidikan, sertifikasi (`GET /v1/sdm/saya` + `/v1/sdm/pegawai/{id}/{jenis}`).
+  - `PenelitianDosen`: rekap per tahun, kegiatan penelitian/PkM, luaran (`GET /v1/lppm/peneliti/{nidn}`).
+- Halaman docs **Modul profil** (kategori Profil) dengan pengalih peran mahasiswa/dosen/tendik dan data tiruan.
+
 ## 1.14.0 (2026-11-15)
 
 - **Ilustrasi per fitur dengan tokoh** (`unipo-ui`): `Ilustrasi` kini punya tokoh yang bisa diatur: gaya rambut/penutup kepala (`gaya`: cepol, pendek, hijab, peci), ekspresi (`ekspresi`: datar, senang, sedih, kaget, bingung), aksesori (`aksesori`: toga, jubah wisuda + selempang, jas, ransel, kacamata, headset, dan satu barang di tangan: laptop, kaca pembesar, dokumen, ijazah, ponsel, buku, kunci, piala, kartu), serta tokoh kedua (`teman`) untuk adegan berdua. Warna baru lewat variabel CSS (`--u-ilus-jubah`, `-emas`, `-hijab`, `-peci`, `-ransel`, `-benda`, `-kulit-sawo`, `-baju-kedua`).
