@@ -1,5 +1,14 @@
 # Catatan perubahan
 
+## 1.20.0 (2026-11-15)
+
+- **Tema dinamis untuk semua aplikasi** (`unipo-ui/siakad`, API SIAKAD `/v1/tema`):
+  - `TemaAplikasi`: pasang tema aplikasi dari SIAKAD (lapis kampus → aplikasi → lingkup, mis. fakultas 05) ke halaman tanpa deploy ulang: CSS tema, huruf Google Fonts, meta theme-color, mode terang/gelap bawaan. `cadangan` untuk aplikasi yang belum punya tema tersimpan.
+  - `PengaturanTema`: halaman pengaturan untuk pemegang izin `<aplikasi>.tema`: preset, warna utama/aksen (pilihan + bebas + hex), nuansa abu-abu, huruf isi/judul, ukuran teks, sudut, bayangan, gerak, mode bawaan, kolom tata letak khusus aplikasi (`tataTambahan`), pratinjau langsung (kartu atau seluruh halaman), simpan dengan catatan, riwayat versi + pulihkan. Pengguna tanpa izin hanya melihat.
+  - `useTemaAplikasi`, `useAksesTema`.
+- **Pemasang tema** (`unipo-ui/tema`): `cssTemaAplikasi` (selektor dipertegas agar menang atas CSS unipo-ui), `pasangTemaAplikasi` (dengan cache localStorage), `skripAwalTema` (skrip index.html agar tidak berkedip), `terapkanModeTampilan`, `pasangModeBawaan`, tipe `DataTemaAplikasi` dan `ModeTampilan`.
+- Halaman docs **Pengaturan tema aplikasi** (Fondasi).
+
 ## 1.19.0 (2026-11-15)
 
 - **Aturan akademik dinamis** (`unipo-ui/siakad`, endpoint `/v1/aturan`): antarmuka untuk syarat, batas waktu, dan batas nilai yang ditegakkan SIAKAD di setiap langkah (KRS, input nilai, ujian, tugas akhir, KKN, cuti, yudisium, wisuda).

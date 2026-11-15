@@ -40,3 +40,4 @@ export * from './modal-fitur';
 export * from './profil-modul';
 export * from './formulir-profil';
 export * from './aturan';
+export * from './tema-aplikasi';
