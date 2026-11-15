@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { ArrowLeft, ArrowRight, CalendarClock, CircleCheck, Clock, Flag, KeyRound, LayoutGrid, MonitorCheck, RefreshCw, Send, Timer } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarClock, CircleCheck, Clock, CloudOff, Flag, KeyRound, LayoutGrid, Maximize, MonitorCheck, RefreshCw, Send, Timer } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { formatDate, formatNumber, formatTime } from '../lib/format';
 import { Badge, Button, Skeleton, type BadgeVariant } from '../components/actions';
@@ -95,8 +95,8 @@ const C = '/v1/cbt';
 export function useUjianSaya() {
   return useSiakadQuery<UjianSaya[]>(['cbt-saya'], (s, signal) => s.cbt.getSaya({}, { signal }) as never, { staleTime: 15_000 });
 }
-export function useLembarUjian(pesertaId: number | undefined) {
-  return useSiakadQuery<LembarUjianData>(['cbt-lembar', String(pesertaId)], (s, signal) => s.request({ method: 'GET', path: `${C}/kerjakan/${pesertaId}` }, { ...hdr(), signal }) as never, {
+export function useLembarUjian(pesertaId: number | undefined, basePath?: string) {
+  return useSiakadQuery<LembarUjianData>(['cbt-lembar', basePath ?? String(pesertaId)], (s, signal) => s.request({ method: 'GET', path: basePath ?? `${C}/kerjakan/${pesertaId}` }, { ...hdr(), signal }) as never, {
     enabled: pesertaId != null,
     staleTime: Infinity,
   });
@@ -435,85 +435,211 @@ function Menjodohkan({ opsi, nilai, onJawab, disabled }: { opsi: { kiri: OpsiSoa
 }
 
 // ================================================================ Lembar ujian
-type StatusSimpan = 'tersimpan' | 'menyimpan' | 'gagal';
+type StatusSimpan = 'tersimpan' | 'menyimpan' | 'gagal' | 'luring';
+type AntreJawaban = Record<number, { soal_id: number; jawaban: JawabanCbt; ragu: boolean }>;
+
+export interface LembarUjianProps {
+  pesertaId: number;
+  awal?: LembarUjianData;
+  onSelesai?: (hasil: LembarUjianData) => void;
+  /**
+   * Alamat dasar lembar (tanpa /jawab, /log, /selesai). Bawaan `/v1/cbt/kerjakan/{pesertaId}`; PMB memakai
+   * `/v1/pmb/saya/pendaftaran/{id}/ujian/{peserta}` yang bentuk datanya sama.
+   */
+  basePath?: string;
+  /**
+   * Pengawasan: catat pindah tab, keluar layar penuh, dan salin-tempel ke `{basePath}/log`, tolak menu klik kanan,
+   * dan tampilkan ajakan layar penuh. Bawaan aktif.
+   */
+  pengawasan?: boolean;
+  /** Teks kecil di bawah nama ujian (mis. nama peserta). */
+  subjudul?: React.ReactNode;
+  className?: string;
+}
 
 /**
- * Lembar ujian lengkap: kepala (nama ujian, jumlah terjawab, hitung mundur), satu soal per layar, tombol ragu-ragu,
- * navigasi nomor, dan kumpulkan. Jawaban dikirim saat dipilih (teks: 0,8 detik setelah berhenti mengetik).
- * Jika waktu habis, lembar dikumpulkan otomatis.
+ * Lembar ujian lengkap: kepala (nama ujian, jumlah terjawab, status simpan, hitung mundur), satu soal per layar,
+ * ragu-ragu, navigasi nomor, dan kumpulkan. Jawaban masuk antrean dan dikirim otomatis (teks 0,8 detik setelah
+ * berhenti mengetik); bila koneksi putus, antrean dikirim ulang tiap 8 detik dan saat tersambung lagi (sekaligus
+ * lewat `jawaban_banyak`). Waktu habis = dikumpulkan otomatis.
  */
-export function LembarUjian({ pesertaId, awal, onSelesai, className }: { pesertaId: number; awal?: LembarUjianData; onSelesai?: (hasil: LembarUjianData) => void; className?: string }) {
+export function LembarUjian({ pesertaId, awal, onSelesai, basePath, pengawasan = true, subjudul, className }: LembarUjianProps) {
   const siakad = useOptionalSiakad();
-  const q = useLembarUjian(awal ? undefined : pesertaId);
+  const dasar = basePath ?? `${C}/kerjakan/${pesertaId}`;
+  const q = useLembarUjian(awal ? undefined : pesertaId, basePath);
   const [lembar, setLembar] = React.useState<LembarUjianData | undefined>(awal);
   const [nomor, setNomor] = React.useState(1);
   const [simpan, setSimpan] = React.useState<StatusSimpan>('tersimpan');
   const [galat, setGalat] = React.useState<string | null>(null);
   const [konfirmasi, setKonfirmasi] = React.useState(false);
+  const [layarPenuh, setLayarPenuh] = React.useState(() => typeof document !== 'undefined' && !!document.fullscreenElement);
+  const antre = React.useRef<AntreJawaban>({});
+  const tunda = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [jumlahAntre, setJumlahAntre] = React.useState(0);
   React.useEffect(() => {
     if (q.data && !lembar) setLembar(q.data);
   }, [q.data, lembar]);
+  const mengerjakan = lembar?.status === 'mengerjakan';
 
-  const kirim = React.useCallback(
-    async (s: SoalCbtData, perubahan: Partial<Pick<SoalCbtData, 'jawaban' | 'ragu'>>) => {
-      const baru = { ...s, ...perubahan };
-      setLembar((l) => (l ? { ...l, soal: l.soal?.map((x) => (x.soal_id === s.soal_id ? baru : x)) } : l));
-      if (!siakad) return;
-      setSimpan('menyimpan');
-      try {
-        const r = await siakad.request<{ sisa_detik: number }>(
-          { method: 'POST', path: `${C}/kerjakan/${pesertaId}/jawab`, body: { soal_id: s.soal_id, jawaban: baru.jawaban, ragu: baru.ragu } },
-          hdr(),
-        );
-        setSimpan('tersimpan');
-        setGalat(null);
-        if (r.data?.sisa_detik != null) setLembar((l) => (l && Math.abs(l.sisa_detik - r.data.sisa_detik) > 5 ? { ...l, sisa_detik: r.data.sisa_detik } : l));
-      } catch (e) {
+  const muatUlang = React.useCallback(async () => {
+    if (!siakad) return;
+    try {
+      const r = await siakad.request<LembarUjianData>({ method: 'GET', path: dasar }, hdr());
+      setLembar(r.data);
+    } catch (e) {
+      setGalat(pesanGalat(e));
+    }
+  }, [siakad, dasar]);
+
+  /** Kirim semua jawaban di antrean. */
+  const sinkron = React.useCallback(async () => {
+    const isi = Object.values(antre.current);
+    if (!isi.length || !siakad) return;
+    setSimpan('menyimpan');
+    try {
+      const r = await siakad.request<{ sisa_detik?: number }>({ method: 'POST', path: `${dasar}/jawab`, body: isi.length === 1 ? isi[0] : { jawaban_banyak: isi } }, hdr());
+      isi.forEach((x) => {
+        if (antre.current[x.soal_id] === x) delete antre.current[x.soal_id];
+      });
+      setJumlahAntre(Object.keys(antre.current).length);
+      setSimpan(Object.keys(antre.current).length ? 'menyimpan' : 'tersimpan');
+      setGalat(null);
+      const sisa = r.data?.sisa_detik;
+      if (sisa != null) setLembar((l) => (l && Math.abs(l.sisa_detik - sisa) > 5 ? { ...l, sisa_detik: sisa } : l));
+    } catch (e) {
+      const st = (e as { status?: number }).status;
+      if (st === 409) {
+        void muatUlang();
+        return;
+      }
+      if (!st || st >= 500) setSimpan('luring');
+      else {
         setSimpan('gagal');
         setGalat(pesanGalat(e));
       }
+    }
+  }, [siakad, dasar, muatUlang]);
+
+  const kirim = React.useCallback(
+    (s: SoalCbtData, perubahan: Partial<Pick<SoalCbtData, 'jawaban' | 'ragu'>>) => {
+      const baru = { ...s, ...perubahan };
+      setLembar((l) => (l ? { ...l, soal: l.soal?.map((x) => (x.soal_id === s.soal_id ? baru : x)) } : l));
+      antre.current = { ...antre.current, [s.soal_id]: { soal_id: s.soal_id, jawaban: baru.jawaban, ragu: baru.ragu } };
+      setJumlahAntre(Object.keys(antre.current).length);
+      clearTimeout(tunda.current);
+      const teks = s.jenis === 'esai' || s.jenis === 'isian_singkat';
+      tunda.current = setTimeout(() => void sinkron(), 'jawaban' in perubahan && teks ? 800 : 50);
     },
-    [siakad, pesertaId],
+    [sinkron],
   );
+
+  // Antrean dikirim ulang berkala dan saat koneksi kembali.
+  React.useEffect(() => {
+    if (!mengerjakan) return;
+    const catat = (jenis: string, detail?: string) => void siakad?.request({ method: 'POST', path: `${dasar}/log`, body: { jenis, detail } }, hdr()).catch(() => undefined);
+    const t = setInterval(() => void sinkron(), 8000);
+    const online = () => {
+      if (pengawasan) catat('koneksi_putus', 'tersambung kembali');
+      void sinkron();
+    };
+    const offline = () => setSimpan('luring');
+    const tinggal = (e: BeforeUnloadEvent) => {
+      if (Object.keys(antre.current).length) e.preventDefault();
+    };
+    window.addEventListener('online', online);
+    window.addEventListener('offline', offline);
+    window.addEventListener('beforeunload', tinggal);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('online', online);
+      window.removeEventListener('offline', offline);
+      window.removeEventListener('beforeunload', tinggal);
+    };
+  }, [mengerjakan, sinkron, siakad, dasar, pengawasan]);
+
+  // Pengawasan: pindah tab, keluar layar penuh, salin-tempel, klik kanan.
+  React.useEffect(() => {
+    if (!mengerjakan || !pengawasan) return;
+    const catat = (jenis: string, detail?: string) => void siakad?.request({ method: 'POST', path: `${dasar}/log`, body: { jenis, detail } }, hdr()).catch(() => undefined);
+    const vis = () => document.visibilityState === 'hidden' && catat('pindah_tab');
+    const fs = () => {
+      const penuh = !!document.fullscreenElement;
+      setLayarPenuh(penuh);
+      if (!penuh) catat('keluar_layar', 'keluar dari layar penuh');
+    };
+    const salin = (e: ClipboardEvent) => {
+      e.preventDefault();
+      catat('salin_tempel', e.type);
+    };
+    const menu = (e: MouseEvent) => e.preventDefault();
+    document.addEventListener('visibilitychange', vis);
+    document.addEventListener('fullscreenchange', fs);
+    document.addEventListener('copy', salin);
+    document.addEventListener('paste', salin);
+    document.addEventListener('contextmenu', menu);
+    return () => {
+      document.removeEventListener('visibilitychange', vis);
+      document.removeEventListener('fullscreenchange', fs);
+      document.removeEventListener('copy', salin);
+      document.removeEventListener('paste', salin);
+      document.removeEventListener('contextmenu', menu);
+    };
+  }, [mengerjakan, pengawasan, siakad, dasar]);
 
   const kumpulkan = React.useCallback(async () => {
     if (!siakad) return;
     try {
-      const r = await siakad.request<LembarUjianData>({ method: 'POST', path: `${C}/kerjakan/${pesertaId}/selesai`, body: {} }, hdr());
+      await sinkron();
+      const r = await siakad.request<LembarUjianData>({ method: 'POST', path: `${dasar}/selesai`, body: {} }, hdr());
       setLembar(r.data);
       invalidateSiakad('cbt-saya');
+      invalidateSiakad('pmb-ujian');
+      if (typeof document !== 'undefined' && document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
       onSelesai?.(r.data);
     } catch (e) {
       setGalat(pesanGalat(e));
     }
-  }, [siakad, pesertaId, onSelesai]);
+  }, [siakad, dasar, sinkron, onSelesai]);
 
   if (!lembar) {
     if (q.error) return <Galat q={q} />;
     return <Skeleton className={className} style={{ height: 420 }} />;
   }
+  if (lembar.status === 'terdaftar') return <Empty title="Ujian belum dimulai" description="Kembali ke daftar ujian lalu masukkan token dari pengawas." />;
   if (lembar.status !== 'mengerjakan') return <HasilUjian lembar={lembar} className={className} />;
   const daftar = lembar.soal ?? [];
   const s = daftar.find((x) => x.nomor === nomor) ?? daftar[0];
   const sudah = daftar.filter((x) => terjawab(x.jawaban)).length;
   const ragu = daftar.filter((x) => x.ragu).length;
   if (!s) return <Empty title="Soal tidak tersedia" />;
+  const bisaLayarPenuh = pengawasan && typeof document !== 'undefined' && document.fullscreenEnabled;
 
   return (
-    <div className={cn('u-cbt-lembar', className)}>
+    <div className={cn('u-cbt-lembar', className)} data-pengawasan={pengawasan || undefined}>
       <header className="u-cbt-lembar-head">
         <div className="u-cbt-lembar-judul">
           <span className="u-cbt-ujian-jenis">{JENIS_UJIAN[lembar.ujian.jenis] ?? lembar.ujian.jenis}</span>
           <h2>{lembar.ujian.nama}</h2>
+          {subjudul && <p className="u-cbt-lembar-sub">{subjudul}</p>}
         </div>
         <span className="u-cbt-simpan" data-status={simpan} aria-live="polite">
-          {simpan === 'menyimpan' ? 'Menyimpan…' : simpan === 'gagal' ? 'Gagal menyimpan' : 'Tersimpan'}
+          {simpan === 'menyimpan' ? 'Menyimpan…' : simpan === 'gagal' ? 'Gagal menyimpan' : simpan === 'luring' ? `Luring, ${jumlahAntre} jawaban menunggu` : 'Tersimpan'}
         </span>
         <span className="u-cbt-hitung">
           <b>{sudah}</b>/{daftar.length} terjawab
         </span>
         <TimerUjian sisaDetik={lembar.sisa_detik} onHabis={kumpulkan} />
       </header>
+      {bisaLayarPenuh && !layarPenuh && (
+        <button type="button" className="u-cbt-layarpenuh" onClick={() => void document.documentElement.requestFullscreen?.().catch(() => undefined)}>
+          <Maximize aria-hidden /> Kerjakan dalam layar penuh (disarankan)
+        </button>
+      )}
+      {simpan === 'luring' && (
+        <Alert variant="warning" icon={<CloudOff />} title="Koneksi terputus">
+          Lanjutkan mengerjakan. Jawaban disimpan di perangkat ini dan dikirim otomatis saat tersambung.
+        </Alert>
+      )}
       {galat && (
         <Alert variant="danger" title="Jawaban terakhir belum tersimpan">
           {galat} Periksa koneksi; jawaban dikirim lagi saat Anda memilih ulang.

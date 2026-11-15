@@ -407,11 +407,47 @@
   &[data-status='menyimpan']::before {
     background: var(--u-warning);
   }
-  &[data-status='gagal'] {
+  &[data-status='gagal'],
+  &[data-status='luring'] {
     color: var(--u-danger);
     &::before {
       background: var(--u-danger);
     }
+  }
+}
+.u-cbt-lembar-sub {
+  margin: 0.125rem 0 0;
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
+}
+.u-cbt-layarpenuh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: var(--u-radius-md);
+  background: var(--u-warning-soft);
+  color: var(--u-warning-text);
+  font: inherit;
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-medium);
+  cursor: pointer;
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+.u-cbt-lembar[data-pengawasan] {
+  user-select: none;
+  textarea,
+  input {
+    user-select: text;
   }
 }
 .u-cbt-hitung {
