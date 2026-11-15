@@ -921,6 +921,20 @@ button.u-step-marker {
   font-size: var(--u-text-xs);
   line-height: 1.4;
 }
+.u-stepper[data-orientation='horizontal'][data-align='center'] {
+  > .u-step {
+    align-items: center;
+    text-align: center;
+  }
+  .u-step-line {
+    // dari tepi penanda ini ke tepi penanda berikutnya (langkah sama lebar, jarak antar-langkah 0.5rem)
+    left: calc(50% + 1rem + 0.5rem);
+    right: calc(-50% + 1rem);
+  }
+  .u-step-text {
+    padding-inline: 0.5rem;
+  }
+}
 @media (max-width: 640px) {
   .u-stepper[data-orientation='horizontal'][data-collapse] {
     .u-step-text {

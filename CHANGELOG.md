@@ -2,10 +2,6 @@
 
 ## 1.13.0 (2026-11-15)
 
-- 
-
-## 1.13.0 (2026-11-15)
-
 - **Obrolan terenkripsi end-to-end** (`unipo-ui/siakad`) di atas `/v1/obrolan` SIAKAD, untuk semua peran: mahasiswa, dosen, tendik, maba, panitia, dan pendaftar PMB (lewat aplikasi PMB). Pengganti chat lama yang menyimpan teks polos.
   - Enkripsi di browser (WebCrypto): kunci perangkat ECDH + ECDSA P-256 di IndexedDB, kunci AES-256-GCM per pesan yang dibungkus (ECDH efemeral + HKDF-SHA256 + AES-KW) untuk setiap perangkat aktif anggota, tanda tangan perangkat pengirim, lampiran dienkripsi sebelum diunggah. Server hanya menyimpan ciphertext dan menolak pesan yang tidak dibungkus untuk tepat semua perangkat aktif.
   - `ChatMengambang`: tombol di pojok dengan lencana belum dibaca, panel daftar + ruang (layar penuh di ponsel). `KotakObrolan`: halaman obrolan dua kolom yang menjadi satu kolom di layar sempit.
@@ -36,6 +32,26 @@
   - Mode pemilih (`pilih`, `onPilih`) untuk lampiran formulir, mode baca saja, dan ruang folder per `modul` (mis. arsip).
   - Pendukung: `useFolderBerkas()`, `useAksiBerkas()`, `validasiNamaFolder()` (aturan sama dengan server), `jenisBerkas()`, `JENIS_BERKAS`, `WARNA_FOLDER`.
 - `useSaatInvalidasi(prefix, fn)`: jalankan fungsi setiap `invalidateSiakad(prefix)` dipanggil, untuk data yang dimuat sendiri.
+
+## 1.9.0 (2026-11-15)
+
+- **LMS mahasiswa** (`unipo-ui/siakad`, berkas `lms-belajar`): semua halaman belajar e-learning di atas `/v1/lms`, sehingga aplikasi LMS cukup menyusun komponen.
+  - Kelas: `HalamanKelasLms` (kepala kelas + tab Materi, Tugas, Kuis, Forum, Presensi, Nilai, Peserta, Info), `KepalaKelasLms` dengan progres, `KontenKelasLms`/`DaftarTopikLms` per pertemuan dengan status selesai, `InfoKelasLms`, `PesertaKelasLms`.
+  - Materi: `HalamanMateriLms` (teks, PDF, video YouTube/Vimeo, tautan, navigasi sebelum/berikutnya, tandai selesai) dan `KartuKelasDaring` untuk Zoom/Google Meet (aktif 15 menit sebelum mulai, salin ID dan kata sandi).
+  - Tugas: `HalamanTugasLms`, `KumpulkanTugasLms` (teks, unggah berkas ke `/v1/lms/file`, simpan draf, kumpulkan dengan konfirmasi), rubrik, nilai, umpan balik.
+  - Kuis: `HalamanKuisLms` (ketentuan, percobaan, kata sandi), `RuangKuisLms` (layar penuh, simpan otomatis dengan coba ulang, ragu-ragu, peta soal, timer, kirim otomatis saat waktu habis; memakai `SoalCbt`), `HasilKuisLms` + `PembahasanSoalLms`.
+  - Forum bertingkat: `DaftarForumKelasLms`, `UtasForumLms`, `UtasBaruLms`, `DiskusiLms`, `KirimanForumLms`.
+  - `PresensiKelasLms` (isi kode presensi, rekap H/I/S/A), `NilaiKelasSayaLms` (buku nilai + perkiraan nilai akhir), `RekapNilaiKelasLms`.
+  - Beranda: `KelasDaringMendatang`, `TenggatLms`, `JadwalHariIniLms`, `TugasKuisSayaLms` (lintas kelas), `DaftarNotifikasiLms` (tandai dibaca).
+  - Publik: `KatalogKelasTerbuka`/`KartuKelasTerbuka` dari `/v1/lms/terbuka` (tanpa token, untuk landing page) dan `GabungKelasKodeLms`.
+  - `KalenderLms`: tenggat tugas, kuis, pertemuan, dan kelas daring digabung dengan kalender akademik SIAKAD.
+  - `LmsRuteProvider`/`RUTE_LMS` mengatur alamat halaman yang dipakai tautan, dan `rute.pindah` meneruskan perpindahan halaman (mulai kuis, selesai kuis, buka utas) ke router SPA; `GalatLms` menampilkan galat dengan kode laporan. Hook data `useKontenKelas`, `useTugasLms`, `useKuisLms`, `useSemuaKelasLms`, dan lainnya ikut diekspor.
+- `KalenderAkademik` menerima kegiatan dari luar (`tambahan`, `labelJenis`, `warnaJenis`, `onRentangChange`). Klik kegiatan tetap memilih tanggalnya walau `onKegiatanClick` diisi.
+- `Stepper align="center"`: penanda dan teks langkah di tengah, garis penghubung antarpenanda (simetris untuk landing).
+- `Ilustrasi tokoh`: tampilkan tokoh orang (`jalan`, `tunjuk`, `duduk`) pada adegan apa pun, atau `false` untuk menyembunyikannya.
+- `Hero`: media berupa `Ilustrasi` tampil tanpa kotak abu-abu, menyatu dengan latar halaman (terang dan gelap).
+- Sampul kelas (`SampulKelas`) hanya memakai warna `--u-chart-1` sampai `--u-chart-6`, jadi tidak lagi hitam.
+- Halaman docs **LMS mahasiswa** dengan data contoh.
 
 ## 1.8.1 (2026-11-15)
 

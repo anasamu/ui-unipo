@@ -24,7 +24,14 @@ export function Card({ variant = 'default', interactive, className, render, ...p
     props: mergeProps<'div'>({ className: cn('u-card', className), 'data-variant': variant, 'data-interactive': dataFlag(interactive) } as React.ComponentProps<'div'>, props),
   });
 }
-export function CardHeader({ title, description, action, className, children, ...props }: { title?: React.ReactNode; description?: React.ReactNode; action?: React.ReactNode } & Omit<React.ComponentProps<'div'>, 'title'>) {
+export function CardHeader({
+  title,
+  description,
+  action,
+  className,
+  children,
+  ...props
+}: { title?: React.ReactNode; description?: React.ReactNode; action?: React.ReactNode } & Omit<React.ComponentProps<'div'>, 'title'>) {
   return (
     <div className={cn('u-card-header', className)} {...props}>
       <div>
@@ -174,7 +181,19 @@ export interface AccordionItem {
   title: React.ReactNode;
   content: React.ReactNode;
 }
-export function Accordion({ items, variant, multiple, defaultValue, className }: { items: AccordionItem[]; variant?: 'line' | 'card'; multiple?: boolean; defaultValue?: string[]; className?: string }) {
+export function Accordion({
+  items,
+  variant,
+  multiple,
+  defaultValue,
+  className,
+}: {
+  items: AccordionItem[];
+  variant?: 'line' | 'card';
+  multiple?: boolean;
+  defaultValue?: string[];
+  className?: string;
+}) {
   return (
     <BaseAccordion.Root className={cn('u-accordion', className)} data-variant={variant} multiple={multiple} defaultValue={defaultValue}>
       {items.map((it) => (
@@ -224,13 +243,36 @@ export function Progress({ value, max = 100, label, showValue = Boolean(label), 
 }
 
 /** Progres melingkar, mis. kelengkapan profil, IPK terhadap 4.00, kehadiran. */
-export function ProgressRing({ value, max = 100, size = 64, thickness = 6, tone, label, className }: { value: number; max?: number; size?: number; thickness?: number; tone?: Tone; label?: React.ReactNode; className?: string }) {
+export function ProgressRing({
+  value,
+  max = 100,
+  size = 64,
+  thickness = 6,
+  tone,
+  label,
+  className,
+}: {
+  value: number;
+  max?: number;
+  size?: number;
+  thickness?: number;
+  tone?: Tone;
+  label?: React.ReactNode;
+  className?: string;
+}) {
   const r = (size - thickness) / 2;
   const c = 2 * Math.PI * r;
   const pct = Math.max(0, Math.min(1, value / max));
   const color = tone ? `var(--u-${tone === 'danger' ? 'danger' : tone})` : undefined;
   return (
-    <div className={cn('u-progress-ring', className)} role="progressbar" aria-valuenow={value} aria-valuemax={max} aria-valuemin={0} style={{ width: size, height: size, ...(color ? ({ '--u-progress-color': color } as React.CSSProperties) : {}) }}>
+    <div
+      className={cn('u-progress-ring', className)}
+      role="progressbar"
+      aria-valuenow={value}
+      aria-valuemax={max}
+      aria-valuemin={0}
+      style={{ width: size, height: size, ...(color ? ({ '--u-progress-color': color } as React.CSSProperties) : {}) }}
+    >
       <svg width={size} height={size}>
         <circle className="u-ring-track" cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={thickness} />
         <circle className="u-ring-indicator" cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={thickness} strokeDasharray={c} strokeDashoffset={c * (1 - pct)} />
@@ -354,7 +396,21 @@ export function Breadcrumb({ items, className }: { items: Array<{ label: React.R
 }
 
 // ---------------------------------------------------------------- Empty
-export function Empty({ icon, title, description, actions, bordered, className }: { icon?: React.ReactNode; title: React.ReactNode; description?: React.ReactNode; actions?: React.ReactNode; bordered?: boolean; className?: string }) {
+export function Empty({
+  icon,
+  title,
+  description,
+  actions,
+  bordered,
+  className,
+}: {
+  icon?: React.ReactNode;
+  title: React.ReactNode;
+  description?: React.ReactNode;
+  actions?: React.ReactNode;
+  bordered?: boolean;
+  className?: string;
+}) {
   return (
     <div className={cn('u-empty', className)} data-bordered={dataFlag(bordered)}>
       {icon && <span className="u-empty-icon">{icon}</span>}
@@ -419,13 +475,15 @@ export interface StepperProps {
   /** Indeks langkah aktif (mulai 0). */
   current: number;
   orientation?: 'horizontal' | 'vertical';
+  /** Horizontal saja: 'center' menaruh penanda dan teks di tengah tiap langkah (simetris, cocok untuk landing). */
+  align?: 'start' | 'center';
   /** Bila diisi, langkah yang sudah lewat bisa diklik. */
   onStepClick?: (index: number) => void;
   className?: string;
 }
-export function Stepper({ steps, current, orientation = 'horizontal', onStepClick, className }: StepperProps) {
+export function Stepper({ steps, current, orientation = 'horizontal', align = 'start', onStepClick, className }: StepperProps) {
   return (
-    <ol className={cn('u-stepper', className)} data-orientation={orientation} data-collapse="">
+    <ol className={cn('u-stepper', className)} data-orientation={orientation} data-align={align} data-collapse="">
       {steps.map((s, i) => {
         const state = s.error ? 'error' : i < current ? 'complete' : i === current ? 'current' : 'upcoming';
         const clickable = onStepClick && i < current;
