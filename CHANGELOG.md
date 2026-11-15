@@ -1,5 +1,12 @@
 # Catatan perubahan
 
+## 1.26.0 (2026-11-16)
+
+- **Penelitian & PkM** (API SIAKAD `/v1/lppm`), dipakai aplikasi LP2M lp2m.unipo.ac.id dan dasbor fakultas:
+  - `StatusKegiatanLppm`, `StatusVerifikasiLuaran`, `PersetujuanFakultasLppm`: lencana status kegiatan, verifikasi luaran, dan persetujuan fakultas (`LABEL_STATUS_LPPM`, `NADA_STATUS_LPPM`, `LABEL_VERIFIKASI_LUARAN`).
+  - `AlurKegiatanLppm`: alur hibah internal (draf, diajukan, review, penetapan, pelaksanaan, selesai) sebagai `Stepper`; hibah eksternal/mandiri hanya pelaksanaan dan selesai.
+- **Aturan penelitian**: `KategoriAturan` bertambah `penelitian` (titik `lppm.usulan.ajukan`, `lppm.laporan.ajukan`, `lppm.luaran.ajukan`), label "Penelitian & PkM" di `KelolaAturan`, saringan, dan `FormAturan`.
+
 ## 1.24.0 (2026-11-15)
 
 - **Pengolah dokumen ala Word** (`unipo-ui/editor`): `PengolahDokumen` dengan pita menu (Beranda, Sisipkan, Tata letak, Tinjau, plus pita Tabel/Gambar saat dipilih), kertas A4/F4/Letter dengan margin nyata dan perkiraan batas halaman, kop/data surat/tanda tangan tetap di kertas, chip penanda `{{nama}}`, tabel bergaris atau polos, gambar dan kode QR lewat unggah berkas, cari & ganti, zoom, cetak, dan pintasan keyboard. Keluarannya HTML berkelas `ub-*` (`KELAS_PENGOLAH`) yang lolos saringan SIAKAD dan diterjemahkan ke PDF. Ekspor `KERTAS`, `MARGIN_SIAP`, `KopLembar`, `htmlPengolah`, `penandaKeChip`.

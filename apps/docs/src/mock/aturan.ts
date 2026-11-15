@@ -17,6 +17,7 @@ const KATEGORI: Record<string, string> = {
   keuangan: 'Keuangan (syarat pembayaran)',
   kemahasiswaan: 'Kemahasiswaan (KKN, cuti, layanan)',
   kepegawaian: 'Kepegawaian dosen dan tendik (cuti, presensi, BKD/SKP, usulan kenaikan, pemutakhiran data)',
+  penelitian: 'Penelitian & PkM (usulan hibah, laporan, verifikasi luaran)',
   umum: 'Umum',
 };
 const JENIS: Record<string, string> = {
