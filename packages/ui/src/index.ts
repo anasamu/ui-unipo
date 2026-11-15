@@ -14,6 +14,7 @@ export * from './components/layout';
 export * from './components/navbar';
 export * from './components/faq';
 export * from './components/identity';
+export * from './components/akun';
 export * from './components/filter';
 export * from './components/data-table';
 export * from './components/status';
