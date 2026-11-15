@@ -25,3 +25,4 @@ export * from './berkas';
 export * from './media-editor';
 export * from './pilih-berkas';
 export * from './surat';
+export * from './alur';

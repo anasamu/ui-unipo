@@ -1,5 +1,6 @@
 // Data contoh detail akademik (mahasiswa, dosen, jadwal) dan navigasi portal (situs, menu, FAQ). Isi rekaan.
 import { DOSEN, MAHASISWA, MATA_KULIAH, tambahRute } from './siakad';
+import { simpanKrsDemo } from './alur';
 
 // Angka acak tetap per kunci, agar data sama di setiap muat ulang.
 function acak(kunci: string) {
@@ -164,7 +165,8 @@ tambahRute(/\/v1\/mahasiswa\/[^/]+\/transkrip$/, (u) => {
   const mk = h.periode.filter((p) => p.ips).flatMap((p) => p.mata_kuliah as Array<Record<string, unknown>>);
   return { data: { nim, mata_kuliah: mk, jumlah_sks: h.kumSks, jumlah_mutu: h.kumMutu, ipk: { sks: h.kumSks, nilai: h.kumSks ? +(h.kumMutu / h.kumSks).toFixed(2) : null } } };
 });
-tambahRute(/\/v1\/mahasiswa\/[^/]+\/krs$/, (u) => {
+tambahRute(/\/v1\/mahasiswa\/[^/]+\/krs$/, (u, init) => {
+  if (init?.method === 'POST') return simpanKrsDemo(init);
   const nim = decodeURIComponent(u.pathname.split('/')[3]!);
   const h = riwayat(nim);
   const r = acak(nim + 'krs');
