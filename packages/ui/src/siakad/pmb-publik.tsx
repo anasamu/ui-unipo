@@ -323,11 +323,15 @@ export const sisaHari = (s?: string | null) => {
 };
 /** Kode periode SIAKAD "20261" -> "2026/2027". */
 export const labelTahunPmb = (ta?: string | null) => (ta && /^\d{5}$/.test(ta) ? `${ta.slice(0, 4)}/${Number(ta.slice(0, 4)) + 1}` : (ta ?? ''));
-const JENJANG: Record<string, string> = { A: 'S3', B: 'S2', C: 'S1', D: 'S1', E: 'D3', F: 'D2', G: 'D1', H: 'Sp-1', I: 'Profesi', J: 'D4' };
+const JENJANG: Record<string, string> = { A: 'S3', B: 'S2', C: 'S1', D: 'D4', E: 'D3', F: 'D2', G: 'D1', H: 'Sp-1', I: 'Sp-2', J: 'Profesi' };
 /** Kode jenjang SIAKAD (C = S1, E = D3, ...) ke label. */
 export const labelJenjang = (j?: string | null) => (j ? (JENJANG[j] ?? j) : 'S1');
-/** "TEKNIK SIPIL" -> "Teknik Sipil". */
-export const hurufJudul = (s: string) => s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+const KATA_KECIL = new Set(['dan', 'di', 'ke', 'dari', 'atau', 'untuk', 'pada', 'dengan', 'yang']);
+/** "FAKULTAS ILMU SOSIAL DAN ILMU POLITIK" -> "Fakultas Ilmu Sosial dan Ilmu Politik". */
+export const hurufJudul = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[\p{L}\p{N}]+/gu, (w, i: number) => (i > 0 && KATA_KECIL.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)));
 const rupiahAtauGratis = (n?: number | null) => (n == null ? '-' : n === 0 ? 'Gratis' : formatRupiah(n));
 const ya = (v: unknown) => v === true || v === 1 || v === '1';
 

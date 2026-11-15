@@ -1,5 +1,11 @@
 # UNIPO UI
 
+[![npm unipo-ui](https://img.shields.io/npm/v/unipo-ui?label=unipo-ui&logo=npm&color=cb3837)](https://www.npmjs.com/package/unipo-ui)
+[![npm unipo-ui-tokens](https://img.shields.io/npm/v/unipo-ui-tokens?label=unipo-ui-tokens&logo=npm&color=cb3837)](https://www.npmjs.com/package/unipo-ui-tokens)
+[![npm unipo-siakad-sdk](https://img.shields.io/npm/v/unipo-siakad-sdk?label=unipo-siakad-sdk&logo=npm&color=cb3837)](https://www.npmjs.com/package/unipo-siakad-sdk)
+[![unduhan per bulan](https://img.shields.io/npm/dm/unipo-ui?label=unduhan%2Fbulan&logo=npm)](https://www.npmjs.com/package/unipo-ui)
+[![lisensi](https://img.shields.io/npm/l/unipo-ui?label=lisensi)](https://www.npmjs.com/package/unipo-ui)
+
 Sistem desain dan pustaka komponen untuk aplikasi Universitas Pohuwato (SIAKAD, PMB, LMS, portal fakultas, tracer study, humas, dan aplikasi yang memakai API SIAKAD).
 
 > Dokumentasi lengkap dan screenshot komponen sedang disusun di PR ini. Jalankan `npm install && npm run dev` lalu buka http://localhost:5180.
