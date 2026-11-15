@@ -11,20 +11,10 @@ import { ConfirmDialog, Dialog, DialogClose, Sheet, Tooltip, useToast, type Menu
 import { formatBytes, formatDate } from '../lib/format';
 import { GalatApi } from '../siakad/galat';
 import { PilihEntitas } from '../siakad/pilih';
+import { useUnggahBerkas } from '../siakad/berkas';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakad, useSiakadQuery } from '../siakad/provider';
 import { useSiakadTable } from '../siakad/tabel';
-import {
-  isiPath,
-  judulBaris,
-  judulOperasi,
-  keabsahanAksi,
-  labelKolom,
-  labelNilai,
-  nilaiKunci,
-  paramPath,
-  pilihKolom,
-  punyaScope,
-} from './aturan';
+import { berkasPusat, isiPath, judulBaris, judulOperasi, keabsahanAksi, labelKolom, labelNilai, nilaiKunci, paramPath, pilihKolom, punyaScope } from './aturan';
 import { FormulirSkema, sumberDariAcuan, useFormulirSkema } from './isian';
 import { useKatalog, useSumber, type SumberState } from './katalog';
 import { AlurStatus, DetailBaris, NilaiSel } from './tampil';
@@ -97,7 +87,22 @@ export function TabelSumber({ sumber: id, induk, query, kolom, sel, onRowClick, 
   if (st.loading) return <Skeleton height={240} />;
   if (st.error) return <GalatApi error={st.error} title="Katalog tidak dapat dimuat" />;
   if (!list) return <Empty title="Sumber ini tidak punya daftar" description="Gunakan operasi detail atau aksi yang tersedia." bordered />;
-  return <TabelSumberDalam st={st} list={list} induk={induk} query={query} kolom={kolom} sel={sel} onRowClick={onRowClick} rowActions={rowActions} actions={actions} perPage={perPage} syncUrl={syncUrl} className={className} />;
+  return (
+    <TabelSumberDalam
+      st={st}
+      list={list}
+      induk={induk}
+      query={query}
+      kolom={kolom}
+      sel={sel}
+      onRowClick={onRowClick}
+      rowActions={rowActions}
+      actions={actions}
+      perPage={perPage}
+      syncUrl={syncUrl}
+      className={className}
+    />
+  );
 }
 
 function TabelSumberDalam({ st, list, induk, query, kolom, sel, onRowClick, rowActions, actions, perPage, syncUrl, className }: Omit<TabelSumberProps, 'sumber'> & { st: SumberState; list: Operasi }) {
@@ -109,7 +114,8 @@ function TabelSumberDalam({ st, list, induk, query, kolom, sel, onRowClick, rowA
   const path = isiPath(list.path, induk ?? {});
   const t = useSiakadTable<Baris>({
     key: `katalog:${path}:${JSON.stringify(query ?? {})}:${sort ? (sort.dir === 'desc' ? '-' : '') + sort.key : ''}`,
-    fetch: (s, q, signal) => s.request<Baris[]>({ method: 'GET', path, query: { ...query, ...q, ...(sort ? { urut: (sort.dir === 'desc' ? '-' : '') + sort.key } : {}) } as never, public: Boolean(list.pub) }, { signal }),
+    fetch: (s, q, signal) =>
+      s.request<Baris[]>({ method: 'GET', path, query: { ...query, ...q, ...(sort ? { urut: (sort.dir === 'desc' ? '-' : '') + sort.key } : {}) } as never, public: Boolean(list.pub) }, { signal }),
     fields,
     perPage,
     syncUrl,
@@ -141,7 +147,11 @@ function TabelSumberDalam({ st, list, induk, query, kolom, sel, onRowClick, rowA
       sort={bisaUrut ? sort : undefined}
       onSortChange={bisaUrut ? setSort : undefined}
       exportCsv={st.sumber?.title}
-      toolbar={fields.length || bisaCari ? <FilterBar fields={fields} {...t.filterProps} search={bisaCari ? { placeholder: `Cari ${st.sumber?.title.toLowerCase() ?? ''}` } : false} resultLabel={st.sumber?.title.toLowerCase()} /> : undefined}
+      toolbar={
+        fields.length || bisaCari ? (
+          <FilterBar fields={fields} {...t.filterProps} search={bisaCari ? { placeholder: `Cari ${st.sumber?.title.toLowerCase() ?? ''}` } : false} resultLabel={st.sumber?.title.toLowerCase()} />
+        ) : undefined
+      }
       actions={actions}
       empty={{ icon: <FileText />, title: `Belum ada ${st.sumber?.title.toLowerCase() ?? 'data'}` }}
     />
@@ -199,7 +209,15 @@ export function TombolAksi({ op, baris, nilaiPath, skemaBaris, onSelesai, varian
       <ConfirmDialog
         trigger={tombol}
         title={`${judul}?`}
-        description={[baris ? judulBaris(baris) : null, op.tr?.ke ? `Status akan menjadi ${labelNilai(op.tr.ke)}.` : null, op.ds?.replace(/(Pengelola modul|Pemilik data( atau pengelola)?|Admin modul)\.\s*/, '').replace(/Status harus[^.]*\.\s*/, '')].filter(Boolean).join(' ') || undefined}
+        description={
+          [
+            baris ? judulBaris(baris) : null,
+            op.tr?.ke ? `Status akan menjadi ${labelNilai(op.tr.ke)}.` : null,
+            op.ds?.replace(/(Pengelola modul|Pemilik data( atau pengelola)?|Admin modul)\.\s*/, '').replace(/Status harus[^.]*\.\s*/, ''),
+          ]
+            .filter(Boolean)
+            .join(' ') || undefined
+        }
         confirmLabel={judul}
         tone={BAHAYA.test(judul) ? 'danger' : 'primary'}
         onConfirm={async () => {
@@ -262,7 +280,19 @@ export function TombolAksi({ op, baris, nilaiPath, skemaBaris, onSelesai, varian
 }
 
 /** Semua aksi alur kerja yang sah untuk satu baris, berderet. */
-export function AksiSumber({ sumber: id, baris, induk, onSelesai, tampilkanTakSah }: { sumber: string; baris: Baris; induk?: Record<string, unknown>; onSelesai?: (hasil: unknown) => void; tampilkanTakSah?: boolean }) {
+export function AksiSumber({
+  sumber: id,
+  baris,
+  induk,
+  onSelesai,
+  tampilkanTakSah,
+}: {
+  sumber: string;
+  baris: Baris;
+  induk?: Record<string, unknown>;
+  onSelesai?: (hasil: unknown) => void;
+  tampilkanTakSah?: boolean;
+}) {
   const st = useSumber(id);
   if (!st.sumber) return null;
   const ops = st.sumber.actions.map((a) => st.op(a)).filter((o): o is Operasi => Boolean(o) && o!.m !== 'GET');
@@ -363,15 +393,33 @@ export function FormulirSumber({ sumber: id, baris, induk, nilai, open, onOpenCh
 
 // ================================================================ Lampiran (sumber /berkas)
 /** Lampiran baris (PusatData berkas): daftar, unggah (seret berkas), unduh, dan hapus. */
-export function LampiranSumber({ path, bisaUbah = true }: { path: string; bisaUbah?: boolean }) {
+export function LampiranSumber({
+  path,
+  sumber,
+  bisaUbah = true,
+}: {
+  path: string;
+  /** ID sumber lampiran di katalog; dipakai untuk tahu apakah endpoint menerima `berkas_id`. */ sumber?: string;
+  bisaUbah?: boolean;
+}) {
   const siakad = useSiakad();
   const toast = useToast();
+  const st = useSumber(sumber ?? '');
+  // Endpoint yang menerima berkas_id: unggah dulu ke /v1/berkas (bertahap untuk file besar, aman untuk batas
+  // upload hosting yang kecil), lalu kirim UUID-nya. Selain itu kirim file langsung (multipart).
+  const pusat = Object.entries(st.op(st.sumber?.create)?.b?.s?.pr ?? {}).some(([k, x]) => berkasPusat(k, x));
+  const keBerkas = useUnggahBerkas({ kategori: 'lampiran' });
   const q = useSiakadQuery<Baris[]>(['katalog:berkas', path], (s, signal) => s.request({ method: 'GET', path }, { signal }));
   const [sibuk, setSibuk] = React.useState(false);
   const unggah = async (files: File[]) => {
     setSibuk(true);
     try {
       for (const f of files) {
+        if (pusat) {
+          const b = await keBerkas(f);
+          await siakad.request({ method: 'POST', path, body: { berkas_id: b.id } });
+          continue;
+        }
         const fd = new FormData();
         fd.append('berkas', f);
         await siakad.request({ method: 'POST', path, body: fd, multipart: true });
@@ -430,7 +478,16 @@ export function LampiranSumber({ path, bisaUbah = true }: { path: string; bisaUb
         </ul>
       )}
       {Array.isArray(q.data) && q.data.length === 0 && !bisaUbah && <p className="u-field-description">Belum ada lampiran.</p>}
-      {bisaUbah && <Dropzone onFiles={unggah} multiple disabled={sibuk} title={sibuk ? 'Mengunggah…' : 'Seret berkas ke sini atau pilih'} hint="PDF, gambar, dokumen Office/ODF, CSV, TXT, ZIP" maxSize={20 * 1024 * 1024} />}
+      {bisaUbah && (
+        <Dropzone
+          onFiles={unggah}
+          multiple
+          disabled={sibuk}
+          title={sibuk ? 'Mengunggah…' : 'Seret berkas ke sini atau pilih'}
+          hint="PDF, gambar, dokumen Office/ODF, CSV, TXT, ZIP"
+          maxSize={20 * 1024 * 1024}
+        />
+      )}
     </div>
   );
 }
@@ -451,7 +508,11 @@ export function DetailSumber({ sumber: id, baris, induk, onBerubah }: DetailSumb
   const get = st.op(st.sumber?.get);
   const nilaiPath = nilaiPathBaris(st.sumber, baris, induk);
   const kunci = st.sumber?.key ? nilaiKunci(baris, st.sumber.key) : undefined;
-  const q = useSiakadQuery<Baris>(['katalog:detail', get?.path, nilaiPath], (s, signal) => s.request({ method: 'GET', path: get!.path, query: nilaiPath as never, public: Boolean(get?.pub) }, { signal }), { enabled: Boolean(get && kunci) });
+  const q = useSiakadQuery<Baris>(
+    ['katalog:detail', get?.path, nilaiPath],
+    (s, signal) => s.request({ method: 'GET', path: get!.path, query: nilaiPath as never, public: Boolean(get?.pub) }, { signal }),
+    { enabled: Boolean(get && kunci) },
+  );
   const b = (q.data && typeof q.data === 'object' && !Array.isArray(q.data) ? q.data : null) ?? baris;
   const aksi = (st.sumber?.actions ?? []).map((a) => st.op(a)).filter((o): o is Operasi => Boolean(o));
   const kolomStatus = st.skemaBaris?.pr?.status?.e ? 'status' : undefined;
@@ -463,14 +524,23 @@ export function DetailSumber({ sumber: id, baris, induk, onBerubah }: DetailSumb
       label: 'Data',
       content: (
         <div className="u-detail-sumber">
-          {kolomStatus && aksi.some((o) => o.tr) && <AlurStatus status={st.skemaBaris!.pr!.status.e!.map(String)} sekarang={b.status == null ? null : String(b.status)} aksi={aksi} baris={b} skemaBaris={st.skemaBaris} />}
+          {kolomStatus && aksi.some((o) => o.tr) && (
+            <AlurStatus status={st.skemaBaris!.pr!.status.e!.map(String)} sekarang={b.status == null ? null : String(b.status)} aksi={aksi} baris={b} skemaBaris={st.skemaBaris} />
+          )}
           {q.error ? <GalatApi error={q.error} onRetry={q.refetch} variant="warning" title="Data terbaru tidak dapat dimuat" /> : null}
           <DetailBaris baris={b} skema={st.skemaBaris} />
         </div>
       ),
     },
     ...(berkas && st.sumber?.key
-      ? [{ value: 'berkas', label: 'Lampiran', icon: <Paperclip />, content: <LampiranSumber path={isiPath(berkas, { ...induk, [paramPath(berkas)[0] ?? 'id']: kunci })} bisaUbah={Boolean(st.sumber.update)} /> }]
+      ? [
+          {
+            value: 'berkas',
+            label: 'Lampiran',
+            icon: <Paperclip />,
+            content: <LampiranSumber path={isiPath(berkas, { ...induk, [paramPath(berkas)[0] ?? 'id']: kunci })} sumber={berkas} bisaUbah={Boolean(st.sumber.update)} />,
+          },
+        ]
       : []),
     ...anak.map((c) => ({
       value: c,

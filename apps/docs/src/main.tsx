@@ -12,6 +12,7 @@ import './mock/lms';
 import './mock/akademik';
 import './mock/pilih';
 import './mock/katalog';
+import './mock/berkas';
 import { ssoDemo } from './mock/aplikasi';
 import { App } from './App';
 

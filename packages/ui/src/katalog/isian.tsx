@@ -7,6 +7,7 @@ import { Field, Input, Switch, Textarea } from '../components/forms';
 import { Select } from '../components/select';
 import { cn } from '../lib/cn';
 import { PilihEntitas, SUMBER_ENTITAS, type SumberEntitas } from '../siakad/pilih';
+import { PilihBerkas } from '../siakad/pilih-berkas';
 import {
   galatDariServer,
   isianSkema,
@@ -19,6 +20,7 @@ import {
   rapikanGalat,
   validasiBody,
   validasiNilai,
+  unggahWajib,
   type GalatForm,
   type NilaiForm,
 } from './aturan';
@@ -137,12 +139,29 @@ export function IsianSkema({ nama, skema: s, value: v, onValueChange: set, onBlu
     case 'json':
       return <IsianJson id={id} value={v} onValueChange={set} onBlur={onBlur} disabled={disabled} />;
     case 'daftar':
-      return <IsianDaftar id={id} value={Array.isArray(v) ? v.map(String) : []} onValueChange={set} disabled={disabled} angka={s.i?.t === 'integer' || s.i?.t === 'number'} enumNilai={s.i?.e?.map(String)} />;
+      return (
+        <IsianDaftar
+          id={id}
+          value={Array.isArray(v) ? v.map(String) : []}
+          onValueChange={set}
+          disabled={disabled}
+          angka={s.i?.t === 'integer' || s.i?.t === 'number'}
+          enumNilai={s.i?.e?.map(String)}
+        />
+      );
+    case 'berkas':
+      return <PilihBerkas id={id} value={typeof v === 'string' && v ? v : null} onValueChange={(x) => set(x ?? '')} disabled={disabled} invalid={invalid} />;
     case 'file':
       return (
         <label htmlFor={id} className={cn('u-isian-berkas', disabled && 'is-disabled')}>
           <Upload aria-hidden />
-          <span>{typeof FileList !== 'undefined' && v instanceof FileList && v.length ? Array.from(v).map((f) => f.name).join(', ') : 'Pilih berkas…'}</span>
+          <span>
+            {typeof FileList !== 'undefined' && v instanceof FileList && v.length
+              ? Array.from(v)
+                  .map((f) => f.name)
+                  .join(', ')
+              : 'Pilih berkas…'}
+          </span>
           <input id={id} type="file" className="u-sr-only" multiple={s.t === 'array'} onChange={(e) => set(e.target.files)} disabled={disabled} />
         </label>
       );
@@ -170,7 +189,21 @@ export function IsianSkema({ nama, skema: s, value: v, onValueChange: set, onBlu
 }
 
 /** Daftar nilai pendek (tag): Enter atau koma menambah. */
-export function IsianDaftar({ value, onValueChange, id, disabled, angka, enumNilai }: { value: string[]; onValueChange: (v: string[]) => void; id?: string; disabled?: boolean; angka?: boolean; enumNilai?: string[] }) {
+export function IsianDaftar({
+  value,
+  onValueChange,
+  id,
+  disabled,
+  angka,
+  enumNilai,
+}: {
+  value: string[];
+  onValueChange: (v: string[]) => void;
+  id?: string;
+  disabled?: boolean;
+  angka?: boolean;
+  enumNilai?: string[];
+}) {
   const [draf, setDraf] = React.useState('');
   const tambah = (t: string) => {
     const x = t.trim().replace(/,$/, '');
@@ -332,6 +365,7 @@ export interface FormulirSkemaProps {
  */
 export function FormulirSkema({ skema, form, kolom, sembunyi, columns = 2, render, query, disabled, className }: FormulirSkemaProps) {
   const wajib = new Set(skema?.rq ?? []);
+  if (!form.ubah && unggahWajib(skema)) wajib.add('berkas_id');
   let props = isianSkema(skema);
   if (kolom) props = kolom.map((k) => [k, skema?.pr?.[k]] as [string, Skema]).filter(([, s]) => s && !penandaKolom(s).baca);
   if (sembunyi) props = props.filter(([k]) => !sembunyi.includes(k));
@@ -340,7 +374,7 @@ export function FormulirSkema({ skema, form, kolom, sembunyi, columns = 2, rende
     <div className={cn('u-formulir-skema', className)} data-columns={columns}>
       {props.map(([k, s]) => {
         const j = jenisIsian(k, s);
-        const lebar = columns === 1 || ['teks-panjang', 'json', 'file', 'daftar'].includes(j);
+        const lebar = columns === 1 || ['teks-panjang', 'json', 'file', 'berkas', 'daftar'].includes(j);
         const p: IsianSkemaProps = {
           nama: k,
           skema: s,
@@ -353,7 +387,9 @@ export function FormulirSkema({ skema, form, kolom, sembunyi, columns = 2, rende
           query: query?.[k],
         };
         const tanda = penandaKolom(s);
-        const ket = [keteranganIsian(s), tanda.kelola ? 'Hanya pengelola' : null, s.max && j !== 'kode' && (j === 'teks' || j === 'teks-panjang') ? `Maksimal ${s.max} karakter` : null].filter(Boolean).join('. ');
+        const ket = [keteranganIsian(s), tanda.kelola ? 'Hanya pengelola' : null, s.max && j !== 'kode' && (j === 'teks' || j === 'teks-panjang') ? `Maksimal ${s.max} karakter` : null]
+          .filter(Boolean)
+          .join('. ');
         return (
           <Field
             key={k}
