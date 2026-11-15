@@ -172,6 +172,22 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+// Lencana yang sudah berupa <Badge> tidak dibungkus pil kedua.
+.u-nav-badge:has(> .u-badge) {
+  .u-sidebar[data-collapsed] & {
+    background: var(--u-danger);
+    > .u-badge {
+      display: none;
+    }
+  }
+  :where(.u-sidebar:not([data-collapsed])) & {
+    min-width: 0;
+    height: auto;
+    padding: 0;
+    background: none;
+    color: inherit;
+  }
+}
 .u-nav-chevron {
   width: 0.875rem;
   height: 0.875rem;

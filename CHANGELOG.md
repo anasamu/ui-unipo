@@ -1,5 +1,12 @@
 # Catatan perubahan
 
+## 1.13.3 (2026-11-15)
+
+- Lencana menu `Sidebar` yang diisi `<Badge>` tidak lagi dibungkus pil kedua (tampil terpotong); di mode rail tetap jadi titik.
+- Pilihan prodi PMB: kode jenjang SIAKAD jadi label (`C` -> `S1`), nama prodi huruf judul, nama fakultas tampil bila API mengirim `nama_fakultas` (kode fakultas mentah tidak ditampilkan lagi), kartu dalam satu baris sama tinggi.
+- `labelJenjang` mengikuti kode jenjang SIAKAD/PDDikti (`D` = D4, `I` = Sp-2, `J` = Profesi); `hurufJudul` membiarkan kata sambung kecil ("Ilmu Sosial dan Ilmu Politik").
+- Formulir PMB: judul daftar langkah jadi "Langkah pengisian" (tidak mengulang judul halaman) dan keterangan langkah prodi tidak lagi mengulang nama gelombang.
+
 ## 1.13.2 (2026-11-15)
 
 - Logo aplikasi dengan `tone="inverse"` (pelat putih untuk latar gelap/berwarna) kini menampilkan glyph-nya dengan warna aplikasi. Sebelumnya glyph bawaan (`UnipoAppLogo`, `LogoAplikasi`) dan inisial nama tetap putih sehingga logo tampak sebagai kotak putih kosong.
