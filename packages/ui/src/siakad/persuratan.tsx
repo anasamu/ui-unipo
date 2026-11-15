@@ -786,7 +786,7 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, tin
 // ---------------------------------------------------------------- catat arsip surat lama
 
 export interface CatatArsipSuratProps {
-  /** Unit pemilik arsip. Tanpa ini memakai unit pertama tempat pengguna admin/pimpinan/sekretaris. */
+  /** Unit pemilik arsip. Tanpa ini memakai unit pertama tempat pengguna admin/pimpinan/sekretaris/arsiparis. */
   unitId?: number;
   arahAwal?: 'masuk' | 'keluar';
   onSelesai?: (surat: SuratArsip) => void;
@@ -794,7 +794,7 @@ export interface CatatArsipSuratProps {
   className?: string;
 }
 
-const PERAN_CATAT = ['admin', 'pimpinan', 'sekretaris'];
+const PERAN_CATAT = ['admin', 'pimpinan', 'sekretaris', 'arsiparis'];
 
 /**
  * Catat surat dari sistem lama atau arsip kertas: unggah pindaian/PDF lalu isi nomor surat, tanggal, perihal,
@@ -847,7 +847,7 @@ export function CatatArsipSurat({ unitId, arahAwal = 'masuk', onSelesai, onBatal
   const g = (k: string) => (sentuh ? (wajib[k] ?? undefined) : undefined);
 
   if (!unit.loading && !unitBoleh.length && !unitId) {
-    return <Empty bordered icon={<Archive />} title="Tidak bisa mencatat arsip surat" description="Pencatatan surat hanya untuk admin, pimpinan, atau sekretaris unit arsip." />;
+    return <Empty bordered icon={<Archive />} title="Tidak bisa mencatat arsip surat" description="Pencatatan surat hanya untuk admin, pimpinan, sekretaris, atau arsiparis unit arsip." />;
   }
 
   const simpan = async () => {
