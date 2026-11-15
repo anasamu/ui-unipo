@@ -4,6 +4,7 @@ import {
   DaftarNotifikasiLms,
   GabungKelasKodeLms,
   HalamanKelasLms,
+  KalenderLms,
   HalamanKuisLms,
   HalamanMateriLms,
   HalamanTugasLms,
@@ -37,6 +38,7 @@ export const meta: DemoMeta = {
     Ruang: 'RuangKuisLms: mengerjakan kuis',
     Forum: 'DiskusiLms: utas bertingkat',
     Terbuka: 'KatalogKelasTerbuka dan GabungKelasKodeLms',
+    Kalender: 'KalenderLms: agenda LMS + kalender akademik',
   },
   props: [
     [
@@ -149,6 +151,13 @@ export function Terbuka() {
         </div>
         <GabungKelasKodeLms open={buka} onOpenChange={setBuka} />
       </div>
+    </Rute>
+  );
+}
+export function Kalender() {
+  return (
+    <Rute>
+      <KalenderLms onBuka={() => undefined} />
     </Rute>
   );
 }

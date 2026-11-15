@@ -11,7 +11,9 @@
   - `PresensiKelasLms` (isi kode presensi, rekap H/I/S/A), `NilaiKelasSayaLms` (buku nilai + perkiraan nilai akhir), `RekapNilaiKelasLms`.
   - Beranda: `KelasDaringMendatang`, `TenggatLms`, `JadwalHariIniLms`, `TugasKuisSayaLms` (lintas kelas), `DaftarNotifikasiLms` (tandai dibaca).
   - Publik: `KatalogKelasTerbuka`/`KartuKelasTerbuka` dari `/v1/lms/terbuka` (tanpa token, untuk landing page) dan `GabungKelasKodeLms`.
+  - `KalenderLms`: tenggat tugas, kuis, pertemuan, dan kelas daring digabung dengan kalender akademik SIAKAD.
   - `LmsRuteProvider`/`RUTE_LMS` mengatur alamat halaman yang dipakai tautan; hook data `useKontenKelas`, `useTugasLms`, `useKuisLms`, `useSemuaKelasLms`, dan lainnya ikut diekspor.
+- `KalenderAkademik` menerima kegiatan dari luar (`tambahan`, `labelJenis`, `warnaJenis`, `onRentangChange`). Klik kegiatan tetap memilih tanggalnya walau `onKegiatanClick` diisi.
 - Halaman docs **LMS mahasiswa** dengan data contoh.
 
 ## 1.8.0 (2026-11-15)

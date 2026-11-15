@@ -58,6 +58,8 @@ import { KodeLaporan } from '../components/galat';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakadQuery, type QueryState } from './provider';
 import { NavigasiSoal, SoalCbt, TimerUjian, type JawabanCbt, type SoalCbtData } from './cbt';
 import { SampulKelas, sisaTenggat, type KelasLms } from './lms';
+import { KalenderAkademik } from './kalender';
+import type { CalendarEvent } from '../components/schedule';
 
 /*
  * Komponen belajar LMS (/v1/lms) untuk mahasiswa e-learning: isi kelas per pertemuan, materi (bacaan, berkas, video,
@@ -606,7 +608,7 @@ export function useAgendaLmsRentang(dari: string, sampai: string, kelasId?: numb
   return useSiakadQuery<AgendaLmsRinci[]>(
     ['lms-kalender', dari, sampai, kelasId ?? null],
     (s, signal) => s.lms.getKalender({ dari, sampai, ...(kelasId ? { kelas_id: kelasId } : {}) } as never, { signal }) as never,
-    { staleTime: 60_000 },
+    { staleTime: 60_000, enabled: Boolean(dari && sampai) },
   );
 }
 /** Katalog kelas terbuka (tanpa token): bisa dipakai di landing page. */
@@ -3232,5 +3234,58 @@ export function TombolUnggahLms({ onFiles, label = 'Pilih berkas', accept }: { o
       </Button>
       <input ref={ref} type="file" hidden multiple accept={accept} onChange={(e) => e.target.files && onFiles([...e.target.files])} />
     </>
+  );
+}
+
+// ================================================================ Kalender gabungan
+const JENIS_AGENDA_LMS: Record<string, string> = { tugas: 'Tenggat tugas', kuis: 'Kuis', presensi: 'Pertemuan', konferensi: 'Kelas daring' };
+const WARNA_AGENDA_LMS: Record<string, string> = { tugas: 'var(--u-warning)', kuis: 'var(--u-danger)', presensi: 'var(--u-success)', konferensi: 'var(--u-primary)' };
+
+const WARNA_JENIS_LMS = Object.fromEntries(Object.entries(WARNA_AGENDA_LMS).map(([k, v]) => [`lms_${k}`, v]));
+
+/** Ubah agenda LMS (/v1/lms/kalender) menjadi kegiatan kalender. */
+export function agendaKeEvent(a: AgendaLmsRinci, rute: RuteLms = RUTE_LMS): CalendarEvent {
+  const jam = (s?: string | null) => (s && s.length > 10 ? s.slice(11, 16).replace(':', '.') : null);
+  const mulai = jam(a.waktu);
+  const selesai = a.jenis !== 'kuis' ? jam(a.selesai) : null;
+  return {
+    id: `lms-${a.jenis}-${a.id}`,
+    title: `${JENIS_AGENDA_LMS[a.jenis] ? `${JENIS_AGENDA_LMS[a.jenis]}: ` : ''}${a.judul}`,
+    start: a.waktu.slice(0, 10),
+    end: a.jenis === 'kuis' && a.selesai ? a.selesai.slice(0, 10) : null,
+    kind: `lms_${a.jenis}`,
+    color: WARNA_AGENDA_LMS[a.jenis],
+    time: mulai ? `${mulai}${selesai ? `–${selesai}` : ''}` : undefined,
+    description: a.kelas,
+    href: ruteDariTautanLms(a.tautan, a.kelas_id, rute) ?? rute.kelas(a.kelas_id),
+  };
+}
+
+/**
+ * Kalender belajar: tenggat tugas, kuis, pertemuan, dan kelas daring dari LMS digabung dengan kalender akademik SIAKAD.
+ * Klik kegiatan LMS membuka halamannya (lewat `onBuka`, bawaan pindah alamat).
+ */
+export function KalenderLms({ onBuka, className }: { onBuka?: (href: string) => void; className?: string }) {
+  const rute = useRuteLms();
+  const [rentang, setRentang] = React.useState<[string, string] | null>(null);
+  const q = useAgendaLmsRentang(rentang?.[0] ?? '', rentang?.[1] ?? '');
+  const tambahan = React.useMemo(() => (rentang ? (q.data ?? []).map((a) => agendaKeEvent(a, rute)) : []), [q.data, rentang, rute]);
+  const ganti = React.useCallback((dari: string, sampai: string) => setRentang((r) => (r?.[0] === dari && r[1] === sampai ? r : [dari, sampai])), []);
+  const label = React.useMemo(() => Object.fromEntries(Object.entries(JENIS_AGENDA_LMS).map(([k, v]) => [`lms_${k}`, v])), []);
+  return (
+    <div className={cn('u-lmsb-tumpuk', className)}>
+      {q.error ? <Galat q={q} /> : null}
+      <KalenderAkademik
+        tambahan={tambahan}
+        labelJenis={label}
+        warnaJenis={WARNA_JENIS_LMS}
+        onRentangChange={ganti}
+        onKegiatanClick={(e) => {
+          if (!e.href || !String(e.id ?? '').startsWith('lms-')) return;
+          if (onBuka) onBuka(e.href);
+          else window.location.assign(e.href);
+        }}
+      />
+    </div>
   );
 }
