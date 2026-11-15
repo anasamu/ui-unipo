@@ -29,6 +29,31 @@ export function UnipoProvider({ siakad = null, children, withProviders = true }:
   );
 }
 
+// ---------------------------------------------------------------- Sesi habis (401)
+let sesiHabis: unknown = null;
+const pendengarSesi = new Set<() => void>();
+
+/** Tandai sesi berakhir (galat 401 dari API). Dipanggil otomatis oleh useSiakadQuery; panggil sendiri untuk aksi tulis. */
+export function laporSesiHabis(galat: unknown = true) {
+  sesiHabis = galat;
+  pendengarSesi.forEach((l) => l());
+}
+/** Bersihkan tanda sesi habis (mis. setelah token diperbarui). */
+export function pulihkanSesi() {
+  laporSesiHabis(null);
+}
+/** Galat 401 terakhir, atau null bila sesi masih berlaku. */
+export function useSesiHabis(): unknown {
+  return React.useSyncExternalStore(
+    (l) => {
+      pendengarSesi.add(l);
+      return () => void pendengarSesi.delete(l);
+    },
+    () => sesiHabis,
+    () => null,
+  );
+}
+
 /** Instans SDK dari <UnipoProvider>. */
 export function useSiakad(): Siakad {
   const s = React.useContext(SiakadContext);
@@ -142,6 +167,7 @@ export function useSiakadQuery<T>(key: ReadonlyArray<unknown>, fn: (siakad: Siak
       if (!ctrl.signal.aborted) setState({ result, loading: false, error: null });
     }).catch((e: Error) => {
       if ((e as { status?: number })?.status === 503) laporPemeliharaan({ message: e.message, until: null });
+      if ((e as { status?: number })?.status === 401) laporSesiHabis(e);
       if (!ctrl.signal.aborted && e?.name !== 'AbortError') setState((s) => ({ ...s, loading: false, error: e }));
     });
     return () => ctrl.abort();

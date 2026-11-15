@@ -1,5 +1,19 @@
 # Catatan perubahan
 
+## 1.14.0 (2026-11-15)
+
+- **Ilustrasi per fitur dengan tokoh** (`unipo-ui`): `Ilustrasi` kini punya tokoh yang bisa diatur: gaya rambut/penutup kepala (`gaya`: cepol, pendek, hijab, peci), ekspresi (`ekspresi`: datar, senang, sedih, kaget, bingung), aksesori (`aksesori`: toga, jubah wisuda + selempang, jas, ransel, kacamata, headset, dan satu barang di tangan: laptop, kaca pembesar, dokumen, ijazah, ponsel, buku, kunci, piala, kartu), serta tokoh kedua (`teman`) untuk adegan berdua. Warna baru lewat variabel CSS (`--u-ilus-jubah`, `-emas`, `-hijab`, `-peci`, `-ransel`, `-benda`, `-kulit-sawo`, `-baju-kedua`).
+  - 26 adegan fitur (`ILUSTRASI_FITUR`): kelulusan-saya, wisuda, yudisium, e-learning, keamanan, salah-password, ganti-password, verifikasi, pendaftaran, maba, pencarian-mahasiswa, mahasiswa, dosen, tendik, wali-mahasiswa, bimbingan, krs, jadwal, presensi, nilai, skripsi, pembayaran, surat-layanan, cuti-akademik, pengumuman, obrolan.
+  - Keadaan baru (`ILUSTRASI_KEADAAN`): sesi-habis, tidak-ditemukan, akses-ditolak, offline. Keadaan lama mendapat ekspresi dan barang yang cocok (galat sedih, cari dengan kaca pembesar, terkunci dengan kunci).
+  - Ilustrasi kepala halaman modul katalog tetap tanpa tokoh (`tokoh={false}`).
+- **Modal per fitur** (`unipo-ui`): `ModalFitur` (ilustrasi di atas judul, aksi async, kotak galat dengan kode laporan/request_id, `wajib` untuk modal yang tidak bisa ditutup) dan preset `ModalSesiHabis`, `ModalSalahPassword` (sisa percobaan, akun terkunci sampai jam tertentu, lupa password), `ModalAksesDitolak` (scope yang dibutuhkan), `ModalBerhasil`, serta `RincianModal`.
+- **Modal terhubung SDK** (`unipo-ui/siakad`):
+  - `ModalAjukanLayanan`: katalog `GET /v1/layanan/jenis` (syarat, biaya, lama proses), isian tambahan sesuai jenis (teks, panjang, angka, tanggal, pilihan), `POST /v1/layanan/permohonan` dengan pemohon dari akun yang masuk; galat per field dari server tampil di field-nya; layar nomor permohonan + perkiraan selesai.
+  - `ModalCekKelulusan`: `GET /v1/kelulusan/mahasiswa/{nim}/syarat` (IPK, predikat, SKS terhadap batas prodi, syarat wisuda, syarat tambahan prodi, status akhir bila sudah lulus) dengan ilustrasi yang berganti sesuai hasil.
+  - `ModalDaftarWisuda` dan `ModalAmbilKrs` membungkus `PendaftaranWisuda` dan `AmbilKrs`; NIM diambil dari akun yang masuk.
+  - `PenjagaSesiSiakad` + `laporSesiHabis()`/`pulihkanSesi()`/`useSesiHabis()`: balasan 401 dari `useSiakadQuery` memunculkan `ModalSesiHabis` di seluruh aplikasi.
+- Halaman docs **Modal per fitur** dan halaman **Ilustrasi** (adegan fitur, atur tokoh sendiri) dengan data tiruan.
+
 ## 1.13.2 (2026-11-15)
 
 - Logo aplikasi dengan `tone="inverse"` (pelat putih untuk latar gelap/berwarna) kini menampilkan glyph-nya dengan warna aplikasi. Sebelumnya glyph bawaan (`UnipoAppLogo`, `LogoAplikasi`) dan inisial nama tetap putih sehingga logo tampak sebagai kotak putih kosong.
@@ -134,7 +148,7 @@
   - Catatan bimbingan per bagian: pembimbing menambah catatan, mahasiswa menandai sudah diperbaiki.
   - Pratinjau naskah utuh siap cetak (setiap bab di halaman baru).
   - Komponennya dikendalikan, karena SIAKAD belum punya API untuk menyimpan naskah.
-- `EditorBlok` punya prop `tipe` untuk membatasi blok yang bisa disisipkan. Hook `useSisipDiKaret` menyisipkan teks di posisi kursor terakhir, walau fokus sempat pindah ke tempat lain. 
+- `EditorBlok` punya prop `tipe` untuk membatasi blok yang bisa disisipkan. Hook `useSisipDiKaret` menyisipkan teks di posisi kursor terakhir, walau fokus sempat pindah ke tempat lain.
 
 ## 1.4.0 (2026-11-15)
 

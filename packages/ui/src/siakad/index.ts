@@ -34,3 +34,4 @@ export * from './profil-kampus';
 export * from './obrolan';
 export * from './pmb-maba';
 export * from './lms-belajar';
+export * from './modal-fitur';

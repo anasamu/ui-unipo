@@ -150,7 +150,7 @@ export function HalamanModul({ modul: key, sumber: sumberProp, onSumberChange, o
           <h1>{info.title}</h1>
           <p>{info.desc}</p>
         </div>
-        <Ilustrasi nama={ADEGAN[info.key] ? info.key : info.group} lebar={150} className="u-halaman-modul-ilus" />
+        <Ilustrasi nama={ADEGAN[info.key] ? info.key : info.group} lebar={150} tokoh={false} className="u-halaman-modul-ilus" />
       </header>
       <div className="u-halaman-modul-isi">
         <nav className="u-halaman-modul-nav" aria-label={`Data ${info.title}`}>
