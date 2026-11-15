@@ -1,5 +1,19 @@
 # Catatan perubahan
 
+## 1.9.0 (2026-11-15)
+
+- **LMS mahasiswa** (`unipo-ui/siakad`, berkas `lms-belajar`): semua halaman belajar e-learning di atas `/v1/lms`, sehingga aplikasi LMS cukup menyusun komponen.
+  - Kelas: `HalamanKelasLms` (kepala kelas + tab Materi, Tugas, Kuis, Forum, Presensi, Nilai, Peserta, Info), `KepalaKelasLms` dengan progres, `KontenKelasLms`/`DaftarTopikLms` per pertemuan dengan status selesai, `InfoKelasLms`, `PesertaKelasLms`.
+  - Materi: `HalamanMateriLms` (teks, PDF, video YouTube/Vimeo, tautan, navigasi sebelum/berikutnya, tandai selesai) dan `KartuKelasDaring` untuk Zoom/Google Meet (aktif 15 menit sebelum mulai, salin ID dan kata sandi).
+  - Tugas: `HalamanTugasLms`, `KumpulkanTugasLms` (teks, unggah berkas ke `/v1/lms/file`, simpan draf, kumpulkan dengan konfirmasi), rubrik, nilai, umpan balik.
+  - Kuis: `HalamanKuisLms` (ketentuan, percobaan, kata sandi), `RuangKuisLms` (layar penuh, simpan otomatis dengan coba ulang, ragu-ragu, peta soal, timer, kirim otomatis saat waktu habis; memakai `SoalCbt`), `HasilKuisLms` + `PembahasanSoalLms`.
+  - Forum bertingkat: `DaftarForumKelasLms`, `UtasForumLms`, `UtasBaruLms`, `DiskusiLms`, `KirimanForumLms`.
+  - `PresensiKelasLms` (isi kode presensi, rekap H/I/S/A), `NilaiKelasSayaLms` (buku nilai + perkiraan nilai akhir), `RekapNilaiKelasLms`.
+  - Beranda: `KelasDaringMendatang`, `TenggatLms`, `JadwalHariIniLms`, `TugasKuisSayaLms` (lintas kelas), `DaftarNotifikasiLms` (tandai dibaca).
+  - Publik: `KatalogKelasTerbuka`/`KartuKelasTerbuka` dari `/v1/lms/terbuka` (tanpa token, untuk landing page) dan `GabungKelasKodeLms`.
+  - `LmsRuteProvider`/`RUTE_LMS` mengatur alamat halaman yang dipakai tautan; hook data `useKontenKelas`, `useTugasLms`, `useKuisLms`, `useSemuaKelasLms`, dan lainnya ikut diekspor.
+- Halaman docs **LMS mahasiswa** dengan data contoh.
+
 ## 1.8.0 (2026-11-15)
 
 - **Komponen AI** (`unipo-ui/siakad`) di atas `POST /v1/integrasi/ai/teks` SIAKAD. Kunci API penyedia tetap di server; browser hanya memakai token SIAKAD (scope `integrasi:ai`).
