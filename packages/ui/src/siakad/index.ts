@@ -20,4 +20,5 @@ export * from './navigasi';
 export * from './aplikasi';
 export * from './log';
 export * from './pilih';
+export * from './pemeliharaan';
 export * from './berkas';

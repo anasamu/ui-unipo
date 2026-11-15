@@ -420,6 +420,11 @@ const ROUTES: Array<[RegExp, (u: URL, init?: RequestInit) => unknown]> = [
 export function tambahRute(pola: RegExp, balas: (u: URL, init?: RequestInit) => unknown) {
   ROUTES.unshift([pola, balas]);
 }
+/** Balasan untuk path yang tidak punya rute khusus (mis. server tiruan dari katalog). */
+let cadangan: ((u: URL, init?: RequestInit) => unknown) | null = null;
+export function setelCadangan(fn: (u: URL, init?: RequestInit) => unknown) {
+  cadangan = fn;
+}
 export { MAHASISWA, DOSEN, PEGAWAI, MATA_KULIAH, PRODI };
 
 export const mockFetch: typeof fetch = async (input, init) => {
@@ -427,8 +432,9 @@ export const mockFetch: typeof fetch = async (input, init) => {
   await new Promise((r) => setTimeout(r, 180 + Math.random() * 220));
   if (init?.signal?.aborted) throw new DOMException('Dibatalkan', 'AbortError');
   const route = ROUTES.find(([re]) => re.test(u.pathname));
-  if (!route) return new Response(JSON.stringify({ error: { message: `Contoh belum ada untuk ${u.pathname}` } }), { status: 404, headers: { 'content-type': 'application/json' } });
-  const out = (await route[1](u, init)) as { __status?: number } & Record<string, unknown>;
+  const balas = route?.[1] ?? cadangan;
+  if (!balas) return new Response(JSON.stringify({ error: { message: `Contoh belum ada untuk ${u.pathname}` } }), { status: 404, headers: { 'content-type': 'application/json' } });
+  const out = (await balas(u, init)) as { __status?: number } & Record<string, unknown>;
   const { __status = 200, ...body } = out ?? {};
   return new Response(JSON.stringify(body), { status: __status, headers: { 'content-type': 'application/json' } });
 };

@@ -8,6 +8,7 @@ import { Menu as BaseMenu } from '@base-ui/react/menu';
 import { Toast as BaseToast } from '@base-ui/react/toast';
 import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from 'lucide-react';
 import { cn } from '../lib/cn';
+import { usePlatform } from '../lib/platform';
 import { Button, Kbd, Spinner } from './actions';
 
 function Arrow() {
@@ -38,9 +39,13 @@ export interface DialogProps {
 }
 
 /** Dialog modal. Dengan `side`, menjadi Sheet (panel samping/bawah) untuk filter, detail, atau formulir panjang. */
-export function Dialog({ open, defaultOpen, onOpenChange, trigger, title, description, footer, size = 'md', side, children, className }: DialogProps) {
+export function Dialog({ open, defaultOpen, onOpenChange, trigger, title, description, footer, size = 'md', side: sideProp, children, className }: DialogProps) {
+  // Di platform mobile dialog dan panel kanan menjadi lembar bawah (bottom sheet), kecuali ukuran penuh.
+  const plat = usePlatform();
+  const side = plat.mobile && size !== 'full' && sideProp !== 'left' ? 'bottom' : sideProp;
   const popup = (
     <BaseDialog.Popup className={cn(side ? 'u-sheet' : 'u-dialog', className)} data-size={size} data-side={side}>
+      {side === 'bottom' && <span className="u-sheet-grabber" aria-hidden />}
       <div className="u-dialog-header">
         <BaseDialog.Title className="u-dialog-title">{title}</BaseDialog.Title>
         {description && <BaseDialog.Description className="u-dialog-description">{description}</BaseDialog.Description>}

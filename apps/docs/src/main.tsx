@@ -11,6 +11,7 @@ import './mock/kurikulum';
 import './mock/lms';
 import './mock/akademik';
 import './mock/pilih';
+import './mock/katalog';
 import { ssoDemo } from './mock/aplikasi';
 import { App } from './App';
 
