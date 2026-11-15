@@ -318,3 +318,112 @@ export function opsiDariParam(q: string | URLSearchParams): OpsiTema {
   const p = typeof q === 'string' ? new URLSearchParams(q.replace(/^\?/, '')) : q;
   return normalisasiTema(Object.fromEntries(p.entries()) as Partial<OpsiTema>);
 }
+
+// ---------------------------------------------------------------- Tema aplikasi dari SIAKAD (/v1/tema)
+
+/** Mode tampilan bawaan aplikasi: `pengguna` = ikuti pilihan pengunjung / sistem. */
+export type ModeTampilan = 'pengguna' | 'terang' | 'gelap';
+
+/** Jawaban GET /v1/tema/{aplikasi}: tema berlaku hasil gabungan lapis kampus → aplikasi → lingkup. */
+export interface DataTemaAplikasi<Tata extends Record<string, unknown> = Record<string, unknown>> {
+  aplikasi: string;
+  lingkup: string;
+  /** Pilihan buatTema yang berlaku (lapis bawah menimpa lapis atas). */
+  tema: Partial<OpsiTema>;
+  /** Tata letak milik aplikasi yang berlaku (mis. hero, navbar, mode). */
+  tata: Partial<Tata> & { mode?: ModeTampilan };
+  /** Isi lapis ini saja (untuk formulir pengaturan). */
+  sendiri: { tema: Partial<OpsiTema>; tata: Partial<Tata> & { mode?: ModeTampilan } };
+  /** Gabungan lapis di atasnya (yang dipakai bila lapis ini dikosongkan). */
+  warisan: { tema: Partial<OpsiTema>; tata: Partial<Tata> & { mode?: ModeTampilan } };
+  sumber: Array<{ aplikasi: string; lingkup: string; versi: number; diubah_pada: string | null }>;
+  versi: number;
+  diubah_oleh: string | null;
+  diubah_pada: string | null;
+  tersedia: boolean;
+}
+
+/** id <style> tempat tema aplikasi dipasang, dan kunci localStorage bawaan. */
+export const ID_TEMA_APLIKASI = 'unipo-tema-aplikasi';
+const KUNCI_MODE_PENGGUNA = 'unipo.mode';
+
+/**
+ * CSS tema untuk dipasang di aplikasi: sama dengan buatTema tetapi selektornya dipertegas (html:root, html.dark) agar
+ * menang atas CSS unipo-ui apa pun urutan pemuatannya. Objek kosong = '' (bawaan unipo-ui).
+ */
+export function cssTemaAplikasi(opsi: Partial<OpsiTema> = {}): string {
+  if (!Object.keys(opsi).length) return '';
+  return buatTema({ ...opsi, muatFont: false })
+    .replace(':root,\n.u-theme {', 'html:root,\nhtml .u-theme {')
+    .replace(".dark,\n[data-theme='dark'] {", "html.dark,\nhtml[data-theme='dark'] {");
+}
+
+/**
+ * Pasang tema ke <style id="unipo-tema-aplikasi"> + tautan Google Fonts bila perlu, perbarui meta theme-color, dan
+ * (bila `kunciCache` diisi) simpan CSS-nya di localStorage agar skripAwalTema bisa memasangnya sebelum aplikasi dimuat.
+ */
+export function pasangTemaAplikasi(opsi: Partial<OpsiTema> = {}, { kunciCache, id = ID_TEMA_APLIKASI }: { kunciCache?: string; id?: string } = {}) {
+  if (typeof document === 'undefined') return;
+  const css = cssTemaAplikasi(opsi);
+  let el = document.getElementById(id) as HTMLStyleElement | null;
+  if (!el) {
+    el = document.createElement('style');
+    el.id = id;
+    document.head.appendChild(el);
+  }
+  if (el.textContent !== css) el.textContent = css;
+  const font = css && opsi.muatFont !== false ? urlGoogleFont(opsi) : '';
+  let link = document.getElementById(`${id}-font`) as HTMLLinkElement | null;
+  if (font && !link) {
+    link = document.createElement('link');
+    link.id = `${id}-font`;
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+  }
+  if (link && link.href !== font) font ? (link.href = font) : link.remove();
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', normalisasiTema(opsi).primary);
+  if (!kunciCache) return;
+  try {
+    if (css) localStorage.setItem(kunciCache, css);
+    else localStorage.removeItem(kunciCache);
+  } catch {
+    /* penyimpanan diblokir */
+  }
+}
+
+/** Terapkan terang/gelap ke <html> (kelas .dark + data-theme). `sistem` mengikuti prefers-color-scheme. */
+export function terapkanModeTampilan(mode: 'terang' | 'gelap' | 'sistem') {
+  if (typeof document === 'undefined') return;
+  const gelap = mode === 'gelap' || (mode === 'sistem' && typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('dark', gelap);
+  document.documentElement.dataset.theme = gelap ? 'dark' : 'light';
+}
+
+/**
+ * Mode bawaan dari tema aplikasi, dipakai hanya bila pengunjung belum memilih sendiri (pilihan pengunjung disimpan
+ * aplikasi di localStorage `kunciPilihan`).
+ */
+export function pasangModeBawaan(mode: ModeTampilan | undefined, kunciPilihan = KUNCI_MODE_PENGGUNA) {
+  if (!mode || mode === 'pengguna') return;
+  try {
+    if (localStorage.getItem(kunciPilihan)) return;
+  } catch {
+    /* */
+  }
+  terapkanModeTampilan(mode);
+}
+
+/**
+ * Isi <script> kecil untuk index.html (sebelum CSS/JS aplikasi) yang memasang tema dari cache dan mode pilihan
+ * pengunjung, agar halaman tidak berkedip saat dimuat:
+ *   <script>{skripAwalTema('pmb.tema.css', 'pmb.mode')}</script>
+ */
+export function skripAwalTema(kunciCache: string, kunciPilihan = KUNCI_MODE_PENGGUNA, id = ID_TEMA_APLIKASI): string {
+  const k = JSON.stringify;
+  return `(function(){try{var d=document.documentElement,m=localStorage.getItem(${k(kunciPilihan)}),g=m==='gelap'||((m===null||m==='sistem')&&matchMedia('(prefers-color-scheme: dark)').matches);d.classList.toggle('dark',g);d.dataset.theme=g?'dark':'light';var c=localStorage.getItem(${k(kunciCache)});if(c){var s=document.createElement('style');s.id=${k(id)};s.textContent=c;document.head.appendChild(s);}}catch(e){}})();`;
+}
+
+/** Gabungkan tema warisan dengan isi lapis sendiri (untuk pratinjau formulir). */
+export function gabungTema(warisan: Partial<OpsiTema> = {}, sendiri: Partial<OpsiTema> = {}): Partial<OpsiTema> {
+  return { ...warisan, ...sendiri };
+}
