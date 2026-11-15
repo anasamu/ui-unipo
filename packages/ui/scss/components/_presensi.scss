@@ -1,0 +1,583 @@
+@use '../mixins' as *;
+
+// Presensi QR (/v1/presensi): layar QR sesi, kiosk, pemindai, kartu, daftar hadir, kelola sesi/titik, izin.
+
+// ================================================================ Bahan umum
+.u-presensi-petunjuk {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+  }
+}
+.u-presensi-sub {
+  display: block;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+}
+.u-presensi-nama {
+  display: block;
+  font-weight: var(--u-weight-medium);
+}
+.u-presensi-alat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  > .u-input {
+    flex: 1 1 14rem;
+    max-width: 20rem;
+  }
+}
+.u-presensi-bagian-kepala {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  h3 {
+    margin: 0;
+    font-size: var(--u-text-md);
+    font-weight: var(--u-weight-semibold);
+  }
+}
+
+// ================================================================ Gambar QR + waktu
+.u-presensi-qr-gambar {
+  max-width: 100%;
+  padding: 0.75rem;
+  border-radius: var(--u-radius-lg);
+  background: #fff; // QR selalu di atas putih agar terbaca kamera, juga di mode gelap
+  box-sizing: border-box;
+  > .u-kode-qr {
+    display: block;
+    width: 100% !important; // ikut lebar wadah agar menyusut di layar sempit
+    height: auto !important;
+  }
+  .u-kode-qr-gambar svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
+.u-presensi-waktu {
+  position: relative;
+  width: 100%;
+  max-width: 24rem;
+  height: 1.5rem;
+  overflow: hidden;
+  border-radius: var(--u-radius-full);
+  background: var(--u-muted);
+}
+.u-presensi-waktu-bilah {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--u-primary-soft);
+  transition: width 1s linear;
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+.u-presensi-waktu-teks {
+  position: relative;
+  display: block;
+  line-height: 1.5rem;
+  font-size: var(--u-text-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+// ================================================================ Angka ringkasan
+.u-presensi-angka {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  > div {
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-md);
+    background: var(--u-card);
+  }
+  dt {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+  }
+  dd {
+    margin: 0.125rem 0 0;
+    font-size: var(--u-text-xl);
+    font-weight: var(--u-weight-semibold);
+    font-variant-numeric: tabular-nums;
+  }
+  [data-nada='success'] dd {
+    color: var(--u-success);
+  }
+  [data-nada='warning'] dd {
+    color: var(--u-warning-text);
+  }
+  [data-nada='danger'] dd {
+    color: var(--u-danger-text);
+  }
+}
+
+// ================================================================ Layar QR sesi
+.u-presensi-layar {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+  padding: clamp(0.75rem, 3vw, 1.25rem);
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card);
+  &[data-penuh] {
+    align-content: center;
+    padding: 2rem 3rem;
+    border: 0;
+    border-radius: 0;
+    background: var(--u-background);
+    .u-presensi-layar-judul {
+      font-size: var(--u-text-4xl);
+    }
+    .u-presensi-kode strong {
+      font-size: var(--u-text-5xl);
+    }
+  }
+}
+.u-presensi-layar-kepala {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.u-presensi-layar-sub {
+  margin: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+}
+.u-presensi-layar-judul {
+  margin: 0.125rem 0 0;
+  font-family: var(--u-font-heading);
+  font-size: var(--u-text-2xl);
+  line-height: var(--u-leading-snug);
+}
+.u-presensi-layar-aksi {
+  display: flex;
+  flex: none;
+  gap: 0.5rem;
+}
+.u-presensi-layar-isi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2rem;
+}
+.u-presensi-layar-qr {
+  display: grid;
+  flex: 0 1 auto;
+  justify-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  max-width: 100%;
+}
+.u-presensi-layar-samping {
+  display: grid;
+  flex: 1 1 16rem;
+  gap: 1rem;
+  min-width: 0;
+}
+.u-presensi-kode {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--u-radius-md);
+  background: var(--u-muted);
+  span {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
+  }
+  strong {
+    font-family: var(--u-font-mono);
+    font-size: var(--u-text-3xl);
+    letter-spacing: 0.2em;
+  }
+}
+.u-presensi-terbaru {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  li {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.375rem 0;
+    border-bottom: 1px solid var(--u-border);
+    font-size: var(--u-text-sm);
+  }
+}
+.u-presensi-terbaru-nama {
+  @include truncate;
+}
+.u-presensi-terbaru-waktu {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--u-muted-foreground);
+  font-variant-numeric: tabular-nums;
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    color: var(--u-danger-text);
+  }
+}
+
+// ================================================================ Kamera + pindai
+.u-presensi-pindai {
+  display: grid;
+  gap: 1rem;
+  max-width: 28rem;
+}
+.u-presensi-kamera {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--u-radius-lg);
+  background: #18181b;
+  aspect-ratio: 1;
+  video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+.u-presensi-kamera-bingkai {
+  position: absolute;
+  inset: 18%;
+  border: 2px solid rgb(255 255 255 / 0.85);
+  border-radius: var(--u-radius-lg);
+  box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.35);
+  pointer-events: none;
+}
+.u-presensi-kamera-galat {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.75rem;
+  height: 100%;
+  padding: 1.5rem;
+  color: #e4e4e7;
+  font-size: var(--u-text-sm);
+  text-align: center;
+  svg {
+    width: 2rem;
+    height: 2rem;
+  }
+  p {
+    margin: 0;
+  }
+}
+.u-presensi-form-kode {
+  display: grid;
+  gap: 0.75rem;
+}
+.u-presensi-isian-kode {
+  font-family: var(--u-font-mono);
+  font-size: var(--u-text-xl);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.u-presensi-hasil {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  max-width: 28rem;
+  padding: 1.5rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card);
+  text-align: center;
+  h3 {
+    margin: 0;
+    font-size: var(--u-text-xl);
+  }
+  p {
+    margin: 0;
+    color: var(--u-muted-foreground);
+  }
+  .u-dl {
+    width: 100%;
+    text-align: left;
+  }
+}
+.u-presensi-hasil-ikon {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--u-radius-full);
+  background: color-mix(in oklab, var(--u-success) 14%, var(--u-background));
+  color: var(--u-success);
+  svg {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+}
+.u-presensi-log-kartu {
+  display: grid;
+  gap: 0.25rem;
+  max-height: 16rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  li {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: var(--u-radius-md);
+    background: var(--u-danger-soft);
+    font-size: var(--u-text-sm);
+    &[data-ok] {
+      background: color-mix(in oklab, var(--u-success) 10%, var(--u-background));
+    }
+    svg {
+      width: 1rem;
+      height: 1rem;
+    }
+    time {
+      color: var(--u-muted-foreground);
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+// ================================================================ Kartu QR saya
+.u-presensi-kartu {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  max-width: 22rem;
+  padding: 1.25rem;
+  text-align: center;
+  h3 {
+    margin: 0.125rem 0 0;
+    font-size: var(--u-text-lg);
+  }
+}
+.u-presensi-kartu-kepala {
+  display: grid;
+  justify-items: center;
+}
+.u-presensi-kartu-id {
+  margin: 0;
+  font-family: var(--u-font-mono);
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+}
+
+// ================================================================ Daftar sesi
+.u-presensi-saya,
+.u-presensi-kelola,
+.u-presensi-hadir,
+.u-presensi-izin,
+.u-presensi-detail,
+.u-presensi-modul {
+  display: grid;
+  gap: 1rem;
+}
+.u-presensi-daftar-sesi {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card);
+  list-style: none;
+  > li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    &:not(:last-child) {
+      border-bottom: 1px solid var(--u-border);
+    }
+    &[data-nonaktif] {
+      opacity: 0.65;
+    }
+  }
+  &[data-interaktif] > li {
+    padding: 0;
+  }
+  &[data-ringkas] > li {
+    padding-block: 0.5rem;
+  }
+}
+.u-presensi-sesi-tombol {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  &:hover {
+    background: var(--u-muted);
+  }
+  &:focus-visible {
+    @include focus-ring(-2px);
+  }
+}
+.u-presensi-sesi-judul {
+  margin: 0;
+  font-weight: var(--u-weight-medium);
+}
+.u-presensi-sesi-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0.125rem 0 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+}
+.u-presensi-sesi-aksi {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+}
+.u-presensi-sel-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+.u-presensi-hadir tr[data-curiga] td:first-child {
+  box-shadow: inset 3px 0 0 var(--u-danger);
+}
+.u-presensi-detail-kepala {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  h2 {
+    margin: 0;
+    font-family: var(--u-font-heading);
+    font-size: var(--u-text-xl);
+  }
+}
+
+// ================================================================ Formulir
+.u-presensi-form {
+  display: grid;
+  gap: 1rem;
+}
+.u-presensi-form-baris {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  align-items: start;
+  gap: 0.75rem;
+}
+.u-presensi-fieldset {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 1rem 0 0;
+  border: 0;
+  border-top: 1px solid var(--u-border);
+  legend {
+    padding: 0;
+    font-weight: var(--u-weight-semibold);
+  }
+}
+.u-presensi-undangan {
+  display: grid;
+  gap: 0.5rem;
+}
+.u-presensi-undangan-daftar {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  li {
+    display: grid;
+    grid-template-columns: 1fr minmax(8rem, 12rem) auto;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--u-text-sm);
+    &:has(> :nth-child(2):last-child) {
+      grid-template-columns: 1fr auto;
+    }
+  }
+  small {
+    color: var(--u-muted-foreground);
+  }
+}
+
+// ================================================================ Kiosk
+.u-presensi-kiosk {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+  min-height: 100%;
+  padding: 2rem 1.5rem;
+  background: var(--u-background);
+  text-align: center;
+  header {
+    display: grid;
+    gap: 0.25rem;
+  }
+  h2 {
+    margin: 0;
+    font-family: var(--u-font-heading);
+    font-size: var(--u-text-3xl);
+  }
+}
+.u-presensi-kiosk-jam {
+  font-size: var(--u-text-6xl);
+  font-weight: var(--u-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.u-presensi-kiosk-tanggal,
+.u-presensi-kiosk-hitung {
+  margin: 0;
+  color: var(--u-muted-foreground);
+}
+.u-presensi-perangkat {
+  color: var(--u-muted-foreground);
+  font-family: var(--u-font-mono);
+  font-size: var(--u-text-xs);
+}
+
+// Kolom grid yang memuat QR berukuran tetap boleh menyusut di layar sempit.
+.u-presensi-layar,
+.u-presensi-layar-qr,
+.u-presensi-kartu,
+.u-presensi-kiosk,
+.u-presensi-pindai,
+.u-presensi-hasil {
+  grid-template-columns: minmax(0, 1fr);
+}
