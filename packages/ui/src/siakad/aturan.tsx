@@ -57,7 +57,7 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
  */
 
 // ================================================================ Tipe
-export type KategoriAturan = 'akademik' | 'kelulusan' | 'keuangan' | 'kemahasiswaan' | 'kepegawaian' | 'penelitian' | 'umum';
+export type KategoriAturan = 'akademik' | 'kelulusan' | 'keuangan' | 'kemahasiswaan' | 'kepegawaian' | 'penelitian' | 'mutu' | 'umum';
 export type JenisAturan = 'syarat' | 'batas_waktu' | 'batas_nilai';
 export type ModeAturan = 'blokir' | 'peringatan';
 export type StatusAturan = 'draf' | 'aktif' | 'nonaktif';
@@ -270,6 +270,7 @@ export const LABEL_KATEGORI_ATURAN: Record<KategoriAturan, string> = {
   kemahasiswaan: 'Kemahasiswaan',
   kepegawaian: 'Kepegawaian',
   penelitian: 'Penelitian & PkM',
+  mutu: 'Mutu (SPMI)',
   umum: 'Umum',
 };
 
