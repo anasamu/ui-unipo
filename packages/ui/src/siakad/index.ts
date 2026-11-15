@@ -45,3 +45,4 @@ export * from './qr';
 export * from './dokumen-terbit';
 export * from './presensi';
 export * from './persuratan';
+export * from './tugas-akhir';
