@@ -1,5 +1,19 @@
 # Catatan perubahan
 
+## 1.19.0 (2026-11-15)
+
+- **Aturan akademik dinamis** (`unipo-ui/siakad`, endpoint `/v1/aturan`): antarmuka untuk syarat, batas waktu, dan batas nilai yang ditegakkan SIAKAD di setiap langkah (KRS, input nilai, ujian, tugas akhir, KKN, cuti, yudisium, wisuda).
+  - `KelolaAturan`: modul lengkap dengan ringkasan (aktif, draf belum ber-SK, nonaktif, mode blokir), daftar dengan saringan, tambah/ubah, panel detail, sampah (admin), dan pengatur. Bisa dibatasi ke satu `kategori` atau `titik`.
+  - `PenyusunKondisi`: penyusun kondisi visual. Kelompok "semua"/"salah satu" bersarang sampai 3 tingkat, indikator sesuai titik dari katalog, operator sesuai tipe indikator, nilai dipilih dari data (status mahasiswa, angkatan, hari, mata kuliah lewat `PilihEntitas`), pesan khusus per kondisi, dan ringkasan dalam kalimat.
+  - `FormAturan`: titik penerapan, kategori sesuai wewenang (`GET /v1/aturan/saya`), jenis, ketentuan (kondisi, rentang tanggal+jam, atau batas bertingkat), cakupan (prodi, fakultas, jenjang, angkatan, kelas), periode dan masa berlaku, mode blokir/peringatan, pesan, catatan perubahan. Validasi sama dengan backend; galat 422 dipetakan ke isian.
+  - `PanelDetailAturan`: aktifkan (SK wajib), nonaktifkan, hapus, pulihkan, dengan hasil tulis-tembus ke menu batas waktu lama; tab ketentuan, SK, dispensasi, uji, dan riwayat.
+  - `LampiranSkAturan` + `FormLampiranAturan` (unggah atau pilih dari berkas terpusat), `PengecualianAturanPanel` + `FormPengecualianAturan` (dispensasi mahasiswa/dosen/prodi dipilih dari data), `RiwayatAturan` (linimasa versi), `UjiAturan` (uji ke mahasiswa contoh, konteks, dan waktu tertentu).
+  - `SyaratSaya`: daftar periksa mahasiswa untuk satu titik dengan status terpenuhi/belum/peringatan/dispensasi dan jendela waktu. `HasilPeriksaAturanPanel` + `hasilDariGalatAturan` menampilkan hasil `/periksa`, `/uji`, atau galat 409 `aturan_dilanggar` dari endpoint mana pun.
+  - `PengaturAturan`: peran/izin yang berhak mengatur per kategori dan titik; admin bisa mengubah atau mengembalikan ke izin bawaan.
+  - Hook: `useKatalogAturan`, `useAturanSaya`, `useDaftarAturan`, `useAturan`, `useRiwayatAturan`, `usePeriksaAturan`. Fungsi: `ringkasKondisi`, `kalimatKondisi`, `ringkasKetentuan`, `ringkasCakupan`, `periksaKondisi`, `periksaIsianAturan`, `posisiBatasWaktu`.
+- `PilihanBanyak` (`unipo-ui`): pilih beberapa nilai sebagai tag, dengan daftar atau isian cari untuk menambah.
+- Halaman docs **Aturan akademik dinamis** di menu Per kegunaan, dan entri baru di Peta kegunaan.
+
 ## 1.18.0 (2026-11-15)
 
 - **Bahan formulir tambah/ubah** (`unipo-ui`):

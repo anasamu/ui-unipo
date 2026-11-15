@@ -23,6 +23,7 @@ import './mock/modal-fitur';
 import './mock/profil';
 import './mock/kerangka-portal';
 import './mock/formulir';
+import './mock/aturan';
 import { ssoDemo } from './mock/aplikasi';
 import { App } from './App';
 
