@@ -14,7 +14,7 @@
   - `PemakaianAi`: rekap permintaan dan token per hari, aplikasi, dan model dari `/v1/integrasi/ai/pemakaian`.
 - Halaman docs **Komponen AI** (kategori baru AI) dengan data contoh untuk semua komponen.
 - **Menu dan kartu akun** (`unipo-ui`), isi yang sama dengan menu akun di sso.unipo.ac.id dan terhubung ke profile.unipo.ac.id:
-  - `MenuAkun`: kepala berisi foto, nama, dan "username · peran"; item Profil saya, Ubah profil, Ganti foto, Ganti password (aplikasi Profil), Keamanan akun (SSO), item tambahan, lalu Keluar dari semua aplikasi. Lima bentuk pemicu: `pil` (seperti SSO), `nama`, `avatar`, `ikon`, `sidebar` (menu terbuka ke atas). Opsional: bilah **Lengkapi profil** dari persen kelengkapan, pilihan peran, dan pilihan tema.
+  - `MenuAkun`: kepala berisi foto, nama, dan "username · peran"; item Profil saya (`/`), Ubah profil (`/profil`), Data pribadi (`/data-pribadi`), Ganti foto, Ganti password (`/akun`) di aplikasi Profil, Keamanan akun (SSO), item tambahan, lalu Keluar dari semua aplikasi. Lima bentuk pemicu: `pil` (seperti SSO), `nama`, `avatar`, `ikon`, `sidebar` (menu terbuka ke atas). Opsional: bilah **Lengkapi profil** dari persen kelengkapan, pilihan peran, dan pilihan tema.
   - `KartuAkun`: varian `baris`, `kartu`, `sampul`, dan `tengah`, dengan kelengkapan profil, statistik kecil, dan tombol Ubah profil + Keamanan akun.
   - `tautanAkun()` / `TautanAkun`: jalur bawaan aplikasi Profil dan SSO yang bisa diganti per aplikasi.
   - `unipo-ui/siakad`: `useAkunSaya()`, `MenuAkunSiakad`, `KartuAkunSiakad` mengisi nama, NIM/NIDN, peran, prodi, pas foto (`/v1/profil/saya/foto`), dan kelengkapan dari `GET /v1/profil/saya`.
