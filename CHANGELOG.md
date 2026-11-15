@@ -5,6 +5,11 @@
 - **Logo unggahan ikut varian logo**: `AppLogo` dengan `src` kini memotong gambar mengikuti `shape` (square, circle, shield, plain) dan `tone` (mono jadi abu-abu, inverse memakai pelat putih). `color` menjadi warna pelat di belakang logo PNG transparan, dan `fit` mengatur gambar memenuhi bentuk (cover) atau utuh (contain). Tata letak baru `layout="full"` menampilkan gambar logo utuh (mis. logo dengan tulisan) tanpa teks tambahan. Komponen tanda gambarnya juga tersedia sendiri: `LogoGambar`.
 - **`LogoAplikasi`**: logo aplikasi yang terdaftar di Pustikom dari `kode`. Urutannya: `src` (mis. `aplikasi.logo` dari `useAplikasiTerpadu()`), logo unggahan klien SSO (`sso.unipo.ac.id/logos/<client_id>.png`), glyph bawaan aplikasi UNIPO, lalu inisial nama dengan warna tetap per kode. Semua tata letak, bentuk, dan nada AppLogo berlaku. Pendukungnya: `useLogoTersedia`, `urlLogoSso`, `glyphInisial`, `warnaAplikasi`.
 - Nama logo yang terlalu panjang kini dipotong dengan elipsis.
+- **Aplikasi publik/privat dan unduhan mobile** (Pustikom, `unipo-ui/siakad`):
+  - `WizardAplikasi` dan `FormAplikasi` punya pilihan **Tampil di dasbor SSO** (publik/privat) dan, untuk aplikasi mobile, tautan unduh Android dan iOS. Nilainya disimpan ke katalog SIAKAD (`visibilitas`, `url_android`, `url_ios`) dan klien SSO (`visibility`, `android_url`, `ios_url`) sekaligus. Aturannya sama dengan server: aplikasi mobile publik wajib punya salah satu tautan (`galatUnduhan()`).
+  - `KartuAplikasi` dan ringkasan detail menampilkan lencana Publik/Privat, tombol **Buka** untuk aplikasi web, dan tombol **Android**/**iOS** sesuai platform yang didukung (`TautanAplikasi`, `IkonAndroid`, `IkonApple`).
+  - `DaftarAplikasiPublik` + `useAplikasiPublik()`: aplikasi publik dari `GET /v1/rbac/aplikasi-publik` (tanpa token) dengan logo terdaftar dan tombol buka/unduh, untuk portal atau dasbor.
+  - `IkonAplikasi` kini memakai `LogoAplikasi`, jadi aplikasi bawaan UNIPO tampil dengan glyph-nya bila belum ada logo unggahan.
 
 ## 1.6.0 (2026-11-15)
 

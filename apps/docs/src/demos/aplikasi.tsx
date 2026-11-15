@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Button } from 'unipo-ui';
-import { DaftarAplikasi, DetailAplikasi, FormAplikasi, KartuAplikasi, PilihScope, SecretSekali, WizardAplikasi, useAplikasiTerpadu, type AplikasiTerpadu } from 'unipo-ui/siakad';
+import { DaftarAplikasi, DaftarAplikasiPublik, DetailAplikasi, FormAplikasi, KartuAplikasi, PilihScope, SecretSekali, WizardAplikasi, useAplikasiTerpadu, type AplikasiTerpadu } from 'unipo-ui/siakad';
 import type { DemoMeta } from '../registry';
 import { jsxProps } from '../Playground';
 
@@ -17,7 +17,8 @@ export const meta: DemoMeta = {
     Detail: 'DetailAplikasi: ringkasan, login SSO, klien API, log API, aktivitas login',
     Wizard: "WizardAplikasi: modal atau tampilan='halaman', secret ditampilkan sekali",
     Ubah: 'FormAplikasi: ubah katalog, login SSO, dan klien API sekaligus',
-    Kartu: 'KartuAplikasi',
+    Kartu: 'KartuAplikasi: lencana publik/privat, tombol Buka dan unduh Android/iOS',
+    Publik: 'DaftarAplikasiPublik: aplikasi publik untuk dasbor dan portal (tanpa login)',
     Scope: 'PilihScope: centang Baca/Tulis per sumber data',
     Secret: 'SecretSekali: salin secret dan isi .env',
   },
@@ -36,6 +37,7 @@ export const meta: DemoMeta = {
     ['useAplikasiTerpadu()', '{ data, loading, peringatan }', 'Data gabungan untuk tampilan sendiri; bila SSO belum terpasang, daftar tetap tampil dari SIAKAD.'],
   ],
   notes: [
+    'Visibilitas: publik tampil di dasbor SSO dan GET /v1/rbac/aplikasi-publik, privat hanya di Pustikom. Aplikasi mobile publik wajib punya tautan Android atau iOS; tombol unduh hanya muncul untuk platform yang diisi. Formulir menyimpan ke katalog SIAKAD dan klien SSO sekaligus.',
     'Di Pustikom: createSsoAdmin({ baseUrl: "/bff/sso", headers: () => ({ "X-CSRF-Token": csrf }), methodOverride: true }). methodOverride mengirim PATCH/DELETE sebagai POST untuk hosting yang menolak metode itu.',
     'Endpoint yang dipakai: GET/POST /v1/rbac/aplikasi, /v1/rbac/klien-api (+ /scope, /{id}/secret), /v1/rbac/peran, dan di SSO /clients, /clients/{id}(/secret|/logo).',
   ],
@@ -130,4 +132,8 @@ export function Secret() {
       />
     </>
   );
+}
+
+export function Publik() {
+  return <DaftarAplikasiPublik ssoUrl={null} />;
 }

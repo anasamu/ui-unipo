@@ -91,6 +91,7 @@ const RBAC = [
     keterangan: 'Ruang redaksi berita dan agenda',
     jenis: 'web',
     url: 'https://humas.unipo.ac.id',
+    visibilitas: 'privat',
     client_id_sso: 'humas',
     client_id_api: null,
     sistem: false,
@@ -104,6 +105,9 @@ const RBAC = [
     keterangan: 'Aplikasi Android katalog dan peminjaman buku',
     jenis: 'mobile',
     url: null,
+    visibilitas: 'publik',
+    url_android: 'https://play.google.com/store/apps/details?id=id.ac.unipo.perpus',
+    url_ios: 'https://apps.apple.com/id/app/perpustakaan-unipo/id6470000001',
     client_id_sso: null,
     client_id_api: 'perpus-mobile',
     sistem: false,
@@ -680,3 +684,22 @@ tambahRute(/\/bff\/sso\/clients(\/[a-z0-9_]+)?$/, (u, init) => {
 
 /** Klien admin SSO untuk situs dokumentasi (BFF tiruan). */
 export const ssoDemo = createSsoAdmin({ baseUrl: 'https://pustikom.unipo.ac.id/bff/sso', fetch: mockFetch });
+
+// Daftar publik: aplikasi aktif + publik, jenis web/mobile (GET /v1/rbac/aplikasi-publik, tanpa token).
+tambahRute(/\/v1\/rbac\/aplikasi-publik$/, (u) => {
+  const jenis = u.searchParams.get('jenis');
+  const data = (RBAC as Array<Record<string, any>>)
+    .filter((a) => a.aktif !== false && (a.visibilitas ?? 'publik') === 'publik' && (a.jenis === 'web' || a.jenis === 'mobile') && (!jenis || a.jenis === jenis))
+    .map((a) => ({
+      kode: a.kode,
+      nama: a.nama,
+      keterangan: a.keterangan ?? null,
+      jenis: a.jenis,
+      url: a.url ?? null,
+      url_android: a.url_android ?? null,
+      url_ios: a.url_ios ?? null,
+      client_id_sso: a.client_id_sso ?? null,
+      platform: [a.url && 'web', a.url_android && 'android', a.url_ios && 'ios'].filter(Boolean),
+    }));
+  return { data };
+});
