@@ -177,23 +177,23 @@ export function Ilustrasi({ nama, lebar = 240, bergerak = true, nada, ikon, labe
           <stop offset="1" className="u-ilus-gelap" />
         </linearGradient>
         <linearGradient id={g('kilap')} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.55" />
-          <stop offset="0.6" stopColor="#fff" stopOpacity="0" />
+          <stop offset="0" className="u-ilus-kilap-1" />
+          <stop offset="0.6" className="u-ilus-kilap-2" />
         </linearGradient>
         <linearGradient id={g('baju')} x1="0" y1="0" x2="0.4" y2="1">
-          <stop offset="0" stopColor="#4aa3f0" />
-          <stop offset="1" stopColor="#1f6fd1" />
+          <stop offset="0" className="u-ilus-baju-1" />
+          <stop offset="1" className="u-ilus-baju-2" />
         </linearGradient>
         <linearGradient id={g('celana')} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#3a3f55" />
-          <stop offset="1" stopColor="#1e2233" />
+          <stop offset="0" className="u-ilus-celana-1" />
+          <stop offset="1" className="u-ilus-celana-2" />
         </linearGradient>
         <radialGradient id={g('kulit')} cx="40%" cy="35%" r="70%">
-          <stop offset="0" stopColor="#ffe3cf" />
-          <stop offset="1" stopColor="#f2b896" />
+          <stop offset="0" className="u-ilus-kulit-1" />
+          <stop offset="1" className="u-ilus-kulit-2" />
         </radialGradient>
         <filter id={g('bayang')} x="-30%" y="-30%" width="160%" height="170%">
-          <feDropShadow dx="0" dy="6" stdDeviation="6" floodOpacity="0.18" />
+          <feDropShadow dx="0" dy="6" stdDeviation="6" className="u-ilus-bayang" />
         </filter>
       </defs>
 
@@ -202,12 +202,12 @@ export function Ilustrasi({ nama, lebar = 240, bergerak = true, nada, ikon, labe
 
       {/* Bentuk melayang (segitiga, cincin, belah ketupat) */}
       <g className="u-ilus-bentuk">
-        <path className="u-ilus-b1" d="M28 40l10-3 -3 10z" fill="#5fd4c4" />
-        <path className="u-ilus-b2" d="M200 28l14 6-12 9z" fill="#ec8cc8" />
-        <circle className="u-ilus-b3" cx="214" cy="104" r="7" fill="none" stroke="#7c7cf0" strokeWidth="4.5" />
-        <circle className="u-ilus-b4" cx="26" cy="122" r="6" fill="none" stroke="#f4c95d" strokeWidth="4" />
-        <path className="u-ilus-b5" d="M190 146l7 -9 4 11z" fill="none" stroke="#5fd4c4" strokeWidth="2.5" strokeLinejoin="round" />
-        <rect className="u-ilus-b6" x="52" y="18" width="8" height="8" rx="1.5" transform="rotate(25 56 22)" fill="#5fd4c4" opacity=".85" />
+        <path className="u-ilus-b1 u-ilus-isi-a1" d="M28 40l10-3 -3 10z" />
+        <path className="u-ilus-b2 u-ilus-isi-a2" d="M200 28l14 6-12 9z" />
+        <circle className="u-ilus-b3 u-ilus-garis-a3" cx="214" cy="104" r="7" fill="none" strokeWidth="4.5" />
+        <circle className="u-ilus-b4 u-ilus-garis-a4" cx="26" cy="122" r="6" fill="none" strokeWidth="4" />
+        <path className="u-ilus-b5 u-ilus-garis-a1" d="M190 146l7 -9 4 11z" fill="none" strokeWidth="2.5" strokeLinejoin="round" />
+        <rect className="u-ilus-b6 u-ilus-isi-a1" x="52" y="18" width="8" height="8" rx="1.5" transform="rotate(25 56 22)" opacity=".85" />
       </g>
 
       {/* Bayangan lantai */}
@@ -218,7 +218,7 @@ export function Ilustrasi({ nama, lebar = 240, bergerak = true, nada, ikon, labe
         <g className="u-ilus-kotak2" transform={`translate(${kx + 52} 70) rotate(12)`}>
           <rect x="-22" y="-22" width="44" height="44" rx="12" fill={`url(#${g('kotak')})`} filter={`url(#${g('bayang')})`} opacity=".92" />
           <rect x="-22" y="-22" width="44" height="44" rx="12" fill={`url(#${g('kilap')})`} />
-          <Ikon2 x={-11} y={-11} width={22} height={22} stroke="#fff" strokeWidth={2.2} />
+          <Ikon2 x={-11} y={-11} width={22} height={22} strokeWidth={2.2} className="u-ilus-ikon" />
         </g>
       )}
 
@@ -227,7 +227,7 @@ export function Ilustrasi({ nama, lebar = 240, bergerak = true, nada, ikon, labe
         <rect x="-38" y="-34" width="76" height="76" rx="20" className="u-ilus-sisi" />
         <rect x="-38" y="-40" width="76" height="76" rx="20" fill={`url(#${g('kotak')})`} filter={`url(#${g('bayang')})`} />
         <rect x="-38" y="-40" width="76" height="76" rx="20" fill={`url(#${g('kilap')})`} />
-        <Ikon x={-19} y={-21} width={38} height={38} stroke="#fff" strokeWidth={2} />
+        <Ikon x={-19} y={-21} width={38} height={38} strokeWidth={2} className="u-ilus-ikon" />
       </g>
 
       {/* Tokoh */}
@@ -243,15 +243,15 @@ function Tokoh({ pose, g }: { pose: 'jalan' | 'tunjuk' | 'duduk'; g: (n: string)
       <>
         <path d="M50 118 L74 120 L76 150" stroke={`url(#${g('celana')})`} strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" fill="none" />
         <path d="M44 120 L66 126 L64 152" stroke={`url(#${g('celana')})`} strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        <ellipse cx="80" cy="154" rx="9" ry="5" fill="#eef1f8" stroke="#1e2233" strokeWidth="2" />
-        <ellipse cx="68" cy="156" rx="9" ry="5" fill="#eef1f8" stroke="#1e2233" strokeWidth="2" />
+        <ellipse cx="80" cy="154" rx="9" ry="5" className="u-ilus-sepatu" strokeWidth="2" />
+        <ellipse cx="68" cy="156" rx="9" ry="5" className="u-ilus-sepatu" strokeWidth="2" />
       </>
     ) : (
       <>
         <path className="u-ilus-kaki-b" d="M52 112 L36 132 L28 150" stroke={`url(#${g('celana')})`} strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" fill="none" />
         <path className="u-ilus-kaki-d" d="M60 112 L72 132 L84 146" stroke={`url(#${g('celana')})`} strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        <ellipse cx="24" cy="153" rx="9" ry="5" transform="rotate(-20 24 153)" fill="#eef1f8" stroke="#1e2233" strokeWidth="2" />
-        <ellipse cx="89" cy="149" rx="9" ry="5" transform="rotate(15 89 149)" fill="#eef1f8" stroke="#1e2233" strokeWidth="2" />
+        <ellipse cx="24" cy="153" rx="9" ry="5" transform="rotate(-20 24 153)" className="u-ilus-sepatu" strokeWidth="2" />
+        <ellipse cx="89" cy="149" rx="9" ry="5" transform="rotate(15 89 149)" className="u-ilus-sepatu" strokeWidth="2" />
       </>
     );
   const lenganDepan = pose === 'tunjuk' ? 'M68 76 L86 66 L100 58' : pose === 'duduk' ? 'M68 78 L78 96 L90 100' : 'M68 76 L84 70 L96 62';
@@ -260,23 +260,23 @@ function Tokoh({ pose, g }: { pose: 'jalan' | 'tunjuk' | 'duduk'; g: (n: string)
     <g className="u-ilus-tokoh" data-pose={pose} transform={pose === 'duduk' ? 'translate(4 0)' : undefined}>
       {kaki}
       {/* lengan belakang */}
-      <path d="M44 78 L32 94 L28 104" stroke="#1f6fd1" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path className="u-ilus-lengan-b" d="M44 78 L32 94 L28 104" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round" fill="none" />
       <circle cx="27" cy="107" r="5.5" fill={`url(#${g('kulit')})`} />
       {/* badan */}
       <path d="M40 72 Q40 60 54 60 L62 60 Q74 60 74 74 L72 112 Q72 120 64 120 L48 120 Q40 120 40 112 Z" fill={`url(#${g('baju')})`} />
-      <path d="M44 66 Q56 62 66 64" stroke="#fff" strokeOpacity=".35" strokeWidth="3" strokeLinecap="round" fill="none" />
+      <path d="M44 66 Q56 62 66 64" className="u-ilus-kerah" strokeWidth="3" strokeLinecap="round" fill="none" />
       {/* lengan depan */}
-      <path className="u-ilus-lengan" d={lenganDepan} stroke="#3a8ee6" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path className="u-ilus-lengan u-ilus-lengan-d" d={lenganDepan} strokeWidth="11" strokeLinecap="round" strokeLinejoin="round" fill="none" />
       <circle cx={tanganDepan[0]} cy={tanganDepan[1]} r="5.5" fill={`url(#${g('kulit')})`} />
       {/* kepala */}
       <g className="u-ilus-kepala">
         <circle cx="58" cy="44" r="14" fill={`url(#${g('kulit')})`} />
-        <path d="M44 42 Q45 28 59 29 Q72 30 72 42 Q66 36 58 37 Q50 37 44 42 Z" fill="#1e2233" />
-        <circle cx="57" cy="24" r="7" fill="#1e2233" />
-        <path d="M51 29 Q57 33 63 29" stroke="#f4c95d" strokeWidth="3" strokeLinecap="round" fill="none" />
-        <circle cx="64" cy="45" r="1.4" fill="#1e2233" />
-        <path d="M61 51 Q64 53 67 50" stroke="#1e2233" strokeWidth="1.4" strokeLinecap="round" fill="none" />
-        <ellipse cx="58" cy="52" rx="4" ry="2.5" fill="#f08bb3" opacity=".45" />
+        <path d="M44 42 Q45 28 59 29 Q72 30 72 42 Q66 36 58 37 Q50 37 44 42 Z" className="u-ilus-rambut" />
+        <circle cx="57" cy="24" r="7" className="u-ilus-rambut" />
+        <path d="M51 29 Q57 33 63 29" className="u-ilus-pita" strokeWidth="3" strokeLinecap="round" fill="none" />
+        <circle cx="64" cy="45" r="1.4" className="u-ilus-mata" />
+        <path d="M61 51 Q64 53 67 50" className="u-ilus-mulut" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+        <ellipse cx="58" cy="52" rx="4" ry="2.5" className="u-ilus-pipi" />
       </g>
     </g>
   );
