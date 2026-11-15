@@ -1,0 +1,831 @@
+@use '../mixins' as *;
+
+// ================================================================ Papan fakta
+.u-factboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  background: var(--u-border);
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-xl);
+  @media (min-width: 560px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
+  }
+}
+.u-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1.125rem 1.25rem;
+  background: var(--u-card);
+  dt {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--u-text-xs);
+    font-weight: var(--u-weight-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--u-muted-foreground);
+    svg {
+      width: 1rem;
+      height: 1rem;
+      color: var(--u-primary);
+    }
+  }
+  dd {
+    margin: 0;
+  }
+}
+.u-fact-value {
+  font-family: var(--u-font-heading);
+  font-size: var(--u-text-xl);
+  font-weight: var(--u-weight-bold);
+  line-height: var(--u-leading-snug);
+  color: var(--u-foreground);
+}
+.u-fact-hint {
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+}
+
+// ================================================================ Deret angka
+.u-statstrip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  > div {
+    padding: 1.75rem 0 1.75rem 1.5rem;
+    border-left: 1px solid var(--u-border);
+    &:nth-child(odd) {
+      padding-left: 0;
+      border-left: 0;
+    }
+    @media (min-width: 1024px) {
+      &:nth-child(odd) {
+        padding-left: 1.5rem;
+        border-left: 1px solid var(--u-border);
+      }
+      &:first-child {
+        padding-left: 0;
+        border-left: 0;
+      }
+    }
+  }
+  dt {
+    font-size: var(--u-text-sm);
+    color: var(--u-muted-foreground);
+  }
+  dd {
+    margin: 0.25rem 0 0;
+    font-family: var(--u-font-heading);
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: var(--u-weight-bold);
+    letter-spacing: -0.02em;
+    color: var(--u-foreground);
+  }
+}
+
+// ================================================================ Keunggulan
+.u-features {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2rem 2.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  @media (min-width: 1024px) {
+    &[data-cols='3'] {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    &[data-cols='4'] {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+}
+.u-feature {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.u-feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-bottom: 0.375rem;
+  border-radius: var(--u-radius-lg);
+  background: var(--u-primary-soft);
+  color: var(--u-primary-soft-foreground);
+  svg {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+}
+.u-feature-title {
+  margin: 0;
+  font-size: var(--u-text-lg);
+  font-weight: var(--u-weight-semibold);
+  color: var(--u-foreground);
+}
+.u-feature-text {
+  margin: 0;
+  font-size: var(--u-text-md);
+  line-height: var(--u-leading-relaxed);
+  color: var(--u-muted-foreground);
+}
+
+// ================================================================ Galeri
+.u-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+    &[data-wide] {
+      grid-column: span 2;
+      grid-row: span 2;
+    }
+  }
+  button {
+    flex: 1;
+    display: block;
+    overflow: hidden;
+    border-radius: var(--u-radius-lg);
+    background: var(--u-muted);
+    &:focus-visible {
+      @include focus-ring;
+    }
+  }
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    transition: transform 500ms var(--u-ease-out);
+  }
+  button:hover img {
+    transform: scale(1.03);
+  }
+}
+.u-gallery-caption {
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+}
+.u-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgb(0 0 0 / 0.82);
+  figure {
+    margin: 0;
+    max-width: min(64rem, 100%);
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  img {
+    max-width: 100%;
+    max-height: calc(100vh - 6rem);
+    object-fit: contain;
+    border-radius: var(--u-radius-lg);
+  }
+  figcaption {
+    text-align: center;
+    font-size: var(--u-text-md);
+    color: rgb(255 255 255 / 0.85);
+  }
+}
+.u-lightbox-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: inline-flex;
+  padding: 0.5rem;
+  border-radius: 999px;
+  color: white;
+  background: rgb(255 255 255 / 0.12);
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+// ================================================================ Testimoni
+.u-rating {
+  display: inline-flex;
+  gap: 0.125rem;
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    color: var(--u-border-strong);
+    &[data-on] {
+      color: #f5a524;
+      fill: #f5a524;
+    }
+  }
+}
+.u-testimonial {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  height: 100%;
+  margin: 0;
+  padding: 1.5rem;
+  background: var(--u-card);
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-xl);
+  blockquote {
+    flex: 1;
+    margin: 0;
+    font-size: var(--u-text-lg);
+    line-height: 1.7;
+    color: color-mix(in oklab, var(--u-foreground) 88%, var(--u-background));
+  }
+  figcaption {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-top: 0.875rem;
+    border-top: 1px solid var(--u-border);
+  }
+}
+.u-testimonial-mark {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: color-mix(in oklab, var(--u-primary) 22%, transparent);
+}
+.u-testimonial-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  b {
+    @include truncate;
+    font-size: var(--u-text-md);
+    color: var(--u-foreground);
+  }
+  span {
+    @include truncate;
+    font-size: var(--u-text-sm);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-testimonial-video {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-semibold);
+  color: var(--u-primary-soft-foreground);
+  text-decoration: none;
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+.u-testimonials {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+.u-testimonials-grid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(auto-fill, minmax(min(19rem, 100%), 1fr));
+  gap: 1rem;
+}
+
+// ================================================================ Ajakan
+.u-cta {
+  --cta-bg: var(--u-primary);
+  --cta-fg: var(--u-primary-foreground);
+  position: relative;
+  overflow: hidden;
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+  isolation: isolate;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(60% 120% at 100% 0%, color-mix(in oklab, var(--u-secondary) 55%, transparent), transparent 70%),
+      radial-gradient(40% 80% at 0% 100%, rgb(255 255 255 / 0.08), transparent 70%);
+  }
+  &[data-tone='dark'] {
+    --cta-bg: color-mix(in oklab, var(--u-primary) 22%, #0d0f14);
+    --cta-fg: #fff;
+  }
+  &[data-tone='soft'] {
+    --cta-bg: var(--u-primary-soft);
+    --cta-fg: var(--u-foreground);
+    &::before {
+      display: none;
+    }
+  }
+}
+.u-cta-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding: clamp(2.5rem, 6vw, 3.5rem) 1rem;
+  @media (min-width: 640px) {
+    padding-inline: 1.5rem;
+  }
+}
+.u-cta-text {
+  flex: 1 1 26rem;
+  h2 {
+    margin: 0;
+    font-family: var(--u-font-heading);
+    font-size: clamp(1.375rem, 3vw, 1.875rem);
+    font-weight: var(--u-weight-bold);
+    line-height: var(--u-leading-tight);
+    letter-spacing: -0.015em;
+  }
+  p {
+    margin: 0.5rem 0 0;
+    font-size: var(--u-text-lg);
+    opacity: 0.85;
+  }
+}
+.u-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+// ================================================================ Garis waktu
+.u-timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    left: 1.1875rem;
+    top: 0.75rem;
+    width: 2px;
+    border-radius: 2px;
+  }
+  &::before {
+    bottom: 0.75rem;
+    background: var(--u-border);
+  }
+  &::after {
+    height: calc(var(--persen, 0%) - 1.5rem);
+    max-height: calc(100% - 1.5rem);
+    background: var(--u-primary);
+    transition: height 700ms var(--u-ease-out);
+  }
+}
+.u-timeline-item {
+  position: relative;
+  display: flex;
+  gap: 1rem;
+}
+.u-timeline-dot {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-bold);
+  background: var(--u-muted);
+  color: var(--u-muted-foreground);
+  box-shadow: 0 0 0 4px var(--u-background);
+  .u-timeline-item[data-status='done'] & {
+    background: var(--u-primary);
+    color: var(--u-primary-foreground);
+  }
+  .u-timeline-item[data-status='active'] & {
+    background: var(--u-success);
+    color: #fff;
+    animation: u-timeline-denyut 2s var(--u-ease-out) infinite;
+  }
+}
+@keyframes u-timeline-denyut {
+  0% {
+    box-shadow:
+      0 0 0 4px var(--u-background),
+      0 0 0 4px color-mix(in oklab, var(--u-success) 50%, transparent);
+  }
+  100% {
+    box-shadow:
+      0 0 0 4px var(--u-background),
+      0 0 0 14px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .u-timeline-dot {
+    animation: none !important;
+  }
+}
+.u-timeline-card {
+  flex: 1;
+  min-width: 0;
+  padding: 0.875rem 1rem;
+  background: var(--u-card);
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  .u-timeline-item[data-status='active'] & {
+    border-color: color-mix(in oklab, var(--u-success) 40%, var(--u-border));
+    background: color-mix(in oklab, var(--u-success) 6%, var(--u-card));
+  }
+}
+.u-timeline-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.u-timeline-title {
+  margin: 0;
+  font-weight: var(--u-weight-semibold);
+  font-size: var(--u-text-md);
+  color: var(--u-foreground);
+}
+.u-timeline-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0.25rem 0 0;
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex: none;
+  }
+}
+.u-timeline-desc {
+  margin: 0.375rem 0 0;
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+}
+
+// ================================================================ Navigasi bagian
+.u-sectionnav {
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  a {
+    display: block;
+    text-decoration: none;
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-md);
+    transition: color var(--u-duration-fast), border-color var(--u-duration-fast);
+    &:hover {
+      color: var(--u-foreground);
+    }
+    &[data-active] {
+      color: var(--u-foreground);
+      font-weight: var(--u-weight-semibold);
+    }
+    &:focus-visible {
+      @include focus-ring;
+    }
+  }
+  &[data-variant='sidebar'] {
+    ul {
+      border-left: 1px solid var(--u-border);
+    }
+    a {
+      margin-left: -1px;
+      padding: 0.375rem 0 0.375rem 1rem;
+      border-left: 2px solid transparent;
+      &[data-active] {
+        border-left-color: var(--u-primary);
+      }
+    }
+  }
+  &[data-variant='bar'] {
+    overflow-x: auto;
+    scrollbar-width: none;
+    ul {
+      display: flex;
+      gap: 1.25rem;
+      white-space: nowrap;
+    }
+    a {
+      padding: 0.75rem 0;
+      border-bottom: 2px solid transparent;
+      &[data-active] {
+        color: var(--u-primary-soft-foreground);
+        border-bottom-color: var(--u-primary);
+      }
+    }
+  }
+}
+.u-sectionnav-title {
+  margin: 0 0 0.75rem;
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--u-muted-foreground);
+}
+
+// ================================================================ Sosial
+.u-social {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-md);
+    color: var(--u-muted-foreground);
+    transition: color var(--u-duration-fast), border-color var(--u-duration-fast);
+    &:hover {
+      color: var(--u-primary-soft-foreground);
+      border-color: color-mix(in oklab, var(--u-primary) 40%, var(--u-border));
+    }
+    &:focus-visible {
+      @include focus-ring;
+    }
+  }
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+// ================================================================ Jendela tanya jawab
+.u-chatw-launcher {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(1rem + env(safe-area-inset-bottom) + var(--u-chatw-offset, 0px));
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 3rem;
+  padding: 0 1.125rem;
+  border-radius: 999px;
+  font-weight: var(--u-weight-semibold);
+  font-size: var(--u-text-md);
+  background: var(--u-primary);
+  color: var(--u-primary-foreground);
+  box-shadow: var(--u-shadow-lg);
+  transition: background var(--u-duration-fast), transform var(--u-duration-fast);
+  &:hover {
+    background: var(--u-primary-hover);
+  }
+  &:active {
+    transform: scale(0.97);
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  span {
+    display: none;
+    @media (min-width: 640px) {
+      display: inline;
+    }
+  }
+  @media (min-width: 640px) {
+    right: 1.5rem;
+    bottom: calc(1.5rem + var(--u-chatw-offset, 0px));
+  }
+}
+.u-chatw-panel {
+  position: fixed;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: calc(5rem + env(safe-area-inset-bottom) + var(--u-chatw-offset, 0px));
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  max-height: min(36rem, calc(100vh - 8rem));
+  overflow: hidden;
+  font-family: var(--u-font-sans);
+  font-size: var(--u-text-md);
+  background: var(--u-popover);
+  color: var(--u-foreground);
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-xl);
+  box-shadow: var(--u-shadow-xl);
+  transform-origin: bottom right;
+  animation: u-chatw-masuk var(--u-duration-base) var(--u-ease-out);
+  @media (min-width: 640px) {
+    left: auto;
+    right: 1.5rem;
+    width: 24rem;
+    bottom: calc(5.5rem + var(--u-chatw-offset, 0px));
+  }
+}
+@keyframes u-chatw-masuk {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .u-chatw-panel {
+    animation: none;
+  }
+}
+.u-chatw-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  color: #fff;
+  background: color-mix(in oklab, var(--u-primary) 30%, #0d0f14);
+  > div {
+    flex: 1;
+    min-width: 0;
+  }
+}
+.u-chatw-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--u-radius-md);
+  background: rgb(255 255 255 / 0.12);
+  svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+.u-chatw-title {
+  margin: 0;
+  font-weight: var(--u-weight-semibold);
+}
+.u-chatw-sub {
+  @include truncate;
+  margin: 0;
+  font-size: var(--u-text-sm);
+  opacity: 0.8;
+}
+.u-chatw-close {
+  display: inline-flex;
+  padding: 0.375rem;
+  border-radius: var(--u-radius-sm);
+  color: #fff !important;
+  &:hover {
+    background: rgb(255 255 255 / 0.14) !important;
+  }
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+.u-chatw-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  overflow-y: auto;
+  background: var(--u-surface);
+}
+.u-chatw-msg {
+  display: flex;
+  > div {
+    max-width: 86%;
+    padding: 0.5rem 0.875rem;
+    border-radius: var(--u-radius-lg);
+    line-height: 1.55;
+    white-space: pre-line;
+  }
+  &[data-from='bot'] > div {
+    background: var(--u-card);
+    border: 1px solid var(--u-border);
+    border-bottom-left-radius: 4px;
+  }
+  &[data-from='saya'] {
+    justify-content: flex-end;
+    > div {
+      background: var(--u-primary);
+      color: var(--u-primary-foreground);
+      border-bottom-right-radius: 4px;
+    }
+  }
+}
+.u-chatw-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.625rem;
+  white-space: normal;
+}
+.u-chatw-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  button {
+    padding: 0.375rem 0.75rem;
+    border-radius: 999px;
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-medium);
+    text-align: left;
+    color: var(--u-primary-soft-foreground);
+    background: var(--u-card);
+    border: 1px solid color-mix(in oklab, var(--u-primary) 30%, var(--u-border));
+    &:hover {
+      background: var(--u-primary-soft);
+    }
+  }
+}
+.u-chatw-form {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-top: 1px solid var(--u-border);
+  input {
+    @include control-surface;
+    flex: 1;
+    min-width: 0;
+    height: 2.5rem;
+    padding: 0 0.875rem;
+    font: inherit;
+    color: var(--u-foreground);
+    &:focus {
+      @include control-focus;
+    }
+  }
+}
+.u-chatw-foot {
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--u-border);
+  text-align: center;
+  font-size: var(--u-text-sm);
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-weight: var(--u-weight-semibold);
+    color: var(--u-success-text);
+    text-decoration: none;
+  }
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+}

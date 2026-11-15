@@ -1,5 +1,14 @@
 # Catatan perubahan
 
+## 1.11.0 (2026-11-15)
+
+- **Tata letak** (`unipo-ui`): `Container`, `Stack`, `Cluster`, `Grid`, `Split` (kolom utama + samping lekat), `PageHeader`, `Text`, `Heading`, `KontenHtml`, `teksPolos()`. Aplikasi tidak perlu Tailwind atau CSS tata letak sendiri.
+- **Blok landing umum** (`unipo-ui`): `FactBoard`, `StatStrip`, `FeatureGrid`, `Gallery`, `Rating`, `Testimonial`/`TestimonialGrid`, `CtaBand`, `Timeline`, `SectionNav` + `useScrollSpy`, `SocialLinks`, `ChatWidget` + `cocokkanFaq()` (asisten FAQ tanpa server).
+- **PMB publik** (`unipo-ui/siakad`, `/v1/pmb/info/*`): `PmbProvider` (kampus, rute, `renderLink`, URL kabar humas, URL berkas, render QR), `LandingPmbLengkap` (hero dengan gelombang otomatis, sekilas, jalur & jadwal, prodi, simulasi biaya, testimoni, pengumuman, kabar kampus, FAQ, kontak panitia, sidebar landing, asisten chat), `DetailGelombangPmb`, `DaftarPengumumanPmb`, `DetailPengumumanPmb`, plus hook data (`useGelombangPmb`, `useLandingPmb`, dll.) dan util (`keadaanGelombang`, `rentangPmb`, `sisaHari`).
+- **Dasbor pendaftar PMB** (`unipo-ui/siakad`, `/v1/pmb/saya/*`): `PendaftaranAktifPmbProvider` + `PemilihPendaftaranPmb`, `DasborPendaftarPmb` (kartu tahap, tugas yang kurang, tagihan, jadwal tes), `PilihGelombangPendaftarPmb`, `FormulirPendaftarPmb`, `BerkasPendaftarPmb`, `PembayaranPendaftarPmb` (pilih metode, VA/QRIS/tautan bayar, unggah bukti transfer), `UjianPendaftarPmb` + `RuangUjianPmb` (token CBT), `KartuPesertaPmb` (siap cetak, QR), `HasilSeleksiPmb`, `NotifikasiPendaftarPmbDaftar` + `useJumlahNotifikasiPmb`, `AkunPendaftarPmbHalaman` (ubah data, ganti password dengan meter kekuatan), `BannerVerifikasiEmailPmb`.
+- **Formulir PMB lebih lengkap**: `WizardPendaftaranPmb` kini memuat sumber informasi, kode referal, wali, langkah prestasi (`IsianPrestasiPmb`) dan nilai rapor (`IsianRaporPmb`) sesuai pengaturan gelombang, mode tinjau saat formulir terkunci, dan alur perbaikan dari panitia. Isian data diri, asal sekolah (NIS), dan orang tua (tanggal lahir, agama, HP, alamat) ditambah.
+- **CBT**: `LembarUjian` punya `basePath` (dipakai PMB `/v1/pmb/saya/.../ujian`), antrean jawaban luring yang dikirim ulang saat online, log pengawasan (pindah tab, keluar layar penuh, salin-tempel, koneksi putus), dan ajakan layar penuh.
+
 ## 1.8.0 (2026-11-15)
 
 - **Komponen AI** (`unipo-ui/siakad`) di atas `POST /v1/integrasi/ai/teks` SIAKAD. Kunci API penyedia tetap di server; browser hanya memakai token SIAKAD (scope `integrasi:ai`).
