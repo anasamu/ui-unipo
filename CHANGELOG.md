@@ -9,6 +9,26 @@
 - **Formulir PMB lebih lengkap**: `WizardPendaftaranPmb` kini memuat sumber informasi, kode referal, wali, langkah prestasi (`IsianPrestasiPmb`) dan nilai rapor (`IsianRaporPmb`) sesuai pengaturan gelombang, mode tinjau saat formulir terkunci, dan alur perbaikan dari panitia. Isian data diri, asal sekolah (NIS), dan orang tua (tanggal lahir, agama, HP, alamat) ditambah.
 - **CBT**: `LembarUjian` punya `basePath` (dipakai PMB `/v1/pmb/saya/.../ujian`), antrean jawaban luring yang dikirim ulang saat online, log pengawasan (pindah tab, keluar layar penuh, salin-tempel, koneksi putus), dan ajakan layar penuh.
 
+## 1.9.0 (2026-11-15)
+
+- **LMS mahasiswa** (`unipo-ui/siakad`, berkas `lms-belajar`): semua halaman belajar e-learning di atas `/v1/lms`, sehingga aplikasi LMS cukup menyusun komponen.
+  - Kelas: `HalamanKelasLms` (kepala kelas + tab Materi, Tugas, Kuis, Forum, Presensi, Nilai, Peserta, Info), `KepalaKelasLms` dengan progres, `KontenKelasLms`/`DaftarTopikLms` per pertemuan dengan status selesai, `InfoKelasLms`, `PesertaKelasLms`.
+  - Materi: `HalamanMateriLms` (teks, PDF, video YouTube/Vimeo, tautan, navigasi sebelum/berikutnya, tandai selesai) dan `KartuKelasDaring` untuk Zoom/Google Meet (aktif 15 menit sebelum mulai, salin ID dan kata sandi).
+  - Tugas: `HalamanTugasLms`, `KumpulkanTugasLms` (teks, unggah berkas ke `/v1/lms/file`, simpan draf, kumpulkan dengan konfirmasi), rubrik, nilai, umpan balik.
+  - Kuis: `HalamanKuisLms` (ketentuan, percobaan, kata sandi), `RuangKuisLms` (layar penuh, simpan otomatis dengan coba ulang, ragu-ragu, peta soal, timer, kirim otomatis saat waktu habis; memakai `SoalCbt`), `HasilKuisLms` + `PembahasanSoalLms`.
+  - Forum bertingkat: `DaftarForumKelasLms`, `UtasForumLms`, `UtasBaruLms`, `DiskusiLms`, `KirimanForumLms`.
+  - `PresensiKelasLms` (isi kode presensi, rekap H/I/S/A), `NilaiKelasSayaLms` (buku nilai + perkiraan nilai akhir), `RekapNilaiKelasLms`.
+  - Beranda: `KelasDaringMendatang`, `TenggatLms`, `JadwalHariIniLms`, `TugasKuisSayaLms` (lintas kelas), `DaftarNotifikasiLms` (tandai dibaca).
+  - Publik: `KatalogKelasTerbuka`/`KartuKelasTerbuka` dari `/v1/lms/terbuka` (tanpa token, untuk landing page) dan `GabungKelasKodeLms`.
+  - `KalenderLms`: tenggat tugas, kuis, pertemuan, dan kelas daring digabung dengan kalender akademik SIAKAD.
+  - `LmsRuteProvider`/`RUTE_LMS` mengatur alamat halaman yang dipakai tautan, dan `rute.pindah` meneruskan perpindahan halaman (mulai kuis, selesai kuis, buka utas) ke router SPA; `GalatLms` menampilkan galat dengan kode laporan. Hook data `useKontenKelas`, `useTugasLms`, `useKuisLms`, `useSemuaKelasLms`, dan lainnya ikut diekspor.
+- `KalenderAkademik` menerima kegiatan dari luar (`tambahan`, `labelJenis`, `warnaJenis`, `onRentangChange`). Klik kegiatan tetap memilih tanggalnya walau `onKegiatanClick` diisi.
+- `Stepper align="center"`: penanda dan teks langkah di tengah, garis penghubung antarpenanda (simetris untuk landing).
+- `Ilustrasi tokoh`: tampilkan tokoh orang (`jalan`, `tunjuk`, `duduk`) pada adegan apa pun, atau `false` untuk menyembunyikannya.
+- `Hero`: media berupa `Ilustrasi` tampil tanpa kotak abu-abu, menyatu dengan latar halaman (terang dan gelap).
+- Sampul kelas (`SampulKelas`) hanya memakai warna `--u-chart-1` sampai `--u-chart-6`, jadi tidak lagi hitam.
+- Halaman docs **LMS mahasiswa** dengan data contoh.
+
 ## 1.8.0 (2026-11-15)
 
 - **Komponen AI** (`unipo-ui/siakad`) di atas `POST /v1/integrasi/ai/teks` SIAKAD. Kunci API penyedia tetap di server; browser hanya memakai token SIAKAD (scope `integrasi:ai`).

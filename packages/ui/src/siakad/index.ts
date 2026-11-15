@@ -30,3 +30,4 @@ export * from './alur';
 export * from './ai';
 export * from './akun';
 export * from './pmb-maba';
+export * from './lms-belajar';

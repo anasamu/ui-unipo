@@ -9,6 +9,7 @@ import './mock/fitur';
 import './mock/dasbor';
 import './mock/kurikulum';
 import './mock/lms';
+import './mock/lms-belajar';
 import './mock/akademik';
 import './mock/pilih';
 import './mock/katalog';

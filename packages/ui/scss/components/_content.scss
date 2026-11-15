@@ -645,6 +645,17 @@
     object-fit: cover;
     display: block;
   }
+  // Ilustrasi vektor menyatu dengan latar halaman: tanpa kotak abu-abu dan tanpa potongan.
+  &:has(.u-ilustrasi) {
+    overflow: visible;
+    background: transparent;
+    aspect-ratio: auto;
+    display: grid;
+    place-items: center;
+    svg {
+      height: auto;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
