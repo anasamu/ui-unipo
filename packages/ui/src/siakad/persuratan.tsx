@@ -90,12 +90,15 @@ const RESET_NOMOR: Record<PenomoranArsip['reset'], string> = { tahunan: 'Mulai d
 
 const GET = <T,>(path: string, query?: Record<string, unknown>) => (s: ReturnType<typeof useSiakad>, signal: AbortSignal) => s.request<T>({ method: 'GET', path, query: query as never }, { signal });
 
+/** Daftar klasifikasi arsip (kode klasifikasi surat) dari `/v1/arsip`, untuk pilihan di formulir surat. */
 export function useKlasifikasiArsip() {
   return useSiakadQuery<KlasifikasiArsip[]>(['arsip/klasifikasi'], GET('/v1/arsip/klasifikasi', { aktif: 1, per_page: 500 }), { staleTime: 600_000 });
 }
+/** Daftar jenis naskah dinas (surat keputusan, edaran, undangan, …) dari `/v1/arsip`. */
 export function useJenisNaskahArsip() {
   return useSiakadQuery<JenisNaskahArsip[]>(['arsip/jenis', 'naskah'], GET('/v1/arsip/jenis', { kelompok: 'naskah', aktif: 1, per_page: 200 }), { staleTime: 600_000 });
 }
+/** Daftar lokasi simpan arsip fisik (gedung, lemari, rak) milik unit. */
 export function useLokasiArsip(unitId?: number | null) {
   return useSiakadQuery<LokasiArsip[]>(['arsip/lokasi', unitId ?? null], GET('/v1/arsip/lokasi', { unit_id: unitId ?? undefined, aktif: 1, per_page: 300 }), { enabled: Boolean(unitId), staleTime: 300_000 });
 }

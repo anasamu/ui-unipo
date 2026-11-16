@@ -879,6 +879,7 @@ function ukuranGambar(f: File): Promise<{ lebar: number; tinggi: number } | null
 }
 
 const mesin = new WeakMap<Siakad, MesinObrolan>();
+/** Mesin obrolan (percakapan, pesan, unggah lampiran, status baca) untuk satu klien SDK; satu instans per klien dipakai ulang oleh semua komponen obrolan. */
 export function mesinObrolan(siakad: Siakad): MesinObrolan {
   let m = mesin.get(siakad);
   if (!m) {

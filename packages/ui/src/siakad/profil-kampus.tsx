@@ -38,6 +38,7 @@ interface SitusPortal {
 
 const urlFoto = (f: BarisStrukturPortal['foto']) => (typeof f === 'string' ? f : (f?.url ?? null));
 const tahun = (t?: string | null) => (t ? t.slice(0, 4) : '');
+/** Teks periode jabatan struktur organisasi, mis. "2022–2026" atau "2024–sekarang"; null bila tidak ada tanggal. */
 export function periodeStruktur(b: Pick<BarisStrukturPortal, 'periode_mulai' | 'periode_selesai'>): string | null {
   const a = tahun(b.periode_mulai);
   const z = tahun(b.periode_selesai);
@@ -191,6 +192,7 @@ export function kategoriPeran(peran?: string | null): string | null {
   return 'lainnya';
 }
 
+/** Ubah baris testimoni PMB dari API menjadi `ItemTestimoni` untuk komponen Testimoni. */
 export function keTestimoni(b: BarisTestimoniPmb): ItemTestimoni {
   const r = b.rating == null || b.rating === '' ? null : Number(b.rating);
   return {

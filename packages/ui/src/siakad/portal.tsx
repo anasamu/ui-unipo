@@ -43,6 +43,7 @@ const JENIS_BERITA: Record<string, string> = {
 
 /** Pembentuk URL detail. Bawaan: `/berita/{slug}`, `/pengumuman/{slug}`, `/agenda/{slug}`. */
 export type HrefKonten = (jenis: 'berita' | 'pengumuman' | 'agenda', k: KontenPortal) => string | undefined;
+/** Alamat bawaan konten portal: `/<jenis>/<slug atau id>`. Ganti lewat prop `hrefKonten` bila rute aplikasi berbeda. */
 export const hrefKontenBawaan: HrefKonten = (jenis, k) => `/${jenis}/${k.slug ?? k.id}`;
 const hrefBawaan = hrefKontenBawaan;
 
