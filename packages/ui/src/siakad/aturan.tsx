@@ -285,6 +285,120 @@ export const LABEL_KATEGORI_ATURAN: Record<KategoriAturan, string> = {
   umum: 'Umum',
 };
 
+/** Label kategori; kategori baru dari server yang belum dikenal tetap tampil terbaca. */
+export function labelKategoriAturan(k: string): string {
+  return LABEL_KATEGORI_ATURAN[k as KategoriAturan] ?? (k.charAt(0).toUpperCase() + k.slice(1)).replace(/_/g, ' ');
+}
+
+/** Contoh isian formulir aturan menurut kategori/unit, supaya aplikasi SDM tidak menampilkan contoh KRS, dst. */
+export interface ContohAturan {
+  cariTitik: string;
+  nama: string;
+  kode: string;
+  dasar: string;
+  pesan: string;
+  alternatif: string;
+  berlakuBila: string;
+  batas: string;
+}
+export const CONTOH_ATURAN: Record<KategoriAturan, ContohAturan> = {
+  akademik: {
+    cariTitik: 'Cari langkah, mis. KRS, input nilai, ujian',
+    nama: 'Mis. Batas SKS KRS menurut IPS',
+    kode: 'mis. krs.batas-sks',
+    dasar: 'Dasar aturan, mis. Peraturan Akademik Pasal 12.',
+    pesan: '“SKS lulus minimal 100 (sekarang 92).”',
+    alternatif: 'mis. bebas tunggakan atau punya dispensasi',
+    berlakuBila: 'Mis. batas khusus mahasiswa semester 1–2.',
+    batas: 'mis. 24',
+  },
+  kelulusan: {
+    cariTitik: 'Cari langkah, mis. yudisium, wisuda',
+    nama: 'Mis. Syarat yudisium minimal 144 SKS',
+    kode: 'mis. yudisium.sks-minimal',
+    dasar: 'Dasar aturan, mis. Pedoman Akademik Bab Kelulusan.',
+    pesan: '“SKS lulus minimal 144 (sekarang 138).”',
+    alternatif: 'mis. sertifikat TOEFL atau lulus tes bahasa internal',
+    berlakuBila: 'Mis. hanya untuk angkatan 2022 ke atas.',
+    batas: 'mis. 144',
+  },
+  keuangan: {
+    cariTitik: 'Cari langkah, mis. KRS, ujian, dispensasi, cicilan',
+    nama: 'Mis. Wajib lunas 50% sebelum KRS',
+    kode: 'mis. krs.syarat-bayar',
+    dasar: 'Dasar aturan, mis. SK Rektor tentang Biaya Pendidikan.',
+    pesan: '“Pembayaran semester minimal 50% (sekarang 30%).”',
+    alternatif: 'mis. lunas atau punya dispensasi pembayaran',
+    berlakuBila: 'Mis. hanya mahasiswa kelas reguler.',
+    batas: 'mis. 3',
+  },
+  kemahasiswaan: {
+    cariTitik: 'Cari langkah, mis. KKN, cuti, layanan, beasiswa',
+    nama: 'Mis. Cuti akademik paling banyak 2 semester',
+    kode: 'mis. cuti.maks-semester',
+    dasar: 'Dasar aturan, mis. Pedoman Kemahasiswaan Pasal 5.',
+    pesan: '“Cuti akademik paling banyak 2 semester (sudah 2).”',
+    alternatif: 'mis. aktif berorganisasi atau punya rekomendasi dosen wali',
+    berlakuBila: 'Mis. hanya mahasiswa semester 5 ke atas.',
+    batas: 'mis. 2',
+  },
+  kepegawaian: {
+    cariTitik: 'Cari langkah, mis. cuti, presensi, BKD, usulan kenaikan',
+    nama: 'Mis. Studi lanjut minimal masa kerja 2 tahun',
+    kode: 'mis. usulan.studi-lanjut',
+    dasar: 'Dasar aturan, mis. Peraturan Rektor tentang Kepegawaian Pasal 8.',
+    pesan: '“Masa kerja minimal 2 tahun (sekarang 1 tahun).”',
+    alternatif: 'mis. BKD memenuhi atau ada izin pimpinan',
+    berlakuBila: 'Mis. hanya untuk tendik kontrak.',
+    batas: 'mis. 12',
+  },
+  penelitian: {
+    cariTitik: 'Cari langkah, mis. usulan hibah, laporan, luaran, KKN',
+    nama: 'Mis. Ketua hibah internal minimal Lektor',
+    kode: 'mis. hibah.ketua-lektor',
+    dasar: 'Dasar aturan, mis. Panduan Penelitian dan PkM LP2M 2026.',
+    pesan: '“Laporan hibah sebelumnya belum diunggah.”',
+    alternatif: 'mis. punya luaran jurnal atau HKI',
+    berlakuBila: 'Mis. hanya skema hibah internal.',
+    batas: 'mis. 2',
+  },
+  mutu: {
+    cariTitik: 'Cari langkah, mis. capaian, temuan, audit, dokumen mutu',
+    nama: 'Mis. Capaian indikator diisi paling lambat 31 Januari',
+    kode: 'mis. capaian.batas-isi',
+    dasar: 'Dasar aturan, mis. Manual SPMI Bab Pelaksanaan.',
+    pesan: '“Minimal 80% indikator unit terisi (sekarang 60%).”',
+    alternatif: 'mis. ada bukti dukung atau catatan auditor',
+    berlakuBila: 'Mis. hanya unit prodi.',
+    batas: 'mis. 80',
+  },
+  umum: {
+    cariTitik: 'Cari langkah layanan',
+    nama: 'Mis. Layanan hanya dibuka pada jam kerja',
+    kode: 'mis. layanan.jam-kerja',
+    dasar: 'Dasar aturan, mis. nomor dan pasal SK yang mengatur.',
+    pesan: '“Layanan dibuka pukul 08.00–16.00.”',
+    alternatif: 'mis. syarat A atau syarat B',
+    berlakuBila: 'Mis. hanya untuk unit tertentu.',
+    batas: 'mis. 10',
+  },
+};
+export const contohAturan = (k?: string | null): ContohAturan => CONTOH_ATURAN[k as KategoriAturan] ?? CONTOH_ATURAN.umum;
+
+/**
+ * Keterangan titik dari katalog ditulis untuk pengembang dan kadang memuat alamat API atau nama tabel, mis.
+ * "(/pegawai/{id}/cek-syarat)" atau "GET /v1/...". Bagian teknis itu dibuang sebelum ditampilkan ke pengguna.
+ */
+export function keteranganTitikRamah(teks?: string | null): string {
+  if (!teks) return '';
+  return teks
+    .replace(/\s*\([^()]*(?:\/|\{|\b[a-z]+_[a-z_]+\b)[^()]*\)/g, '')
+    .replace(/\b(?:GET|POST|PUT|PATCH|DELETE)\s+\/\S+/g, '')
+    .replace(/\s+([.,;:])/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 export const LABEL_JENIS_PEGAWAI_ATURAN = { dosen: 'Dosen', tendik: 'Tendik' } as const;
 export const LABEL_KATEGORI_PEGAWAI_ATURAN = { tetap: 'Tetap', tidak_tetap: 'Tidak tetap' } as const;
 export const LABEL_STATUS_KEPEGAWAIAN_ATURAN: Record<string, string> = {
@@ -653,7 +767,9 @@ export function DaftarAturan({ filter: tetap = {}, onBuka, saring = true, aksi, 
   };
   const d = useDaftarAturan(filter);
   const total = (d.meta as { total?: number } | undefined)?.total ?? d.data?.length ?? 0;
-  const opsiTitik = (katalog.data?.titik ?? []).map((t) => ({ value: t.kode, label: t.judul, group: LABEL_KATEGORI_ATURAN[t.kategori[0]] }));
+  const opsiTitik = (katalog.data?.titik ?? [])
+    .filter((t) => !tetap.kategori || t.kategori.includes(tetap.kategori as KategoriAturan))
+    .map((t) => ({ value: t.kode, label: t.judul, group: labelKategoriAturan(t.kategori[0]) }));
   const disaring = Boolean(q || titik || kategori || status !== 'semua');
 
   return (
@@ -1217,7 +1333,7 @@ export function periksaIsianAturan(x: IsiAturan, katalog: KatalogAturan | undefi
   const g: Record<string, string> = {};
   const t = katalog?.titik.find((y) => y.kode === x.titik);
   if (!x.titik) g.titik = 'Pilih titik penerapan.';
-  if (t && x.kategori && !t.kategori.includes(x.kategori as KategoriAturan)) g.kategori = `Titik ini menerima: ${t.kategori.map((k) => LABEL_KATEGORI_ATURAN[k]).join(', ')}.`;
+  if (t && x.kategori && !t.kategori.includes(x.kategori as KategoriAturan)) g.kategori = `Titik ini menerima: ${t.kategori.map((k) => labelKategoriAturan(k)).join(', ')}.`;
   if (!x.kategori) g.kategori = 'Pilih kategori.';
   if (!x.jenis) g.jenis = 'Pilih jenis aturan.';
   else if (t && !t.jenis.includes(x.jenis)) g.jenis = 'Jenis ini tidak tersedia di titik yang dipilih.';
@@ -1344,13 +1460,19 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
   const t = katalog.data?.titik.find((y) => y.kode === isi.titik);
   const peta = petaIndikator(katalog.data);
   const bolehKategori = (k: string) => !saya.data || saya.data.admin || saya.data.kategori.some((s) => s.kategori === k && s.boleh_atur);
-  const opsiTitik: SelectOption<string>[] = (katalog.data?.titik ?? []).map((y) => ({
-    value: y.kode,
-    label: y.judul,
-    group: LABEL_KATEGORI_ATURAN[y.kategori[0]],
-    disabled: saya.data ? !y.kategori.some(bolehKategori) : false,
-  }));
-  const opsiKategori: SelectOption<string>[] = (t?.kategori ?? []).map((k) => ({ value: k, label: LABEL_KATEGORI_ATURAN[k], disabled: !bolehKategori(k) }));
+  // Di aplikasi unit (SDM, LP2M, SPMI, ...) KelolaAturan dibatasi satu kategori: hanya titik kategori itu yang
+  // ditawarkan, dan kategori tidak perlu dipilih lagi.
+  const opsiTitik: SelectOption<string>[] = (katalog.data?.titik ?? [])
+    .filter((y) => !kategoriAwal || ubah || y.kategori.includes(kategoriAwal))
+    .map((y) => ({
+      value: y.kode,
+      label: y.judul,
+      group: kategoriAwal ? undefined : labelKategoriAturan(y.kategori[0]),
+      disabled: saya.data ? !y.kategori.some(bolehKategori) : false,
+    }));
+  const opsiKategori: SelectOption<string>[] = (t?.kategori ?? []).map((k) => ({ value: k, label: labelKategoriAturan(k), disabled: !bolehKategori(k) }));
+  const kategoriTunggal = opsiKategori.length === 1 || (Boolean(kategoriAwal) && !ubah && opsiKategori.some((o) => o.value === kategoriAwal));
+  const contoh = contohAturan(isi.kategori || kategoriAwal || t?.kategori[0]);
   const opsiJenis: SelectOption<string>[] = (t?.jenis ?? []).map((j) => ({ value: j, label: LABEL_JENIS_ATURAN[j].label, icon: IKON_JENIS[j] }));
   const opsiTarget = (t?.indikator ?? []).filter((k) => peta.get(k)?.tipe === 'angka').map((k) => ({ value: k, label: peta.get(k)?.judul ?? k }));
   const berubah = JSON.stringify(isi) !== JSON.stringify(awal);
@@ -1434,14 +1556,14 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
       }}
     >
       <BagianForm judul="Di mana aturan ditegakkan" keterangan="Titik penerapan adalah langkah bisnis yang memeriksa aturan ini. Titik tidak bisa diubah setelah disimpan." ikon={<Target />}>
-        <Field label="Titik penerapan" required className="u-form-lebar" error={galat.titik || undefined} description={t?.keterangan}>
+        <Field label="Titik penerapan" required className="u-form-lebar" error={galat.titik || undefined} description={keteranganTitikRamah(t?.keterangan) || undefined}>
           <Pilihan
             id="aturan-titik"
             tampilan="cari"
             options={opsiTitik}
             value={isi.titik || null}
             disabled={ubah}
-            placeholder="Cari langkah, mis. KRS, input nilai, wisuda"
+            placeholder={contoh.cariTitik}
             onValueChange={(v) => {
               const baru = katalog.data?.titik.find((y) => y.kode === v);
               setIsi((x) => ({
@@ -1459,23 +1581,27 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
         </Field>
         {t && (
           <>
-            <Field label="Kategori" required error={galat.kategori || undefined} description="Menentukan siapa yang berwenang mengatur.">
-              <Pilihan id="aturan-kategori" options={opsiKategori} value={isi.kategori || null} required onValueChange={(v) => set('kategori', v ?? '')} />
-            </Field>
+            {kategoriTunggal ? (
+              <Field label="Kategori" error={galat.kategori || undefined} description="Mengikuti unit ini; menentukan siapa yang berwenang mengatur.">
+                <p id="aturan-kategori" className="u-aturan-nilai-tetap">
+                  {labelKategoriAturan(isi.kategori || kategoriAwal || opsiKategori[0]?.value || '')}
+                </p>
+              </Field>
+            ) : (
+              <Field label="Kategori" required error={galat.kategori || undefined} description="Menentukan siapa yang berwenang mengatur.">
+                <Pilihan id="aturan-kategori" options={opsiKategori} value={isi.kategori || null} required onValueChange={(v) => set('kategori', v ?? '')} />
+              </Field>
+            )}
             <Field label="Jenis aturan" required error={galat.jenis || undefined} description={isi.jenis ? LABEL_JENIS_ATURAN[isi.jenis].keterangan : undefined}>
               <Pilihan id="aturan-jenis" tampilan="tombol" options={opsiJenis} value={isi.jenis || null} required onValueChange={(v) => set('jenis', (v ?? '') as JenisAturan)} />
             </Field>
             {t.penerapan.length > 0 && (
-              <details className="u-aturan-penerapan u-form-lebar">
-                <summary>Ditegakkan di {t.penerapan.length} langkah</summary>
-                <ul>
-                  {t.penerapan.map((p) => (
-                    <li key={p}>
-                      <code>{p}</code>
-                    </li>
-                  ))}
-                </ul>
-              </details>
+              <p className="u-aturan-penerapan u-form-lebar">
+                <ShieldCheck aria-hidden />
+                {t.penerapan.length === 1
+                  ? 'Diperiksa otomatis oleh sistem setiap kali langkah ini dijalankan, di semua aplikasi.'
+                  : `Diperiksa otomatis oleh sistem di ${t.penerapan.length} langkah terkait, di semua aplikasi.`}
+              </p>
             )}
           </>
         )}
@@ -1483,21 +1609,21 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
 
       <BagianForm judul="Identitas" ikon={<FileText />}>
         <Field label="Nama aturan" required className="u-form-lebar" error={galat.nama || undefined}>
-          <Input id="aturan-nama" value={isi.nama} maxLength={200} placeholder="Mis. Batas SKS KRS menurut IPS" onChange={(e) => set('nama', e.target.value)} />
+          <Input id="aturan-nama" value={isi.nama} maxLength={200} placeholder={contoh.nama} onChange={(e) => set('nama', e.target.value)} />
         </Field>
         <Field label="Kode" optional error={galat.kode || undefined} description="Unik, untuk dirujuk aplikasi lain.">
-          <Input id="aturan-kode" value={isi.kode} maxLength={60} placeholder="mis. krs.batas-sks" onChange={(e) => set('kode', e.target.value)} />
+          <Input id="aturan-kode" value={isi.kode} maxLength={60} placeholder={contoh.kode} onChange={(e) => set('kode', e.target.value)} />
         </Field>
         <Field label="Prioritas" optional error={galat.prioritas || undefined} description="Angka lebih besar diperiksa lebih dulu.">
           <Input id="aturan-prioritas" type="number" inputMode="numeric" value={isi.prioritas} onChange={(e) => set('prioritas', e.target.value)} />
         </Field>
         <Field label="Keterangan" optional className="u-form-lebar">
-          <Textarea id="aturan-keterangan" rows={2} value={isi.keterangan} placeholder="Dasar aturan, mis. Peraturan Akademik Pasal 12." onChange={(e) => set('keterangan', e.target.value)} />
+          <Textarea id="aturan-keterangan" rows={2} value={isi.keterangan} placeholder={contoh.dasar} onChange={(e) => set('keterangan', e.target.value)} />
         </Field>
       </BagianForm>
 
       {t && isi.jenis === 'syarat' && (
-        <BagianForm judul="Syarat" keterangan="Susun kondisi yang harus dipenuhi. Kelompok “salah satu” untuk alternatif, mis. bebas tunggakan atau punya dispensasi." ikon={<ListChecks />} kolom={1}>
+        <BagianForm judul="Syarat" keterangan={`Susun kondisi yang harus dipenuhi. Kelompok “salah satu” untuk alternatif, ${contoh.alternatif}.`} ikon={<ListChecks />} kolom={1}>
           <PenyusunKondisi id="aturan-kondisi" titik={isi.titik} value={isi.kondisi} onValueChange={(v) => set('kondisi', v)} galat={galat.kondisi || undefined} />
         </BagianForm>
       )}
@@ -1515,7 +1641,7 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
               Bila periode diisi dan cakupan hanya prodi/fakultas tanpa syarat berlaku, tanggal ini ditulis ke menu Tahun Akademik saat diaktifkan, sehingga halaman web lama memakai tanggal yang sama.
             </Alert>
           )}
-          <Field label="Berlaku bila" optional className="u-form-lebar" description="Mis. batas khusus mahasiswa semester 1–2.">
+          <Field label="Berlaku bila" optional className="u-form-lebar" description={contoh.berlakuBila}>
             <PenyusunKondisi id="aturan-kondisi" titik={isi.titik} opsional value={isi.kondisi} onValueChange={(v) => set('kondisi', v)} galat={galat.kondisi || undefined} />
           </Field>
         </BagianForm>
@@ -1600,7 +1726,7 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
             </Button>
           </div>
           <Field label={isi.tabel.length ? 'Batas selain itu' : 'Batas'} required={!isi.tabel.length} optional={isi.tabel.length > 0} error={galat.nilaiBatas || undefined}>
-            <Input id="aturan-nilaiBatas" type="number" inputMode="decimal" value={isi.nilaiBatas} placeholder="mis. 18" onChange={(e) => set('nilaiBatas', e.target.value)} />
+            <Input id="aturan-nilaiBatas" type="number" inputMode="decimal" value={isi.nilaiBatas} placeholder={contoh.batas} onChange={(e) => set('nilaiBatas', e.target.value)} />
           </Field>
           <Field label="Berlaku bila" optional className="u-form-lebar">
             <PenyusunKondisi id="aturan-kondisi" titik={isi.titik} opsional value={isi.kondisi} onValueChange={(v) => set('kondisi', v)} galat={galat.kondisi || undefined} />
@@ -1694,7 +1820,7 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
           }
           optional
           className="u-form-lebar"
-          description="Menggantikan pesan otomatis. Kosongkan agar pesan dibuat dari kondisi, mis. “SKS lulus minimal 100 (sekarang 92).”"
+          description={`Menggantikan pesan otomatis. Kosongkan agar pesan dibuat dari kondisi, mis. ${contoh.pesan}`}
           error={galat.pesan || undefined}
         >
           <Textarea id="aturan-pesan" rows={2} value={isi.pesan} onChange={(e) => set('pesan', e.target.value)} />
@@ -1991,7 +2117,7 @@ export function FormLampiranAturan({
           <IsianTanggal value={isi.tanggal || null} onValueChange={(v) => set('tanggal', v)} />
         </Field>
         <Field label="Perihal" optional className="u-form-lebar">
-          <Input value={isi.perihal} maxLength={255} placeholder="mis. Penetapan batas SKS KRS" onChange={(e) => set('perihal', e.target.value)} />
+          <Input value={isi.perihal} maxLength={255} placeholder="mis. Penetapan aturan yang dilampirkan" onChange={(e) => set('perihal', e.target.value)} />
         </Field>
       </BagianForm>
     </PanelForm>
@@ -2163,7 +2289,7 @@ export function FormPengecualianAturan({
           className="u-form-lebar"
           error={galat.alasan || undefined}
         >
-          <Textarea rows={3} value={isi.alasan} placeholder="mis. Sakit dengan surat dokter, disetujui Wakil Rektor I." onChange={(e) => set('alasan', e.target.value)} />
+          <Textarea rows={3} value={isi.alasan} placeholder="mis. Sakit dengan surat dokter, disetujui pimpinan yang berwenang." onChange={(e) => set('alasan', e.target.value)} />
         </Field>
         <Field label="Berlaku sampai" optional description="Kosong = tanpa batas waktu." error={galat.berlaku_sampai || undefined}>
           <IsianTanggal value={isi.berlaku_sampai || null} onValueChange={(v) => set('berlaku_sampai', v)} />
@@ -2834,7 +2960,7 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
                           ? `${formatWaktuAturan(a.berlaku_mulai) ?? ''} – ${a.berlaku_selesai ? formatWaktuAturan(a.berlaku_selesai) : 'seterusnya'}`
                           : 'Selama aktif',
                     },
-                    { label: 'Kategori', value: LABEL_KATEGORI_ATURAN[a.kategori] },
+                    { label: 'Kategori', value: labelKategoriAturan(a.kategori) },
                     { label: 'Pesan', value: a.pesan ?? 'Dibuat otomatis dari kondisi' },
                     { label: 'Prioritas', value: a.prioritas },
                     { label: 'Diaktifkan', value: a.diaktifkan_at ? `${formatWaktuAturan(a.diaktifkan_at, { jam: true })} oleh ${a.diaktifkan_oleh ?? '–'}` : '–' },
