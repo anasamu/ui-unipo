@@ -15,6 +15,7 @@ export * from './kelengkapan';
 export * from './dasbor';
 export * from './lppm';
 export * from './kurikulum';
+export * from './kurikulum-kelola';
 export * from './lms';
 export * from './cbt';
 export * from './akademik';

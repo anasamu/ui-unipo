@@ -1,5 +1,14 @@
 # Catatan perubahan
 
+## 1.32.0 (2026-11-16)
+
+- **Kelola kurikulum OBE lengkap** (`unipo-ui/siakad`, API `/v1/kurikulum-obe`, tanpa perubahan API kecuali `hak`/`transisi_saya` pada detail kurikulum SIAKAD 2026-11-16). Sebelumnya komponen kurikulum hanya menampilkan data; sekarang semua langkah penyusunan bisa dikerjakan dari aplikasi:
+  - `RuangKurikulumObe`: satu ruang kerja bertab (Ringkasan, Profil lulusan & CPL, Bahan kajian, Mata kuliah, Matriks, Ekuivalensi, Capaian CPL, Peninjauan, Terbit ke SIAKAD). Tab Terbit hanya muncul bila `hak.migrasi`.
+  - `AlurKurikulum`: langkah draf → diajukan → disahkan → berlaku → arsip dengan tombol transisi yang boleh bagi pengguna; mengesahkan meminta nomor SK (`PilihNomorSK`) dan tanggal, menampilkan galat validasi Permendiktisaintek 39/2025 dan bisa diabaikan dengan alasan; berlaku meminta tahun akademik mulai; revisi membuat draf baru; angkatan pengguna dengan pemindahan dari kurikulum lain.
+  - `FormKurikulumObe`: identitas, beban belajar, dan narasi Pasal 44; isian terkunci setelah disahkan.
+  - `KelolaButirKurikulum` (profil lulusan, CPL, bahan kajian), `KelolaMkKurikulum` (sebaran per semester dengan total SKS wajib/pilihan dan batas SKS per semester, tambah/ubah/hapus MK, rincian SKS, dosen pengampu, prasyarat), `KelolaCpmk` (CPMK dengan CPL dan bobot, sub-CPMK), `KelolaRps` + `EditorRps` (versi, salin, 16 pertemuan, komponen evaluasi total 100%, sahkan, cetak), `RuangMkKurikulum` (lembar MK bertab), `KelolaMatriksKurikulum`, `KelolaEkuivalensi` (manual dan otomatis dari kurikulum lama), `KelolaPeninjauan`, `KelolaCapaianCpl` (rekam dan riwayat per angkatan), `TerbitKurikulum` (selisih, pratinjau, terbitkan, batal).
+  - `useHakKurikulum(id, batas)`: gabungan hak dari API dan batas aplikasi (mis. dasbor fakultas mematikan terbit).
+
 ## 1.31.1 (2026-11-16)
 
 - **Obrolan: pesan ke orang yang belum pernah membuka obrolan tidak lagi gagal** (butuh SIAKAD dengan `/v1/obrolan/susulan`). Pesan tetap terkirim dan terenkripsi; begitu penerima membuka obrolan dan perangkatnya membuat kunci, perangkat pengirim membungkus ulang kunci pesan untuk perangkat itu secara otomatis, lalu pesan terbuka sendiri. Server tetap tidak pernah memegang kunci pesan.
