@@ -91,6 +91,10 @@ const PETA: Baris[] = [
   },
   { k: 'Navigasi', kegunaan: 'Sidebar per modul aplikasi (SDM, BAAK, Keuangan, LP2M, SPMI)', komponen: 'SidebarModul', dari: 'unipo-ui', halaman: 'navigasi-modul' },
   { k: 'Navigasi', kegunaan: 'Menu utama beranda dan menu atas halaman', komponen: 'MenuUtama, MenuAtas', dari: 'unipo-ui', halaman: 'navigasi-modul' },
+  // Jadwal kuliah
+  { k: 'Jadwal', kegunaan: 'Cek jadwal kuliah yang bentrok (ruang, dosen, kelas, KRS) lintas prodi dan kampus 1/2', komponen: 'PanelBentrokJadwal', dari: 'unipo-ui/siakad', api: '/v1/akademik/jadwal/bentrok', scope: 'akademik:read', halaman: 'jadwal-bentrok' },
+  { k: 'Jadwal', kegunaan: 'Susun jadwal kuliah otomatis tanpa bentrok (pratinjau lalu simpan)', komponen: 'PenyusunJadwalOtomatis', dari: 'unipo-ui/siakad', api: '/v1/akademik/jadwal/otomatis', scope: 'akademik:write', halaman: 'jadwal-bentrok' },
+  { k: 'Jadwal', kegunaan: 'Cek bentrok langsung saat mengisi formulir jadwal', komponen: 'HasilCekJadwal', dari: 'unipo-ui/siakad', api: '/v1/akademik/jadwal/cek', scope: 'akademik:read', halaman: 'jadwal-bentrok' },
   // Presensi QR
   {
     k: 'Presensi',

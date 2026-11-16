@@ -1,6 +1,6 @@
 # Catatan perubahan
 
-## 1.32.0 (2026-11-16)
+## 1.33.0 (2026-11-16)
 
 - **Kelola kurikulum OBE lengkap** (`unipo-ui/siakad`, API `/v1/kurikulum-obe`, tanpa perubahan API kecuali `hak`/`transisi_saya` pada detail kurikulum SIAKAD 2026-11-16). Sebelumnya komponen kurikulum hanya menampilkan data; sekarang semua langkah penyusunan bisa dikerjakan dari aplikasi:
   - `RuangKurikulumObe`: satu ruang kerja bertab (Ringkasan, Profil lulusan & CPL, Bahan kajian, Mata kuliah, Matriks, Ekuivalensi, Capaian CPL, Peninjauan, Terbit ke SIAKAD). Tab Terbit hanya muncul bila `hak.migrasi`.
@@ -8,6 +8,20 @@
   - `FormKurikulumObe`: identitas, beban belajar, dan narasi Pasal 44; isian terkunci setelah disahkan.
   - `KelolaButirKurikulum` (profil lulusan, CPL, bahan kajian), `KelolaMkKurikulum` (sebaran per semester dengan total SKS wajib/pilihan dan batas SKS per semester, tambah/ubah/hapus MK, rincian SKS, dosen pengampu, prasyarat), `KelolaCpmk` (CPMK dengan CPL dan bobot, sub-CPMK), `KelolaRps` + `EditorRps` (versi, salin, 16 pertemuan, komponen evaluasi total 100%, sahkan, cetak), `RuangMkKurikulum` (lembar MK bertab), `KelolaMatriksKurikulum`, `KelolaEkuivalensi` (manual dan otomatis dari kurikulum lama), `KelolaPeninjauan`, `KelolaCapaianCpl` (rekam dan riwayat per angkatan), `TerbitKurikulum` (selisih, pratinjau, terbitkan, batal).
   - `useHakKurikulum(id, batas)`: gabungan hak dari API dan batas aplikasi (mis. dasbor fakultas mematikan terbit).
+
+## 1.32.0 (2026-11-16)
+
+- **Cek jadwal bentrok dan jadwal otomatis** (`unipo-ui/siakad`, butuh SIAKAD dengan `/v1/akademik/jadwal/bentrok|cek|otomatis` atau `/v1/fakultas/{kode}/jadwal/...`):
+  - `PanelBentrokJadwal`: bentrok ruang, dosen (termasuk tim), rombongan kelas, dan mahasiswa KRS terhadap jadwal semua prodi, plus peringatan kampus 1/2 (pindah kampus tanpa jeda cukup, ruang di kampus lain), dikelompokkan per hari; pilihan jeda pindah kampus; tombol "Perbaiki otomatis".
+  - `PenyusunJadwalOtomatis`: atur (dari periode lain atau pindahkan yang bentrok, hari, kelas, jeda kampus, menit per SKS, batas kelas sore) → pratinjau usulan yang bisa dicentang → simpan. Pratinjau tidak mengubah data.
+  - `useCekJadwal` + `HasilCekJadwal`: cek bentrok langsung saat mengisi formulir tambah/ubah jadwal.
+  - `KartuTemuanJadwal`, `DaftarTemuanJadwal`, `useBentrokJadwal`, `labelKampus`, `HARI_KULIAH`; prop `sumber` memilih API akademik atau dasbor fakultas.
+- **Buat surat dari templat** (`unipo-ui/siakad`, tanpa perubahan API): `EditorSuratKeluar` untuk surat baru kini membuka galeri templat lebih dulu (`galeriAwal`, bawaan true), jadi semua aplikasi yang memakai `PersuratanUnit` atau `EditorSuratKeluar` (fakultas, BAAK, BAUK, SDM, SPMI, PMB) langsung mendapatkannya.
+  - `PilihTemplatSurat`: cari, saring kategori, pratinjau di kertas dengan contoh data; berisi templat unit, templat bersama (/v1/arsip/template), dan 12 templat bawaan UNIPO (`TEMPLAT_SURAT_BAWAAN`): undangan, pemberitahuan, permohonan, pengantar, berita acara, keterangan aktif kuliah, rekomendasi mahasiswa, izin penelitian, surat tugas, keterangan dosen/pegawai, SK, dan edaran. Templat bawaan tidak perlu disimpan di server dulu.
+  - Isian bertipe di panel editor: tanggal (ditulis "17 November 2026" atau "Selasa, 17 November 2026"), paragraf, angka; tipe ditebak dari nama penanda untuk templat unit. "Ambil dari data mahasiswa/dosen" mengisi nama, NIM/NIDN, prodi, jabatan sekaligus dari SIAKAD.
+  - Tombol **Bangkitkan surat** menulis isian ke kertas sebagai teks biasa (masih bisa disunting); isian kosong tetap menjadi penanda kuning. Jenis naskah (nomor surat) dipilih otomatis dari templat.
+  - `KelolaTemplatSurat`: tombol **Salin dari galeri** untuk menjadikan templat bawaan sebagai templat unit lalu menyesuaikannya.
+  - Helper: `templatTerpilih`, `isianTemplat`, `nilaiIsianSurat`, `terapkanIsian`, `tipeIsianDariNama`, `hariTanggalSurat`, `jenisDariKode`, `ISIAN_DARI_DATA`.
 
 ## 1.31.1 (2026-11-16)
 
