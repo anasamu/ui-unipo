@@ -12,7 +12,7 @@
   background: var(--u-primary-soft); color: var(--u-primary-soft-foreground);
   svg { width: 18px; height: 18px; }
 }
-.u-2fa-ket { display: block; font-size: 0.875rem; margin-top: 2px; }
+.u-2fa .u-2fa-ket, .u-dialog .u-2fa-ket { display: block; font-size: 0.875rem; line-height: 1.45; margin-top: 2px; }
 .u-2fa-galat { margin-top: 12px; }
 .u-2fa-aksi { display: flex; flex-wrap: wrap; gap: 8px; }
 .u-2fa-langkah { display: flex; flex-direction: column; gap: 16px; }
