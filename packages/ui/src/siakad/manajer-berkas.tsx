@@ -7,6 +7,9 @@ import {
   ChevronDown,
   ChevronRight,
   CircleAlert,
+  ClipboardPaste,
+  Copy,
+  CopyPlus,
   CircleCheck,
   CloudUpload,
   Download,
@@ -16,6 +19,7 @@ import {
   FileArchive,
   FileAudio,
   FileImage,
+  FilePlus,
   FileSpreadsheet,
   FileText,
   FileVideo,
@@ -24,13 +28,21 @@ import {
   FolderOpen,
   FolderPlus,
   FolderTree,
+  FolderUp,
   HardDrive,
   LayoutGrid,
   List,
+  Lock,
+  LockOpen,
   Pencil,
+  Plus,
   Presentation,
   RotateCw,
+  Scissors,
   Search,
+  Share2,
+  ShieldCheck,
+  CalendarRange,
   Trash2,
   Upload,
   X,
@@ -42,6 +54,22 @@ import { ConfirmDialog, Dialog, Menu, Tooltip, type MenuEntry } from '../compone
 import { cn } from '../lib/cn';
 import { formatBytes, formatDate } from '../lib/format';
 import { unggahKeBerkas, useInfoBerkas, useUrlBerkas, type BerkasTerunggah, type InfoBerkas } from './berkas';
+import {
+  BERKAS_BARU,
+  DialogBagikanBerkas,
+  DialogBerkasBaru,
+  DialogPeriodeBerkas,
+  KebijakanEnkripsiBerkas,
+  paramRuang,
+  setelPapanBerkas,
+  useKebijakanBerkas,
+  usePapanBerkas,
+  usePeriodeBerkas,
+  useUnitBerkas,
+  type JenisBerkasBaru,
+  type RuangBerkasOpsi,
+  type SasaranBagi,
+} from './berkas-ruang';
 import { invalidateSiakad, pesanGalat, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
 
 // ================================================================ Tipe dan aturan (sama dengan /v1/berkas)
@@ -77,6 +105,8 @@ export interface FolderBerkas {
 export interface DaftarFolderBerkas {
   akar: { jumlah_berkas: number; ukuran: number; total_berkas: number; total_ukuran: number; jumlah_subfolder: number };
   folder: FolderBerkas[];
+  /** Ruang yang dibuka (SIAKAD 2026-11+): `batas` = akar folder yang dibagikan, `akses` = pemilik/anggota/kelola/bagi. */
+  ruang?: { kode: string; unit: string | null; akses: string | null; batas: string | null; periode: string | null };
 }
 
 /** Berkas di manajer (GET /v1/berkas). */
@@ -87,6 +117,13 @@ export interface BerkasManajer extends BerkasTerunggah {
   dibuat_at?: string | null;
   jumlah_unduh?: number;
   pemilik?: string | null;
+  /** Kode unit bila berkas ada di ruang bersama unit. */
+  unit?: string | null;
+  /** Periode akademik (m_tahun, mis. 20251). */
+  periode?: string | null;
+  /** Isi disimpan terenkripsi AES-256-GCM di penyimpanan. */
+  terenkripsi?: boolean;
+  diubah_at?: string | null;
 }
 
 export type JenisBerkas = 'gambar' | 'pdf' | 'dokumen' | 'spreadsheet' | 'presentasi' | 'arsip' | 'video' | 'audio';
@@ -161,30 +198,50 @@ function rapikanSegmen(s: string): string {
   return r || 'Folder';
 }
 
+/** Nama periode dari kode m_tahun, mis. 20251 → "2025/2026 Ganjil". */
+export function namaPeriode(kode: string): string {
+  if (kode === 'tanpa') return 'Tanpa periode';
+  const th = Number(kode.slice(0, 4));
+  const sem = ({ '1': 'Ganjil', '2': 'Genap', '3': 'Pendek' } as Record<string, string>)[kode.slice(4, 5)] ?? '';
+  return Number.isFinite(th) ? `${th}/${th + 1} ${sem}`.trim() : kode;
+}
+
 const gabung = (induk: string | null | undefined, nama: string) => (induk ? `${induk}/${nama}` : nama);
 const indukDari = (path: string) => (path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : null);
 const namaDari = (path: string) => path.slice(path.lastIndexOf('/') + 1);
 
 // ================================================================ Hook data
 
-/** Pohon folder (GET /v1/berkas/folder). */
-export function useFolderBerkas(modul?: string) {
+/** Pohon folder (GET /v1/berkas/folder) di ruang pribadi per modul, ruang unit (`unit`), atau folder yang dibagikan (`bagi`). */
+export function useFolderBerkas(modul?: string, ruang: { unit?: string; bagi?: string; periode?: string | null } = {}) {
+  const r: RuangBerkasOpsi = { modul, unit: ruang.unit, bagi: ruang.bagi };
   return useSiakadQuery<DaftarFolderBerkas>(
-    ['berkas-folder', modul ?? ''],
-    (s, signal) => s.request<DaftarFolderBerkas>({ method: 'GET', path: '/v1/berkas/folder', query: { modul: modul || undefined } }, { signal }),
+    ['berkas-folder', modul ?? '', ruang.unit ?? '', ruang.bagi ?? '', ruang.periode ?? ''],
+    (s, signal) => s.request<DaftarFolderBerkas>({ method: 'GET', path: '/v1/berkas/folder', query: { ...paramRuang(r), periode: ruang.periode || undefined } }, { signal }),
     { staleTime: 30_000 },
   );
 }
 
-/** Aksi folder dan berkas untuk manajer berkas. Setiap aksi menyegarkan pohon folder dan daftar berkas. */
-export function useAksiBerkas(modul?: string) {
+/** Ruang tujuan salin/pindah antar ruang: `unit` null = ruang pribadi (per `modul`). */
+export interface TujuanRuangBerkas {
+  unit: string | null;
+  modul?: string;
+}
+const bodyTujuan = (t?: TujuanRuangBerkas) => (t ? { tujuan_unit: t.unit ?? '', tujuan_modul: t.modul || undefined } : {});
+
+type HasilBanyak = { gagal: Array<{ id: string; pesan: string }> };
+
+/** Aksi folder dan berkas untuk manajer berkas. Setiap aksi menyegarkan pohon folder dan daftar berkas. `unit` = ruang unit. */
+export function useAksiBerkas(modul?: string, unit?: string) {
   const siakad = useSiakad();
   return React.useMemo(() => {
     const segarkan = () => {
       invalidateSiakad('berkas-folder');
       invalidateSiakad('berkas-isi');
+      invalidateSiakad('berkas-periode');
     };
     const m = modul || undefined;
+    const ruang = unit ? { unit } : { modul: m };
     const jalan = async <T,>(fn: () => Promise<{ data: T }>) => {
       const r = await fn();
       segarkan();
@@ -193,15 +250,46 @@ export function useAksiBerkas(modul?: string) {
     return {
       segarkan,
       buatFolder: (nama: string, induk: string | null, warna?: WarnaFolder | null) =>
-        jalan(() => siakad.request<FolderBerkas>({ method: 'POST', path: '/v1/berkas/folder', body: { nama, induk, warna: warna ?? undefined, modul: m } })),
+        jalan(() => siakad.request<FolderBerkas>({ method: 'POST', path: '/v1/berkas/folder', body: { nama, induk, warna: warna ?? undefined, ...ruang } })),
       ubahFolder: (path: string, ubah: { nama?: string; induk_baru?: string | null; warna?: WarnaFolder | null }) =>
-        jalan(() => siakad.request<FolderBerkas & { berkas_dipindah: number }>({ method: 'POST', path: '/v1/berkas/folder/ubah', body: { path, ...ubah, modul: m } })),
+        jalan(() => siakad.request<FolderBerkas & { berkas_dipindah: number }>({ method: 'POST', path: '/v1/berkas/folder/ubah', body: { path, ...ubah, ...ruang } })),
       hapusFolder: (path: string, isi = false) =>
-        jalan(() => siakad.request<{ path: string; berkas_dihapus: number }>({ method: 'POST', path: '/v1/berkas/folder/hapus', body: { path, isi, modul: m } })),
-      ubahBerkas: (id: string, ubah: { nama?: string; folder?: string | null; keterangan?: string }) =>
+        jalan(() => siakad.request<{ path: string; berkas_dihapus: number }>({ method: 'POST', path: '/v1/berkas/folder/hapus', body: { path, isi, ...ruang } })),
+      ubahBerkas: (id: string, ubah: { nama?: string; folder?: string | null; keterangan?: string; periode?: string }) =>
         jalan(() => siakad.request<BerkasManajer>({ method: 'POST', path: `/v1/berkas/${encodeURIComponent(id)}/ubah`, body: ubah })),
-      pindahBerkas: (id: string[], folder: string | null) =>
-        jalan(() => siakad.request<{ dipindah: string[]; gagal: Array<{ id: string; pesan: string }> }>({ method: 'POST', path: '/v1/berkas/pindah', body: { id, folder } })),
+      /** Pindah berkas ke folder; `tujuan` = pindah ke ruang lain (unit lain atau ruang pribadi). */
+      pindahBerkas: (id: string[], folder: string | null, tujuan?: TujuanRuangBerkas) =>
+        jalan(() => siakad.request<{ dipindah: string[] } & HasilBanyak>({ method: 'POST', path: '/v1/berkas/pindah', body: { id, folder, ...bodyTujuan(tujuan) } })),
+      /** Salin berkas (nama bentrok diberi akhiran "(salinan)"); `tujuan` = salin ke ruang lain. */
+      salinBerkas: (id: string[], folder: string | null, tujuan?: TujuanRuangBerkas) =>
+        jalan(() => siakad.request<{ disalin: BerkasManajer[] } & HasilBanyak>({ method: 'POST', path: '/v1/berkas/salin', body: { id, folder, ...bodyTujuan(tujuan) } })),
+      /** Salin folder beserta isinya; `asal` = ruang folder itu (bawaan ruang hook ini). */
+      salinFolder: (path: string, induk: string | null, tujuan?: TujuanRuangBerkas, asal?: { unit?: string; modul?: string }) =>
+        jalan(() =>
+          siakad.request<{ path: string; berkas_disalin: number; folder_disalin: number }>({
+            method: 'POST',
+            path: '/v1/berkas/folder/salin',
+            body: { path, induk_baru: induk, ...(asal ? (asal.unit ? { unit: asal.unit } : { modul: asal.modul || undefined }) : ruang), ...bodyTujuan(tujuan) },
+          }),
+        ),
+      /** Hapus folder di ruang lain (mis. setelah potong-tempel antar ruang). */
+      hapusFolderDi: (path: string, asal: { unit?: string; modul?: string }) =>
+        jalan(() => siakad.request({ method: 'POST', path: '/v1/berkas/folder/hapus', body: { path, isi: true, ...(asal.unit ? { unit: asal.unit } : { modul: asal.modul || undefined }) } })),
+      /** Ganti periode akademik beberapa berkas ("tanpa" = tanpa periode). */
+      ubahPeriode: async (id: string[], periode: string) => {
+        const gagal: Array<{ id: string; pesan: string }> = [];
+        for (const x of id) {
+          try {
+            await siakad.request({ method: 'POST', path: `/v1/berkas/${encodeURIComponent(x)}/ubah`, body: { periode } });
+          } catch (e) {
+            gagal.push({ id: x, pesan: pesanGalat(e) });
+          }
+        }
+        segarkan();
+        return { gagal };
+      },
+      /** Enkripsi (`aktif` true) atau buka enkripsi isi berkas yang sudah ada. */
+      enkripsi: (id: string, aktif: boolean) => jalan(() => siakad.request<BerkasManajer>({ method: 'POST', path: `/v1/berkas/${encodeURIComponent(id)}/enkripsi`, body: { aktif } })),
       hapusBerkas: (id: string[]) => jalan(() => siakad.request<{ dihapus: string[]; gagal: Array<{ id: string; pesan: string }> }>({ method: 'POST', path: '/v1/berkas/hapus-banyak', body: { id } })),
       unduh: async (b: BerkasManajer) => {
         const r = await siakad.request<{ url: string }>({ method: 'GET', path: `/v1/berkas/${encodeURIComponent(b.id)}/url`, query: { unduh: 1, ttl: 300 } });
@@ -214,7 +302,7 @@ export function useAksiBerkas(modul?: string) {
         a.remove();
       },
     };
-  }, [siakad, modul]);
+  }, [siakad, modul, unit]);
 }
 
 // ================================================================ Antrean unggah
@@ -630,6 +718,7 @@ function DialogPindah({
   dari,
   terlarang,
   pindah,
+  salin,
 }: {
   open: boolean;
   tutup: () => void;
@@ -639,6 +728,8 @@ function DialogPindah({
   dari: string | null;
   terlarang?: string | null;
   pindah: (tujuan: string | null) => Promise<void>;
+  /** Mode salin: tombol "Salin ke sini" dan folder asal boleh dipilih. */
+  salin?: boolean;
 }) {
   const [tujuan, setTujuan] = React.useState<string | null>(dari);
   const [galat, setGalat] = React.useState<string | null>(null);
@@ -672,9 +763,9 @@ function DialogPindah({
           <Button variant="ghost" onClick={tutup}>
             Batal
           </Button>
-          <Button onClick={kirim} loading={sibuk} disabled={tujuan === dari}>
-            <FolderInput aria-hidden />
-            Pindahkan ke sini
+          <Button onClick={kirim} loading={sibuk} disabled={!salin && tujuan === dari}>
+            {salin ? <Copy aria-hidden /> : <FolderInput aria-hidden />}
+            {salin ? 'Salin ke sini' : 'Pindahkan ke sini'}
           </Button>
         </>
       }
@@ -745,6 +836,18 @@ function Pratinjau({ b, tutup, unduh, onAksi }: { b: BerkasManajer | null; tutup
                 <dd>{formatDate(b.dibuat_at, 'long')}</dd>
               </div>
             )}
+            {b.periode && (
+              <div>
+                <dt>Periode</dt>
+                <dd>{namaPeriode(b.periode)}</dd>
+              </div>
+            )}
+            {b.terenkripsi !== undefined && (
+              <div>
+                <dt>Penyimpanan</dt>
+                <dd>{b.terenkripsi ? 'Terenkripsi AES-256-GCM' : 'Tidak dienkripsi'}</dd>
+              </div>
+            )}
             {b.kategori && (
               <div>
                 <dt>Kategori</dt>
@@ -773,6 +876,16 @@ function Pratinjau({ b, tutup, unduh, onAksi }: { b: BerkasManajer | null; tutup
 // ================================================================ ManajerBerkas
 
 type Sasaran = { jenis: 'folder'; f: FolderBerkas } | { jenis: 'berkas'; b: BerkasManajer } | { jenis: 'kosong' };
+type DialogManajer =
+  | null
+  | { jenis: 'folder-baru' }
+  | { jenis: 'folder-nama'; f: FolderBerkas }
+  | { jenis: 'pindah'; berkas: BerkasManajer[]; f?: FolderBerkas; salin?: boolean }
+  | { jenis: 'hapus'; berkas: BerkasManajer[]; f?: FolderBerkas }
+  | { jenis: 'bagikan'; sasaran: SasaranBagi }
+  | { jenis: 'baru'; tipe: JenisBerkasBaru }
+  | { jenis: 'periode'; berkas: BerkasManajer[] }
+  | { jenis: 'kebijakan' };
 const TIPE_SERET = 'application/x-unipo-berkas';
 /** Peristiwa React dari portal (menu, dialog) ikut naik ke induk; abaikan yang bukan dari elemen ini. */
 const dariSini = (e: React.SyntheticEvent) => e.currentTarget.contains(e.target as Node);
@@ -780,6 +893,19 @@ const dariSini = (e: React.SyntheticEvent) => e.currentTarget.contains(e.target 
 export interface ManajerBerkasProps {
   /** Ruang folder per aplikasi/modul (mis. "arsip"); kosong = umum. Berkas baru juga diberi modul ini. */
   modul?: string;
+  /**
+   * Ruang bersama unit (mis. "baak", "bauk", "sdm", "lpm", "pmb", "lppm", "humas", kode fakultas/prodi): semua anggota
+   * unit melihat isinya. Hak tulis dan kelola mengikuti izin unit pemanggil (GET /v1/berkas/unit).
+   */
+  unit?: string;
+  /** UUID folder yang dibagikan ke saya (dari GET /v1/berkas/dibagikan): hanya lihat, unduh, dan salin ke ruang sendiri. */
+  bagi?: string;
+  /** Tampilkan pilihan periode akademik untuk mengelompokkan berkas (bawaan true). */
+  periode?: boolean;
+  /** Periode yang dipilih pertama kali: kode m_tahun (mis. "20251"), "tanpa", atau null = semua periode. */
+  periodeAwal?: string | null;
+  /** Bagikan berkas dan folder ke orang, unit, atau tautan publik (bawaan true). */
+  bolehBagikan?: boolean;
   /** Kategori berkas yang diunggah (bawaan "dokumen"). */
   kategori?: string;
   /** Folder yang dibuka pertama kali (null = folder utama). */
@@ -814,29 +940,53 @@ export interface ManajerBerkasProps {
  */
 export function ManajerBerkas({
   modul,
+  unit,
+  bagi,
+  periode: tampilPeriode = true,
+  periodeAwal = null,
+  bolehBagikan: bolehBagikanProp = true,
   kategori = 'dokumen',
   folderAwal = null,
   folder: folderProp,
   onFolderChange,
   tampilanAwal = 'grid',
   accept,
-  bolehUnggah = true,
-  bolehHapus = true,
-  bolehKelola = true,
+  bolehUnggah: bolehUnggahProp = true,
+  bolehHapus: bolehHapusProp = true,
+  bolehKelola: bolehKelolaProp = true,
   pilih,
   onPilih,
   labelPilih,
   onBuka,
-  judul = 'Berkas saya',
+  judul: judulProp,
   tinggi = '36rem',
   className,
 }: ManajerBerkasProps) {
   const siakad = useSiakad();
-  const aksi = useAksiBerkas(modul);
+  const aksi = useAksiBerkas(modul, unit);
   const { data: info } = useInfoBerkas();
-  const pohonQ = useFolderBerkas(modul);
+  const ruangOpsi: RuangBerkasOpsi = React.useMemo(() => ({ modul, unit, bagi }), [modul, unit, bagi]);
+  const [periode, setPeriode] = React.useState<string | null>(periodeAwal);
+  const pohonQ = useFolderBerkas(modul, { unit, bagi, periode });
+  const periodeQ = usePeriodeBerkas(ruangOpsi, tampilPeriode);
+  const kebijakanQ = useKebijakanBerkas(unit, !bagi);
+  const unitQ = useUnitBerkas(false);
+  const unitIni = unit ? unitQ.data?.unit.find((u) => u.kode === unit) : undefined;
+  const judul = judulProp ?? (unit ? (unitIni ? `Berkas ${unitIni.singkatan || unitIni.nama}` : `Berkas ${unit.toUpperCase()}`) : bagi ? 'Dibagikan ke saya' : 'Berkas saya');
+  const akses = pohonQ.data?.ruang?.akses ?? (bagi ? 'bagi' : unit ? (unitIni?.akses ?? 'anggota') : 'pemilik');
+  // Folder bersama hanya bisa dilihat, diunduh, dan disalin; anggota unit tidak bisa menghapus folder unit.
+  const bolehUnggah = bolehUnggahProp && !bagi;
+  const bolehKelola = bolehKelolaProp && !bagi;
+  const bolehHapus = bolehHapusProp && !bagi;
+  const bolehKelolaRuang = bolehKelola && akses !== 'anggota';
+  const bolehBagikan = bolehBagikanProp && !bagi;
+  const enkripsiEfektif = kebijakanQ.data?.efektif ?? null;
+  const [enkripsiUnggah, setEnkripsiUnggah] = React.useState(false);
+  const papan = usePapanBerkas();
+  const akarBagi = bagi ? (pohonQ.data?.ruang?.batas ?? null) : null;
   const [folderDalam, setFolderDalam] = React.useState<string | null>(folderAwal);
-  const folder = folderProp !== undefined ? folderProp : folderDalam;
+  const folderPilih = folderProp !== undefined ? folderProp : folderDalam;
+  const folder = folderPilih ?? akarBagi;
   const buka = React.useCallback(
     (f: string | null) => {
       setFolderDalam(f);
@@ -863,19 +1013,14 @@ export function ManajerBerkas({
   const [seretLuar, setSeretLuar] = React.useState(false);
   const [sasaranLepas, setSasaranLepas] = React.useState<string | null>(null);
   const [panelPohon, setPanelPohon] = React.useState(false);
-  const [dialog, setDialog] = React.useState<
-    | null
-    | { jenis: 'folder-baru' }
-    | { jenis: 'folder-nama'; f: FolderBerkas }
-    | { jenis: 'pindah'; berkas: BerkasManajer[]; f?: FolderBerkas }
-    | { jenis: 'hapus'; berkas: BerkasManajer[]; f?: FolderBerkas }
-  >(null);
+  const [dialog, setDialog] = React.useState<DialogManajer>(null);
   const [gantiNama, setGantiNama] = React.useState<BerkasManajer | null>(null);
   const [pratinjau, setPratinjau] = React.useState<BerkasManajer | null>(null);
   const [pesan, setPesan] = React.useState<{ nada: 'sukses' | 'galat'; teks: string } | null>(null);
   const sasaranMenu = React.useRef<Sasaran>({ jenis: 'kosong' });
   const [menuSasaran, setMenuSasaran] = React.useState<Sasaran>({ jenis: 'kosong' });
   const inputFile = React.useRef<HTMLInputElement>(null);
+  const inputFolder = React.useRef<HTMLInputElement>(null);
   const hitungSeret = React.useRef(0);
 
   const daftarFolder = pohonQ.data?.folder ?? [];
@@ -899,15 +1044,24 @@ export function ManajerBerkas({
   React.useEffect(() => {
     setHalaman(1);
     setTerpilih(new Set());
-  }, [folder, kata, jenis, urut, modul]);
+  }, [folder, kata, jenis, urut, modul, unit, bagi, periode]);
 
   // Daftar berkas di folder ini (atau hasil pencarian di folder ini beserta subfoldernya).
   React.useEffect(() => {
     const ctrl = new AbortController();
     setMemuat(true);
     setGalat(null);
+    if (bagi && !folder) {
+      // Akar folder bersama belum diketahui (pohon masih dimuat).
+      if (pohonQ.error) {
+        setGalat(pesanGalat(pohonQ.error));
+        setMemuat(false);
+      }
+      return () => ctrl.abort();
+    }
     const query: Record<string, string | number | undefined> = {
-      modul: modul || undefined,
+      ...paramRuang(ruangOpsi),
+      periode: periode || undefined,
       q: kata || undefined,
       jenis: jenis === 'semua' ? undefined : jenis,
       urut,
@@ -928,7 +1082,7 @@ export function ManajerBerkas({
       .catch((e) => !ctrl.signal.aborted && setGalat(pesanGalat(e)))
       .finally(() => !ctrl.signal.aborted && setMemuat(false));
     return () => ctrl.abort();
-  }, [siakad, folder, kata, mencari, jenis, urut, halaman, modul, nonce]);
+  }, [siakad, folder, kata, mencari, jenis, urut, halaman, ruangOpsi, periode, nonce, bagi, pohonQ.error]);
 
   // Segarkan saat aksi lain memanggil invalidateSiakad('berkas-isi').
   useSaatInvalidasi('berkas-isi', () => {
@@ -957,7 +1111,14 @@ export function ManajerBerkas({
         const ctrl = new AbortController();
         antreanRef.current = antreanRef.current.map((x) => (x.kunci === berikut.kunci ? { ...x, status: 'unggah', ctrl } : x));
         ubahItem(berikut.kunci, { status: 'unggah', ctrl });
-        unggahKeBerkas(siakad, infoServer, berikut.file, { kategori, modul, folder: berikut.folder ?? undefined }, (persen) => ubahItem(berikut.kunci, { persen }), ctrl.signal)
+        unggahKeBerkas(
+          siakad,
+          infoServer,
+          berikut.file,
+          { kategori, modul, unit, periode: periode ?? undefined, enkripsi: enkripsiEfektif === 'opsional' ? enkripsiUnggah : undefined, folder: berikut.folder ?? undefined },
+          (persen) => ubahItem(berikut.kunci, { persen }),
+          ctrl.signal,
+        )
           .then(() => {
             ubahItem(berikut.kunci, { status: 'selesai', persen: 100 });
             aksi.segarkan();
@@ -969,7 +1130,7 @@ export function ManajerBerkas({
           });
       }
     },
-    [siakad, kategori, modul, aksi],
+    [siakad, kategori, modul, unit, periode, enkripsiEfektif, enkripsiUnggah, aksi],
   );
 
   const ekstensiBoleh = React.useMemo(() => {
@@ -1054,6 +1215,87 @@ export function ManajerBerkas({
 
   const unduh = (b: BerkasManajer) => aksi.unduh(b).catch((e) => setPesan({ nada: 'galat', teks: pesanGalat(e) }));
 
+  // ---------------------------------------------------------------- papan klip (salin, potong, tempel)
+  const asalIni = { unit, modul, label: judul };
+  const samaRuang = (a: { unit?: string; modul?: string }) => (a.unit ?? '') === (unit ?? '') && (unit ? true : (a.modul ?? '') === (modul ?? ''));
+  const tujuanIni = { unit: unit ?? null, modul };
+  const keKlip = (mode: 'salin' | 'potong', item: { berkas?: BerkasManajer[]; f?: FolderBerkas }) => {
+    if (mode === 'potong' && !bolehKelola) return;
+    setelPapanBerkas({ mode, berkas: item.berkas ?? [], folder: item.f ?? null, asal: asalIni });
+    const n = item.f ? `folder ${item.f.nama}` : item.berkas && item.berkas.length > 1 ? `${item.berkas.length} berkas` : (item.berkas?.[0]?.nama ?? '');
+    setPesan({ nada: 'sukses', teks: `${mode === 'salin' ? 'Disalin' : 'Dipotong'}: ${n}. Buka folder tujuan lalu pilih Tempel (Ctrl+V).` });
+  };
+  const bisaTempel = Boolean(papan) && bolehUnggah;
+  const tempel = async (tujuan: string | null) => {
+    const p = papan;
+    if (!p || !bolehUnggah) return;
+    const sama = samaRuang(p.asal);
+    const ke = sama ? undefined : tujuanIni;
+    const label = tujuan ? namaDari(tujuan) : judul;
+    try {
+      if (p.folder) {
+        const f = p.folder;
+        if (sama && (tujuan === f.path || (tujuan && tujuan.startsWith(`${f.path}/`)))) throw new Error('Folder tidak bisa ditempel ke dalam dirinya sendiri.');
+        if (sama && p.mode === 'potong') {
+          if (indukDari(f.path) !== tujuan) await aksi.ubahFolder(f.path, { induk_baru: tujuan });
+        } else {
+          const r = await aksi.salinFolder(f.path, tujuan, ke, { unit: p.asal.unit, modul: p.asal.modul });
+          if (p.mode === 'potong') await aksi.hapusFolderDi(f.path, { unit: p.asal.unit, modul: p.asal.modul });
+          void r;
+        }
+        setPesan({ nada: 'sukses', teks: `Folder ${f.nama} ${p.mode === 'potong' ? 'dipindah' : 'disalin'} ke ${label}.` });
+      } else if (p.berkas.length) {
+        const id = p.berkas.map((b) => b.id);
+        const r = p.mode === 'potong' ? await aksi.pindahBerkas(id, tujuan, ke) : await aksi.salinBerkas(id, tujuan, ke);
+        const ok = 'dipindah' in r ? r.dipindah.length : r.disalin.length;
+        setPesan(
+          r.gagal.length
+            ? { nada: 'galat', teks: `${ok} berkas berhasil, ${r.gagal.length} gagal: ${r.gagal[0].pesan}` }
+            : { nada: 'sukses', teks: `${ok} berkas ${p.mode === 'potong' ? 'dipindah' : 'disalin'} ke ${label}.` },
+        );
+      }
+      if (p.mode === 'potong') setelPapanBerkas(null);
+      if (!sama) invalidateSiakad('berkas-isi');
+    } catch (e) {
+      setPesan({ nada: 'galat', teks: pesanGalat(e) });
+    }
+  };
+  const duplikat = async (berkas: BerkasManajer[]) => {
+    try {
+      const r = await aksi.salinBerkas(
+        berkas.map((b) => b.id),
+        folder,
+      );
+      setPesan(r.gagal.length ? { nada: 'galat', teks: `${r.gagal.length} berkas gagal disalin: ${r.gagal[0].pesan}` } : { nada: 'sukses', teks: `${r.disalin.length} salinan dibuat.` });
+    } catch (e) {
+      setPesan({ nada: 'galat', teks: pesanGalat(e) });
+    }
+  };
+  const ubahEnkripsi = async (b: BerkasManajer, aktif: boolean) => {
+    try {
+      await aksi.enkripsi(b.id, aktif);
+      setPesan({ nada: 'sukses', teks: aktif ? `${b.nama} sekarang disimpan terenkripsi.` : `Enkripsi ${b.nama} dibuka.` });
+    } catch (e) {
+      setPesan({ nada: 'galat', teks: pesanGalat(e) });
+    }
+  };
+  const buatBerkas = async (file: File) => {
+    const infoServer = info ?? (await siakad.request<InfoBerkas>({ method: 'GET', path: '/v1/berkas/info' })).data;
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    if (ekstensiBoleh.length && !ekstensiBoleh.includes(ext)) throw new Error(`Jenis .${ext} tidak diizinkan di penyimpanan ini.`);
+    await unggahKeBerkas(siakad, infoServer, file, {
+      kategori,
+      modul,
+      unit,
+      periode: periode ?? undefined,
+      enkripsi: enkripsiEfektif === 'opsional' ? enkripsiUnggah : undefined,
+      folder: folder ?? undefined,
+    });
+    aksi.segarkan();
+    setPesan({ nada: 'sukses', teks: `${file.name} dibuat.` });
+  };
+  const opsiBaru = (Object.keys(BERKAS_BARU) as JenisBerkasBaru[]).filter((k) => !ekstensiBoleh.length || ekstensiBoleh.includes(k));
+
   // ---------------------------------------------------------------- seret
   const seretDalam = (e: React.DragEvent) => Array.from(e.dataTransfer.types).includes(TIPE_SERET);
   const seretFile = (e: React.DragEvent) => Array.from(e.dataTransfer.types).includes('Files');
@@ -1114,40 +1356,68 @@ export function ManajerBerkas({
 
   // ---------------------------------------------------------------- menu konteks
   const entriMenu = (s: Sasaran): MenuEntry[] => {
+    const sep = { type: 'separator' } as MenuEntry;
     if (s.jenis === 'folder') {
       const f = s.f;
       return [
         { label: 'Buka', icon: <FolderOpen aria-hidden />, onSelect: () => buka(f.path) },
+        ...(bolehBagikan && bolehKelolaRuang
+          ? ([{ label: 'Bagikan…', icon: <Share2 aria-hidden />, onSelect: () => setDialog({ jenis: 'bagikan', sasaran: { jenis: 'folder', path: f.path, nama: f.nama, ruang: ruangOpsi } }) }] as MenuEntry[])
+          : []),
+        sep,
+        { label: 'Salin', icon: <Copy aria-hidden />, shortcut: 'Ctrl+C', onSelect: () => keKlip('salin', { f }) },
+        ...(bolehKelola ? ([{ label: 'Potong', icon: <Scissors aria-hidden />, shortcut: 'Ctrl+X', onSelect: () => keKlip('potong', { f }) }] as MenuEntry[]) : []),
+        ...(bisaTempel ? ([{ label: 'Tempel ke folder ini', icon: <ClipboardPaste aria-hidden />, onSelect: () => void tempel(f.path) }] as MenuEntry[]) : []),
         ...(bolehKelola
           ? ([
-              { label: 'Ganti nama atau warna', icon: <Pencil aria-hidden />, onSelect: () => setDialog({ jenis: 'folder-nama', f }) },
+              sep,
+              { label: 'Ganti nama atau warna', icon: <Pencil aria-hidden />, shortcut: 'F2', onSelect: () => setDialog({ jenis: 'folder-nama', f }) },
               { label: 'Pindahkan…', icon: <FolderInput aria-hidden />, onSelect: () => setDialog({ jenis: 'pindah', berkas: [], f }) },
+              { label: 'Salin ke…', icon: <CopyPlus aria-hidden />, onSelect: () => setDialog({ jenis: 'pindah', berkas: [], f, salin: true }) },
             ] as MenuEntry[])
           : []),
-        ...(bolehHapus
-          ? ([{ type: 'separator' }, { label: 'Hapus folder', icon: <Trash2 aria-hidden />, destructive: true, onSelect: () => setDialog({ jenis: 'hapus', berkas: [], f }) }] as MenuEntry[])
+        ...(bolehHapus && bolehKelolaRuang
+          ? ([sep, { label: 'Hapus folder', icon: <Trash2 aria-hidden />, shortcut: 'Del', destructive: true, onSelect: () => setDialog({ jenis: 'hapus', berkas: [], f }) }] as MenuEntry[])
           : []),
       ];
     }
     if (s.jenis === 'berkas') {
       const b = s.b;
       const banyak = terpilih.has(b.id) && terpilih.size > 1 ? berkasTerpilih : [b];
+      const satu = banyak.length === 1;
       return [
-        ...(banyak.length === 1
+        ...(satu
           ? ([
               { label: pilih === 'satu' ? labelPilih || 'Pakai berkas ini' : 'Pratinjau', icon: <Eye aria-hidden />, onSelect: () => bukaBerkas(b) },
               { label: 'Unduh', icon: <Download aria-hidden />, onSelect: () => void unduh(b) },
+              ...(bolehBagikan ? [{ label: 'Bagikan…', icon: <Share2 aria-hidden />, onSelect: () => setDialog({ jenis: 'bagikan', sasaran: { jenis: 'berkas', b } }) }] : []),
             ] as MenuEntry[])
           : [{ type: 'label', label: `${banyak.length} berkas dipilih` } as MenuEntry]),
+        sep,
+        { label: 'Salin', icon: <Copy aria-hidden />, shortcut: 'Ctrl+C', onSelect: () => keKlip('salin', { berkas: banyak }) },
         ...(bolehKelola
           ? ([
-              ...(banyak.length === 1 ? [{ label: 'Ganti nama', icon: <Pencil aria-hidden />, shortcut: 'F2', onSelect: () => setGantiNama(b) }] : []),
+              { label: 'Potong', icon: <Scissors aria-hidden />, shortcut: 'Ctrl+X', onSelect: () => keKlip('potong', { berkas: banyak }) },
+              { label: satu ? 'Buat salinan' : `Buat ${banyak.length} salinan`, icon: <CopyPlus aria-hidden />, onSelect: () => void duplikat(banyak) },
+              sep,
+              ...(satu ? [{ label: 'Ganti nama', icon: <Pencil aria-hidden />, shortcut: 'F2', onSelect: () => setGantiNama(b) }] : []),
               { label: 'Pindahkan…', icon: <FolderInput aria-hidden />, onSelect: () => setDialog({ jenis: 'pindah', berkas: banyak }) },
+              { label: 'Salin ke…', icon: <CopyPlus aria-hidden />, onSelect: () => setDialog({ jenis: 'pindah', berkas: banyak, salin: true }) },
+              ...(tampilPeriode ? [{ label: 'Periode akademik…', icon: <CalendarRange aria-hidden />, onSelect: () => setDialog({ jenis: 'periode', berkas: banyak }) }] : []),
+              ...(satu && enkripsiEfektif && (b.terenkripsi ? enkripsiEfektif !== 'wajib' : enkripsiEfektif !== 'mati')
+                ? [
+                    {
+                      label: b.terenkripsi ? 'Buka enkripsi' : 'Enkripsi isi berkas',
+                      icon: b.terenkripsi ? <LockOpen aria-hidden /> : <Lock aria-hidden />,
+                      onSelect: () => void ubahEnkripsi(b, !b.terenkripsi),
+                    },
+                  ]
+                : []),
             ] as MenuEntry[])
           : []),
         ...(bolehHapus
           ? ([
-              { type: 'separator' },
+              sep,
               {
                 label: banyak.length > 1 ? `Hapus ${banyak.length} berkas` : 'Hapus',
                 icon: <Trash2 aria-hidden />,
@@ -1160,11 +1430,21 @@ export function ManajerBerkas({
       ];
     }
     return [
-      ...(bolehKelola ? ([{ label: 'Folder baru', icon: <FolderPlus aria-hidden />, onSelect: () => setDialog({ jenis: 'folder-baru' }) }] as MenuEntry[]) : []),
-      ...(bolehUnggah ? ([{ label: 'Unggah berkas', icon: <Upload aria-hidden />, onSelect: () => inputFile.current?.click() }] as MenuEntry[]) : []),
+      ...(bisaTempel ? ([{ label: `Tempel ${papan?.folder ? `folder ${papan.folder.nama}` : `${papan?.berkas.length} berkas`}`, icon: <ClipboardPaste aria-hidden />, shortcut: 'Ctrl+V', onSelect: () => void tempel(folder) }, sep] as MenuEntry[]) : []),
+      ...entriBaru,
+      ...(bolehUnggah ? ([{ label: 'Unggah folder', icon: <FolderUp aria-hidden />, onSelect: () => inputFolder.current?.click() }] as MenuEntry[]) : []),
+      sep,
+      ...(!bagi ? ([{ label: 'Keamanan berkas…', icon: <ShieldCheck aria-hidden />, onSelect: () => setDialog({ jenis: 'kebijakan' }) }] as MenuEntry[]) : []),
       { label: 'Segarkan', icon: <RotateCw aria-hidden />, onSelect: () => aksi.segarkan() },
     ];
   };
+
+  /** Isi menu "Baru": folder, dokumen teks/catatan/CSV, dan unggah. */
+  const entriBaru: MenuEntry[] = [
+    ...(bolehKelola ? ([{ label: 'Folder baru', icon: <FolderPlus aria-hidden />, onSelect: () => setDialog({ jenis: 'folder-baru' }) }] as MenuEntry[]) : []),
+    ...(bolehUnggah ? opsiBaru.map((t) => ({ label: BERKAS_BARU[t].label, icon: <FilePlus aria-hidden />, onSelect: () => setDialog({ jenis: 'baru', tipe: t }) })) : []),
+    ...(bolehUnggah ? ([{ label: 'Unggah berkas', icon: <Upload aria-hidden />, onSelect: () => inputFile.current?.click() }] as MenuEntry[]) : []),
+  ];
 
   const setelSasaran = (s: Sasaran) => (e: React.MouseEvent) => {
     void e;
@@ -1175,9 +1455,17 @@ export function ManajerBerkas({
   const tombolIsi = (e: React.KeyboardEvent) => {
     const el = e.target as HTMLElement;
     if (el.closest('input, textarea, [role="menu"]')) return;
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && pilih !== 'satu') {
+    const mod = e.ctrlKey || e.metaKey;
+    const k = e.key.toLowerCase();
+    if (mod && k === 'a' && pilih !== 'satu') {
       e.preventDefault();
       setTerpilih(new Set(semuaId));
+    } else if (mod && (k === 'c' || k === 'x') && terpilih.size && el.closest('[data-folder]') === null) {
+      e.preventDefault();
+      keKlip(k === 'c' ? 'salin' : 'potong', { berkas: berkasTerpilih });
+    } else if (mod && k === 'v' && bisaTempel) {
+      e.preventDefault();
+      void tempel(folder);
     } else if (e.key === 'Escape' && terpilih.size) {
       setTerpilih(new Set());
     } else if ((e.key === 'Delete' || e.key === 'Backspace') && terpilih.size && bolehHapus) {
@@ -1207,6 +1495,7 @@ export function ManajerBerkas({
       tabIndex: 0,
       draggable: bolehKelola,
       'data-sasaran': sasaranLepas === f.path ? '' : undefined,
+      'data-potong': papan?.mode === 'potong' && papan.folder?.path === f.path && samaRuang(papan.asal) ? '' : undefined,
       onDragStart: (e: React.DragEvent) => mulaiSeret(e, { f }),
       onDoubleClick: (e: React.MouseEvent) => dariSini(e) && buka(f.path),
       onClick: (e: React.MouseEvent) => {
@@ -1216,7 +1505,12 @@ export function ManajerBerkas({
         if (!dariSini(e) || e.target !== e.currentTarget) return;
         if (e.key === 'Enter') buka(f.path);
         if (e.key === 'F2' && bolehKelola) setDialog({ jenis: 'folder-nama', f });
-        if (e.key === 'Delete' && bolehHapus) setDialog({ jenis: 'hapus', berkas: [], f });
+        if (e.key === 'Delete' && bolehHapus && bolehKelolaRuang) setDialog({ jenis: 'hapus', berkas: [], f });
+        if ((e.ctrlKey || e.metaKey) && ['c', 'x'].includes(e.key.toLowerCase())) {
+          e.preventDefault();
+          e.stopPropagation();
+          keKlip(e.key.toLowerCase() === 'c' ? 'salin' : 'potong', { f });
+        }
       },
       onContextMenu: (e: React.MouseEvent) => dariSini(e) && setelSasaran({ jenis: 'folder', f })(e),
       ...propsLepasFolder(f),
@@ -1273,6 +1567,7 @@ export function ManajerBerkas({
       tabIndex: 0,
       draggable: bolehKelola,
       'aria-selected': dipilih,
+      'data-potong': papan?.mode === 'potong' && papan.berkas.some((x) => x.id === b.id) ? '' : undefined,
       onDragStart: (e: React.DragEvent) => mulaiSeret(e, { berkas: b }),
       onClick: (e: React.MouseEvent) => {
         if (!dariSini(e) || (e.target as HTMLElement).closest('.u-mb-aksi, .u-mb-cek')) return;
@@ -1318,6 +1613,11 @@ export function ManajerBerkas({
       />
     );
     const status = b.status !== 'tersedia' ? <small className="u-mb-status">Belum selesai diunggah</small> : null;
+    const gembok = b.terenkripsi ? (
+      <span className="u-mb-gembok" title="Disimpan terenkripsi" aria-label="terenkripsi">
+        <Lock aria-hidden />
+      </span>
+    ) : null;
     if (tampilan === 'daftar')
       return (
         <div key={b.id} role="row" className="u-mb-baris" aria-label={b.nama} {...umum}>
@@ -1327,8 +1627,11 @@ export function ManajerBerkas({
           <span role="gridcell" className="u-mb-baris-nama">
             <IkonBerkas b={b} />
             <span>
-              <b title={b.nama}>{b.nama}</b>
-              {mencari ? <small>{b.folder || judul}</small> : status}
+              <b title={b.nama}>
+                {b.nama}
+                {gembok}
+              </b>
+              {mencari ? <small>{b.folder || judul}</small> : (status ?? (b.periode && !periode ? <small>{namaPeriode(b.periode)}</small> : null))}
             </span>
           </span>
           <span role="gridcell" className="u-mb-baris-info">
@@ -1347,7 +1650,10 @@ export function ManajerBerkas({
       <div key={b.id} role="gridcell" className="u-mb-kartu" data-berkas="" aria-label={b.nama} {...umum}>
         {jenisBerkas(b) === 'gambar' ? <GambarMini b={b} /> : <span className="u-mb-mini">{<IkonBerkas b={b} besar />}</span>}
         <span className="u-mb-kartu-teks">
-          <b title={b.nama}>{b.nama}</b>
+          <b title={b.nama}>
+            {b.nama}
+            {gembok}
+          </b>
           <small>{mencari ? b.folder || judul : [formatBytes(b.ukuran), b.dibuat_at ? formatDate(b.dibuat_at, 'short') : null].filter(Boolean).join(' · ')}</small>
           {status}
         </span>
@@ -1358,7 +1664,15 @@ export function ManajerBerkas({
   };
 
   // ---------------------------------------------------------------- render
-  const jejak = folder ? folder.split('/').map((s, i, a) => ({ label: s, path: a.slice(0, i + 1).join('/') })) : [];
+  const jejak = folder ? folder.split('/').map((s, i, a) => ({ label: s, path: a.slice(0, i + 1).join('/') })).filter((j) => !akarBagi || j.path.length > akarBagi.length) : [];
+  const diAkar = folder === akarBagi;
+  const daftarPeriode = periodeQ.data?.periode ?? [];
+  const opsiPeriode = [
+    { value: 'semua', label: 'Semua periode' },
+    ...daftarPeriode.filter((x) => x.periode !== 'tanpa').map((x) => ({ value: x.periode, label: `${x.nama}${x.aktif ? ' · aktif' : ''}` })),
+    ...(periode && periode !== 'tanpa' && !daftarPeriode.some((x) => x.periode === periode) ? [{ value: periode, label: namaPeriode(periode) }] : []),
+    { value: 'tanpa', label: 'Tanpa periode' },
+  ];
   const ringkas = pohonQ.data?.akar;
   const selesai = antrean.filter((x) => x.status === 'selesai').length;
   const aktifUnggah = antrean.filter((x) => x.status === 'antre' || x.status === 'unggah').length;
@@ -1455,11 +1769,11 @@ export function ManajerBerkas({
                 <li>
                   <button
                     type="button"
-                    aria-current={folder === null ? 'page' : undefined}
+                    aria-current={diAkar ? 'page' : undefined}
                     data-sasaran={sasaranLepas === '' ? '' : undefined}
                     onClick={() => buka(null)}
                     onDragOver={(e) => {
-                      if (seretDalam(e) && bolehKelola && folder !== null) {
+                      if (seretDalam(e) && bolehKelola && !diAkar) {
                         e.preventDefault();
                         setSasaranLepas('');
                       }
@@ -1468,7 +1782,7 @@ export function ManajerBerkas({
                     onDrop={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      void lepasKe(null, e);
+                      void lepasKe(akarBagi, e);
                     }}
                   >
                     {judul}
@@ -1502,17 +1816,67 @@ export function ManajerBerkas({
               </ol>
             </nav>
             <span className="u-mb-spasi" />
-            {bolehKelola && (
-              <Button variant="outline" size="sm" aria-label="Folder baru" onClick={() => setDialog({ jenis: 'folder-baru' })}>
-                <FolderPlus aria-hidden />
-                <span className="u-mb-sembunyi-kecil">Folder baru</span>
-              </Button>
+            {bisaTempel && papan && (
+              <span className="u-mb-papan">
+                <Tooltip content={`Tempel ${papan.folder ? `folder ${papan.folder.nama}` : `${papan.berkas.length} berkas`} dari ${papan.asal.label}`} shortcut="Ctrl+V">
+                  <Button variant="outline" size="sm" aria-label="Tempel" onClick={() => void tempel(folder)}>
+                    <ClipboardPaste aria-hidden />
+                    <span className="u-mb-sembunyi-kecil">Tempel{papan.folder ? '' : ` ${papan.berkas.length}`}</span>
+                  </Button>
+                </Tooltip>
+                <Tooltip content="Kosongkan papan klip">
+                  <Button variant="ghost" size="sm" iconOnly aria-label="Kosongkan papan klip" onClick={() => setelPapanBerkas(null)}>
+                    <X aria-hidden />
+                  </Button>
+                </Tooltip>
+              </span>
+            )}
+            {enkripsiEfektif === 'wajib' && (
+              <Tooltip content="Semua berkas baru di ruang ini disimpan terenkripsi">
+                <span className="u-mb-enkripsi" data-aktif="">
+                  <Lock aria-hidden />
+                  <span className="u-mb-sembunyi-kecil">Terenkripsi</span>
+                </span>
+              </Tooltip>
+            )}
+            {enkripsiEfektif === 'opsional' && bolehUnggah && (
+              <Tooltip content={enkripsiUnggah ? 'Berkas yang diunggah akan dienkripsi' : 'Enkripsi berkas yang diunggah'}>
+                <button
+                  type="button"
+                  className="u-mb-enkripsi"
+                  aria-pressed={enkripsiUnggah}
+                  data-aktif={enkripsiUnggah ? '' : undefined}
+                  aria-label="Enkripsi berkas yang diunggah"
+                  onClick={() => setEnkripsiUnggah((x) => !x)}
+                >
+                  {enkripsiUnggah ? <Lock aria-hidden /> : <LockOpen aria-hidden />}
+                  <span className="u-mb-sembunyi-kecil">{enkripsiUnggah ? 'Enkripsi aktif' : 'Enkripsi'}</span>
+                </button>
+              </Tooltip>
+            )}
+            {entriBaru.length > 0 && (
+              <Menu
+                trigger={
+                  <Button variant="outline" size="sm" aria-label="Buat baru">
+                    <Plus aria-hidden />
+                    <span className="u-mb-sembunyi-kecil">Baru</span>
+                  </Button>
+                }
+                items={[...entriBaru, ...(bolehUnggah ? ([{ label: 'Unggah folder', icon: <FolderUp aria-hidden />, onSelect: () => inputFolder.current?.click() }] as MenuEntry[]) : [])]}
+              />
             )}
             {bolehUnggah && (
               <Button size="sm" aria-label="Unggah berkas" onClick={() => inputFile.current?.click()}>
                 <Upload aria-hidden />
                 <span className="u-mb-sembunyi-kecil">Unggah</span>
               </Button>
+            )}
+            {!bagi && (
+              <Tooltip content="Keamanan dan enkripsi">
+                <Button variant="ghost" size="sm" iconOnly aria-label="Keamanan dan enkripsi" onClick={() => setDialog({ jenis: 'kebijakan' })}>
+                  <ShieldCheck aria-hidden />
+                </Button>
+              </Tooltip>
             )}
           </div>
           <div className="u-mb-kontrol">
@@ -1531,6 +1895,16 @@ export function ManajerBerkas({
                 </button>
               )}
             </div>
+            {tampilPeriode && opsiPeriode.length > 2 && (
+              <Select<string>
+                aria-label="Periode akademik"
+                size="sm"
+                className="u-mb-filter u-mb-filter-periode"
+                value={periode ?? 'semua'}
+                onValueChange={(v) => setPeriode(!v || v === 'semua' ? null : v)}
+                options={opsiPeriode}
+              />
+            )}
             <Select<JenisBerkas | 'semua'>
               aria-label="Filter jenis berkas"
               size="sm"
@@ -1574,6 +1948,24 @@ export function ManajerBerkas({
                 e.target.value = '';
               }}
             />
+            <input
+              ref={inputFolder}
+              type="file"
+              multiple
+              hidden
+              {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
+              onChange={(e) => {
+                void tambahUnggah(
+                  Array.from(e.target.files ?? []).map((file) => {
+                    const rel = (file as File & { webkitRelativePath?: string }).webkitRelativePath ?? '';
+                    const dir = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : '';
+                    return { file, sub: dir ? dir.split('/').map(rapikanSegmen).join('/') : null };
+                  }),
+                  folder,
+                );
+                e.target.value = '';
+              }}
+            />
           </div>
         </div>
 
@@ -1586,11 +1978,36 @@ export function ManajerBerkas({
                 Unduh
               </Button>
             )}
+            {terpilih.size === 1 && bolehBagikan && berkasTerpilih[0] && (
+              <Button variant="ghost" size="sm" onClick={() => setDialog({ jenis: 'bagikan', sasaran: { jenis: 'berkas', b: berkasTerpilih[0] } })}>
+                <Share2 aria-hidden />
+                Bagikan
+              </Button>
+            )}
+            <Tooltip content="Salin" shortcut="Ctrl+C">
+              <Button variant="ghost" size="sm" iconOnly aria-label="Salin" onClick={() => keKlip('salin', { berkas: berkasTerpilih })}>
+                <Copy aria-hidden />
+              </Button>
+            </Tooltip>
+            {bolehKelola && (
+              <Tooltip content="Potong" shortcut="Ctrl+X">
+                <Button variant="ghost" size="sm" iconOnly aria-label="Potong" onClick={() => keKlip('potong', { berkas: berkasTerpilih })}>
+                  <Scissors aria-hidden />
+                </Button>
+              </Tooltip>
+            )}
             {bolehKelola && (
               <Button variant="ghost" size="sm" onClick={() => setDialog({ jenis: 'pindah', berkas: berkasTerpilih })}>
                 <FolderInput aria-hidden />
                 Pindahkan
               </Button>
+            )}
+            {bolehKelola && tampilPeriode && (
+              <Tooltip content="Periode akademik">
+                <Button variant="ghost" size="sm" iconOnly aria-label="Periode akademik" onClick={() => setDialog({ jenis: 'periode', berkas: berkasTerpilih })}>
+                  <CalendarRange aria-hidden />
+                </Button>
+              </Tooltip>
             )}
             {bolehHapus && (
               <Button variant="ghost" size="sm" className="u-mb-bahaya" onClick={() => setDialog({ jenis: 'hapus', berkas: berkasTerpilih })}>
@@ -1898,13 +2315,35 @@ export function ManajerBerkas({
       <DialogPindah
         open={dialog?.jenis === 'pindah'}
         tutup={() => setDialog(null)}
-        judul={dialog?.jenis === 'pindah' ? (dialog.f ? `Pindahkan folder ${dialog.f.nama}` : `Pindahkan ${dialog.berkas.length} berkas`) : ''}
+        judul={
+          dialog?.jenis === 'pindah'
+            ? `${dialog.salin ? 'Salin' : 'Pindahkan'} ${dialog.f ? `folder ${dialog.f.nama}` : dialog.berkas.length === 1 ? dialog.berkas[0].nama : `${dialog.berkas.length} berkas`}`
+            : ''
+        }
+        salin={dialog?.jenis === 'pindah' && dialog.salin}
         pohon={pohon}
         akarLabel={judul}
         dari={dialog?.jenis === 'pindah' ? (dialog.f ? dialog.f.induk : folder) : null}
         terlarang={dialog?.jenis === 'pindah' ? dialog.f?.path : null}
         pindah={async (tujuan) => {
           if (dialog?.jenis !== 'pindah') return;
+          if (dialog.salin) {
+            if (dialog.f) {
+              const r = await aksi.salinFolder(dialog.f.path, tujuan);
+              setPesan({ nada: 'sukses', teks: `Folder ${dialog.f.nama} disalin (${r.berkas_disalin} berkas) ke ${tujuan ?? judul}.` });
+            } else {
+              const r = await aksi.salinBerkas(
+                dialog.berkas.map((b) => b.id),
+                tujuan,
+              );
+              setPesan(
+                r.gagal.length
+                  ? { nada: 'galat', teks: `${r.gagal.length} berkas gagal disalin: ${r.gagal[0].pesan}` }
+                  : { nada: 'sukses', teks: `${r.disalin.length} berkas disalin ke ${tujuan ?? judul}.` },
+              );
+            }
+            return;
+          }
           if (dialog.f) {
             const r = await aksi.ubahFolder(dialog.f.path, { induk_baru: tujuan });
             setPesan({ nada: 'sukses', teks: `Folder ${dialog.f.nama} dipindah ke ${tujuan ?? judul}.` });
@@ -1949,6 +2388,31 @@ export function ManajerBerkas({
           await aksi.ubahBerkas(gantiNama.id, { nama });
         }}
       />
+      <DialogBagikanBerkas sasaran={dialog?.jenis === 'bagikan' ? dialog.sasaran : null} tutup={() => setDialog(null)} />
+      <DialogBerkasBaru jenis={dialog?.jenis === 'baru' ? dialog.tipe : null} tutup={() => setDialog(null)} buat={buatBerkas} />
+      <DialogPeriodeBerkas
+        berkas={dialog?.jenis === 'periode' ? dialog.berkas : null}
+        pilihan={daftarPeriode}
+        tutup={() => setDialog(null)}
+        simpan={async (kode) => {
+          if (dialog?.jenis !== 'periode') return;
+          const r = await aksi.ubahPeriode(
+            dialog.berkas.map((b) => b.id),
+            kode,
+          );
+          setTerpilih(new Set());
+          if (r.gagal.length) throw new Error(`${r.gagal.length} berkas gagal diubah: ${r.gagal[0].pesan}`);
+          setPesan({ nada: 'sukses', teks: `Periode ${dialog.berkas.length} berkas diubah ke ${namaPeriode(kode)}.` });
+        }}
+      />
+      <Dialog
+        open={dialog?.jenis === 'kebijakan'}
+        onOpenChange={(o) => !o && setDialog(null)}
+        title="Keamanan berkas"
+        description={unit ? `Enkripsi isi berkas di ruang ${judul}.` : 'Enkripsi isi berkas pribadi Anda.'}
+      >
+        {dialog?.jenis === 'kebijakan' && <KebijakanEnkripsiBerkas unit={unit} />}
+      </Dialog>
       <Pratinjau
         b={pratinjau}
         tutup={() => setPratinjau(null)}

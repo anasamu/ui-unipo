@@ -32,6 +32,12 @@ export interface OpsiUnggahBerkas {
   folder?: string;
   keterangan?: string;
   visibilitas?: 'privat' | 'publik';
+  /** Ruang bersama unit (mis. "baak"); kosong = ruang pribadi. */
+  unit?: string;
+  /** Periode akademik (kode m_tahun, mis. "20251", atau "tanpa"); bawaan periode yang sedang dibuka. */
+  periode?: string;
+  /** Minta isi dienkripsi (berlaku bila kebijakan enkripsi "opsional"; "wajib" selalu dienkripsi). */
+  enkripsi?: boolean;
   /** Potongan yang dikirim bersamaan pada unggah bertahap (bawaan 3). */
   paralel?: number;
 }
@@ -51,7 +57,11 @@ export async function unggahKeBerkas(
   signal?: AbortSignal,
 ): Promise<BerkasTerunggah> {
   const { paralel = 3, ...atribut } = opsi;
-  const attr = Object.fromEntries(Object.entries(atribut).filter(([, v]) => v !== undefined));
+  const attr = Object.fromEntries(
+    Object.entries(atribut)
+      .filter(([, v]) => v !== undefined && v !== '')
+      .map(([k, v]) => [k, typeof v === 'boolean' ? (v ? '1' : '0') : v]),
+  );
   if (file.size <= info.batas_sekali_unggah_byte) {
     onProgress?.(0);
     const r = await siakad.request<BerkasTerunggah>({ method: 'POST', path: '/v1/berkas', body: { berkas: file, ...attr }, multipart: true }, { signal, timeout: 300_000 });

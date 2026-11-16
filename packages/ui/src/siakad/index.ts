@@ -33,6 +33,8 @@ export * from './alur';
 export * from './ai';
 export * from './akun';
 export * from './manajer-berkas';
+export * from './berkas-ruang';
+export * from './drive-berkas';
 export * from './profil-kampus';
 export * from './obrolan';
 export * from './pmb-maba';
