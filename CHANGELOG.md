@@ -1,5 +1,17 @@
 # Catatan perubahan
 
+## 1.43.0 (2026-11-16)
+
+- **Komponen peta** (`unipo-ui`, Leaflet 1.9.4 + ubin OpenStreetMap; tanpa kunci API):
+  - `Peta`: titik, area lingkaran (geofence) dengan nada warna, posisi pengguna dengan lingkar akurasi, tombol "posisi saya", pas otomatis ke semua isi, klik peta/titik/area. Penanda berupa vektor (tanpa gambar), warna dari token tema, Leaflet dimuat saat dibutuhkan (aman untuk SSR).
+  - `PilihTitikPeta`: memilih titik + radius dengan klik peta, geser radius, isi koordinat manual, atau "pakai posisi saya"; area lain ditampilkan sebagai pembanding.
+  - `useLokasiPerangkat` (GPS sekali/terus dengan akurasi), `jarakMeterPeta` (haversine, sama dengan server), `PetaProvider`/`UBIN_OSM` untuk mengganti server ubin.
+- **Presensi kerja pegawai modern** (`unipo-ui/siakad`, butuh SIAKAD dengan `/v1/sdm/presensi/saya`, lihat docs/PRESENSI_PEGAWAI.md di repo siakad_unipo; scope `sdm:read sdm:write berkas:write`):
+  - `PresensiKerjaSaya`: jam server berjalan, jadwal hari ini (termasuk shift malam), peta area dan posisi, status di dalam/luar area dan akurasi GPS, swafoto bila diwajibkan, alasan bila di luar area dengan kebijakan tinjau, kunci idempotensi (tekan ulang saat jaringan putus tidak mencatat dua kali).
+  - `RiwayatKejadianPresensi`, `DetailKejadianPresensi`, `TandaPresensi` (lokasi palsu, akurasi rendah, jam perangkat beda, kecepatan tidak wajar, perangkat baru, luar area).
+  - Koreksi: `FormKoreksiPresensi` (lupa masuk/pulang, dinas luar, gangguan, dengan lampiran), `DaftarKoreksiPresensi` untuk pegawai, atasan langsung, dan petugas SDM.
+  - Kelola: `KelolaLokasiPresensi` (lokasi + radius di peta per unit/kampus), `KelolaJadwalKerja` (jam per hari, toleransi, jendela masuk/pulang, shift lintas hari), `KelolaKebijakanPresensi` (per semua/jenis/unit/pegawai: mode area, luar area tolak/tinjau, swafoto, akurasi, lokasi palsu, batas perangkat), `PantauPresensiKerja`, `PerangkatPresensiSaya`, `ModulPresensiKerja`.
+
 ## 1.42.0 (2026-11-16)
 
 - **Tab vertikal**: `Tabs` prop `orientation="vertical"` untuk sub tab yang banyak atau labelnya panjang (jenis riwayat pegawai, data master, bagian keuangan). Daftar tab di kiri, isi di kanan (`children` ikut tampil di kolom isi); di wadah lebih sempit dari 40rem daftar otomatis menjadi pilihan tarik-turun. Prop `aria-label` baru.
