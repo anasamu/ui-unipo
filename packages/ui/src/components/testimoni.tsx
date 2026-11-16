@@ -95,6 +95,7 @@ export interface RingkasanRatingProps {
   className?: string;
 }
 
+/** Rata-rata dan jumlah penilaian dari daftar testimoni; butir tanpa `rating` diabaikan. */
 export function hitungRating(items: Array<{ rating?: number | null }>) {
   const d: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   let total = 0;

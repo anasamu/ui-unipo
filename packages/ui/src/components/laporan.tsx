@@ -26,6 +26,7 @@ export function formatAkuntansi(n: number | null | undefined, opsi: { rp?: boole
   return n < 0 ? `(${t})` : t;
 }
 
+/** Format satu nilai sel laporan sesuai jenisnya (teks, angka, rupiah, akuntansi, persen, tanggal) untuk tabel, CSV, dan cetak. */
 export function formatNilai(v: unknown, f: FormatNilai = 'teks'): string {
   if (v == null || v === '') return '';
   if (f === 'teks' || typeof v !== 'number') return String(v);

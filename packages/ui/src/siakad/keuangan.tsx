@@ -164,12 +164,19 @@ function useKeu<T>(path: string, q: Q, enabled = true) {
   const query = bersih(q);
   return useSiakadQuery<T>(['keu', path, query], (s, signal) => s.request({ method: 'GET', path: `${P}${path}`, query }, { signal }), { enabled });
 }
+/** Laporan posisi keuangan (neraca) per tanggal, opsional dengan tanggal pembanding dan saringan unit. GET /v1/keu/laporan/posisi-keuangan. */
 export const usePosisiKeuangan = (q: { tanggal: string; pembanding?: string | null; unit_id?: number | null }) => useKeu<PosisiKeuanganData>('/laporan/posisi-keuangan', q);
+/** Laporan aktivitas (pendapatan dan beban) untuk rentang tanggal. GET /v1/keu/laporan/aktivitas. */
 export const useAktivitasKeuangan = (q: { dari: string; sampai: string; pembanding?: 0 | 1; unit_id?: number | null }) => useKeu<AktivitasData>('/laporan/aktivitas', q);
+/** Laporan arus kas untuk rentang tanggal. GET /v1/keu/laporan/arus-kas. */
 export const useArusKas = (q: { dari: string; sampai: string; unit_id?: number | null }) => useKeu<ArusKasData>('/laporan/arus-kas', q);
+/** Neraca saldo per akun sampai tanggal tertentu. GET /v1/keu/laporan/neraca-saldo. */
 export const useNeracaSaldo = (q: { dari?: string | null; sampai: string; unit_id?: number | null }) => useKeu<NeracaSaldoData>('/laporan/neraca-saldo', q);
+/** Saldo kas per unit (fakultas, prodi, biro). GET /v1/keu/kas-unit. */
 export const useKasUnit = (q: { tanggal?: string; dari?: string; unit_id?: number | null } = {}) => useKeu<KasUnitData>('/kas-unit', q);
+/** Transparansi biaya kuliah per prodi dan tahun akademik untuk halaman publik. GET /v1/keu/transparansi. */
 export const useTransparansiBiaya = (q: { tahun_id?: string | null; kode_fakultas?: string | null; kode_prodi?: string | null } = {}) => useKeu<TransparansiData>('/transparansi', q);
+/** Statistik keuangan tahunan (penerimaan, realisasi, tunggakan) untuk dasbor. GET /v1/keu/statistik. */
 export const useStatistikKeuangan = (q: { tahun: number; tahun_id?: string | null; unit_id?: number | null }) => useKeu<StatistikKeuanganData>('/statistik', q);
 
 // ================================================================ Laporan keuangan

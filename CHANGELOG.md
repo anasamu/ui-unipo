@@ -1,10 +1,15 @@
 # Catatan perubahan
 
-## 1.28.1 (2026-11-16)
+## 1.28.2 (2026-11-16)
 
 - **Responsif di peramban ponsel**: `usePlatform().mobile` kini juga bernilai `true` di peramban web dengan layar ≤ 639 px (sebelumnya hanya di aplikasi native). Semua komponen yang punya tata letak ponsel ikut berpindah otomatis saat dibuka di HP: dialog jadi lembar bawah, `Kasir` dengan bilah bawah, `BukuKas` dan `JurnalUmum` sebagai daftar, `ProgressLangkah` ringkas, `SidebarModul`/`MenuAtas` sebagai laci, pengolah dokumen ringkas. Field baru `sempit` dan konstanta `MEDIA_SEMPIT`; berubah langsung saat layar diputar atau jendela diubah ukurannya.
 - `StatCard`: angka panjang (mis. "Rp 5.000.000") mengecil di kartu sempit, tidak lagi meluber keluar kartu.
 - `BukuKas` dan `JurnalUmum`: isi tidak lagi melebarkan halaman di ponsel.
+
+## 1.28.1 (2026-11-16)
+
+- JSDoc untuk 34 ekspor yang belum terdokumentasi (mis. `Rating`, `sisaWaktu`, `usePmb`, `useRuteLms`, `BadgeStatusSesi`, hook laporan keuangan `/v1/keu`). Dengan ini setiap ekspor punya penjelasan di referensi api.unipo.ac.id.
+- Situs dokumentasi: `SIAKAD_TS` dan `mainTsx` diekspor dari `apps/docs/src/kode-contoh.js` untuk tab kode di api_unipo.
 
 ## 1.28.0 (2026-11-16)
 

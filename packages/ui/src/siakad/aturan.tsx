@@ -520,6 +520,7 @@ function useNamaProdi() {
 }
 
 // ================================================================ Lencana
+/** Lencana status aturan dinamis (draf, aktif, nonaktif), atau "Dihapus" untuk aturan di sampah. */
 export function StatusAturanBadge({ status, dihapus }: { status: StatusAturan; dihapus?: boolean }) {
   if (dihapus) return <Badge variant="danger">Di sampah</Badge>;
   return (
@@ -528,6 +529,7 @@ export function StatusAturanBadge({ status, dihapus }: { status: StatusAturan; d
     </Badge>
   );
 }
+/** Lencana mode aturan: blokir (menolak aksi) atau peringatan (hanya memberi tahu). */
 export function ModeAturanBadge({ mode }: { mode: ModeAturan }) {
   return mode === 'blokir' ? (
     <Badge variant="danger" className="u-aturan-mode">

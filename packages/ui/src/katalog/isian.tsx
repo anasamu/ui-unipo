@@ -99,6 +99,7 @@ const dariTanggal = (d: Date | null) => (d ? `${d.getFullYear()}-${String(d.getM
  * selain itu label dari nilai (`paruh_waktu` → "Paruh waktu").
  */
 const LABEL_DARI_KET = new WeakSet<Skema>();
+/** Opsi pilihan dari enum skema OpenAPI, dengan label dari keterangan skema atau dari nilainya (`paruh_waktu` → "Paruh waktu"). */
 export function opsiEnum(s: Skema): SelectOption<string>[] {
   const nilai = (s.e ?? []).filter((x) => x !== null).map(String);
   const peta: Record<string, string> = {};

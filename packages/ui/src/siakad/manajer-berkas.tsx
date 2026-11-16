@@ -102,6 +102,7 @@ export const JENIS_BERKAS: Record<JenisBerkas, { label: string; ekstensi: string
   audio: { label: 'Audio', ekstensi: ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'] },
 };
 
+/** Golongan berkas (gambar, pdf, dokumen, lembar kerja, presentasi, arsip, video, audio, atau lain) dari ekstensi atau MIME, untuk ikon dan pratinjau. */
 export function jenisBerkas(b: { ekstensi?: string | null; mime?: string | null; nama?: string }): JenisBerkas | 'lain' {
   const ext = String(b.ekstensi ?? b.nama?.split('.').pop() ?? '').toLowerCase();
   for (const [k, v] of Object.entries(JENIS_BERKAS)) if (v.ekstensi.includes(ext)) return k as JenisBerkas;

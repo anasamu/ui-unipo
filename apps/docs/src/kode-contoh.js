@@ -59,7 +59,7 @@ export function imporUntuk(src, kode) {
   return { teks, ui };
 }
 
-const SIAKAD_TS = `import { Siakad } from 'unipo-siakad-sdk';
+export const SIAKAD_TS = `import { Siakad } from 'unipo-siakad-sdk';
 
 // Klien SDK UNIPO. Di browser, arahkan ke BFF aplikasi Anda (client_secret tidak pernah ada di browser);
 // BFF meneruskan ke api.unipo.ac.id dengan token pengguna dari SSO.
@@ -69,7 +69,7 @@ export const siakad = new Siakad({
 });
 `;
 
-const mainTsx = (nama) => `import { createRoot } from 'react-dom/client';
+export const mainTsx = (nama) => `import { createRoot } from 'react-dom/client';
 import { UnipoProvider } from 'unipo-ui/siakad';
 import 'unipo-ui/css';
 import { siakad } from './siakad';
