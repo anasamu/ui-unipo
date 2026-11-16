@@ -1,0 +1,510 @@
+@use '../mixins' as *;
+
+// ================================================================ Kelola kurikulum OBE (u-kk-*)
+.u-kk-blok,
+.u-kk-form,
+.u-kk-tumpuk,
+.u-kk-ruang-mk,
+.u-kk-semester-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+.u-kk-form {
+  gap: 0.875rem;
+}
+.u-kk-grid,
+.u-kk-grid-3,
+.u-kk-grid-4 {
+  display: grid;
+  gap: 0.75rem 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+.u-kk-grid-3 {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+}
+.u-kk-grid-4 {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr));
+}
+.u-kk-fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.875rem 1rem 1rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  min-width: 0;
+  > legend {
+    padding: 0 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: var(--u-weight-semibold);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-kk-toolbar,
+.u-kk-simpan,
+.u-kk-aksi,
+.u-kk-alur-aksi,
+.u-kk-sub-aksi,
+.u-kk-opsi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.u-kk-toolbar {
+  justify-content: space-between;
+  > :is(input, .u-input, [class*='u-input']):first-child,
+  > .u-kk-catatan:first-child {
+    flex: 1 1 16rem;
+    max-width: 28rem;
+  }
+  > .u-kk-catatan:first-child {
+    max-width: none;
+  }
+}
+.u-kk-simpan {
+  justify-content: flex-end;
+  padding-top: 0.25rem;
+}
+.u-kk-aksi {
+  margin-left: auto;
+}
+.u-kk-muted,
+.u-kk-catatan {
+  color: var(--u-muted-foreground);
+  font-size: 0.8125rem;
+}
+.u-kk-catatan {
+  margin: 0;
+  line-height: 1.5;
+}
+.u-kk-warn {
+  color: var(--u-warning, #b45309);
+  font-weight: var(--u-weight-semibold);
+}
+.u-kk-galat-list {
+  margin: 0.375rem 0 0;
+  padding-left: 1.125rem;
+  font-size: 0.8125rem;
+  li + li {
+    margin-top: 0.125rem;
+  }
+}
+.u-kk-teks {
+  display: block;
+  white-space: pre-line;
+  line-height: 1.5;
+}
+.u-kk-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font: inherit;
+  line-height: 1.55;
+}
+.u-kk-angka {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.u-kk-total {
+  margin-left: 0.5rem;
+  font-variant-numeric: tabular-nums;
+  &[data-ok] {
+    color: var(--u-success, #15803d);
+  }
+  &:not([data-ok]) {
+    color: var(--u-destructive);
+  }
+}
+.u-kk {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+.u-kk-kembali {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+// ---------------------------------------------------------------- Alur susun → sahkan → berlaku
+.u-kk-alur {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card);
+}
+.u-kk-langkah {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  > li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: var(--u-radius-md);
+    font-size: 0.8125rem;
+    color: var(--u-muted-foreground);
+    b {
+      display: block;
+      color: var(--u-foreground);
+      font-weight: var(--u-weight-semibold);
+    }
+    small {
+      display: block;
+      font-size: 0.75rem;
+      line-height: 1.35;
+    }
+    &[data-state='current'] {
+      background: color-mix(in oklab, var(--u-primary) 8%, var(--u-card));
+      .u-kk-langkah-titik {
+        background: var(--u-primary);
+        color: var(--u-primary-foreground);
+        border-color: var(--u-primary);
+      }
+    }
+    &[data-state='done'] .u-kk-langkah-titik {
+      color: var(--u-success, #15803d);
+      border-color: color-mix(in oklab, var(--u-success, #15803d) 50%, var(--u-border));
+    }
+  }
+}
+.u-kk-langkah-titik {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--u-border);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: var(--u-weight-semibold);
+  svg {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+}
+.u-kk-alur-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 1rem;
+  font-size: 0.8125rem;
+  color: var(--u-muted-foreground);
+}
+
+// ---------------------------------------------------------------- Ringkasan & sebaran semester
+.u-kk-mk-ringkas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 0.75rem;
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-lg);
+    background: var(--u-card);
+    min-width: 0;
+    > b {
+      font-size: 1.375rem;
+      line-height: 1.2;
+      font-weight: var(--u-weight-semibold);
+      font-variant-numeric: tabular-nums;
+    }
+    > span {
+      font-size: 0.8125rem;
+      color: var(--u-muted-foreground);
+    }
+    &[data-warn] > b {
+      color: var(--u-warning, #b45309);
+    }
+  }
+}
+.u-kk-semester {
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card);
+  overflow: hidden;
+  > header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.375rem 0.75rem;
+    padding: 0.625rem 0.875rem;
+    border-bottom: 1px solid var(--u-border);
+    background: color-mix(in oklab, var(--u-muted) 50%, var(--u-card));
+    h4 {
+      margin: 0;
+      font-size: 0.875rem;
+      font-weight: var(--u-weight-semibold);
+    }
+    > span {
+      font-size: 0.8125rem;
+      color: var(--u-muted-foreground);
+      font-variant-numeric: tabular-nums;
+    }
+    > :last-child:not(span, h4) {
+      grid-column: 1 / -1;
+    }
+  }
+  &[data-lebih] > header {
+    background: color-mix(in oklab, var(--u-destructive) 7%, var(--u-card));
+  }
+  table {
+    width: 100%;
+  }
+}
+.u-kk-baris {
+  cursor: pointer;
+  &:hover {
+    background: color-mix(in oklab, var(--u-primary) 5%, transparent);
+  }
+  &[data-jenis='pilihan'] .u-kk-nama-mk::after {
+    content: ' (pilihan)';
+    color: var(--u-muted-foreground);
+    font-size: 0.75rem;
+  }
+}
+.u-kk-nama-mk {
+  font-weight: var(--u-weight-medium);
+}
+
+// ---------------------------------------------------------------- Chip & pilihan
+.u-kk-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.u-kk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--u-border);
+  border-radius: 999px;
+  background: var(--u-card);
+  color: var(--u-foreground);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: default;
+  &:is(button) {
+    cursor: pointer;
+    &:hover {
+      border-color: color-mix(in oklab, var(--u-primary) 40%, var(--u-border));
+    }
+    &:focus-visible {
+      outline: 2px solid var(--u-primary);
+      outline-offset: 1px;
+    }
+  }
+  &[data-active] {
+    border-color: var(--u-primary);
+    background: color-mix(in oklab, var(--u-primary) 10%, var(--u-card));
+    color: color-mix(in oklab, var(--u-primary) 80%, var(--u-foreground));
+  }
+}
+.u-kk-centang,
+.u-kk-pilih-cpl,
+.u-kk-prasyarat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  max-height: 18rem;
+  overflow: auto;
+  padding: 0.5rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+}
+.u-kk-pilih-cpl > * {
+  display: grid;
+  grid-template-columns: 1fr 6rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+.u-kk-pras {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0 0.375rem 0.25rem 0;
+}
+
+// ---------------------------------------------------------------- CPMK & sub-CPMK
+.u-kk-cpmk {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  > li {
+    padding: 0.75rem 0.875rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-lg);
+    background: var(--u-card);
+  }
+}
+.u-kk-cpmk-kepala {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.375rem 0.625rem;
+  > p {
+    margin: 0;
+    line-height: 1.5;
+  }
+  > .u-kk-cpmk-cpl {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  > :last-child:not(.u-kk-cpmk-cpl):not(p) {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
+.u-kk-cpmk-cpl {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.u-kk-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0.625rem 0 0;
+  padding: 0 0 0 0.875rem;
+  border-left: 2px solid color-mix(in oklab, var(--u-primary) 25%, var(--u-border));
+  list-style: none;
+  font-size: 0.8125rem;
+  > li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+.u-kk-sub-aksi {
+  margin-left: auto;
+  flex: none;
+}
+
+// ---------------------------------------------------------------- RPS
+.u-kk-versi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+.u-kk-rps,
+.u-kk-rps-lihat {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.u-kk-rps-syarat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--u-radius-md);
+  background: color-mix(in oklab, var(--u-muted) 55%, var(--u-card));
+  font-size: 0.8125rem;
+}
+.u-kk-tabel-isi {
+  td {
+    vertical-align: top;
+  }
+  textarea,
+  input {
+    min-width: 8rem;
+  }
+  td:nth-child(-n + 2) input {
+    width: 4.5rem;
+    min-width: 0;
+  }
+}
+
+// ---------------------------------------------------------------- Info / detail
+.u-kk-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 0.75rem 1.25rem;
+  margin: 0;
+  > div {
+    min-width: 0;
+  }
+  dt {
+    font-size: 0.75rem;
+    color: var(--u-muted-foreground);
+    margin-bottom: 0.125rem;
+  }
+  dd {
+    margin: 0;
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+  }
+}
+.u-kk-info-lebar {
+  grid-column: 1 / -1;
+}
+.u-kk-cpl-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  > li {
+    display: flex;
+    gap: 0.375rem;
+    align-items: baseline;
+  }
+}
+.u-kk-selisih {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 0.75rem;
+}
+.u-kk-detail {
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+  padding: 0.5rem 0.75rem;
+  > summary {
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: var(--u-weight-medium);
+  }
+}
+
+// ---------------------------------------------------------------- Ruang kurikulum
+.u-kk-tabs {
+  overflow-x: auto;
+}
+.u-kk-isi {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 1rem;
+  min-width: 0;
+}
+.u-kk-dua {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  align-items: start;
+  @media (max-width: 960px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
