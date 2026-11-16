@@ -1,0 +1,381 @@
+@use '../mixins' as *;
+
+// ================================================================ Aturan biaya dan pembagiannya (unipo-ui/siakad biaya.tsx)
+.u-biaya-kelola,
+.u-biaya-halaman,
+.u-biaya-isi,
+.u-biaya-detail,
+.u-biaya-ringkasan,
+.u-biaya-pencairan,
+.u-biaya-komponen,
+.u-biaya-alur {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+.u-biaya-kelola-kepala,
+.u-biaya-detail-kepala {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  h2 {
+    margin: 0.25rem 0 0;
+    font-size: var(--u-text-xl);
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  p {
+    margin: 0.25rem 0 0;
+    max-width: 68ch;
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
+  }
+}
+.u-biaya-detail-aksi,
+.u-biaya-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.u-biaya-toolbar {
+  justify-content: space-between;
+  width: 100%;
+}
+.u-biaya-cari {
+  min-width: 12rem;
+}
+.u-biaya-sel-nama {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  strong {
+    font-weight: 600;
+  }
+  span {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+  }
+}
+.u-biaya-mono {
+  font-family: var(--u-font-mono);
+  font-size: var(--u-text-sm);
+}
+.u-biaya-keterangan {
+  margin: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+}
+.u-biaya-subjudul {
+  margin: 0.5rem 0 0;
+  font-size: var(--u-text-md);
+  font-weight: 600;
+}
+
+// ---------------------------------------------------------------- Komponen (form)
+.u-biaya-komponen-daftar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.u-biaya-komponen-butir {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card);
+}
+.u-biaya-komponen-kepala {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  > :nth-child(2) {
+    flex: 1;
+  }
+}
+.u-biaya-komponen-no {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--u-radius-full, 999px);
+  color: #fff;
+  font-size: var(--u-text-xs);
+  font-weight: 600;
+}
+.u-biaya-komponen-isian {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.75rem;
+}
+.u-biaya-komponen-contoh {
+  margin: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+}
+.u-biaya-klop {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid color-mix(in oklab, var(--u-warning) 40%, transparent);
+  border-radius: var(--u-radius-md);
+  background: color-mix(in oklab, var(--u-warning) 8%, transparent);
+  > svg {
+    flex: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-top: 0.125rem;
+    color: var(--u-warning);
+  }
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    font-size: var(--u-text-sm);
+  }
+  strong {
+    font-weight: 600;
+  }
+  &[data-klop] {
+    border-color: color-mix(in oklab, var(--u-success) 40%, transparent);
+    background: color-mix(in oklab, var(--u-success) 8%, transparent);
+    > svg {
+      color: var(--u-success);
+    }
+  }
+}
+.u-biaya-pegawai {
+  position: relative;
+}
+.u-biaya-pegawai-hasil {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  max-height: 16rem;
+  margin: 0;
+  padding: 0.25rem;
+  overflow: auto;
+  list-style: none;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+  background: var(--u-card);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.08);
+  button {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 0.5rem 0.625rem;
+    border: 0;
+    border-radius: var(--u-radius-sm);
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    &:hover,
+    &:focus-visible {
+      background: var(--u-muted);
+    }
+    span {
+      color: var(--u-muted-foreground);
+      font-size: var(--u-text-xs);
+    }
+  }
+}
+.u-biaya-pegawai-info {
+  padding: 0.5rem 0.625rem;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+}
+.u-biaya-pegawai-terpilih {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  padding: 0 0.25rem 0 0.75rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+  font-size: var(--u-text-sm);
+}
+
+// ---------------------------------------------------------------- Batang proporsi
+.u-biaya-batang {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+.u-biaya-batang-isi {
+  display: flex;
+  gap: 2px;
+  height: 0.75rem;
+  overflow: hidden;
+  border-radius: var(--u-radius-full, 999px);
+  background: var(--u-muted);
+  > span {
+    flex-basis: 0;
+    min-width: 2px;
+  }
+}
+.u-biaya-legenda {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.375rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--u-text-sm);
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  i {
+    flex: none;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 2px;
+  }
+  span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  strong {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+}
+
+// ---------------------------------------------------------------- Tabel komponen + riwayat
+.u-biaya-tabel {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--u-text-sm);
+  th,
+  td {
+    padding: 0.5rem 0.625rem;
+    border-bottom: 1px solid var(--u-border);
+    text-align: left;
+  }
+  th {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+    font-weight: 600;
+  }
+  tfoot td {
+    border-bottom: 0;
+    font-weight: 600;
+  }
+  .u-angka {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+}
+.u-biaya-warna {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-right: 0.375rem;
+  border-radius: 2px;
+  vertical-align: baseline;
+}
+.u-biaya-riwayat {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  li {
+    position: relative;
+    display: flex;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+    &:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: 0.3125rem;
+      top: 0.875rem;
+      bottom: 0;
+      width: 1px;
+      background: var(--u-border);
+    }
+  }
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    font-size: var(--u-text-sm);
+  }
+  small {
+    color: var(--u-muted-foreground);
+    font-weight: 400;
+  }
+  span {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+  }
+  p {
+    margin: 0.25rem 0 0;
+  }
+}
+.u-biaya-riwayat-titik {
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-top: 0.3125rem;
+  border-radius: 999px;
+  background: var(--u-primary);
+  &[data-aksi='ditolak'],
+  &[data-aksi='dinonaktifkan'] {
+    background: var(--u-danger);
+  }
+  &[data-aksi='disetujui'] {
+    background: var(--u-success);
+  }
+  &[data-aksi='diajukan'],
+  &[data-aksi='dikembalikan'] {
+    background: var(--u-warning);
+  }
+}
+
+// ---------------------------------------------------------------- Simulasi + ringkasan
+.u-biaya-simulasi-isian {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.u-biaya-simulasi-hasil {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  p {
+    margin: 0;
+    font-size: var(--u-text-sm);
+  }
+}
+.u-biaya-tanpa-aturan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--u-text-sm);
+}
