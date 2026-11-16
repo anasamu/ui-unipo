@@ -7,6 +7,7 @@ import { Checkbox } from './forms';
 import { Select } from './select';
 import { Menu, Popover, Tooltip, type MenuEntry } from './overlays';
 import { Empty, Pagination, SortButton } from './display';
+import { SelPohon, TombolPohon, susunPohon, usePohon, type NodePohon } from './pohon';
 
 // ================================================================ Tipe
 export interface DataColumn<T> {
@@ -93,6 +94,19 @@ export interface DataTableProps<T> {
   grid?: (row: T, index: number) => React.ReactNode;
   /** Lebar minimum kartu di kisi (bawaan 15rem). */
   gridMin?: string;
+  /**
+   * Data bertingkat (induk-anak). Baris disusun sebagai pohon: anak menjorok di bawah induknya dan cabang bisa
+   * dibuka/tutup lewat kolom pertama. Bawaan hanya induk teratas yang tampil; saat `filtered` semua cabang dibuka
+   * supaya hasil pencarian tidak tersembunyi. Urutan berlaku antar-saudara, halaman dihitung dari baris yang tampil.
+   */
+  tree?: {
+    /** Kunci induk baris (cocok dengan `rowKey` induknya); kosong/0 = akar. */
+    parentKey: (row: T) => string | number | null | undefined;
+    /** true = semua terbuka, false = hanya induk teratas (bawaan), angka = buka sampai tingkat itu. */
+    defaultExpanded?: boolean | number;
+    /** Tombol "Buka semua/Tutup semua" di bilah alat (bawaan true). */
+    expandAllToggle?: boolean;
+  };
 }
 
 // ================================================================ Utilitas
@@ -195,6 +209,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     storageKey,
     grid,
     gridMin,
+    tree,
   } = props;
 
   // ---- urutan
@@ -231,9 +246,25 @@ export function DataTable<T>(props: DataTableProps<T>) {
     const out = [...all].sort((a, b) => compare(raw(col, a), raw(col, b)));
     return sort.dir === 'desc' ? out.reverse() : out;
   }, [all, sort, serverSort, columns]);
-  const total = totalProp ?? sorted.length;
+  // ---- pohon (data bertingkat)
+  const nodes = React.useMemo<NodePohon<T>[]>(() => (tree ? susunPohon(sorted, { getKey: rowKey, getParent: tree.parentKey }) : []), [sorted, tree?.parentKey, rowKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pohon = usePohon(nodes, { defaultExpanded: tree?.defaultExpanded ?? false, storageKey: storageKey && `${storageKey}:pohon`, showAll: Boolean(filtered) });
+  const nodeOf = React.useMemo(() => new Map(nodes.map((n) => [n.key, n])), [nodes]);
+  const ordered = tree ? pohon.visible.map((n) => n.row) : sorted;
+  const total = tree && !serverPage ? ordered.length : (totalProp ?? sorted.length);
   const totalPages = Math.max(1, Math.ceil(total / perPage));
-  const shown = serverPage ? sorted : sorted.slice((page - 1) * perPage, page * perPage);
+  const shown = serverPage ? ordered : ordered.slice((page - 1) * perPage, page * perPage);
+  /** Isi sel kolom pertama, dibungkus SelPohon bila tabel bertingkat. */
+  const treeCell = (row: T, content: React.ReactNode) => {
+    const n = tree ? nodeOf.get(rowKey(row)) : undefined;
+    if (!n) return content;
+    const open = pohon.isExpanded(n.key);
+    return (
+      <SelPohon depth={n.depth} hasChildren={n.childCount > 0} expanded={open} onToggle={() => pohon.toggle(n.key)} count={n.descendantCount}>
+        {content}
+      </SelPohon>
+    );
+  };
   React.useEffect(() => {
     if (!serverPage && page > totalPages) setInnerPage(totalPages);
   }, [serverPage, page, totalPages]);
@@ -260,7 +291,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
 
   const downloadCsv = () => {
     const name = typeof exportCsv === 'string' ? exportCsv : 'data';
-    const blob = new Blob(['﻿' + toCsv(visible, sorted)], { type: 'text/csv;charset=utf-8' });
+    const blob = new Blob(['﻿' + toCsv(visible, tree ? nodes.map((n) => n.row) : sorted)], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = name.endsWith('.csv') ? name : `${name}.csv`;
@@ -272,6 +303,9 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const tools = (
     <>
       {actions}
+      {tree && tree.expandAllToggle !== false && pohon.punyaCabang && !filtered && (
+        <TombolPohon semuaTerbuka={pohon.semuaTerbuka} onExpandAll={pohon.expandAll} onCollapseAll={pohon.collapseAll} />
+      )}
       {densityToggle && !cards && (
         <Tooltip content={density === 'compact' ? 'Baris lega' : 'Baris rapat'}>
           <Button
@@ -463,8 +497,8 @@ export function DataTable<T>(props: DataTableProps<T>) {
                     </span>
                   )}
                   <div className="u-dt-card-title">
-                    {by('title').map((c) => (
-                      <div key={c.key}>{c.cell ? c.cell(row, i) : String(raw(c, row) ?? '')}</div>
+                    {by('title').map((c, ti) => (
+                      <div key={c.key}>{ti === 0 ? treeCell(row, c.cell ? c.cell(row, i) : String(raw(c, row) ?? '')) : c.cell ? c.cell(row, i) : String(raw(c, row) ?? '')}</div>
                     ))}
                     {by('subtitle').map((c) => (
                       <div key={c.key} className="u-dt-card-subtitle">
@@ -493,7 +527,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     </div>
   ) : (
     <div className="u-table-wrap u-dt-scroll" style={maxHeight ? { maxHeight, overflowY: 'auto' } : undefined}>
-      <table className="u-table" data-density={density} data-striped={dataFlag(striped)} aria-busy={loading || undefined}>
+      <table className="u-table" role={tree ? 'treegrid' : undefined} data-tree={dataFlag(Boolean(tree))} data-density={density} data-striped={dataFlag(striped)} aria-busy={loading || undefined}>
         {caption && <caption className="u-sr-only">{caption}</caption>}
         <thead>
           <tr>
@@ -549,15 +583,22 @@ export function DataTable<T>(props: DataTableProps<T>) {
                 const k = rowKey(row);
                 const sel = selected.includes(k);
                 return (
-                  <tr key={k} data-selected={dataFlag(sel)} data-clickable={dataFlag(Boolean(onRowClick))} onClick={onRowClick ? () => onRowClick(row) : undefined}>
+                  <tr
+                    key={k}
+                    data-selected={dataFlag(sel)}
+                    data-clickable={dataFlag(Boolean(onRowClick))}
+                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    aria-level={tree ? (nodeOf.get(k)?.depth ?? 0) + 1 : undefined}
+                    data-tree-depth={tree ? (nodeOf.get(k)?.depth ?? 0) : undefined}
+                  >
                     {selectable && (
                       <td className="u-dt-check" onClick={(e) => e.stopPropagation()}>
                         <Checkbox checked={sel} onCheckedChange={() => toggleRow(k)} aria-label="Pilih baris" />
                       </td>
                     )}
-                    {visible.map((c) => (
+                    {visible.map((c, ci) => (
                       <td key={c.key} data-align={c.align} data-shrink={c.shrink ? '' : undefined}>
-                        {c.cell ? c.cell(row, i) : String(raw(c, row) ?? '')}
+                        {ci === 0 ? treeCell(row, c.cell ? c.cell(row, i) : String(raw(c, row) ?? '')) : c.cell ? c.cell(row, i) : String(raw(c, row) ?? '')}
                       </td>
                     ))}
                     {rowActions && (

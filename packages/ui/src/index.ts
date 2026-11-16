@@ -17,6 +17,7 @@ export * from './components/identity';
 export * from './components/akun';
 export * from './components/filter';
 export * from './components/data-table';
+export * from './components/pohon';
 export * from './components/status';
 export * from './components/schedule';
 export * from './components/content';
