@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Button, CodeBlock, UnipoMark } from 'unipo-ui';
 import { EditorDokumen, EditorTemplatSurat, LembarSurat, isiTemplat, type KopSurat, type PenandatanganSurat } from 'unipo-ui/editor';
-import { BuatSuratDariTemplat, KelolaTemplatSurat, type SuratKeluar } from 'unipo-ui/siakad';
+import { BuatSuratDariTemplat, EditorSuratKeluar, KelolaTemplatSurat, TEMPLAT_SURAT_BAWAAN, type SuratKeluar } from 'unipo-ui/siakad';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
@@ -15,6 +15,7 @@ export const meta: DemoMeta = {
   importLine:
     "import { EditorDokumen, EditorTemplatSurat, LembarSurat, isiTemplat } from 'unipo-ui/editor';\nimport { KelolaTemplatSurat, BuatSuratDariTemplat } from 'unipo-ui/siakad';\nimport 'unipo-ui/css';",
   demos: {
+    DariTemplat: 'EditorSuratKeluar: galeri templat (bawaan UNIPO, unit, bersama) → isian bertipe + ambil dari data mahasiswa/dosen → Bangkitkan surat',
     Wizard: 'BuatSuratDariTemplat: unit → templat → data → tujuan → isi → tinjau → POST /v1/arsip/surat-keluar',
     Kelola: 'KelolaTemplatSurat: daftar, cari, buat, sunting, hapus templat (/v1/arsip/template)',
     Templat: 'EditorTemplatSurat tanpa SDK: nama, perihal, isi, penanda, data uji, pratinjau',
@@ -22,6 +23,10 @@ export const meta: DemoMeta = {
     Dokumen: 'EditorDokumen: kertas dengan kop dan kaki tetap',
   },
   props: [
+    ['EditorSuratKeluar.galeriAwal', 'boolean', 'Surat baru membuka galeri templat lebih dulu (bawaan true).'],
+    ['EditorSuratKeluar.templatAwal', 'TemplatTerpilih', 'Muat templat langsung, mis. templatTerpilih(TEMPLAT_SURAT_BAWAAN[0]).'],
+    ['PilihTemplatSurat', 'open, onOpenChange, unitId, onPilih', 'Galeri templat mandiri: cari, kategori, pratinjau dengan contoh data.'],
+    ['TEMPLAT_SURAT_BAWAAN', 'TemplatSuratBawaan[]', `${TEMPLAT_SURAT_BAWAAN.length} templat siap pakai: undangan, pemberitahuan, permohonan, pengantar, berita acara, keterangan aktif kuliah, rekomendasi, izin penelitian, surat tugas, keterangan pegawai, SK, edaran.`],
     ['EditorDokumen.nilaiAwal', 'string | Blok[]', 'HTML dari server (diurai ke blok) atau blok. Ganti `key` untuk memuat dokumen lain.'],
     ['EditorDokumen.onChange', '(html, blok) => void', 'HTML sudah disaring seperti server.'],
     ['EditorDokumen.penanda', 'PenandaTemplat[]', 'Penanda yang disarankan. Penanda di isi dan penanda bawaan ikut tampil.'],
@@ -47,6 +52,18 @@ const KOP: KopSurat = {
   kontak: 'Telepon (0443) 210 123 · ft@unipo.ac.id · ft.unipo.ac.id',
 };
 const TTD: PenandatanganSurat = { jabatan: 'Dekan', nama: 'Dr. Rahmawati Hasan, S.T., M.T.', nomorInduk: 'NIDN 0912078501', verifikasi: 'https://siakad.unipo.ac.id/v1/arsip/verifikasi/K7Q2-M9XA' };
+
+export function DariTemplat() {
+  const [kunci, setKunci] = React.useState(0);
+  return (
+    <div style={{ display: 'grid', gap: '0.75rem' }}>
+      <Button variant="outline" onClick={() => setKunci((k) => k + 1)} style={{ justifySelf: 'start' }}>
+        Buat surat keluar
+      </Button>
+      <EditorSuratKeluar key={kunci} unitId={2} tinggi={820} />
+    </div>
+  );
+}
 
 export function Wizard() {
   const [hasil, setHasil] = React.useState<SuratKeluar | null>(null);
