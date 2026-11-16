@@ -18,6 +18,9 @@ interface B {
   jumlah_unduh: number;
   dibuat_at: string;
   url?: string;
+  unit: string | null;
+  periode: string | null;
+  terenkripsi: boolean;
 }
 const uuid = () => '6f1c2d3e-xxxx-4xxx-9xxx-xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
 const MIME: Record<string, string> = {
@@ -50,9 +53,12 @@ const b = (nama: string, ukuran: number, kategori: string, folder: string | null
     jumlah_unduh: Math.floor(Math.random() * 12),
     dibuat_at: t.toISOString().slice(0, 19).replace('T', ' '),
     url: '#',
+    unit: null,
+    periode: hari > 14 ? '20242' : '20251',
+    terenkripsi: false,
   };
 };
-const BERKAS: B[] = [
+let BERKAS: B[] = [
   b('SK Rektor tentang kalender akademik 2026.pdf', 412_000, 'dokumen', 'Surat Keputusan'),
   b('Surat undangan rapat senat.pdf', 188_400, 'dokumen', 'Surat Masuk/2026'),
   b('Ijazah S2 - Dr. Rahmawati.pdf', 1_120_000, 'dokumen', 'Kepegawaian/Ijazah'),
@@ -81,13 +87,71 @@ interface F {
   warna: string | null;
   dibuat_at: string;
 }
-const FOLDER: F[] = [
+let FOLDER: F[] = [
   { path: 'Surat Masuk', warna: 'biru', dibuat_at: '2026-10-01 08:00:00' },
   { path: 'Surat Masuk/2026', warna: null, dibuat_at: '2026-10-01 08:00:00' },
   { path: 'Surat Keluar', warna: 'teal', dibuat_at: '2026-10-01 08:00:00' },
   { path: 'Akreditasi', warna: 'ungu', dibuat_at: '2026-10-02 08:00:00' },
   { path: 'Draf', warna: 'abu', dibuat_at: '2026-11-10 08:00:00' },
 ];
+
+// ---------------------------------------------------------------- ruang: pribadi, unit, folder yang dibagikan
+const unitB = (unit: string, nama: string, ukuran: number, folder: string | null, periode: string, terenkripsi = false): B => ({ ...b(nama, ukuran, 'dokumen', folder), unit, periode, terenkripsi });
+const RUANG: Record<string, { berkas: B[]; folder: F[] }> = {
+  u: { berkas: BERKAS, folder: FOLDER },
+  'n:bauk': {
+    berkas: [
+      unitB('bauk', 'Laporan realisasi anggaran Oktober.xlsx', 410_000, 'Laporan Keuangan', '20251', true),
+      unitB('bauk', 'Rekap pembayaran UKT ganjil.xlsx', 1_250_000, 'Tagihan', '20251', true),
+      unitB('bauk', 'SK honor dosen luar biasa.pdf', 288_000, 'SK', '20251', true),
+      unitB('bauk', 'Laporan realisasi anggaran Mei.xlsx', 380_000, 'Laporan Keuangan', '20242', true),
+      unitB('bauk', 'Rekap pembayaran UKT genap.xlsx', 1_090_000, 'Tagihan', '20242', true),
+      unitB('bauk', 'Template kuitansi.docx', 42_000, null, '20251', true),
+    ],
+    folder: [{ path: 'Laporan Keuangan', warna: 'hijau', dibuat_at: '2026-08-01 08:00:00' }],
+  },
+  'n:lpm': {
+    berkas: [unitB('lpm', 'Instrumen AMI 2026.docx', 520_000, 'Akreditasi', '20251'), unitB('lpm', 'Jadwal AMI.pdf', 160_000, 'Akreditasi/Jadwal', '20251')],
+    folder: [],
+  },
+};
+const KEBIJAKAN: Record<string, string> = { global: 'opsional', 'unit:bauk': 'wajib' };
+interface Bagi {
+  id: string;
+  berkas_id?: string;
+  path?: string;
+  ruang?: string;
+  ke_jenis: 'pengguna' | 'unit' | 'tautan';
+  ke: string | null;
+  izin: 'lihat' | 'ubah';
+  sandi: boolean;
+  kedaluwarsa_at: string | null;
+  pesan: string | null;
+  dibuat_oleh: string;
+  masuk: boolean;
+}
+const BAGI: Bagi[] = [
+  { id: uuid(), path: 'Akreditasi', ruang: 'n:lpm', ke_jenis: 'pengguna', ke: 'demo', izin: 'lihat', sandi: false, kedaluwarsa_at: null, pesan: 'Bahan AMI', dibuat_oleh: 'kepala.lpm', masuk: true },
+];
+/** Pilih ruang dari parameter `unit` / `bagi` (body atau query). */
+function pakai(u: URL, d: Record<string, unknown> = {}) {
+  const bagi = (d.bagi as string) || u.searchParams.get('bagi');
+  const unit = (d.unit as string) || u.searchParams.get('unit');
+  const sh = bagi ? BAGI.find((x) => x.id === bagi) : undefined;
+  const kunci = sh?.ruang ?? (unit ? `n:${unit}` : 'u');
+  RUANG[kunci] ??= { berkas: [], folder: [] };
+  BERKAS = RUANG[kunci].berkas;
+  FOLDER = RUANG[kunci].folder;
+  return { kunci, unit: kunci.startsWith('n:') ? kunci.slice(2) : null, batas: sh?.path ?? null, akses: sh ? 'bagi' : unit ? 'kelola' : 'pemilik' };
+}
+/** Cari berkas di semua ruang (untuk rute per id). */
+function cariDiMana(id: string): { x: B; daftar: B[] } | null {
+  for (const r of Object.values(RUANG)) {
+    const x = r.berkas.find((y) => y.id === id);
+    if (x) return { x, daftar: r.berkas };
+  }
+  return null;
+}
 
 const galat = (status: number, code: string, message: string, details?: unknown) => ({ __status: status, error: { code, message, details } });
 const SEGMEN = /^[\p{L}\p{N}][\p{L}\p{N} ._()&,+-]*$/u;
@@ -149,9 +213,10 @@ tambahRute(/^\/v1\/berkas\/info$/, () => ({
 }));
 
 // ---------------------------------------------------------------- folder
-tambahRute(/^\/v1\/berkas\/folder$/, async (_u, init) => {
+tambahRute(/^\/v1\/berkas\/folder$/, async (u, init) => {
   if (init?.method === 'POST') {
     const d = await bacaBody(init);
+    pakai(u, d);
     const ind = normal(d.induk);
     if (ind && typeof ind === 'object') return galat(422, 'validation_failed', 'Data yang dikirim tidak valid.', { induk: ind.salah });
     const nama = String(d.nama ?? '').trim();
@@ -161,10 +226,14 @@ tambahRute(/^\/v1\/berkas\/folder$/, async (_u, init) => {
     tambahFolder(p, (d.warna as string) || null);
     return { __status: 201, data: daftar().folder.find((f) => f.path === p) };
   }
-  return { data: daftar() };
+  const r = pakai(u);
+  const dft = daftar();
+  if (r.batas) dft.folder = dft.folder.filter((f) => dalam(f.path, r.batas!));
+  return { data: { ...dft, ruang: { kode: r.kunci, unit: r.unit, akses: r.akses, batas: r.batas, periode: u.searchParams.get('periode') } } };
 });
-tambahRute(/^\/v1\/berkas\/folder\/ubah$/, async (_u, init) => {
+tambahRute(/^\/v1\/berkas\/folder\/ubah$/, async (u, init) => {
   const d = await bacaBody(init);
+  pakai(u, d);
   const lama = normal(d.path);
   if (!lama || typeof lama === 'object') return galat(422, 'validation_failed', 'Data yang dikirim tidak valid.', { path: 'wajib' });
   if (!ada(lama)) return galat(404, 'not_found', 'Folder tidak ditemukan.');
@@ -192,8 +261,9 @@ tambahRute(/^\/v1\/berkas\/folder\/ubah$/, async (_u, init) => {
   if (induk(baru)) tambahFolder(induk(baru)!);
   return { data: { ...daftar().folder.find((f) => f.path === baru), berkas_dipindah: n } };
 });
-tambahRute(/^\/v1\/berkas\/folder\/hapus$/, async (_u, init) => {
+tambahRute(/^\/v1\/berkas\/folder\/hapus$/, async (u, init) => {
   const d = await bacaBody(init);
+  pakai(u, d);
   const p = normal(d.path);
   if (!p || typeof p === 'object') return galat(422, 'validation_failed', 'Data yang dikirim tidak valid.', { path: 'wajib' });
   if (!ada(p)) return galat(404, 'not_found', 'Folder tidak ditemukan.');
@@ -253,11 +323,18 @@ tambahRute(/^\/v1\/berkas\/pindah$/, async (_u, init) => {
   if (f && typeof f === 'object') return galat(422, 'validation_failed', 'Data yang dikirim tidak valid.', { folder: f.salah });
   const ok: string[] = [];
   const gagal: Array<{ id: string; kode: string; pesan: string }> = [];
+  const tujuan = 'tujuan_unit' in d ? (d.tujuan_unit ? `n:${d.tujuan_unit}` : 'u') : null;
   for (const id of (d.id as string[]) ?? []) {
-    const x = BERKAS.find((r) => r.id === id);
-    if (!x) gagal.push({ id, kode: 'not_found', pesan: 'Berkas tidak ditemukan.' });
+    const c = cariDiMana(id);
+    if (!c) gagal.push({ id, kode: 'not_found', pesan: 'Berkas tidak ditemukan.' });
     else {
-      x.folder = f;
+      c.x.folder = f;
+      if (tujuan) {
+        c.daftar.splice(c.daftar.indexOf(c.x), 1);
+        RUANG[tujuan] ??= { berkas: [], folder: [] };
+        c.x.unit = tujuan.startsWith('n:') ? tujuan.slice(2) : null;
+        RUANG[tujuan].berkas.unshift(c.x);
+      }
       ok.push(id);
     }
   }
@@ -268,11 +345,11 @@ tambahRute(/^\/v1\/berkas\/hapus-banyak$/, async (_u, init) => {
   const ok: string[] = [];
   const gagal: Array<{ id: string; kode: string; pesan: string }> = [];
   for (const id of (d.id as string[]) ?? []) {
-    const i = BERKAS.findIndex((r) => r.id === id);
-    if (i < 0) gagal.push({ id, kode: 'not_found', pesan: 'Berkas tidak ditemukan.' });
-    else if (/ijazah/i.test(BERKAS[i].nama)) gagal.push({ id, kode: 'berkas_dipakai', pesan: `${BERKAS[i].nama} masih dipakai data Kepegawaian.` });
+    const c = cariDiMana(id);
+    if (!c) gagal.push({ id, kode: 'not_found', pesan: 'Berkas tidak ditemukan.' });
+    else if (/ijazah/i.test(c.x.nama)) gagal.push({ id, kode: 'berkas_dipakai', pesan: `${c.x.nama} masih dipakai data Kepegawaian.` });
     else {
-      SAMPAH.push(...BERKAS.splice(i, 1));
+      SAMPAH.push(...c.daftar.splice(c.daftar.indexOf(c.x), 1));
       ok.push(id);
     }
   }
@@ -281,13 +358,13 @@ tambahRute(/^\/v1\/berkas\/hapus-banyak$/, async (_u, init) => {
 
 // ---------------------------------------------------------------- satu berkas
 tambahRute(/^\/v1\/berkas\/[0-9a-f-]{36}\/url$/, (u) => {
-  const x = BERKAS.find((r) => r.id === u.pathname.split('/')[3]);
+  const x = cariDiMana(u.pathname.split('/')[3])?.x;
   if (!x) return galat(404, 'not_found', 'Berkas tidak ditemukan.');
   const url = x.mime.startsWith('image/') ? gambarTiruan(x) : x.ekstensi === 'txt' ? `data:text/plain;charset=utf-8,${encodeURIComponent('Catatan contoh dari berkas tiruan.')}` : 'about:blank';
   return { data: { url, kedaluwarsa_at: sekarang() } };
 });
 tambahRute(/^\/v1\/berkas\/[0-9a-f-]{36}\/ubah$/, async (u, init) => {
-  const x = BERKAS.find((r) => r.id === u.pathname.split('/')[3]);
+  const x = cariDiMana(u.pathname.split('/')[3])?.x;
   if (!x) return galat(404, 'not_found', 'Berkas tidak ditemukan.');
   const d = await bacaBody(init);
   if (typeof d.nama === 'string') {
@@ -301,25 +378,32 @@ tambahRute(/^\/v1\/berkas\/[0-9a-f-]{36}\/ubah$/, async (u, init) => {
     x.folder = f;
   }
   if (typeof d.keterangan === 'string') x.keterangan = d.keterangan;
+  if (typeof d.periode === 'string') x.periode = d.periode === 'tanpa' ? null : d.periode;
   return { data: x };
 });
 tambahRute(/^\/v1\/berkas\/[0-9a-f-]{36}$/, (u) => {
-  const x = BERKAS.find((r) => r.id === u.pathname.split('/').pop());
+  const x = cariDiMana(u.pathname.split('/').pop()!)?.x;
   return x ? { data: x } : galat(404, 'not_found', 'Berkas tidak ditemukan.');
 });
 tambahRute(/^\/v1\/berkas$/, async (u, init) => {
   if (init?.method === 'POST') {
     const d = await bacaBody(init);
+    const r = pakai(u, d);
     const f = d.berkas instanceof File ? d.berkas : null;
     const folder = normal(d.folder);
     if (folder && typeof folder === 'object') return galat(422, 'validation_failed', 'Data yang dikirim tidak valid.', { folder: folder.salah });
     const baru = b(f?.name ?? 'berkas.pdf', f?.size ?? 1000, String(d.kategori ?? 'dokumen'), folder);
     baru.dibuat_at = sekarang();
     if (typeof d.modul === 'string') baru.modul = d.modul;
+    baru.unit = r.unit;
+    baru.periode = typeof d.periode === 'string' ? (d.periode === 'tanpa' ? null : d.periode) : '20251';
+    baru.terenkripsi = KEBIJAKAN.global !== 'mati' && (d.enkripsi === '1' || efektif(r.unit) === 'wajib');
     BERKAS.unshift(baru);
     return { __status: 201, data: baru };
   }
+  const ru = pakai(u);
   const p = u.searchParams;
+  const per0 = p.get('periode');
   const q = (p.get('q') ?? '').toLowerCase();
   const kat = p.get('kategori');
   const fol = p.get('folder');
@@ -332,7 +416,9 @@ tambahRute(/^\/v1\/berkas$/, async (u, init) => {
       (!kat || r.kategori === kat) &&
       (fol === null || (fol === '/' ? !r.folder : r.folder !== null && sama(r.folder, fol))) &&
       (!dlm || dalam(r.folder, dlm)) &&
-      (!ext.length || ext.includes(r.ekstensi)),
+      (!ext.length || ext.includes(r.ekstensi)) &&
+      (!per0 || (per0 === 'tanpa' ? !r.periode : r.periode === per0)) &&
+      (!ru.batas || dalam(r.folder, ru.batas)),
   );
   const urut = p.get('urut') ?? 'baru';
   const banding: Record<string, (a: B, b: B) => number> = {
@@ -351,12 +437,15 @@ tambahRute(/^\/v1\/berkas$/, async (u, init) => {
 
 // ---------------------------------------------------------------- unggah bertahap (file di atas 8 MB)
 const SESI = new Map<string, { b: B; jumlah: number }>();
-tambahRute(/^\/v1\/berkas\/bertahap$/, async (_u, init) => {
+tambahRute(/^\/v1\/berkas\/bertahap$/, async (u, init) => {
   const d = await bacaBody(init);
+  const r = pakai(u, d);
   const folder = normal(d.folder);
   if (folder && typeof folder === 'object') return galat(422, 'validation_failed', 'Data yang dikirim tidak valid.', { folder: folder.salah });
   const x = b(String(d.nama ?? 'berkas.bin'), Number(d.ukuran ?? 0), String(d.kategori ?? 'dokumen'), folder);
   x.dibuat_at = sekarang();
+  x.unit = r.unit;
+  x.terenkripsi = d.enkripsi === '1' || efektif(r.unit) === 'wajib';
   const ukuran = 2 * 1024 * 1024;
   const jumlah = Math.max(1, Math.ceil(x.ukuran / ukuran));
   SESI.set(x.id, { b: x, jumlah });
@@ -367,6 +456,185 @@ tambahRute(/^\/v1\/berkas\/[0-9a-f-]{36}\/selesai$/, (u) => {
   const s = SESI.get(u.pathname.split('/')[3]);
   if (!s) return galat(404, 'not_found', 'Berkas tidak ditemukan.');
   SESI.delete(s.b.id);
-  BERKAS.unshift(s.b);
+  (RUANG[s.b.unit ? `n:${s.b.unit}` : 'u'] ??= { berkas: [], folder: [] }).berkas.unshift(s.b);
   return { data: s.b };
+});
+
+// ---------------------------------------------------------------- unit, periode, salin, berbagi, enkripsi (SIAKAD 2026-11)
+const UNIT = [
+  { kode: 'bauk', nama: 'Biro Administrasi Umum dan Keuangan', singkatan: 'BAUK', jenis: 'unit', aplikasi: 'bauk', akses: 'kelola' as const },
+  { kode: 'baak', nama: 'Biro Administrasi Akademik', singkatan: 'BAAK', jenis: 'unit', aplikasi: 'baak', akses: 'anggota' as const },
+];
+const SEMUA_UNIT = [
+  ...UNIT,
+  { kode: 'sdm', nama: 'Biro Sumber Daya Manusia', singkatan: 'SDM', jenis: 'unit' },
+  { kode: 'lpm', nama: 'Lembaga Penjaminan Mutu', singkatan: 'LPM', jenis: 'unit' },
+  { kode: 'pmb', nama: 'Panitia Penerimaan Mahasiswa Baru', singkatan: 'PMB', jenis: 'unit' },
+  { kode: 'fak-teknik', nama: 'Fakultas Teknik', singkatan: 'FT', jenis: 'fakultas' },
+];
+function efektif(unit: string | null) {
+  const g = KEBIJAKAN.global ?? 'opsional';
+  const un = unit ? (KEBIJAKAN[`unit:${unit}`] ?? 'opsional') : null;
+  const pg = unit ? null : (KEBIJAKAN['pengguna:demo'] ?? 'opsional');
+  return g === 'mati' ? 'mati' : [g, un, pg].includes('wajib') ? 'wajib' : 'opsional';
+}
+const NAMA_PERIODE: Record<string, string> = { '20251': '2025/2026 Ganjil', '20242': '2024/2025 Genap' };
+tambahRute(/^\/v1\/berkas\/unit$/, (u) => ({
+  data: { unit: UNIT.map((x) => ({ ...x, enkripsi: efektif(x.kode) })), ...(u.searchParams.get('semua') ? { semua: SEMUA_UNIT.map(({ kode, nama, singkatan, jenis }) => ({ kode, nama, singkatan, jenis })) } : {}) },
+}));
+tambahRute(/^\/v1\/berkas\/periode$/, (u) => {
+  pakai(u);
+  const hit = new Map<string, { n: number; b: number }>();
+  BERKAS.forEach((x) => {
+    const k = x.periode ?? 'tanpa';
+    const v = hit.get(k) ?? { n: 0, b: 0 };
+    hit.set(k, { n: v.n + 1, b: v.b + x.ukuran });
+  });
+  hit.set('20251', hit.get('20251') ?? { n: 0, b: 0 });
+  const kode = [...hit.keys()].filter((k) => k !== 'tanpa').sort().reverse();
+  return {
+    data: {
+      aktif: '20251',
+      periode: [...kode, ...(hit.has('tanpa') ? ['tanpa'] : [])].map((k) => ({
+        periode: k,
+        nama: k === 'tanpa' ? 'Tanpa periode' : (NAMA_PERIODE[k] ?? k),
+        tahun: k === 'tanpa' ? null : k.slice(0, 4),
+        semester: k === 'tanpa' ? null : k.slice(4),
+        aktif: k === '20251',
+        jumlah_berkas: hit.get(k)!.n,
+        ukuran: hit.get(k)!.b,
+      })),
+    },
+  };
+});
+const namaSalinan = (daftar: B[], nama: string, folder: string | null) => {
+  if (!daftar.some((x) => x.nama === nama && x.folder === folder)) return nama;
+  const i = nama.lastIndexOf('.');
+  return `${nama.slice(0, i)} (salinan)${nama.slice(i)}`;
+};
+tambahRute(/^\/v1\/berkas\/salin$/, async (_u, init) => {
+  const d = await bacaBody(init);
+  const f = normal(d.folder);
+  if (f && typeof f === 'object') return galat(422, 'validation_failed', 'Data yang dikirim tidak valid.', { folder: f.salah });
+  const disalin: B[] = [];
+  const gagal: Array<{ id: string; kode: string; pesan: string }> = [];
+  for (const id of (d.id as string[]) ?? []) {
+    const c = cariDiMana(id);
+    if (!c) {
+      gagal.push({ id, kode: 'not_found', pesan: 'Berkas tidak ditemukan.' });
+      continue;
+    }
+    const kunci = 'tujuan_unit' in d ? (d.tujuan_unit ? `n:${d.tujuan_unit}` : 'u') : c.x.unit ? `n:${c.x.unit}` : 'u';
+    const tujuan = (RUANG[kunci] ??= { berkas: [], folder: [] }).berkas;
+    const baru = { ...c.x, id: uuid(), folder: f, nama: namaSalinan(tujuan, c.x.nama, f), unit: kunci.startsWith('n:') ? kunci.slice(2) : null, dibuat_at: sekarang() };
+    tujuan.unshift(baru);
+    disalin.push(baru);
+  }
+  return { __status: 201, data: { folder: f, disalin, gagal } };
+});
+tambahRute(/^\/v1\/berkas\/folder\/salin$/, async (u, init) => {
+  const d = await bacaBody(init);
+  pakai(u, d);
+  const p = normal(d.path);
+  if (!p || typeof p === 'object' || !ada(p)) return galat(404, 'not_found', 'Folder tidak ditemukan.');
+  const ind = normal(d.induk_baru);
+  const isi = BERKAS.filter((x) => dalam(x.folder, p));
+  const sub = FOLDER.filter((x) => dalam(x.path, p));
+  const kunci = 'tujuan_unit' in d ? (d.tujuan_unit ? `n:${d.tujuan_unit}` : 'u') : null;
+  if (kunci) {
+    BERKAS = (RUANG[kunci] ??= { berkas: [], folder: [] }).berkas;
+    FOLDER = RUANG[kunci].folder;
+  }
+  const nama0 = p.slice(p.lastIndexOf('/') + 1);
+  let nama = nama0;
+  for (let i = 2; ada(ind && typeof ind === 'string' ? `${ind}/${nama}` : nama); i++) nama = `${nama0} (${i})`;
+  const baru = ind && typeof ind === 'string' ? `${ind}/${nama}` : nama;
+  tambahFolder(baru);
+  sub.forEach((x) => tambahFolder(baru + x.path.slice(p.length), x.warna));
+  isi.forEach((x) => BERKAS.unshift({ ...x, id: uuid(), folder: baru + x.folder!.slice(p.length), unit: kunci ? (kunci.startsWith('n:') ? kunci.slice(2) : null) : x.unit }));
+  return { __status: 201, data: { path: baru, berkas_disalin: isi.length, folder_disalin: sub.length + 1 } };
+});
+const bentukBagi = (x: Bagi) => ({
+  id: x.id,
+  jenis: x.berkas_id ? 'berkas' : 'folder',
+  folder: x.path ? { path: x.path, nama: x.path.slice(x.path.lastIndexOf('/') + 1), unit: x.ruang?.startsWith('n:') ? x.ruang.slice(2) : null } : undefined,
+  ke_jenis: x.ke_jenis,
+  ke: x.ke,
+  ke_nama: x.ke_jenis === 'unit' ? SEMUA_UNIT.find((s) => s.kode === x.ke)?.nama : undefined,
+  izin: x.izin,
+  tautan: x.ke_jenis === 'tautan' ? `https://siakad.unipo.ac.id/api/v1/berkas/tautan/${x.id.replace(/-/g, '')}` : undefined,
+  bersandi: x.sandi,
+  kedaluwarsa_at: x.kedaluwarsa_at,
+  pesan: x.pesan,
+  jumlah_akses: x.ke_jenis === 'tautan' ? 3 : 0,
+  dibuat_oleh: x.dibuat_oleh,
+  berkas: x.berkas_id ? cariDiMana(x.berkas_id)?.x : undefined,
+});
+async function buatBagi(d: Record<string, unknown>, isi: Partial<Bagi>) {
+  const jenis = d.ke_jenis as Bagi['ke_jenis'];
+  if (!['pengguna', 'unit', 'tautan'].includes(jenis)) return galat(422, 'validation_failed', 'Data yang dikirim tidak valid.', { ke_jenis: 'pengguna, unit, atau tautan' });
+  if (jenis !== 'tautan' && !d.ke) return galat(422, 'validation_failed', 'Data yang dikirim tidak valid.', { ke: 'wajib' });
+  const x: Bagi = {
+    id: uuid(),
+    ke_jenis: jenis,
+    ke: jenis === 'tautan' ? null : String(d.ke),
+    izin: d.izin === 'ubah' && jenis !== 'tautan' ? 'ubah' : 'lihat',
+    sandi: Boolean(d.sandi),
+    kedaluwarsa_at: (d.kedaluwarsa_at as string) || null,
+    pesan: (d.pesan as string) || null,
+    dibuat_oleh: 'demo',
+    masuk: false,
+    ...isi,
+  };
+  BAGI.unshift(x);
+  return { __status: 201, data: bentukBagi(x) };
+}
+tambahRute(/^\/v1\/berkas\/[0-9a-f-]{36}\/bagikan$/, async (u, init) => {
+  const id = u.pathname.split('/')[3];
+  if (!cariDiMana(id)) return galat(404, 'not_found', 'Berkas tidak ditemukan.');
+  if (init?.method === 'POST') return buatBagi(await bacaBody(init), { berkas_id: id });
+  return { data: { dibagikan: BAGI.filter((x) => x.berkas_id === id).map(bentukBagi) } };
+});
+tambahRute(/^\/v1\/berkas\/folder\/bagikan$/, async (u, init) => {
+  const d = await bacaBody(init);
+  const r = pakai(u, d);
+  const path = String(d.path ?? u.searchParams.get('path') ?? '');
+  if (init?.method === 'POST') return buatBagi(d, { path, ruang: r.kunci });
+  return { data: { dibagikan: BAGI.filter((x) => x.path === path && x.ruang === r.kunci && !x.masuk).map(bentukBagi) } };
+});
+tambahRute(/^\/v1\/berkas\/bagikan\/[0-9a-f-]{36}\/cabut$/, (u) => {
+  const i = BAGI.findIndex((x) => x.id === u.pathname.split('/')[4]);
+  if (i >= 0) BAGI.splice(i, 1);
+  return { data: { dicabut: true } };
+});
+tambahRute(/^\/v1\/berkas\/dibagikan$/, (u) => ({
+  data: { dibagikan: BAGI.filter((x) => x.masuk === (u.searchParams.get('arah') !== 'keluar')).map(bentukBagi) },
+}));
+tambahRute(/^\/v1\/berkas\/[0-9a-f-]{36}\/enkripsi$/, async (u, init) => {
+  const c = cariDiMana(u.pathname.split('/')[3]);
+  if (!c) return galat(404, 'not_found', 'Berkas tidak ditemukan.');
+  const d = await bacaBody(init);
+  const aktif = d.aktif !== false;
+  if (!aktif && efektif(c.x.unit) === 'wajib') return galat(409, 'enkripsi_wajib', 'Kebijakan ruang ini mewajibkan enkripsi.');
+  c.x.terenkripsi = aktif;
+  return { data: c.x };
+});
+tambahRute(/^\/v1\/berkas\/kebijakan$/, async (u, init) => {
+  if (init?.method === 'POST') {
+    const d = await bacaBody(init);
+    const k = d.lingkup === 'global' ? 'global' : d.lingkup === 'unit' ? `unit:${d.unit}` : 'pengguna:demo';
+    KEBIJAKAN[k] = String(d.enkripsi);
+    return { data: { tersimpan: true } };
+  }
+  const unit = u.searchParams.get('unit');
+  return {
+    data: {
+      global: KEBIJAKAN.global,
+      unit: unit ? (KEBIJAKAN[`unit:${unit}`] ?? 'opsional') : null,
+      pengguna: unit ? null : (KEBIJAKAN['pengguna:demo'] ?? 'opsional'),
+      efektif: efektif(unit),
+      boleh_ubah: { global: true, unit: Boolean(unit && UNIT.find((x) => x.kode === unit)?.akses === 'kelola'), pengguna: !unit },
+      semua: Object.entries(KEBIJAKAN).map(([k, v]) => ({ lingkup: k.split(':')[0], kunci: k.split(':')[1] ?? '', enkripsi: v, diubah_oleh: 'pustikom', updated_at: '2026-11-16 08:00:00' })),
+    },
+  };
 });
