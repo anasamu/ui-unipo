@@ -27,6 +27,7 @@ import './mock/formulir';
 import './mock/aturan';
 import './mock/qr-dokumen';
 import './mock/presensi';
+import './mock/jadwal-bentrok';
 import './mock/keuangan';
 import './mock/kasir';
 import { ssoDemo } from './mock/aplikasi';
