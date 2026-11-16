@@ -65,7 +65,11 @@ function Page({ page }: { page: DocPage }) {
               </div>
               <details className="docs-code">
                 <summary>Lihat kode</summary>
-                <CodeBlock code={d.code} language="tsx" windowControls={false} maxHeight={420} />
+                {d.files.length > 1 ? (
+                  <CodeBlock tabs={d.files.map((f) => ({ label: f.nama, language: f.bahasa as 'tsx' | 'ts', code: f.kode }))} windowControls={false} maxHeight={420} />
+                ) : (
+                  <CodeBlock code={d.files[0]?.kode ?? d.code} language="tsx" windowControls={false} maxHeight={420} />
+                )}
               </details>
             </section>
           ),

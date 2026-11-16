@@ -35,6 +35,7 @@
   - Penanda simpan otomatis (`simpan`).
   - Mode fokus dan layar penuh.
   - Perkiraan waktu baca.
+- Situs dokumentasi: "Lihat kode" kini bertab per berkas. Tab pertama berisi berkas contoh lengkap dengan impornya. Bila contoh memakai komponen yang mengambil data, ada tab tambahan `main.tsx` (UnipoProvider), `siakad.ts` (klien SDK UNIPO), dan `sdk.ts` (panggilan SDK yang dijalankan komponen, hasil pemindaian kode sumber lewat `apps/docs/scripts/peta-sdk.mjs`).
 - Situs dokumentasi: pemilih perangkat global (otomatis, web, desktop, iOS, Android) memanggil `setelPlatform`. Semua pratinjau mengikuti perangkat yang dipilih, dan bisa diatur lewat `?perangkat=` atau `postMessage`.
 
 ## 1.27.1 (2026-11-16)

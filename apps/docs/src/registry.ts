@@ -1,5 +1,7 @@
 import type { ComponentType } from 'react';
 import type { PlaygroundSpec } from './Playground';
+import petaSdk from 'virtual:peta-sdk';
+import { berkasContoh, type BerkasContoh } from './kode-contoh';
 
 export interface DemoMeta {
   title: string;
@@ -26,7 +28,13 @@ export interface DemoMeta {
 export interface DocPage {
   slug: string;
   meta: DemoMeta;
-  demos: Array<{ name: string; title: string; Component: ComponentType; code: string }>;
+  demos: Array<{
+    name: string;
+    title: string;
+    Component: ComponentType;
+    code: string;
+    /** Berkas untuk tab "Lihat kode": contoh + impor, lalu main.tsx, siakad.ts, sdk.ts bila memakai SDK. */ files: BerkasContoh[];
+  }>;
 }
 
 const mods = import.meta.glob<Record<string, unknown>>('./demos/*.tsx', { eager: true });
@@ -77,7 +85,10 @@ export const PAGES: DocPage[] = Object.entries(mods)
     return {
       slug,
       meta,
-      demos: Object.entries(meta.demos).map(([name, title]) => ({ name, title, Component: mod[name] as ComponentType, code: slice(src, name) })),
+      demos: Object.entries(meta.demos).map(([name, title]) => {
+        const code = slice(src, name);
+        return { name, title, Component: mod[name] as ComponentType, code, files: code ? berkasContoh(src, name, code, petaSdk) : [] };
+      }),
     };
   })
   .sort((a, b) => CATEGORIES.indexOf(a.meta.category) - CATEGORIES.indexOf(b.meta.category) || (a.meta.order ?? 50) - (b.meta.order ?? 50) || a.meta.title.localeCompare(b.meta.title));
