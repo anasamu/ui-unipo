@@ -1,0 +1,305 @@
+@use '../mixins' as *;
+
+// ================================================================ Cek bentrok + jadwal otomatis (unipo-ui/siakad)
+.u-jb {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+.u-jb-ringkas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+}
+.u-jb-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+  > svg {
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.125rem;
+    color: var(--u-danger);
+  }
+  &[data-aman] > svg {
+    color: var(--u-success);
+  }
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+  strong {
+    font-size: var(--u-text-md);
+    font-weight: var(--u-weight-semibold, 600);
+    color: var(--u-foreground);
+  }
+  span {
+    font-size: var(--u-text-sm);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-jb-alat {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.u-jb-jeda {
+  min-width: 10rem;
+}
+.u-jb-daftar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.u-jb-hari {
+  h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.5rem;
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-semibold, 600);
+    color: var(--u-foreground);
+    span {
+      font-weight: var(--u-weight-medium, 500);
+      color: var(--u-muted-foreground);
+      font-variant-numeric: tabular-nums;
+    }
+  }
+  > ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-lg);
+    background: var(--u-card);
+    overflow: hidden;
+    > li + li {
+      border-top: 1px solid var(--u-border);
+    }
+  }
+}
+.u-jb-temuan {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  border-left: 3px solid var(--u-warning);
+  &[data-tingkat='bentrok'] {
+    border-left-color: var(--u-danger);
+  }
+}
+.u-jb-cek-daftar {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  .u-jb-temuan {
+    border: 1px solid var(--u-border);
+    border-left-width: 3px;
+    border-radius: var(--u-radius-md);
+  }
+}
+.u-jb-temuan-kepala {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem 0.75rem;
+  flex-wrap: wrap;
+  .u-badge svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+}
+.u-jb-temuan-pesan {
+  flex: 1 1 16rem;
+  font-size: var(--u-text-sm);
+  color: var(--u-foreground);
+}
+.u-jb-temuan-isi {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+  &[data-dua] {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: stretch;
+  }
+  @media (max-width: 640px) {
+    &[data-dua] {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .u-jb-temuan-vs {
+      justify-self: center;
+      transform: rotate(90deg);
+    }
+  }
+}
+.u-jb-temuan-vs {
+  display: grid;
+  place-items: center;
+  color: var(--u-muted-foreground);
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+.u-jb-sesi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  height: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--u-radius-md);
+  background: var(--u-muted);
+  min-width: 0;
+}
+.u-jb-sesi-tombol {
+  all: unset;
+  display: block;
+  cursor: pointer;
+  border-radius: var(--u-radius-md);
+  &:hover .u-jb-sesi {
+    background: color-mix(in oklab, var(--u-primary) 8%, var(--u-muted));
+  }
+  &:focus-visible {
+    outline: 2px solid var(--u-primary);
+    outline-offset: 2px;
+  }
+}
+.u-jb-sesi-mk {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  min-width: 0;
+  strong {
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-semibold, 600);
+    color: var(--u-foreground);
+  }
+  span {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-jb-sesi-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.125rem 0.75rem;
+  margin: 0;
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
+  font-variant-numeric: tabular-nums;
+  > span:first-child {
+    color: var(--u-foreground);
+    font-weight: var(--u-weight-medium, 500);
+  }
+}
+.u-jb-sesi-dosen {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.u-jb-cek {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  &[data-memuat] {
+    opacity: 0.6;
+  }
+}
+.u-jb-cek-memuat {
+  margin: 0;
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+}
+.u-jb-bantuan {
+  margin: -0.5rem 0 0;
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+}
+.u-jb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem 1rem;
+}
+.u-jb-kaki {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-top: 0.25rem;
+}
+.u-jb-pilih-semua {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+  cursor: pointer;
+}
+.u-jb-usulan {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  &:not([data-dipilih]) .u-jb-usulan-isi {
+    opacity: 0.55;
+  }
+}
+.u-jb-usulan-isi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1;
+}
+.u-jb-waktu-baru {
+  color: var(--u-primary) !important;
+  font-weight: var(--u-weight-semibold, 600) !important;
+}
+.u-jb-asal {
+  margin: 0;
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in oklab, var(--u-muted-foreground) 60%, transparent);
+}
+.u-jb-catatan {
+  margin: 0;
+  font-size: var(--u-text-xs);
+  color: var(--u-warning);
+}
+.u-jb-tidak h4 {
+  margin: 0 0 0.5rem;
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-semibold, 600);
+}
+.u-jb-gagal {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  > li {
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--u-radius-md);
+    background: color-mix(in oklab, var(--u-warning) 10%, var(--u-card));
+    font-size: var(--u-text-sm);
+    > span {
+      display: block;
+      font-size: var(--u-text-xs);
+      color: var(--u-muted-foreground);
+    }
+  }
+}

@@ -1,5 +1,13 @@
 # Catatan perubahan
 
+## 1.32.0 (2026-11-16)
+
+- **Cek jadwal bentrok dan jadwal otomatis** (`unipo-ui/siakad`, butuh SIAKAD dengan `/v1/akademik/jadwal/bentrok|cek|otomatis` atau `/v1/fakultas/{kode}/jadwal/...`):
+  - `PanelBentrokJadwal`: bentrok ruang, dosen (termasuk tim), rombongan kelas, dan mahasiswa KRS terhadap jadwal semua prodi, plus peringatan kampus 1/2 (pindah kampus tanpa jeda cukup, ruang di kampus lain), dikelompokkan per hari; pilihan jeda pindah kampus; tombol "Perbaiki otomatis".
+  - `PenyusunJadwalOtomatis`: atur (dari periode lain atau pindahkan yang bentrok, hari, kelas, jeda kampus, menit per SKS, batas kelas sore) → pratinjau usulan yang bisa dicentang → simpan. Pratinjau tidak mengubah data.
+  - `useCekJadwal` + `HasilCekJadwal`: cek bentrok langsung saat mengisi formulir tambah/ubah jadwal.
+  - `KartuTemuanJadwal`, `DaftarTemuanJadwal`, `useBentrokJadwal`, `labelKampus`, `HARI_KULIAH`; prop `sumber` memilih API akademik atau dasbor fakultas.
+
 ## 1.31.1 (2026-11-16)
 
 - **Obrolan: pesan ke orang yang belum pernah membuka obrolan tidak lagi gagal** (butuh SIAKAD dengan `/v1/obrolan/susulan`). Pesan tetap terkirim dan terenkripsi; begitu penerima membuka obrolan dan perangkatnya membuat kunci, perangkat pengirim membungkus ulang kunci pesan untuk perangkat itu secara otomatis, lalu pesan terbuka sendiri. Server tetap tidak pernah memegang kunci pesan.
