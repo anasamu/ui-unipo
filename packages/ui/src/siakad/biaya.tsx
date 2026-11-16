@@ -1587,6 +1587,8 @@ export interface PembagianBiayaUnitProps {
   unitId?: number | null;
   /** terima (bawaan) = bagian yang diterima unit; asal = bagian dari pembayaran mahasiswa unit. */
   arah?: 'terima' | 'asal';
+  /** Batasi ke satu jenis penerima, mis. "jabatan"/"pegawai" untuk honor di aplikasi SDM. */
+  penerima?: PenerimaBiaya;
   judul?: React.ReactNode;
   /** Nama unit untuk kepala cetak. */
   namaUnit?: React.ReactNode;
@@ -1599,11 +1601,11 @@ export interface PembagianBiayaUnitProps {
  * Laporan transparan bagian biaya: total diterima, sudah dicairkan, sisa, per penerima, per jenis biaya, per komponen,
  * per bulan, per prodi, dan rincian per pembayaran. Untuk aplikasi unit (fakultas, prodi, LP2M, rektorat) dan BAUK.
  */
-export function PembagianBiayaUnit({ unitId, arah: arahAwal = 'terima', judul = 'Pembagian biaya', namaUnit, rincian = true, className }: PembagianBiayaUnitProps) {
+export function PembagianBiayaUnit({ unitId, arah: arahAwal = 'terima', penerima, judul = 'Pembagian biaya', namaUnit, rincian = true, className }: PembagianBiayaUnitProps) {
   const [periode, setPeriode] = React.useState(() => ({ dari: `${new Date().getFullYear()}-01-01`, sampai: hariIni() }));
   const [arah, setArah] = React.useState(arahAwal);
   const [tab, setTab] = React.useState<'ringkas' | 'rincian'>('ringkas');
-  const filter: FilterPembagian = { ...periode, unit_id: unitId ?? undefined, arah: unitId ? arah : undefined };
+  const filter: FilterPembagian = { ...periode, unit_id: unitId ?? undefined, arah: unitId ? arah : undefined, penerima };
   const q = useRekapPembagianBiaya(filter);
   const r = q.data;
   const d = r?.per_penerima ?? [];
