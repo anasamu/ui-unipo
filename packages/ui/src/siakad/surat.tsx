@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { ArrowLeft, FilePlus2, FileText, Network, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { ArrowLeft, BookCopy, FilePlus2, FileText, Network, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Empty } from '../components/display';
 import { Checkbox, Field, Input, RadioGroup } from '../components/forms';
@@ -16,6 +16,7 @@ import type { MediaEditor, OpsiPilihMedia } from '../editor/konteks';
 import { KEAMANAN_SURAT, SIFAT_SURAT } from './filter-presets';
 import { GalatApi } from './galat';
 import { PilihEntitas, type SumberEntitas } from './pilih';
+import { PilihTemplatSurat, jenisDariKode } from './surat-galeri';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 
 // ---------------------------------------------------------------- tipe data arsip
@@ -126,6 +127,7 @@ export function KelolaTemplatSurat({ kop, penandatangan, unggah, tinggi = 'calc(
   const [unitFilter, setUnitFilter] = React.useState<number | null>(null);
   const daftar = useTemplatSurat({ unit_id: unitFilter, q });
   const [sunting, setSunting] = React.useState<TemplatSurat | 'baru' | null>(null);
+  const [galeri, setGaleri] = React.useState(false);
   const [hapus, setHapus] = React.useState<TemplatSurat | null>(null);
   const [galat, setGalat] = React.useState<string | null>(null);
 
@@ -135,7 +137,7 @@ export function KelolaTemplatSurat({ kop, penandatangan, unggah, tinggi = 'calc(
   if (sunting) {
     return (
       <PenyuntingTemplat
-        key={sunting === 'baru' ? 'baru' : sunting.id}
+        key={sunting === 'baru' ? 'baru' : sunting.id || `salin:${sunting.nama}`}
         awal={sunting === 'baru' ? null : sunting}
         unitKelola={unitKelola}
         jenis={jenis.data ?? []}
@@ -167,11 +169,27 @@ export function KelolaTemplatSurat({ kop, penandatangan, unggah, tinggi = 'calc(
           placeholder="Semua unit"
           options={[{ value: null, label: 'Semua unit' }, ...(unit.data ?? []).map((u) => ({ value: u.id as number | null, label: u.nama }))]}
         />
+        <Button variant="outline" onClick={() => setGaleri(true)} disabled={!unitKelola.length && !unit.loading}>
+          <BookCopy />
+          Salin dari galeri
+        </Button>
         <Button onClick={() => setSunting('baru')} disabled={!unitKelola.length && !unit.loading}>
           <Plus />
           Buat templat
         </Button>
       </div>
+      <PilihTemplatSurat
+        open={galeri}
+        onOpenChange={setGaleri}
+        tanpaKosong
+        judul="Salin templat dari galeri"
+        onPilih={(t) => {
+          setGaleri(false);
+          if (!t) return;
+          // id 0 = templat baru (POST) berisi salinan; disimpan sebagai milik unit pertama yang bisa dikelola.
+          setSunting({ id: 0, unit_id: unitKelola[0]?.id ?? null, jenis_id: t.jenis_id ?? jenisDariKode(jenis.data, t.jenis_kode), nama: t.nama, perihal: t.perihal ?? null, isi: t.isi, keterangan: null, aktif: 1 });
+        }}
+      />
       {galat && (
         <Alert variant="danger" title="Templat tidak dapat dihapus">
           {galat}
