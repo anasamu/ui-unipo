@@ -621,7 +621,12 @@
 .u-buku-kas,
 .u-jurnal {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.875rem;
+  min-width: 0;
+  > * {
+    min-width: 0;
+  }
 }
 .u-buku-kas-kepala,
 .u-jurnal-kepala {
