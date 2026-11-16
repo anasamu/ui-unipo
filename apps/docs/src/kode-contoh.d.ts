@@ -8,3 +8,5 @@ export function imporUntuk(src: string, kode: string): { teks: string; ui: Array
 export function barisSdk(ep: string): string;
 export function sdkTs(perKomponen: Record<string, string[]>): string;
 export function berkasContoh(src: string, nama: string, kode: string, petaSdk: Record<string, string[]>): BerkasContoh[];
+export const SIAKAD_TS: string;
+export function mainTsx(nama: string): string;

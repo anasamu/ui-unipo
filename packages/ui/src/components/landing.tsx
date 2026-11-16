@@ -121,6 +121,7 @@ export function Gallery({ items, max = 8, className }: { items: Array<{ src: str
 }
 
 // ================================================================ Testimoni
+/** Bintang penilaian hanya-baca (nilai dibulatkan ke bintang terdekat, 0 sampai `max`) untuk testimoni dan ulasan. */
 export function Rating({ value, max = 5, className }: { value: number; max?: number; className?: string }) {
   return (
     <span className={cn('u-rating', className)} role="img" aria-label={`${value} dari ${max} bintang`}>

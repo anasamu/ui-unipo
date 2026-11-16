@@ -378,6 +378,7 @@ export function LmsRuteProvider({ rute, children }: { rute?: Partial<RuteLms>; c
   const v = React.useMemo(() => ({ ...RUTE_LMS, ...rute }), [rute]);
   return <RuteCtx.Provider value={v}>{children}</RuteCtx.Provider>;
 }
+/** Baca alamat halaman LMS dari `LmsRuteProvider` (bawaan `RUTE_LMS`). */
 export const useRuteLms = () => React.useContext(RuteCtx);
 /** Pindah halaman lewat `rute.pindah` bila ada, selain itu memuat alamat baru. */
 const pindahKe = (rute: RuteLms, href: string): void => (rute.pindah ? rute.pindah(href) : window.location.assign(href));
@@ -660,6 +661,7 @@ export function useSemuaKelasLms<T>(kelasIds: number[] | undefined, bagian: 'tug
 }
 
 // ================================================================ Keadaan kuis & tugas
+/** Keadaan kuis LMS menurut waktu mulai/selesai: belum dibuka, dibuka, segera ditutup, atau ditutup, dengan warna lencana dan apakah bisa dikerjakan. */
 export function keadaanKuis(k: Pick<KuisLms, 'mulai' | 'selesai'>, kini = Date.now()): { label: string; variant: BadgeVariant; buka: boolean } {
   const m = tglLms(k.mulai)?.getTime();
   const s = tglLms(k.selesai)?.getTime();
@@ -1591,6 +1593,7 @@ export function KartuKuisLms({ kuis: k, kelas, href, className }: { kuis: KuisLm
   );
 }
 
+/** Daftar kuis satu kelas LMS untuk mahasiswa, dengan keadaan tiap kuis dan tombol mengerjakan. */
 export function DaftarKuisKelasLms({ kelasId, className }: { kelasId: number; className?: string }) {
   const q = useKuisKelas(kelasId);
   const rute = useRuteLms();

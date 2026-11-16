@@ -26,6 +26,7 @@ export function formatAkuntansi(n: number | null | undefined, opsi: { rp?: boole
   return n < 0 ? `(${t})` : t;
 }
 
+/** Format satu nilai sel laporan sesuai jenisnya (teks, angka, rupiah, akuntansi, persen, tanggal) untuk tabel, CSV, dan cetak. */
 export function formatNilai(v: unknown, f: FormatNilai = 'teks'): string {
   if (v == null || v === '') return '';
   if (f === 'teks' || typeof v !== 'number') return String(v);
@@ -70,7 +71,19 @@ export function unduhCsv(namaFile: string, kolom: string[], baris: SelCsv[][], p
  * Cetak/PDF. Di dalam KerangkaLaporan hanya laporan itu yang tercetak (bagian lain halaman disembunyikan);
  * di luar kerangka mencetak seluruh halaman.
  */
-export function TombolCetak({ label = 'Cetak / PDF', target, variant = 'outline', size, className }: { label?: React.ReactNode; /** Elemen yang dicetak. Bawaan: KerangkaLaporan terdekat. */ target?: React.RefObject<HTMLElement | null>; variant?: 'outline' | 'ghost' | 'secondary'; size?: 'sm' | 'md'; className?: string }) {
+export function TombolCetak({
+  label = 'Cetak / PDF',
+  target,
+  variant = 'outline',
+  size,
+  className,
+}: {
+  label?: React.ReactNode;
+  /** Elemen yang dicetak. Bawaan: KerangkaLaporan terdekat. */ target?: React.RefObject<HTMLElement | null>;
+  variant?: 'outline' | 'ghost' | 'secondary';
+  size?: 'sm' | 'md';
+  className?: string;
+}) {
   const cetak = (e: React.MouseEvent<HTMLElement>) => {
     const el = target?.current ?? e.currentTarget.closest<HTMLElement>('.u-laporan') ?? null;
     if (!el) return window.print();
@@ -93,7 +106,21 @@ export function TombolCetak({ label = 'Cetak / PDF', target, variant = 'outline'
 }
 
 /** Tombol unduh CSV. `data` dipanggil saat diklik agar CSV selalu dari data terbaru. */
-export function TombolCsv({ namaFile, data, label = 'CSV', disabled, size, className }: { namaFile: string; data: () => { kolom: string[]; baris: SelCsv[][] }; label?: React.ReactNode; disabled?: boolean; size?: 'sm' | 'md'; className?: string }) {
+export function TombolCsv({
+  namaFile,
+  data,
+  label = 'CSV',
+  disabled,
+  size,
+  className,
+}: {
+  namaFile: string;
+  data: () => { kolom: string[]; baris: SelCsv[][] };
+  label?: React.ReactNode;
+  disabled?: boolean;
+  size?: 'sm' | 'md';
+  className?: string;
+}) {
   return (
     <Button
       type="button"
@@ -208,7 +235,24 @@ export interface KerangkaLaporanProps {
  * Kerangka satu laporan: judul + penjelasan, baris filter, tombol Cetak/PDF dan CSV, kepala cetak, isi,
  * catatan kaki, dan tanda tangan. Saat dicetak dari tombolnya hanya kerangka ini yang tercetak.
  */
-export function KerangkaLaporan({ judul, deskripsi, periode, instansi, unit, logo, filter, aksi, csv, tanpaCetak, lencana, catatan, penandatangan, loading, children, className }: KerangkaLaporanProps) {
+export function KerangkaLaporan({
+  judul,
+  deskripsi,
+  periode,
+  instansi,
+  unit,
+  logo,
+  filter,
+  aksi,
+  csv,
+  tanpaCetak,
+  lencana,
+  catatan,
+  penandatangan,
+  loading,
+  children,
+  className,
+}: KerangkaLaporanProps) {
   return (
     <section className={cn('u-laporan', className)} aria-busy={loading || undefined}>
       <KepalaCetak instansi={instansi} unit={unit} logo={logo} judul={judul} sub={periode} />
@@ -305,9 +349,20 @@ export function TabelLaporan({ kolom, baris, labelKolom = 'Uraian', denganKode, 
           {baris.map((b, i) => {
             const jenis = b.jenis ?? 'item';
             return (
-              <tr key={i} data-jenis={jenis} data-klik={b.onClick ? '' : undefined} onClick={b.onClick} tabIndex={b.onClick ? 0 : undefined} onKeyDown={b.onClick ? (e) => (e.key === 'Enter' ? b.onClick?.() : undefined) : undefined}>
+              <tr
+                key={i}
+                data-jenis={jenis}
+                data-klik={b.onClick ? '' : undefined}
+                onClick={b.onClick}
+                tabIndex={b.onClick ? 0 : undefined}
+                onKeyDown={b.onClick ? (e) => (e.key === 'Enter' ? b.onClick?.() : undefined) : undefined}
+              >
                 {denganKode && <td className="u-tl-kode">{b.kode}</td>}
-                <td className="u-tl-label" style={{ paddingInlineStart: `calc(0.75rem + ${(b.tingkat ?? 0) * 1.25}rem)` }} colSpan={jenis === 'grup' || jenis === 'catatan' ? kolom.length + 1 : undefined}>
+                <td
+                  className="u-tl-label"
+                  style={{ paddingInlineStart: `calc(0.75rem + ${(b.tingkat ?? 0) * 1.25}rem)` }}
+                  colSpan={jenis === 'grup' || jenis === 'catatan' ? kolom.length + 1 : undefined}
+                >
                   {b.label}
                 </td>
                 {jenis !== 'grup' &&
@@ -422,7 +477,14 @@ export function PilihPeriode({ value, onChange, preset = ['bulan_ini', 'bulan_la
           <span className="u-pilih-periode-sd">s.d.</span>
         </>
       )}
-      <Input type="date" size="sm" aria-label={satuTanggal ? 'Per tanggal' : 'Sampai tanggal'} value={value.sampai} min={satuTanggal ? undefined : value.dari} onChange={(e) => e.target.value && onChange({ ...value, sampai: e.target.value })} />
+      <Input
+        type="date"
+        size="sm"
+        aria-label={satuTanggal ? 'Per tanggal' : 'Sampai tanggal'}
+        value={value.sampai}
+        min={satuTanggal ? undefined : value.dari}
+        onChange={(e) => e.target.value && onChange({ ...value, sampai: e.target.value })}
+      />
     </div>
   );
 }
@@ -492,7 +554,23 @@ export interface KolomRekap<T> {
  * Tabel rekap sederhana (per prodi, per jenis biaya, per unit) dengan baris total, batang proporsi di sel, dan klik baris.
  * Untuk laporan akuntansi berjenjang gunakan TabelLaporan.
  */
-export function TabelRekap<T>({ kolom, baris, kunci, onPilih, total = true, kosong = 'Belum ada data.', className }: { kolom: KolomRekap<T>[]; baris: T[]; kunci: (b: T) => string; onPilih?: (b: T) => void; total?: boolean | string; kosong?: React.ReactNode; className?: string }) {
+export function TabelRekap<T>({
+  kolom,
+  baris,
+  kunci,
+  onPilih,
+  total = true,
+  kosong = 'Belum ada data.',
+  className,
+}: {
+  kolom: KolomRekap<T>[];
+  baris: T[];
+  kunci: (b: T) => string;
+  onPilih?: (b: T) => void;
+  total?: boolean | string;
+  kosong?: React.ReactNode;
+  className?: string;
+}) {
   const maks = React.useMemo(() => Object.fromEntries(kolom.filter((k) => k.batang).map((k) => [k.key, Math.max(1, ...baris.map((b) => Math.abs(Number(k.nilai(b)) || 0)))])), [kolom, baris]);
   const jumlah = (k: KolomRekap<T>) => baris.reduce((s, b) => s + (Number(k.nilai(b)) || 0), 0);
   return (
@@ -516,7 +594,13 @@ export function TabelRekap<T>({ kolom, baris, kunci, onPilih, total = true, koso
             </tr>
           )}
           {baris.map((b) => (
-            <tr key={kunci(b)} data-klik={onPilih ? '' : undefined} onClick={onPilih ? () => onPilih(b) : undefined} tabIndex={onPilih ? 0 : undefined} onKeyDown={onPilih ? (e) => (e.key === 'Enter' ? onPilih(b) : undefined) : undefined}>
+            <tr
+              key={kunci(b)}
+              data-klik={onPilih ? '' : undefined}
+              onClick={onPilih ? () => onPilih(b) : undefined}
+              tabIndex={onPilih ? 0 : undefined}
+              onKeyDown={onPilih ? (e) => (e.key === 'Enter' ? onPilih(b) : undefined) : undefined}
+            >
               {kolom.map((k, i) => {
                 const v = k.nilai(b);
                 const angka = i > 0 && k.format !== 'teks';

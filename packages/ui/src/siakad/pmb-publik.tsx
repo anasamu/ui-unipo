@@ -292,6 +292,7 @@ export function PmbProvider({ children, rute, ...v }: Omit<PmbContextValue, 'rut
   const nilai = React.useMemo(() => ({ ...v, rute: { ...RUTE_PMB_BAWAAN, ...rute } }), [v.kampus, v.pendaftar, v.renderLink, v.kabarUrl, v.urlBerkas, v.renderQr, rute]); // eslint-disable-line react-hooks/exhaustive-deps
   return <PmbCtx.Provider value={nilai}>{children}</PmbCtx.Provider>;
 }
+/** Baca konteks aplikasi PMB dari `PmbProvider`: data kampus, pendaftar, rute halaman, dan fungsi tautan. */
 export const usePmb = () => React.useContext(PmbCtx);
 
 /** Tautan internal PMB (lewat router aplikasi bila renderLink dipasang). */
@@ -314,6 +315,7 @@ export const tanggalPmb = (s?: string | null) => {
 };
 /** Tanggal saja bila jamnya 00:00 (kegiatan sepanjang hari), selain itu tanggal + jam. */
 export const waktuPmb = (s?: string | null) => (!s ? '-' : /[ T]00:00(:00)?$/.test(s) || s.length <= 10 ? tanggalPmb(s) : `${tanggalPmb(s)}, ${formatTime(keDate(s))}`);
+/** Teks rentang tanggal PMB, mis. "1 Jan 2026 – 31 Mar 2026"; satu tanggal bila awal sama dengan akhir, "-" bila kosong. */
 export const rentangPmb = (a?: string | null, b?: string | null) => (!a && !b ? '-' : !b || a === b ? tanggalPmb(a) : `${tanggalPmb(a)} – ${tanggalPmb(b)}`);
 /** Sisa hari sampai tanggal (null bila lewat). */
 export const sisaHari = (s?: string | null) => {
@@ -328,10 +330,7 @@ const JENJANG: Record<string, string> = { A: 'S3', B: 'S2', C: 'S1', D: 'D4', E:
 export const labelJenjang = (j?: string | null) => (j ? (JENJANG[j] ?? j) : 'S1');
 const KATA_KECIL = new Set(['dan', 'di', 'ke', 'dari', 'atau', 'untuk', 'pada', 'dengan', 'yang']);
 /** "FAKULTAS ILMU SOSIAL DAN ILMU POLITIK" -> "Fakultas Ilmu Sosial dan Ilmu Politik". */
-export const hurufJudul = (s: string) =>
-  s
-    .toLowerCase()
-    .replace(/[\p{L}\p{N}]+/gu, (w, i: number) => (i > 0 && KATA_KECIL.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)));
+export const hurufJudul = (s: string) => s.toLowerCase().replace(/[\p{L}\p{N}]+/gu, (w, i: number) => (i > 0 && KATA_KECIL.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)));
 const rupiahAtauGratis = (n?: number | null) => (n == null ? '-' : n === 0 ? 'Gratis' : formatRupiah(n));
 const ya = (v: unknown) => v === true || v === 1 || v === '1';
 
@@ -341,6 +340,7 @@ export function urutkanGelombang<G extends GelombangPmb>(d: G[] = []): G[] {
   const skor = (g: G) => (g.sedang_buka ? 0 : (g.pendaftaran.mulai ?? '') > kini ? 1 : 2);
   return [...d].sort((a, b) => skor(a) - skor(b) || (a.pendaftaran.selesai ?? '').localeCompare(b.pendaftaran.selesai ?? ''));
 }
+/** Label dan warna lencana gelombang PMB: sedang dibuka, segera dibuka, atau ditutup. */
 export function keadaanGelombang(g: GelombangPmb): { label: string; variant: 'success' | 'warning' | 'neutral' } {
   const kini = new Date().toISOString().slice(0, 10);
   if (g.sedang_buka) return { label: 'Sedang dibuka', variant: 'success' };
@@ -1158,6 +1158,7 @@ export function SimulasiBiayaPmb({ gelombang = [], simulasi, loading, id = 'biay
 }
 
 // ================================================================ Testimoni, pengumuman, kabar
+/** Bagian testimoni di halaman publik PMB (landing), dari data testimoni `/v1/pmb/publik`. */
 export function TestimoniPmbBagian({ testimoni = [], id = 'testimoni' }: { testimoni?: TestimoniPmb[]; id?: string }) {
   if (!testimoni.length) return null;
   return (
@@ -1349,6 +1350,7 @@ export function KontakPanitiaPmb({ bantuan, judul = 'Hubungi panitia PMB' }: { b
   );
 }
 
+/** Bagian pertanyaan umum (FAQ) di halaman publik PMB, dengan kontak bantuan panitia. */
 export function FaqPmbBagian({ faq = [], bantuan, loading, id = 'faq' }: { faq?: FaqPmb[]; bantuan?: BantuanPmb | null; loading?: boolean; id?: string }) {
   return (
     <section id={id} className="u-pmb-bagian">
