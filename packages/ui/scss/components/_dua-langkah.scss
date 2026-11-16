@@ -1,0 +1,39 @@
+// Pengaturan login dua langkah (components/dua-langkah.tsx)
+.u-2fa { display: flex; flex-direction: column; gap: 16px; }
+.u-2fa-judul { display: inline-flex; align-items: center; gap: 8px; }
+.u-2fa-metode { display: inline-flex; align-items: center; gap: 8px; svg { width: 16px; height: 16px; color: var(--u-muted-foreground); } }
+.u-2fa-badge-sisa { margin-left: 8px; }
+.u-2fa-pilihan {
+  list-style: none; margin: 0; padding: 0; display: grid; gap: 12px;
+  li { display: flex; gap: 12px; align-items: flex-start; }
+}
+.u-2fa-pilihan-ikon {
+  flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--u-primary-soft); color: var(--u-primary-soft-foreground);
+  svg { width: 18px; height: 18px; }
+}
+.u-2fa .u-2fa-ket, .u-dialog .u-2fa-ket { display: block; font-size: 0.875rem; line-height: 1.45; margin-top: 2px; }
+.u-2fa-galat { margin-top: 12px; }
+.u-2fa-aksi { display: flex; flex-wrap: wrap; gap: 8px; }
+.u-2fa-langkah { display: flex; flex-direction: column; gap: 16px; }
+.u-2fa-qr {
+  display: grid; grid-template-columns: auto 1fr; gap: 16px 20px; align-items: start;
+  @media (max-width: 560px) { grid-template-columns: 1fr; justify-items: center; }
+}
+.u-2fa-urutan { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 0.9375rem; line-height: 1.5; }
+.u-2fa-secret {
+  grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 0.875rem;
+  code { font-size: 0.9375rem; letter-spacing: 0.04em; padding: 4px 8px; border-radius: 6px; background: var(--u-muted); word-break: break-all; }
+}
+.u-2fa-kirim { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.875rem; }
+.u-2fa-input-kode { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0.15em; }
+.u-2fa-tukar { align-self: flex-start; }
+.u-2fa-langkah a { color: var(--u-primary); font-weight: 500; }
+.u-2fa-cadangan {
+  margin: 0; padding: 16px; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px;
+  border: 1px dashed var(--u-border); border-radius: 12px; background: var(--u-muted);
+  counter-reset: kode;
+  li { counter-increment: kode; display: flex; gap: 10px; align-items: baseline; }
+  li::before { content: counter(kode) '.'; min-width: 1.5em; text-align: right; color: var(--u-muted-foreground); font-size: 0.8125rem; }
+  code { font-size: 1.0625rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0.06em; }
+}
