@@ -46,6 +46,7 @@ export * from './profil-modul';
 export * from './formulir-profil';
 export * from './aturan';
 export * from './biaya';
+export * from './panitia';
 export * from './tema-aplikasi';
 export * from './qr';
 export * from './dokumen-terbit';

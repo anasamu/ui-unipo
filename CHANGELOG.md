@@ -1,5 +1,15 @@
 # Catatan perubahan
 
+## 1.40.0 (2026-11-16)
+
+- **Kepanitiaan ber-SK dengan hak akses yang disetujui Pustikom** (`unipo-ui/siakad`, butuh SIAKAD dengan `/v1/panitia`, lihat docs/PANITIA.md di repo siakad_unipo; scope `panitia:read panitia:write berkas:read berkas:write`):
+  - `KepanitiaanUnit` (unit/fakultas/prodi/biro): daftar panitia per status, bentuk draf (jenis, nama, masa SK, tahun akademik), lampirkan SK (`IsianSK`), isi anggota dengan `PilihEntitas`, ajukan, tambah/keluarkan anggota saat aktif, bubarkan, salin untuk SK perpanjangan atau periode berikutnya.
+  - `PanelPanitia` / `DetailPanitiaIsi`: SK, masa, anggota beserta status hak akses dan aplikasi yang terbuka per orang, pratinjau jabatan → peran → aplikasi, masalah yang menghalangi pengajuan, riwayat.
+  - `PersetujuanAksesPanitia` (Pustikom, izin `panitia.setujui`): ringkasan antrean, setujui/tolak per baris, banyak sekaligus, atau satu panitia penuh; tolak wajib catatan; cabut akses yang sudah aktif.
+  - `PengaturanJenisPanitia` + `FormJenisPanitia` (izin `panitia.atur`): jenis panitia, jenis unit yang boleh membentuk, wajib SK, batas masa, jabatan (wajib, batas jumlah), dan peran RBAC yang diajukan tiap jabatan.
+  - `KepanitiaanSaya`: keanggotaan pengguna di panitia beserta status hak aksesnya.
+  - Hook `useHakPanitia`, `useDaftarPanitia`, `usePanitia`, `useAntreanAksesPanitia`, `useJenisPanitia`, dll.; `StatusPanitiaBadge`, `StatusAksesPanitiaBadge`, `DeretAplikasiPanitia`, `TabelJabatanPanitia`, `SUMBER_ANGGOTA_PANITIA`.
+
 ## 1.39.0 (2026-11-16)
 
 - **Pengajuan mahasiswa ke unit lain, ujung ke ujung** (`unipo-ui/siakad`, butuh SIAKAD dengan prasyarat pengajuan 2026-11-16, docs/PRASYARAT.md):
