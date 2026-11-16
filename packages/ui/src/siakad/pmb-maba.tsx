@@ -254,6 +254,7 @@ export const LANGKAH_PMB = [
   { title: 'Pengumuman', description: 'Hasil seleksi' },
   { title: 'Daftar ulang', description: 'Jadi mahasiswa' },
 ];
+/** Urutan (0-based) tahap pendaftaran PMB dari kodenya, untuk progres langkah calon mahasiswa; 0 bila tidak dikenal. */
 export function indeksTahapPmb(kode: string): number {
   return (
     {
@@ -389,6 +390,7 @@ export function PendaftaranAktifPmbProvider({ children }: { children: React.Reac
   );
   return <PendaftarCtx.Provider value={nilai}>{children}</PendaftarCtx.Provider>;
 }
+/** Pendaftaran PMB yang sedang dipilih calon mahasiswa beserta daftar pendaftarannya, dari provider dasbor maba. */
 export function usePendaftaranAktifPmb(): KonteksPendaftar {
   const c = React.useContext(PendaftarCtx);
   if (!c) throw new Error('usePendaftaranAktifPmb harus di dalam <PendaftaranAktifPmbProvider>.');

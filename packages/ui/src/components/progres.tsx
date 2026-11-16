@@ -344,6 +344,7 @@ export interface ProgressTenggatProps {
   className?: string;
 }
 const tgl = (d: string | Date) => (d instanceof Date ? d : new Date(d.length <= 10 ? `${d}T23:59:59` : d));
+/** Teks sisa waktu ramah baca dari milidetik, mis. "4 hari lagi", "1 hari 3 jam lagi", "9 jam 35 menit lagi"; "berakhir" bila sudah lewat. */
 export function sisaWaktu(ms: number): string {
   if (ms <= 0) return 'berakhir';
   const m = Math.floor(ms / 60000);

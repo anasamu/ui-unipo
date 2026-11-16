@@ -280,6 +280,7 @@ function tanggalPanjang(t?: string | null): string {
   return d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 
+/** Lencana status kehadiran peserta (H hadir, I izin, S sakit, A alpa), dengan tanda terlambat. */
 export function BadgeStatusHadir({ status, terlambat }: { status: StatusHadir | null | undefined; terlambat?: boolean }) {
   if (!status) return <Badge variant="outline">Belum</Badge>;
   return (
@@ -290,6 +291,7 @@ export function BadgeStatusHadir({ status, terlambat }: { status: StatusHadir | 
   );
 }
 
+/** Lencana status sesi presensi (draf, dibuka, ditutup, disahkan, batal). */
 export function BadgeStatusSesi({ status }: { status: StatusSesiPresensi }) {
   return (
     <Badge variant={VARIAN_SESI[status]} dot={status === 'buka'}>

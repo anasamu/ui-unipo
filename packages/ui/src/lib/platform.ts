@@ -10,7 +10,13 @@ export interface InfoPlatform {
   os: SistemOperasi;
   /** Layar sentuh (target sentuh lebih besar, tanpa efek sorot). */
   sentuh: boolean;
+  /**
+   * Tata letak ponsel: platform mobile, ATAU peramban web/desktop yang lebarnya ≤ 639 px (ponsel lewat browser).
+   * Komponen memakai ini untuk lembar bawah, daftar kartu, dan langkah ringkas.
+   */
   mobile: boolean;
+  /** Layar sempit (≤ 639 px) di platform apa pun. */
+  sempit: boolean;
   desktop: boolean;
   ios: boolean;
   android: boolean;
@@ -41,13 +47,29 @@ export function deteksiPlatform(): { platform: Platform; os: SistemOperasi } {
   return { platform: 'web', os };
 }
 
-function info(platform: Platform, os: SistemOperasi): InfoPlatform {
+/** Batas lebar layar ponsel (sama dengan titik patah `sm` di CSS UNIPO). */
+export const MEDIA_SEMPIT = '(max-width: 639px)';
+const cekSempit = () => typeof window !== 'undefined' && !!window.matchMedia?.(MEDIA_SEMPIT).matches;
+
+function info(platform: Platform, os: SistemOperasi, sempit = cekSempit()): InfoPlatform {
   const sentuh = typeof window !== 'undefined' ? window.matchMedia?.('(pointer: coarse)').matches || platform === 'mobile' : platform === 'mobile';
-  return { platform, os, sentuh, mobile: platform === 'mobile', desktop: platform === 'desktop', ios: os === 'ios', android: os === 'android' };
+  return { platform, os, sentuh, sempit, mobile: platform === 'mobile' || sempit, desktop: platform === 'desktop', ios: os === 'ios', android: os === 'android' };
 }
 
 let sekarang: InfoPlatform = info('web', 'lain');
 const pendengar = new Set<() => void>();
+
+// Ikuti perubahan lebar layar (putar layar, ubah ukuran jendela) agar komponen berpindah ke tata letak ponsel.
+if (typeof window !== 'undefined' && window.matchMedia) {
+  const mq = window.matchMedia(MEDIA_SEMPIT);
+  const ubah = () => {
+    if (mq.matches === sekarang.sempit) return;
+    sekarang = info(sekarang.platform, sekarang.os, mq.matches);
+    pendengar.forEach((l) => l());
+  };
+  if (mq.addEventListener) mq.addEventListener('change', ubah);
+  else mq.addListener?.(ubah);
+}
 
 /**
  * Atur target platform untuk seluruh komponen UNIPO. Panggil sekali di berkas awal aplikasi
