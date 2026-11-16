@@ -6,6 +6,7 @@
   - `PengaturanDuaLangkah`: status, saran mengaktifkan, wizard 3 langkah (pilih metode, pindai QR atau masukkan kode kiriman, simpan kode cadangan), buat kode cadangan baru, ganti metode, minta kode lagi di semua perangkat, dan matikan. Tindakan sensitif meminta kode yang berlaku (atau kode cadangan); untuk metode email/WhatsApp ada tombol kirim kode.
   - Metode aplikasi authenticator (Google Authenticator dan sejenisnya) selalu ada; kode lewat email/WhatsApp hanya muncul bila SSO melaporkan integrasinya aktif (`metode_tersedia`).
   - `DialogKodeCadangan` (salin, unduh .txt, cetak, wajib dicentang), `apiDuaLangkahBff(csrf, basis)` untuk BFF aplikasi (`/bff/keamanan`), tipe `ApiDuaLangkah`, `StatusDuaLangkah`, `MulaiDuaLangkah`, `GalatDuaLangkah`, `labelMetodeDuaLangkah`.
+  - Isian kode memakai `OtpField` (6 kotak); kode cadangan lewat tombol "Pakai kode cadangan". Metode WhatsApp memakai nomor HP di profil bila BFF mengirim `nomor_whatsapp` (tanpa isian nomor; `null` = belum ada nomor, dengan tautan `tautanUbahNomor`, bawaan `/data-pribadi`).
 
 ## 1.35.0 (2026-11-16)
 

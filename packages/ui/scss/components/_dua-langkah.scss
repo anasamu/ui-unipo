@@ -27,6 +27,8 @@
 }
 .u-2fa-kirim { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.875rem; }
 .u-2fa-input-kode { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0.15em; }
+.u-2fa-tukar { align-self: flex-start; }
+.u-2fa-langkah a { color: var(--u-primary); font-weight: 500; }
 .u-2fa-cadangan {
   margin: 0; padding: 16px; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px;
   border: 1px dashed var(--u-border); border-radius: 12px; background: var(--u-muted);

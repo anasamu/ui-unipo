@@ -30,6 +30,12 @@ export interface StatusDuaLangkah {
   perangkat_diingat: number;
   ingat_hari: number;
   metode_tersedia: PilihanMetodeDuaLangkah[];
+  /**
+   * Nomor HP di profil pengguna (disamarkan) yang dipakai metode WhatsApp, diisi BFF dari data pribadi SIAKAD.
+   * `null`: nomor HP di profil belum ada, metode WhatsApp tidak bisa dipilih. Tidak ada (undefined): aplikasi lama,
+   * nomor diketik pengguna.
+   */
+  nomor_whatsapp?: string | null;
   /** Hanya pada jawaban aktifkan dan kode cadangan baru. */
   kode_cadangan?: string[];
 }
@@ -145,6 +151,8 @@ export interface PengaturanDuaLangkahProps {
   onBerubah?: (status: StatusDuaLangkah) => void;
   /** Tampilkan saran mengaktifkan saat masih mati (bawaan true). */
   saran?: boolean;
+  /** Alamat untuk mengubah nomor HP di profil (bawaan /data-pribadi), ditampilkan pada metode WhatsApp. */
+  tautanUbahNomor?: string;
   className?: string;
 }
 
@@ -152,7 +160,7 @@ export interface PengaturanDuaLangkahProps {
  * Pengaturan login dua langkah akun SSO: aktifkan (aplikasi authenticator bawaan; email/WhatsApp bila integrasinya
  * aktif), kode cadangan, ganti metode, lupakan perangkat, dan matikan. Dipakai aplikasi profil di /keamanan.
  */
-export function PengaturanDuaLangkah({ api, onBerubah, saran = true, className }: PengaturanDuaLangkahProps) {
+export function PengaturanDuaLangkah({ api, onBerubah, saran = true, tautanUbahNomor = '/data-pribadi', className }: PengaturanDuaLangkahProps) {
   const [status, setStatus] = React.useState<StatusDuaLangkah | null>(null);
   const [galat, setGalat] = React.useState<string | null>(null);
   const [atur, setAtur] = React.useState<null | { bukti?: BuktiDuaLangkah }>(null);
@@ -281,6 +289,7 @@ export function PengaturanDuaLangkah({ api, onBerubah, saran = true, className }
           api={api}
           status={status}
           bukti={atur.bukti}
+          tautanUbahNomor={tautanUbahNomor}
           onTutup={() => setAtur(null)}
           onSelesai={(s) => {
             setAtur(null);
@@ -327,16 +336,21 @@ function DialogAturDuaLangkah({
   api,
   status,
   bukti,
+  tautanUbahNomor,
   onTutup,
   onSelesai,
 }: {
   api: ApiDuaLangkah;
   status: StatusDuaLangkah;
   bukti?: BuktiDuaLangkah;
+  tautanUbahNomor: string;
   onTutup: () => void;
   onSelesai: (s: StatusDuaLangkah) => void;
 }) {
   const pilihan = status.metode_tersedia;
+  // Nomor WhatsApp mengikuti nomor HP di profil bila aplikasi (BFF) mengirimkannya.
+  const nomorProfil = status.nomor_whatsapp;
+  const ikutProfil = nomorProfil !== undefined;
   const [metode, setMetode] = React.useState<MetodeDuaLangkah>('totp');
   const [nomor, setNomor] = React.useState('');
   const [setup, setSetup] = React.useState<MulaiDuaLangkah | null>(null);
@@ -350,7 +364,7 @@ function DialogAturDuaLangkah({
     setSibuk(true);
     setGalat(null);
     try {
-      const s = await api.mulai(metode, { nomor: metode === 'whatsapp' ? nomor : undefined, ...bukti });
+      const s = await api.mulai(metode, { nomor: metode === 'whatsapp' && !ikutProfil ? nomor : undefined, ...bukti });
       setSetup(s);
       setKode('');
       setMundur(s.kirim_ulang_detik ?? 0);
@@ -391,7 +405,7 @@ function DialogAturDuaLangkah({
         ) : (
           <>
             <Button variant="ghost" onClick={onTutup}>Batal</Button>
-            <Button onClick={() => void mulai()} disabled={sibuk || (metode === 'whatsapp' && nomor.replace(/\D/g, '').length < 10)} loading={sibuk}>Lanjut</Button>
+            <Button onClick={() => void mulai()} disabled={sibuk || (metode === 'whatsapp' && (ikutProfil ? !nomorProfil : nomor.replace(/\D/g, '').length < 10))} loading={sibuk}>Lanjut</Button>
           </>
         )
       }
@@ -413,7 +427,19 @@ function DialogAturDuaLangkah({
           {pilihan.length === 1 && (
             <p className="u-muted u-2fa-ket">Pilihan kode lewat email atau WhatsApp muncul bila Pustikom mengaktifkan integrasinya.</p>
           )}
-          {metode === 'whatsapp' && (
+          {metode === 'whatsapp' && ikutProfil && (
+            nomorProfil ? (
+              <p className="u-muted u-2fa-ket">
+                Kode dikirim ke nomor HP di profil Anda, <strong>{nomorProfil}</strong>, sekarang dan setiap kali Anda masuk. Nomor salah?{' '}
+                <a href={tautanUbahNomor}>Ubah di data pribadi</a>, lalu aktifkan lagi.
+              </p>
+            ) : (
+              <Alert variant="warning">
+                Nomor HP di profil Anda belum diisi. <a href={tautanUbahNomor}>Isi nomor HP di data pribadi</a> dulu, lalu pilih WhatsApp lagi.
+              </Alert>
+            )
+          )}
+          {metode === 'whatsapp' && !ikutProfil && (
             <Field label="Nomor WhatsApp" description="Kode verifikasi dikirim ke nomor ini sekarang dan setiap kali Anda masuk.">
               <Input value={nomor} onChange={(e) => setNomor(e.target.value)} inputMode="tel" autoComplete="tel" placeholder="081234567890" />
             </Field>
@@ -506,12 +532,13 @@ function DialogBuktiDuaLangkah({
   onBukti: (b: BuktiDuaLangkah) => Promise<void>;
 }) {
   const [kode, setKode] = React.useState('');
+  const [cadangan, setCadangan] = React.useState(false);
   const [konfirmasiId, setKonfirmasiId] = React.useState<string | undefined>();
   const [galat, setGalat] = React.useState<string | null>(null);
   const [sibuk, setSibuk] = React.useState(false);
   const [mundur, setMundur] = useHitungMundur();
   const bersih = kode.replace(/[\s-]/g, '');
-  const sah = /^\d{6}$/.test(bersih) || /^[a-zA-Z2-9]{8}$/.test(bersih);
+  const sah = cadangan ? /^[a-zA-Z2-9]{8}$/.test(bersih) : /^\d{6}$/.test(bersih);
 
   const kirim = async () => {
     setGalat(null);
@@ -564,9 +591,27 @@ function DialogBuktiDuaLangkah({
             </Button>
           </div>
         )}
-        <Field label="Kode" description={kirimLewat ? 'Kode 6 digit yang dikirim, atau kode cadangan (xxxx-xxxx).' : 'Kode 6 digit dari aplikasi authenticator, atau kode cadangan (xxxx-xxxx).'}>
-          <Input value={kode} onChange={(e) => setKode(e.target.value)} autoComplete="one-time-code" maxLength={9} autoFocus className="u-2fa-input-kode" />
-        </Field>
+        {cadangan ? (
+          <Field label="Kode cadangan" description="Salah satu dari 10 kode cadangan yang Anda simpan (xxxx-xxxx).">
+            <Input value={kode} onChange={(e) => setKode(e.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={9} autoFocus placeholder="xxxx-xxxx" className="u-2fa-input-kode" />
+          </Field>
+        ) : (
+          <Field label="Kode verifikasi" description={kirimLewat ? 'Kode 6 digit yang dikirim.' : 'Kode 6 digit dari aplikasi authenticator.'}>
+            <OtpField value={kode} onValueChange={(v) => setKode(v)} validationType="numeric" separatorAfter={3} autoFocus />
+          </Field>
+        )}
+        <Button
+          variant="link"
+          size="sm"
+          className="u-2fa-tukar"
+          onClick={() => {
+            setCadangan(!cadangan);
+            setKode('');
+            setGalat(null);
+          }}
+        >
+          {cadangan ? (kirimLewat ? 'Pakai kode yang dikirim' : 'Pakai kode dari aplikasi authenticator') : 'Pakai kode cadangan'}
+        </Button>
         {galat && <Alert variant="danger">{galat}</Alert>}
       </div>
     </Dialog>
