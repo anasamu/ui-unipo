@@ -1,6 +1,6 @@
 # Catatan perubahan
 
-## 1.34.0 (2026-11-16)
+## 1.35.0 (2026-11-16)
 
 - **Aturan biaya dan pembagiannya** (`unipo-ui/siakad`, butuh SIAKAD dengan `/v1/biaya`): biaya yang ditagih ke mahasiswa/PMB (UKT, uang gedung, biaya ujian, formulir) dengan komponen pembagian ke yayasan, rektorat, fakultas, prodi, unit lain, pejabat, atau pegawai (persen, nominal, sisa). Aturan wajib ber-SK dari storage dan ditetapkan WR bidang keuangan.
   - `KelolaAturanBiaya`: tab berlaku/menunggu/draf/semua, cari, susun aturan (izin `biaya.susun`), panel detail dengan komponen, SK, riwayat, dan tombol alur sesuai hak (ajukan; tetapkan/tolak/kembalikan untuk `biaya.setujui`; revisi, nonaktifkan). Prop `unitId` membatasi ke aturan yang menyangkut unit.
@@ -9,7 +9,13 @@
   - `RingkasanPembagianBiaya` (kartu dasbor pimpinan), `DaftarPencairanBiaya` + `FormPencairanBiaya` (izin `biaya.cairkan`), `SimulasiPembagianBiaya`, `TombolSinkronBiaya`, dan `HalamanAturanBiaya` (semua tab sekaligus untuk BAUK).
   - Hook dan helper: `useHakBiaya`, `useReferensiBiaya`, `useDaftarAturanBiaya`, `useAturanBiaya`, `useRekapPembagianBiaya`, `useRincianPembagianBiaya`, `useRingkasanBiaya`, `useDaftarPencairanBiaya`, `bagiBiaya`, `periksaKomponenBiaya`, `nilaiKomponenBiaya`, `labelPenerimaBiaya`.
 
-- 
+## 1.34.0 (2026-11-16)
+
+- **Dokumen RPS, silabus, bahan ajar per mata kuliah, dan buku kurikulum** (`unipo-ui/siakad`, butuh SIAKAD dengan `/v1/kurikulum-obe/mk/{mk}/berkas`, `/mk-berkas/{id}`, `/kurikulum/{id}/buku`):
+  - `KelolaPerangkatMk` + `usePerangkatMk`: unggah RPS yang sudah ditandatangani, silabus, bahan ajar, modul ke berkas terpusat (`PilihBerkas`), lihat/unduh, ubah judul/jenis, hapus. Boleh bagi penyusun kurikulum prodi dan dosen koordinator/pengampu MK.
+  - `RuangMkKurikulum` punya tab baru "Dokumen RPS & bahan ajar".
+  - `BukuKurikulum` + `useBukuKurikulum`: buku kurikulum A4 (identitas dan SK, narasi Pasal 44, profil lulusan, CPL per ranah, bahan kajian, MK per semester dengan prasyarat/CPL/status RPS, deskripsi dan CPMK, ekuivalensi, peninjauan) dengan tombol cetak/simpan PDF. `RuangKurikulumObe` punya tab "Buku kurikulum".
+  - Hak `sahkan` dari API kini juga berlaku bagi dekan/wakil dekan untuk prodi di fakultasnya (izin `fakultas.kurikulum.sahkan`); `AlurKurikulum` otomatis menampilkan tombol pengesahan.
 
 ## 1.33.0 (2026-11-16)
 

@@ -6,12 +6,14 @@ import {
   CheckCircle2,
   CircleAlert,
   ClipboardList,
+  Download,
   Copy,
   FileText,
   GitBranch,
   GraduationCap,
   Layers,
   ListChecks,
+  MoreHorizontal,
   Network,
   PenLine,
   Plus,
@@ -27,7 +29,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import { cn, dataFlag } from '../lib/cn';
-import { formatDate, formatNumber } from '../lib/format';
+import { formatBytes, formatDate, formatNumber } from '../lib/format';
 import { Badge, Button } from '../components/actions';
 import { Alert, Empty, Progress, Table, TableContainer, Tabs } from '../components/display';
 import { Panel } from '../components/charts';
@@ -37,6 +39,7 @@ import { Select, type SelectOption } from '../components/select';
 import { DataTable, type DataColumn } from '../components/data-table';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { PilihEntitas } from './pilih';
+import { PilihBerkas } from './pilih-berkas';
 import { PilihNomorSK } from './isian-sk';
 import { PilihTahunAkademik } from './cari';
 import {
@@ -2247,12 +2250,13 @@ export interface RuangMkKurikulumProps {
   onOpenChange: (open: boolean) => void;
 }
 
-/** Panel samping satu mata kuliah: ringkasan (prasyarat, CPL, bahan kajian, koordinator), CPMK, dan RPS. */
+/** Panel samping satu mata kuliah: ringkasan (prasyarat, CPL, bahan kajian, koordinator), CPMK, RPS, dan dokumen RPS/silabus/bahan ajar. */
 export function RuangMkKurikulum({ mkId, kurikulumId, hak: batas, onOpenChange }: RuangMkKurikulumProps) {
   const h = useHakKurikulum(kurikulumId, batas);
   const q = useMataKuliahObe(mkId ?? undefined);
   const m = q.data as MkDetail | undefined;
-  const [tab, setTab] = React.useState<'ringkas' | 'cpmk' | 'rps'>('cpmk');
+  const [tab, setTab] = React.useState<'ringkas' | 'cpmk' | 'rps' | 'perangkat'>('cpmk');
+  const perangkat = usePerangkatMk(mkId);
   React.useEffect(() => setTab('cpmk'), [mkId]);
   return (
     <Sheet open={mkId != null} onOpenChange={onOpenChange} size="xl" title={m ? `${m.kode_mk} · ${m.nama}` : 'Mata kuliah'} description={m ? [`${formatNumber(n(m.sks))} SKS`, m.semester ? `Semester ${m.semester}` : 'Pilihan bebas', JENIS_MK[m.jenis] ?? m.jenis].join(' · ') : undefined} className="u-kk-sheet">
@@ -2264,12 +2268,14 @@ export function RuangMkKurikulum({ mkId, kurikulumId, hak: batas, onOpenChange }
             items={[
               { value: 'cpmk', label: 'CPMK & sub-CPMK', count: m?.cpmk?.length },
               { value: 'rps', label: 'RPS', count: m?.rps?.length },
+              { value: 'perangkat', label: 'Dokumen RPS & bahan ajar', count: perangkat.data?.length || undefined },
               { value: 'ringkas', label: 'Ringkasan' },
             ]}
           />
           {tab === 'ringkas' && m && <RingkasMk m={m} />}
           {tab === 'cpmk' && <KelolaCpmk mkId={mkId} kurikulumId={kurikulumId} bolehUbah={h.ubah_struktur} />}
           {tab === 'rps' && <KelolaRps mkId={mkId} bolehSusun={h.rps} bolehSahkan={h.susun} />}
+          {tab === 'perangkat' && <KelolaPerangkatMk mkId={mkId} bolehUbah={h.rps || h.susun} />}
         </div>
       )}
     </Sheet>
@@ -3081,7 +3087,7 @@ export function TerbitKurikulum({ kurikulumId, className }: { kurikulumId: numbe
 }
 
 // ================================================================ Ruang kerja kurikulum
-export type TabRuangKurikulum = 'ringkasan' | 'cpl' | 'bk' | 'mk' | 'matriks' | 'ekuivalensi' | 'capaian' | 'peninjauan' | 'terbit';
+export type TabRuangKurikulum = 'ringkasan' | 'cpl' | 'bk' | 'mk' | 'matriks' | 'ekuivalensi' | 'capaian' | 'peninjauan' | 'buku' | 'terbit';
 export interface RuangKurikulumObeProps {
   kurikulumId: number | string;
   /** Persempit hak dari API, mis. `{ migrasi: false }` di dasbor fakultas. */
@@ -3118,6 +3124,7 @@ export function RuangKurikulumObe({ kurikulumId, hak: batas, tab: tabProp, onTab
     { value: 'ekuivalensi', label: 'Ekuivalensi', icon: <ClipboardList /> },
     { value: 'capaian', label: 'Capaian CPL', icon: <GraduationCap /> },
     { value: 'peninjauan', label: 'Peninjauan', icon: <FileText /> },
+    { value: 'buku', label: 'Buku kurikulum', icon: <Printer /> },
     ...(h.migrasi ? [{ value: 'terbit' as const, label: 'Terbit', icon: <Upload /> }] : []),
   ];
   return (
@@ -3182,6 +3189,7 @@ export function RuangKurikulumObe({ kurikulumId, hak: batas, tab: tabProp, onTab
         {tab === 'ekuivalensi' && <KelolaEkuivalensi kurikulumId={kurikulumId} kodeProdi={k?.kode_prodi} bolehUbah={h.susun} />}
         {tab === 'capaian' && <KelolaCapaianCpl kurikulumId={kurikulumId} bolehRekam={h.susun} />}
         {tab === 'peninjauan' && <KelolaPeninjauan kurikulumId={kurikulumId} bolehUbah={h.susun} />}
+        {tab === 'buku' && <BukuKurikulum kurikulumId={kurikulumId} />}
         {tab === 'terbit' && h.migrasi && <TerbitKurikulum kurikulumId={kurikulumId} />}
       </div>
       <RuangMkKurikulum mkId={mk} kurikulumId={kurikulumId} hak={batas} onOpenChange={(o) => !o && setMk(null)} />
@@ -3225,5 +3233,603 @@ function IdentitasKurikulum({ k }: { k: KurikulumLengkap }) {
           </div>
         ))}
     </dl>
+  );
+}
+
+// ================================================================ Perangkat pembelajaran per MK
+export type JenisPerangkatMk = 'silabus' | 'rps' | 'bahan_ajar' | 'modul' | 'lainnya';
+export const JENIS_PERANGKAT_MK: Record<JenisPerangkatMk, string> = {
+  rps: 'RPS (dokumen)',
+  silabus: 'Silabus',
+  bahan_ajar: 'Bahan ajar',
+  modul: 'Modul/praktikum',
+  lainnya: 'Lainnya',
+};
+export interface PerangkatMk {
+  id: number;
+  mk_id: number;
+  jenis: JenisPerangkatMk;
+  nama_jenis: string;
+  judul: string;
+  keterangan: string | null;
+  berkas_id: string;
+  nama: string;
+  ukuran: number;
+  mime: string | null;
+  dibuat_oleh: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+/** Perangkat pembelajaran satu MK (silabus, RPS dokumen, bahan ajar, modul) dari /v1/kurikulum-obe/mk/{mk}/berkas. */
+export function usePerangkatMk(mkId: number | string | null | undefined) {
+  return useSiakadQuery<PerangkatMk[]>(
+    ['kur-perangkat', String(mkId)],
+    (s, signal) => s.request<PerangkatMk[]>({ method: 'GET', path: `${P}/mk/${mkId}/berkas` }, { signal }),
+    { enabled: mkId != null },
+  );
+}
+
+/** Buka atau unduh isi file perangkat (lewat token, jadi diambil sebagai blob). */
+function useBukaPerangkat() {
+  const siakad = useSiakad();
+  const toast = useToast();
+  const [sibuk, setSibuk] = React.useState<number | null>(null);
+  const buka = async (p: PerangkatMk, unduh: boolean) => {
+    // Jendela dibuka dulu (sinkron dengan klik) agar tidak diblokir peramban.
+    const w = !unduh && typeof window !== 'undefined' ? window.open('', '_blank') : null;
+    setSibuk(p.id);
+    try {
+      const r = await siakad.request<unknown>({ method: 'GET', path: `${P}/mk-berkas/${p.id}/isi`, query: unduh ? { unduh: '1' } : undefined });
+      const d = r.data as { blob?: () => Blob; url?: string } | Blob | null;
+      if (d && !(d instanceof Blob) && typeof d === 'object' && typeof d.url === 'string') {
+        if (w) w.location.href = d.url;
+        else window.open(d.url, '_blank');
+        return;
+      }
+      const blob = d instanceof Blob ? d : d && typeof d === 'object' && typeof d.blob === 'function' ? d.blob() : null;
+      if (!blob) throw new Error('Berkas tidak dapat dibuka.');
+      const url = URL.createObjectURL(blob);
+      if (w) {
+        w.location.href = url;
+      } else {
+        const el = document.createElement('a');
+        el.href = url;
+        el.download = p.nama;
+        el.click();
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e) {
+      w?.close();
+      toast.add({ title: 'Gagal membuka berkas', description: pesanGalat(e), type: 'error' });
+    } finally {
+      setSibuk(null);
+    }
+  };
+  return { buka, sibuk };
+}
+
+export interface KelolaPerangkatMkProps {
+  mkId: number | string;
+  /** Boleh mengunggah/mengubah/menghapus (penyusun kurikulum, atau dosen koordinator/pengampu MK). */
+  bolehUbah?: boolean;
+  /** Jenis yang dipilih saat membuka form (mis. "rps"). */
+  jenisAwal?: JenisPerangkatMk;
+  className?: string;
+}
+
+/**
+ * Perangkat pembelajaran satu mata kuliah: unggah RPS (dokumen yang sudah ditandatangani), silabus, bahan ajar, dan
+ * modul ke berkas terpusat, lalu lihat, unduh, ubah judul, atau hapus. Perangkat tetap bisa ditambah saat kurikulum
+ * sudah berlaku.
+ */
+export function KelolaPerangkatMk({ mkId, bolehUbah, jenisAwal = 'rps', className }: KelolaPerangkatMkProps) {
+  const q = usePerangkatMk(mkId);
+  const daftar = q.data ?? [];
+  const { kirim, sibuk, galat, setGalat, kolom } = useKirim();
+  const { buka, sibuk: membuka } = useBukaPerangkat();
+  const [form, setForm] = React.useState<null | { id?: number; jenis: JenisPerangkatMk; judul: string; keterangan: string; berkas_id: string | null }>(null);
+  const [hapus, setHapus] = React.useState<PerangkatMk | null>(null);
+  const kelompok = (Object.keys(JENIS_PERANGKAT_MK) as JenisPerangkatMk[]).map((j) => ({ j, isi: daftar.filter((p) => p.jenis === j) })).filter((g) => g.isi.length);
+  const adaRps = daftar.some((p) => p.jenis === 'rps');
+  const simpan = async () => {
+    if (!form) return;
+    const body = { jenis: form.jenis, judul: form.judul.trim() || undefined, keterangan: form.keterangan.trim() || null };
+    try {
+      if (form.id) await kirim('PUT', `${P}/mk-berkas/${form.id}`, body, 'Perangkat diperbarui.');
+      else await kirim('POST', `${P}/mk/${mkId}/berkas`, { ...body, berkas_id: form.berkas_id }, 'Perangkat diunggah.');
+      setForm(null);
+    } catch {
+      /* tampil di form */
+    }
+  };
+  return (
+    <div className={cn('u-kk-perangkat', className)}>
+      <div className="u-kk-perangkat-kepala">
+        <p>
+          {adaRps ? (
+            <>
+              <CheckCircle2 aria-hidden className="u-kk-ok" /> Dokumen RPS sudah diunggah.
+            </>
+          ) : (
+            <>
+              <CircleAlert aria-hidden className="u-kk-awas" /> Belum ada dokumen RPS. Unggah RPS yang sudah ditandatangani, atau susun di tab RPS.
+            </>
+          )}
+        </p>
+        {bolehUbah && (
+          <Button
+            size="sm"
+            onClick={() => {
+              setGalat(null);
+              setForm({ jenis: adaRps && jenisAwal === 'rps' ? 'bahan_ajar' : jenisAwal, judul: '', keterangan: '', berkas_id: null });
+            }}
+          >
+            <Upload /> Unggah perangkat
+          </Button>
+        )}
+      </div>
+      {q.loading && <Progress value={null} size="sm" />}
+      {!q.loading && !daftar.length && (
+        <Empty
+          icon={<FileText />}
+          title="Belum ada perangkat pembelajaran"
+          description={bolehUbah ? 'Unggah RPS, silabus, bahan ajar, atau modul untuk mata kuliah ini.' : 'Penyusun kurikulum atau dosen pengampu belum mengunggah perangkat.'}
+          bordered
+        />
+      )}
+      {kelompok.map((g) => (
+        <section key={g.j} className="u-kk-perangkat-grup">
+          <h4>
+            {JENIS_PERANGKAT_MK[g.j]} <Badge variant="secondary">{g.isi.length}</Badge>
+          </h4>
+          <ul>
+            {g.isi.map((p) => (
+              <li key={p.id}>
+                <FileText aria-hidden className="u-kk-perangkat-ikon" />
+                <span className="u-kk-perangkat-teks">
+                  <button type="button" className="u-kk-perangkat-judul" onClick={() => buka(p, false)} disabled={membuka === p.id}>
+                    {p.judul}
+                  </button>
+                  <small>{[p.nama, formatBytes(p.ukuran), p.updated_at ? formatDate(p.updated_at) : null].filter(Boolean).join(' · ')}</small>
+                  {p.keterangan && <small className="u-kk-perangkat-ket">{p.keterangan}</small>}
+                </span>
+                <span className="u-kk-aksi">
+                  <Button size="sm" variant="ghost" iconOnly aria-label={`Unduh ${p.judul}`} loading={membuka === p.id} onClick={() => buka(p, true)}>
+                    <Download />
+                  </Button>
+                  {bolehUbah && (
+                    <Menu
+                      trigger={
+                        <Button size="sm" variant="ghost" iconOnly aria-label={`Aksi ${p.judul}`}>
+                          <MoreHorizontal />
+                        </Button>
+                      }
+                      items={[
+                        { label: 'Ubah judul/jenis', icon: <PenLine />, onSelect: () => setForm({ id: p.id, jenis: p.jenis, judul: p.judul, keterangan: p.keterangan ?? '', berkas_id: p.berkas_id }) },
+                        { label: 'Hapus', icon: <Trash2 />, destructive: true, onSelect: () => setHapus(p) },
+                      ]}
+                    />
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      <Dialog
+        open={form != null}
+        onOpenChange={(o) => !o && setForm(null)}
+        title={form?.id ? 'Ubah perangkat' : 'Unggah perangkat pembelajaran'}
+        description="File disimpan di berkas terpusat UNIPO. PDF disarankan untuk RPS dan silabus."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setForm(null)}>
+              Batal
+            </Button>
+            <Button loading={sibuk} disabled={!form || (!form.id && !form.berkas_id)} onClick={simpan}>
+              {form?.id ? 'Simpan perubahan' : 'Simpan perangkat'}
+            </Button>
+          </>
+        }
+      >
+        {form && (
+          <div className="u-kk-form">
+            <KotakGalat galat={galat} />
+            <Field label="Jenis" required error={kolom.jenis}>
+              <Select value={form.jenis} onValueChange={(v) => setForm({ ...form, jenis: (v ?? 'rps') as JenisPerangkatMk })} options={Object.entries(JENIS_PERANGKAT_MK).map(([value, l]) => ({ value, label: l }))} />
+            </Field>
+            {!form.id && (
+              <Field label="File" required error={kolom.berkas_id}>
+                <PilihBerkas
+                  value={form.berkas_id}
+                  onValueChange={(id, b) => setForm((f) => (f ? { ...f, berkas_id: id, judul: f.judul || (b?.nama ? b.nama.replace(/\.[^.]+$/, '') : '') } : f))}
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.jpg,.png"
+                  kategori="kurikulum"
+                  modul="kurikulum"
+                />
+              </Field>
+            )}
+            <Field label="Judul" optional description="Kosong = jenis + nama mata kuliah." error={kolom.judul}>
+              <Input value={form.judul} onChange={(e) => setForm({ ...form, judul: e.target.value })} placeholder="mis. RPS Logika dan Pemrograman 2025/2026" />
+            </Field>
+            <Field label="Keterangan" optional error={kolom.keterangan}>
+              <Textarea rows={2} value={form.keterangan} onChange={(e) => setForm({ ...form, keterangan: e.target.value })} placeholder="Versi, tanggal pengesahan, atau catatan untuk dosen pengampu" />
+            </Field>
+          </div>
+        )}
+      </Dialog>
+      <ConfirmDialog
+        open={hapus != null}
+        onOpenChange={(o) => !o && setHapus(null)}
+        title="Hapus perangkat?"
+        description={hapus ? `${hapus.judul} (${hapus.nama}) dilepas dari mata kuliah ini.` : undefined}
+        confirmLabel="Hapus perangkat"
+        onConfirm={async () => {
+          if (hapus) await kirim('DELETE', `${P}/mk-berkas/${hapus.id}`, undefined, 'Perangkat dihapus.');
+          setHapus(null);
+        }}
+      />
+    </div>
+  );
+}
+
+// ================================================================ Buku kurikulum
+interface MkBuku {
+  id: number;
+  kode_mk: string;
+  nama: string;
+  nama_en: string | null;
+  sks: number;
+  sks_tatap_muka: number;
+  sks_praktikum: number;
+  sks_praktik_lapangan: number;
+  sks_simulasi: number;
+  jenis: string;
+  nama_jenis: string;
+  kelompok: string | null;
+  deskripsi: string | null;
+  koordinator: string | null;
+  prasyarat: Array<{ kode_mk: string; nama: string; jenis: string }>;
+  cpl: string[];
+  cpmk: Array<{ kode: string; deskripsi: string }>;
+  status_rps: 'disahkan' | 'draf' | null;
+  perangkat: Partial<Record<JenisPerangkatMk, number>>;
+}
+export interface BukuKurikulumData {
+  kurikulum: KurikulumLengkap & Record<string, unknown>;
+  profil_lulusan: Array<{ kode: string; nama: string; deskripsi: string | null }>;
+  cpl: Array<{ kode: string; ranah: string; nama_ranah: string; deskripsi: string; target: number | null }>;
+  bahan_kajian: Array<{ kode: string; nama: string; deskripsi: string | null }>;
+  semester: Array<{ semester: number; sks_wajib: number; sks_pilihan: number; mk: MkBuku[] }>;
+  ekuivalensi: Array<{ kode_mk_lama: string; nama_mk_lama: string | null; sks_lama: number | null; kode_mk: string | null; nama: string | null; sks: number | null; jenis: string; catatan: string | null }>;
+  peninjauan: Array<{ jenis: string; judul: string; tanggal: string | null; pelaksana: string | null; ringkasan: string | null; status: string | null }>;
+  dibuat_at: string;
+}
+
+export function useBukuKurikulum(kurikulumId: number | string | undefined) {
+  return useSiakadQuery<BukuKurikulumData>(
+    ['kur-buku', String(kurikulumId)],
+    (s, signal) => s.request<BukuKurikulumData>({ method: 'GET', path: `${P}/kurikulum/${kurikulumId}/buku` }, { signal }),
+    { enabled: kurikulumId != null },
+  );
+}
+
+function cetakBuku(id: string, judul: string) {
+  const el = typeof document !== 'undefined' ? document.getElementById(id) : null;
+  if (!el) return;
+  const w = window.open('', '_blank', 'width=900,height=1000');
+  if (!w) return;
+  const gaya = [...document.querySelectorAll('style, link[rel="stylesheet"]')].map((s) => s.outerHTML).join('');
+  w.document.write(
+    `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>${judul.replace(/</g, '&lt;')}</title>${gaya}<style>body{background:#fff;padding:0;margin:0}@page{size:A4;margin:16mm}</style></head><body class="u-kk-buku-cetak">${el.outerHTML}</body></html>`,
+  );
+  w.document.close();
+  w.addEventListener('load', () => w.print());
+}
+
+const NARASI_BUKU: Array<[string, string]> = [
+  ['visi_keilmuan', 'Visi keilmuan program studi'],
+  ['kompetensi_utama', 'Kompetensi utama lulusan'],
+  ['metode_pembelajaran', 'Metode pembelajaran'],
+  ['modalitas_pembelajaran', 'Modalitas pembelajaran'],
+  ['penilaian', 'Penilaian'],
+  ['tugas_akhir', 'Tugas akhir'],
+  ['syarat_masuk', 'Syarat masuk'],
+  ['tata_cara_penerimaan', 'Tata cara penerimaan'],
+];
+
+export interface BukuKurikulumProps {
+  kurikulumId: number | string;
+  /** Nama institusi di sampul. */
+  institusi?: string;
+  className?: string;
+}
+
+/**
+ * Buku kurikulum siap cetak (A4) atau simpan sebagai PDF lewat dialog cetak peramban: identitas dan SK, narasi
+ * Pasal 44, profil lulusan, CPL per ranah, bahan kajian, struktur mata kuliah per semester (SKS, prasyarat, CPL,
+ * CPMK, koordinator, status RPS, perangkat), ekuivalensi, dan riwayat peninjauan.
+ */
+export function BukuKurikulum({ kurikulumId, institusi = 'Universitas Pohuwato', className }: BukuKurikulumProps) {
+  const q = useBukuKurikulum(kurikulumId);
+  const b = q.data;
+  const id = `u-kk-buku-${kurikulumId}`;
+  if (q.loading || !b) return q.error ? <KotakGalat galat={q.error} /> : <Progress value={null} size="sm" />;
+  const k = b.kurikulum;
+  const totalWajib = b.semester.reduce((a, s) => a + s.sks_wajib, 0);
+  const totalPilihan = b.semester.reduce((a, s) => a + s.sks_pilihan, 0);
+  const jumlahMk = b.semester.reduce((a, s) => a + s.mk.length, 0);
+  const rpsSah = b.semester.reduce((a, s) => a + s.mk.filter((m) => m.status_rps === 'disahkan').length, 0);
+  const rpsDok = b.semester.reduce((a, s) => a + s.mk.filter((m) => (m.perangkat.rps ?? 0) > 0).length, 0);
+  const ranah = [...new Set(b.cpl.map((c) => c.nama_ranah))];
+  const narasi = NARASI_BUKU.filter(([f]) => typeof k[f] === 'string' && (k[f] as string).trim());
+  let bab = 0;
+  return (
+    <div className={cn('u-kk-buku-wadah', className)}>
+      <div className="u-kk-buku-alat">
+        <span>
+          {jumlahMk} mata kuliah · {formatNumber(totalWajib + totalPilihan)} SKS · RPS disahkan {rpsSah}/{jumlahMk} · dokumen RPS {rpsDok}/{jumlahMk}
+        </span>
+        <Button size="sm" onClick={() => cetakBuku(id, `Buku Kurikulum ${k.kode}`)}>
+          <Printer /> Cetak / simpan PDF
+        </Button>
+      </div>
+      <article id={id} className="u-kk-buku">
+        <header className="u-kk-buku-sampul">
+          <p className="u-kk-buku-inst">{institusi}</p>
+          <h1>Buku Kurikulum</h1>
+          <p className="u-kk-buku-prodi">
+            Program Studi {k.nama_prodi ?? k.kode_prodi}
+            {k.jenjang?.nama ? ` (${k.jenjang.nama})` : ''}
+          </p>
+          <p className="u-kk-buku-nama">
+            {k.nama} <span>({k.kode})</span>
+          </p>
+          <dl>
+            <div>
+              <dt>Status</dt>
+              <dd>{label(k.status)}</dd>
+            </div>
+            <div>
+              <dt>Tahun berlaku</dt>
+              <dd>{k.tahun_berlaku ?? '–'}</dd>
+            </div>
+            <div>
+              <dt>SK</dt>
+              <dd>{k.no_sk ? `${k.no_sk}${k.tanggal_sk ? `, ${formatDate(k.tanggal_sk)}` : ''}` : 'Belum ada'}</dd>
+            </div>
+            <div>
+              <dt>Acuan</dt>
+              <dd>{k.regulasi ?? 'Permendiktisaintek 39/2025'}</dd>
+            </div>
+          </dl>
+        </header>
+
+        <section>
+          <h2>{++bab}. Identitas dan beban belajar</h2>
+          <table className="u-kk-buku-tabel u-kk-buku-kv">
+            <tbody>
+              <tr>
+                <th>Beban studi lulus</th>
+                <td>{formatNumber(n(k.sks_lulus))} SKS (wajib {formatNumber(n(k.sks_wajib))}, pilihan {formatNumber(n(k.sks_pilihan))})</td>
+              </tr>
+              <tr>
+                <th>Masa tempuh</th>
+                <td>{k.masa_tempuh ? `${k.masa_tempuh} semester` : '–'}</td>
+              </tr>
+              <tr>
+                <th>IPK minimal lulus</th>
+                <td>{k.ipk_min_lulus != null && k.ipk_min_lulus !== '' ? formatNumber(n(k.ipk_min_lulus)) : '–'}</td>
+              </tr>
+              <tr>
+                <th>Struktur mata kuliah</th>
+                <td>
+                  {jumlahMk} MK, {formatNumber(totalWajib)} SKS wajib, {formatNumber(totalPilihan)} SKS pilihan
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          {narasi.map(([f, l]) => (
+            <div key={f} className="u-kk-buku-narasi">
+              <h3>{l}</h3>
+              <p>{k[f] as string}</p>
+            </div>
+          ))}
+        </section>
+
+        <section>
+          <h2>{++bab}. Profil lulusan</h2>
+          {b.profil_lulusan.length ? (
+            <table className="u-kk-buku-tabel">
+              <thead>
+                <tr>
+                  <th>Kode</th>
+                  <th>Profil</th>
+                  <th>Deskripsi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {b.profil_lulusan.map((p) => (
+                  <tr key={p.kode}>
+                    <td className="u-kk-buku-kode">{p.kode}</td>
+                    <td>{p.nama}</td>
+                    <td>{p.deskripsi ?? ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="u-kk-buku-kosong">Belum diisi.</p>
+          )}
+        </section>
+
+        <section>
+          <h2>{++bab}. Capaian pembelajaran lulusan (CPL)</h2>
+          {ranah.length ? (
+            ranah.map((r) => (
+              <div key={r}>
+                <h3>{r}</h3>
+                <table className="u-kk-buku-tabel">
+                  <tbody>
+                    {b.cpl
+                      .filter((c) => c.nama_ranah === r)
+                      .map((c) => (
+                        <tr key={c.kode}>
+                          <td className="u-kk-buku-kode">{c.kode}</td>
+                          <td>{c.deskripsi}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            ))
+          ) : (
+            <p className="u-kk-buku-kosong">Belum diisi.</p>
+          )}
+        </section>
+
+        {b.bahan_kajian.length > 0 && (
+          <section>
+            <h2>{++bab}. Bahan kajian</h2>
+            <table className="u-kk-buku-tabel">
+              <tbody>
+                {b.bahan_kajian.map((x) => (
+                  <tr key={x.kode}>
+                    <td className="u-kk-buku-kode">{x.kode}</td>
+                    <td>
+                      <strong>{x.nama}</strong>
+                      {x.deskripsi ? <> · {x.deskripsi}</> : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+
+        <section>
+          <h2>{++bab}. Struktur mata kuliah per semester</h2>
+          {b.semester.map((s) => (
+            <div key={s.semester} className="u-kk-buku-smt">
+              <h3>
+                {s.semester ? `Semester ${s.semester}` : 'Pilihan bebas'} <small>({formatNumber(s.sks_wajib + s.sks_pilihan)} SKS)</small>
+              </h3>
+              <table className="u-kk-buku-tabel">
+                <thead>
+                  <tr>
+                    <th>Kode</th>
+                    <th>Mata kuliah</th>
+                    <th className="u-kk-buku-angka">SKS</th>
+                    <th>Jenis</th>
+                    <th>Prasyarat</th>
+                    <th>CPL</th>
+                    <th>RPS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {s.mk.map((m) => (
+                    <tr key={m.id}>
+                      <td className="u-kk-buku-kode">{m.kode_mk}</td>
+                      <td>
+                        {m.nama}
+                        {m.koordinator && <small className="u-kk-buku-sub">Koordinator: {m.koordinator}</small>}
+                      </td>
+                      <td className="u-kk-buku-angka">{formatNumber(m.sks)}</td>
+                      <td>{m.nama_jenis}</td>
+                      <td>{m.prasyarat.map((p) => p.kode_mk).join(', ') || '–'}</td>
+                      <td>{m.cpl.join(', ') || '–'}</td>
+                      <td>{m.status_rps === 'disahkan' ? 'Disahkan' : m.perangkat.rps ? 'Dokumen' : m.status_rps === 'draf' ? 'Draf' : '–'}</td>
+                    </tr>
+                  ))}
+                  <tr className="u-kk-buku-jumlah">
+                    <td colSpan={2}>Jumlah</td>
+                    <td className="u-kk-buku-angka">{formatNumber(s.sks_wajib + s.sks_pilihan)}</td>
+                    <td colSpan={4}>{s.sks_pilihan ? `wajib ${formatNumber(s.sks_wajib)}, pilihan ${formatNumber(s.sks_pilihan)}` : ''}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </section>
+
+        {b.semester.some((s) => s.mk.some((m) => m.cpmk.length || m.deskripsi)) && (
+          <section>
+            <h2>{++bab}. Deskripsi mata kuliah dan CPMK</h2>
+            {b.semester.flatMap((s) =>
+              s.mk
+                .filter((m) => m.cpmk.length || m.deskripsi)
+                .map((m) => (
+                  <div key={m.id} className="u-kk-buku-mk">
+                    <h3>
+                      {m.kode_mk} · {m.nama} <small>({formatNumber(m.sks)} SKS)</small>
+                    </h3>
+                    {m.deskripsi && <p>{m.deskripsi}</p>}
+                    {m.cpmk.length > 0 && (
+                      <ul>
+                        {m.cpmk.map((c) => (
+                          <li key={c.kode}>
+                            <strong>{c.kode}</strong> {c.deskripsi}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )),
+            )}
+          </section>
+        )}
+
+        {b.ekuivalensi.length > 0 && (
+          <section>
+            <h2>{++bab}. Ekuivalensi mata kuliah</h2>
+            <table className="u-kk-buku-tabel">
+              <thead>
+                <tr>
+                  <th>MK lama</th>
+                  <th className="u-kk-buku-angka">SKS</th>
+                  <th>MK baru</th>
+                  <th className="u-kk-buku-angka">SKS</th>
+                  <th>Jenis</th>
+                </tr>
+              </thead>
+              <tbody>
+                {b.ekuivalensi.map((e, i) => (
+                  <tr key={i}>
+                    <td>
+                      <span className="u-kk-buku-kode">{e.kode_mk_lama}</span> {e.nama_mk_lama ?? ''}
+                    </td>
+                    <td className="u-kk-buku-angka">{e.sks_lama != null ? formatNumber(e.sks_lama) : ''}</td>
+                    <td>{e.kode_mk ? <><span className="u-kk-buku-kode">{e.kode_mk}</span> {e.nama}</> : 'Dihapus'}</td>
+                    <td className="u-kk-buku-angka">{e.sks != null ? formatNumber(e.sks) : ''}</td>
+                    <td>{label(e.jenis)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+
+        {b.peninjauan.length > 0 && (
+          <section>
+            <h2>{++bab}. Riwayat evaluasi dan peninjauan</h2>
+            <table className="u-kk-buku-tabel">
+              <tbody>
+                {b.peninjauan.map((p, i) => (
+                  <tr key={i}>
+                    <td>{p.tanggal ? formatDate(p.tanggal) : '–'}</td>
+                    <td>
+                      <strong>{p.judul}</strong> ({label(p.jenis)}){p.pelaksana ? `, ${p.pelaksana}` : ''}
+                      {p.ringkasan && <small className="u-kk-buku-sub">{p.ringkasan}</small>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+        <footer className="u-kk-buku-kaki">Dicetak dari SIAKAD UNIPO, {formatDate(b.dibuat_at)}.</footer>
+      </article>
+    </div>
   );
 }
