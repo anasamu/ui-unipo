@@ -383,6 +383,20 @@
     overflow-y: auto;
   }
 }
+// Kolom cari dan deret saringan tidak boleh ikut mengecil walau daftar pengguna panjang atau tinggi panel sempit
+// (laporan: kotak cari tergencet jadi garis tipis dan chip saringan terpotong). Selektor dua kelas supaya tidak
+// kalah oleh aturan `flex` lain yang sama kuatnya.
+.u-ob-pengguna > .u-input-group,
+.u-ob-pengguna > .u-ob-saring,
+.u-ob-pengguna > .u-ob-terpilih {
+  flex: none;
+}
+.u-ob-pengguna > .u-input-group {
+  min-height: 2rem;
+}
+.u-ob-pengguna > .u-ob-saring {
+  min-height: calc(1.875rem + 0.125rem);
+}
 .u-ob-saring,
 .u-ob-terpilih {
   display: flex;

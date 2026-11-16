@@ -38,12 +38,31 @@
 }
 .u-card-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 0.75rem;
   padding: 1.125rem 1.25rem 0;
   > :first-child {
-    flex: 1;
+    flex: 1 1 14rem;
     min-width: 0;
+  }
+  // Aksi di kanan judul (tombol, pemilih bulan, saringan) memakai lebar isinya sendiri dan tidak boleh menimpa
+  // judul. Kontrol isian yang biasanya selebar wadah (Input, Select) dibatasi; bila tidak muat, aksi turun ke baris
+  // berikutnya.
+  > :not(:first-child) {
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+  > .u-input,
+  > .u-input-group,
+  > .u-select-trigger {
+    flex: 0 1 13rem;
+  }
+  // Kartu yang hanya berisi kepala (mis. status "Belum terhubung" + tombol) tetap punya jarak bawah.
+  &:last-child {
+    padding-bottom: 1.125rem;
   }
 }
 .u-card-title {
@@ -362,6 +381,89 @@
     box-shadow:
       var(--u-shadow-sm),
       0 0 0 1px color-mix(in oklab, var(--u-foreground) 6%, transparent);
+  }
+}
+// Tab vertikal: daftar di kiri, isi di kanan. Ikut lebar wadah (bukan layar): di wadah sempit daftar diganti pilihan.
+.u-tabs-wadah {
+  container-type: inline-size;
+  min-width: 0;
+}
+.u-tabs[data-orientation='vertical'] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+.u-tabs-samping {
+  min-width: 0;
+}
+.u-tabs-isi {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+.u-tabs-list[data-variant='side'] {
+  display: none;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  overflow: visible;
+  > .u-tab {
+    justify-content: flex-start;
+    height: auto;
+    min-height: 2.25rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: calc(var(--u-radius) - 2px);
+    line-height: 1.35;
+    text-align: start;
+    white-space: normal;
+    &:hover:not([data-active]):not([data-selected]) {
+      background: var(--u-hover);
+    }
+    &[data-active],
+    &[data-selected] {
+      color: var(--u-primary);
+    }
+    .u-badge {
+      margin-inline-start: auto;
+    }
+  }
+  > .u-tabs-indicator {
+    top: var(--active-tab-top);
+    left: 0;
+    width: 100%;
+    height: var(--active-tab-height);
+    border-radius: calc(var(--u-radius) - 2px);
+    background: var(--u-primary-soft, color-mix(in oklab, var(--u-primary) 12%, transparent));
+    box-shadow: inset 3px 0 0 var(--u-primary);
+    transition:
+      top var(--u-duration-base) var(--u-ease-out),
+      height var(--u-duration-base) var(--u-ease-out);
+  }
+}
+.u-tab-label {
+  min-width: 0;
+}
+.u-tabs-pilih {
+  width: 100%;
+}
+@container (min-width: 40rem) {
+  .u-tabs[data-orientation='vertical'] {
+    grid-template-columns: minmax(11rem, 15rem) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .u-tabs-samping {
+    position: sticky;
+    top: 1rem;
+    padding-inline-end: 1rem;
+    border-inline-end: 1px solid var(--u-border);
+  }
+  .u-tabs-list[data-variant='side'] {
+    display: flex;
+  }
+  .u-tabs-pilih {
+    display: none;
   }
 }
 .u-tabs-panel {

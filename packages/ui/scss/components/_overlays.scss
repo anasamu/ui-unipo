@@ -201,9 +201,22 @@
       transform: translateY(100%);
     }
   }
+  // Kepala panel (judul + keterangan) dipisah garis dari isi yang bergulir, dengan jarak bawah yang sama dengan
+  // jarak atas, supaya isi yang digulir tidak tampak menempel/bertumpuk dengan keterangan.
+  .u-dialog-header {
+    flex-shrink: 0;
+    padding-block: 1.25rem 1rem;
+    border-bottom: 1px solid var(--u-border);
+  }
   .u-dialog-body {
     padding-block: 1.25rem;
   }
+}
+// Formulir di dialog tengah juga bergulir: perlakuan kepala yang sama.
+.u-dialog.u-panel-form .u-dialog-header {
+  flex-shrink: 0;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--u-border);
 }
 
 // ---------------------------------------------------------------- Popover / Tooltip / Preview

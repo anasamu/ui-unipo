@@ -1,5 +1,17 @@
 # Catatan perubahan
 
+## 1.42.0 (2026-11-16)
+
+- **Tab vertikal**: `Tabs` prop `orientation="vertical"` untuk sub tab yang banyak atau labelnya panjang (jenis riwayat pegawai, data master, bagian keuangan). Daftar tab di kiri, isi di kanan (`children` ikut tampil di kolom isi); di wadah lebih sempit dari 40rem daftar otomatis menjadi pilihan tarik-turun. Prop `aria-label` baru.
+- **Kepala kartu**: aksi di `CardHeader` (pemilih bulan, Select, tombol) memakai lebar isinya sendiri dan tidak lagi menimpa judul; bila tidak muat, aksi turun ke baris berikutnya. Kartu yang hanya berisi kepala (mis. "Belum terhubung ke SISTER" / "Terhubung: …" + tombol) kini punya jarak bawah.
+- **Kepala panel samping**: judul dan keterangan `Sheet`/`PanelForm` diberi jarak bawah dan garis pemisah, jadi isi yang digulir tidak tampak bertumpuk dengan keterangan. Berlaku juga untuk `PanelForm tampilan="dialog"`.
+- **Formulir aturan menyesuaikan unit** (`KelolaAturan kategori=…`, `FormAturan`):
+  - Titik penerapan (form dan saringan daftar) hanya dari kategori unit itu; kategori tidak perlu dipilih lagi dan tampil sebagai teks ("Kepegawaian"), bukan lingkaran centang tanpa label.
+  - Contoh isian per kategori lewat `CONTOH_ATURAN`/`contohAturan()` (nama, kode, dasar aturan, pesan, alternatif syarat, batas): SDM tidak lagi melihat contoh KRS/IPS.
+  - Keterangan titik dibersihkan dari alamat API dan nama tabel (`keteranganTitikRamah`); daftar `POST /v1/...` diganti kalimat "Diperiksa otomatis oleh sistem …".
+  - `labelKategoriAturan()` untuk kategori yang belum dikenal.
+- **Obrolan baru / Grup baru**: kotak cari dan deret saringan peran dikunci tidak bisa mengecil (dilaporkan tergencet jadi garis tipis).
+
 ## 1.41.0 (2026-11-16)
 
 - **Data bertingkat (induk-anak) rapi dan seragam** untuk kategori aset, unit kerja, akun/COA, klasifikasi arsip, menu portal, standar SPMI, dan sejenisnya:

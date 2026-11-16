@@ -11,6 +11,7 @@ import { mergeProps } from '@base-ui/react/merge-props';
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Info, TriangleAlert } from 'lucide-react';
 import { cn, dataFlag } from '../lib/cn';
 import { hueFromString, initials } from '../lib/format';
+import { Select } from './select';
 
 // ---------------------------------------------------------------- Card
 export interface CardProps extends useRender.ComponentProps<'div'> {
@@ -143,36 +144,84 @@ export interface TabsProps<V extends string> {
   defaultValue?: V;
   onValueChange?: (v: V) => void;
   variant?: 'underline' | 'pill';
+  /**
+   * horizontal (bawaan): deret tab di atas isi. vertical: daftar tab di kiri dan isi di kanan, cocok untuk sub tab
+   * yang banyak atau labelnya panjang (jenis riwayat, data master). Di wadah sempit (< 40rem) daftar vertikal
+   * otomatis menjadi pilihan tarik-turun supaya isi tetap selebar layar.
+   */
+  orientation?: 'horizontal' | 'vertical';
+  /** Label daftar tab untuk pembaca layar dan pilihan tarik-turun (mode vertikal di layar sempit). */
+  'aria-label'?: string;
   className?: string;
-  /** Konten tambahan di samping daftar tab (mis. tombol). */
+  /** Isi tambahan di area isi (di bawah panel tab). Di mode vertikal tampil di kolom kanan. */
   children?: React.ReactNode;
 }
-export function Tabs<V extends string>({ items, value, defaultValue, onValueChange, variant = 'underline', className }: TabsProps<V>) {
-  return (
-    <BaseTabs.Root className={cn('u-tabs', className)} value={value} defaultValue={defaultValue ?? items[0]?.value} onValueChange={(v) => onValueChange?.(v as V)}>
-      <BaseTabs.List className="u-tabs-list" data-variant={variant}>
-        {items.map((t) => (
-          <BaseTabs.Tab key={t.value} value={t.value} disabled={t.disabled} className="u-tab">
-            {t.icon}
-            {t.label}
-            {t.count != null && (
-              <span className="u-badge" data-variant="neutral">
-                {t.count}
-              </span>
-            )}
-          </BaseTabs.Tab>
-        ))}
-        <BaseTabs.Indicator className="u-tabs-indicator" />
-      </BaseTabs.List>
-      {items.map((t) =>
-        t.content !== undefined ? (
-          <BaseTabs.Panel key={t.value} value={t.value} className="u-tabs-panel">
-            {t.content}
-          </BaseTabs.Panel>
-        ) : null,
+export function Tabs<V extends string>({ items, value, defaultValue, onValueChange, variant = 'underline', orientation = 'horizontal', className, children, ...rest }: TabsProps<V>) {
+  const vertikal = orientation === 'vertical';
+  const [inner, setInner] = React.useState<V | undefined>(defaultValue ?? items[0]?.value);
+  const aktif = value ?? inner;
+  const ganti = (v: V) => {
+    setInner(v);
+    onValueChange?.(v);
+  };
+  const panel = items.map((t) =>
+    t.content !== undefined ? (
+      <BaseTabs.Panel key={t.value} value={t.value} className="u-tabs-panel">
+        {t.content}
+      </BaseTabs.Panel>
+    ) : null,
+  );
+  const daftar = (
+    <BaseTabs.List className="u-tabs-list" data-variant={vertikal ? 'side' : variant} aria-label={rest['aria-label']}>
+      {items.map((t) => (
+        <BaseTabs.Tab key={t.value} value={t.value} disabled={t.disabled} className="u-tab">
+          {t.icon}
+          <span className="u-tab-label">{t.label}</span>
+          {t.count != null && (
+            <span className="u-badge" data-variant="neutral">
+              {t.count}
+            </span>
+          )}
+        </BaseTabs.Tab>
+      ))}
+      <BaseTabs.Indicator className="u-tabs-indicator" />
+    </BaseTabs.List>
+  );
+  const root = (
+    <BaseTabs.Root
+      className={cn('u-tabs', className)}
+      data-orientation={orientation}
+      orientation={orientation}
+      value={aktif}
+      onValueChange={(v) => ganti(v as V)}
+    >
+      {vertikal ? (
+        <>
+          <div className="u-tabs-samping">
+            {daftar}
+            <Select<string>
+              className="u-tabs-pilih"
+              aria-label={rest['aria-label'] ?? 'Pilih bagian'}
+              options={items.map((t) => ({ value: t.value, label: t.label, disabled: t.disabled, icon: t.icon }))}
+              value={aktif ?? null}
+              onValueChange={(v) => v && ganti(v as V)}
+            />
+          </div>
+          <div className="u-tabs-isi">
+            {panel}
+            {children}
+          </div>
+        </>
+      ) : (
+        <>
+          {daftar}
+          {panel}
+          {children}
+        </>
       )}
     </BaseTabs.Root>
   );
+  return vertikal ? <div className="u-tabs-wadah">{root}</div> : root;
 }
 
 // ---------------------------------------------------------------- Accordion / Collapsible
