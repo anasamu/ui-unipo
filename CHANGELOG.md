@@ -1,6 +1,6 @@
 # Catatan perubahan
 
-## 1.30.0 (2026-11-16)
+## 1.31.0 (2026-11-16)
 
 - **Program studi dengan logo fakultas dan akreditasi** (`unipo-ui/siakad`, API `/v1/referensi/prodi` dan `/v1/referensi/fakultas`, tanpa perubahan API):
   - `LogoFakultas`: logo dari `images/fakultas/` SIAKAD (ubah alamat dengan `aturAsalBerkasSiakad`), monogram berwarna (FT, FIK) bila belum diunggah atau gagal dimuat.
