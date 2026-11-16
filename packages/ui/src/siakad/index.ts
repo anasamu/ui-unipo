@@ -50,3 +50,6 @@ export * from './gaji';
 export * from './keuangan';
 export * from './kebijakan';
 export * from './tugas-akhir';
+export * from './kasir';
+export * from './widget-unit';
+export * from './cari-dokumen';

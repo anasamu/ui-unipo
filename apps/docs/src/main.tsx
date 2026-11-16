@@ -28,6 +28,7 @@ import './mock/aturan';
 import './mock/qr-dokumen';
 import './mock/presensi';
 import './mock/keuangan';
+import './mock/kasir';
 import { ssoDemo } from './mock/aplikasi';
 import { App } from './App';
 

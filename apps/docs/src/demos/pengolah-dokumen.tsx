@@ -15,6 +15,7 @@ export const meta: DemoMeta = {
   demos: {
     Surat: 'Surat dinas: kop, data surat sebelum isi, tanda tangan + QR verifikasi di kaki, panel data',
     Templat: 'Templat dengan penanda data (chip) dan HTML keluaran',
+    Modern: 'Tampilan ringkas: bilah satu baris, panel navigasi judul, status simpan otomatis, mode fokus & layar penuh',
     Baca: 'Mode baca (tanpa pita)',
   },
   props: [
@@ -28,6 +29,9 @@ export const meta: DemoMeta = {
     ['panel / panelJudul', 'ReactNode', 'Panel samping (isian data surat), bisa ditutup.'],
     ['judul / aksi / status', 'ReactNode', 'Bilah atas (judul, tombol simpan) dan teks status di bilah bawah.'],
     ['baca', 'boolean', 'Tanpa pita, tidak bisa disunting.'],
+    ['tampilan', "'pita' | 'ringkas'", 'ringkas = bilah alat satu baris. Bawaan ringkas di perangkat mobile, pita di desktop.'],
+    ['navigasi', 'boolean', 'Panel navigasi judul (Judul 1–3) di kiri; klik untuk melompat.'],
+    ['simpan', "{ status: 'tersimpan' | 'menyimpan' | 'belum' | 'galat'; waktu? }", 'Penanda simpan otomatis di bilah atas dan bawah.'],
   ],
   notes: [
     'Pintasan: Ctrl+B/I/U, Ctrl+L/E/R/J (rata), Tab/Shift+Tab (inden), Ctrl+Enter (pemisah halaman), Ctrl+F (cari), Ctrl+Z/Y.',
@@ -158,6 +162,32 @@ export function Templat() {
       />
       <CodeBlock language="html" code={html || '(ketik sesuatu)'} />
     </div>
+  );
+}
+
+export function Modern() {
+  const [status, setStatus] = React.useState<'tersimpan' | 'menyimpan' | 'belum'>('tersimpan');
+  const [waktu, setWaktu] = React.useState<Date>(new Date());
+  const t = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  return (
+    <PengolahDokumen
+      tampilan="ringkas"
+      navigasi
+      tinggi={640}
+      judul="Pedoman akademik 2026"
+      nilaiAwal={
+        '<h1>Pedoman akademik</h1><p>Pedoman ini berlaku untuk seluruh program studi.</p><h2>Bab I Pendahuluan</h2><p>Latar belakang dan tujuan.</p><h2>Bab II Registrasi</h2><h3>Pengisian KRS</h3><p>KRS diisi setiap awal semester.</p><h3>Cuti akademik</h3><p>Cuti diajukan paling lambat dua minggu sebelum perkuliahan.</p><h2>Bab III Penilaian</h2><p>Nilai akhir terdiri atas tugas, UTS, dan UAS.</p>'
+      }
+      simpan={{ status, waktu }}
+      onChange={() => {
+        setStatus('belum');
+        clearTimeout(t.current);
+        t.current = setTimeout(() => {
+          setStatus('menyimpan');
+          setTimeout(() => (setStatus('tersimpan'), setWaktu(new Date())), 700);
+        }, 900);
+      }}
+    />
   );
 }
 

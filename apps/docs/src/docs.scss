@@ -741,3 +741,18 @@ body {
     padding-left: 2.25rem;
   }
 }
+
+// Pratinjau perangkat mobile: area contoh dipersempit seperti layar ponsel.
+html[data-docs-perangkat^='mobile'] .docs-preview-inner {
+  max-width: 420px;
+  margin-inline: auto;
+  border-inline: 1px dashed var(--u-border);
+  padding-inline: 0.75rem;
+}
+.docs-perangkat {
+  min-width: 11rem;
+  @media (max-width: 640px) {
+    min-width: 0;
+    max-width: 9.5rem;
+  }
+}

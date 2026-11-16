@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { Select as BaseSelect } from '@base-ui/react/select';
 import { Combobox as BaseCombobox } from '@base-ui/react/combobox';
-import { Check, ChevronsUpDown, Search, X } from 'lucide-react';
+import { Check, ChevronsUpDown, Plus, Search, X } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Spinner } from './actions';
 import type { ControlSize } from './forms';
@@ -117,6 +117,15 @@ export interface ComboboxProps<T> {
   'aria-label'?: string;
   /** Pesan galat pemuatan, mis. "Tidak bisa memuat data". */
   errorText?: string;
+  /**
+   * Tambah data baru bila yang dicari tidak ada. Tombol "Tambah …" muncul di kaki daftar (selalu, atau hanya saat
+   * hasil kosong bila `hanyaKosong`). Kembalikan butir baru (boleh Promise) agar langsung terpilih.
+   */
+  tambah?: {
+    onTambah: (kata: string) => T | null | void | Promise<T | null | void>;
+    label?: (kata: string) => React.ReactNode;
+    hanyaKosong?: boolean;
+  };
 }
 
 function useDebounced<T>(value: T, ms: number): T {
@@ -153,6 +162,7 @@ export function Combobox<T>({
   className,
   id,
   errorText = 'Data tidak bisa dimuat. Coba lagi.',
+  tambah,
   ...rest
 }: ComboboxProps<T>) {
   const initial = value !== undefined ? value : (defaultValue ?? null);
@@ -237,7 +247,15 @@ export function Combobox<T>({
         <BaseCombobox.Positioner className="u-popup-positioner" sideOffset={6}>
           <BaseCombobox.Popup className="u-listbox">
             <BaseCombobox.Status className="u-listbox-status">
-              {failed ? errorText : tooShort ? (hintText ?? `Ketik minimal ${minQueryLength} huruf.`) : loading && !listWithSelected.length ? <><Spinner size="sm" /> Mencari…</> : null}
+              {failed ? (
+                errorText
+              ) : tooShort ? (
+                (hintText ?? `Ketik minimal ${minQueryLength} huruf.`)
+              ) : loading && !listWithSelected.length ? (
+                <>
+                  <Spinner size="sm" /> Mencari…
+                </>
+              ) : null}
             </BaseCombobox.Status>
             {!loading && !failed && !tooShort && <BaseCombobox.Empty className="u-listbox-empty">{emptyText}</BaseCombobox.Empty>}
             <BaseCombobox.List>
@@ -250,6 +268,26 @@ export function Combobox<T>({
                 </BaseCombobox.Item>
               )}
             </BaseCombobox.List>
+            {tambah && !tooShort && (!tambah.hanyaKosong || (!loading && !listWithSelected.length)) && (
+              <button
+                type="button"
+                className="u-listbox-tambah"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={async () => {
+                  const kata = selected && query === itemToString(selected) ? '' : query.trim();
+                  setOpen(false);
+                  const baru = await tambah.onTambah(kata);
+                  if (baru) {
+                    setInner(baru);
+                    setRemote((r) => [baru, ...r]);
+                    onValueChange?.(baru);
+                  }
+                }}
+              >
+                <Plus aria-hidden />
+                <span>{tambah.label ? tambah.label(query.trim()) : query.trim() && !(selected && query === itemToString(selected)) ? <>Tambah “{query.trim()}”</> : 'Tambah data baru'}</span>
+              </button>
+            )}
           </BaseCombobox.Popup>
         </BaseCombobox.Positioner>
       </BaseCombobox.Portal>

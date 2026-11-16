@@ -35,6 +35,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { ProgressTenggat } from '../components/progres';
 import { cn } from '../lib/cn';
 import { Badge, Button, Skeleton, Tag } from '../components/actions';
 import { Alert, Card, DescriptionList, Empty, Progress, Tabs } from '../components/display';
@@ -1711,7 +1712,11 @@ export function KetentuanAturan({ aturan: a }: { aturan: Pick<Aturan, 'jenis' | 
             <span>Mulai</span>
             <strong>{formatWaktuAturan(p?.mulai)}</strong>
           </div>
-          <Progress value={pos.persen} size="sm" tone={pos.tahap === 'lewat' ? 'secondary' : pos.tahap === 'buka' ? 'success' : 'primary'} />
+          {p?.mulai && p.selesai ? (
+            <ProgressTenggat mulai={p.mulai.replace(' ', 'T')} selesai={p.selesai.length <= 10 ? p.selesai : p.selesai.replace(' ', 'T')} />
+          ) : (
+            <Progress value={pos.persen} size="sm" tone={pos.tahap === 'lewat' ? 'secondary' : pos.tahap === 'buka' ? 'success' : 'primary'} />
+          )}
           <div>
             <span>Selesai</span>
             <strong>{formatWaktuAturan(p?.selesai)}</strong>
@@ -2437,6 +2442,9 @@ export function SyaratSaya({ titik, tahunId, konteks, nim: nimProp, pegawaiId, j
             {pos.tahap === 'belum' && ` (${pos.sisaHari} hari lagi)`}
           </span>
         </div>
+      )}
+      {w?.mulai && w.selesai && pos?.tahap === 'buka' && (
+        <ProgressTenggat mulai={w.mulai.replace(' ', 'T')} selesai={w.selesai.length <= 10 ? w.selesai : w.selesai.replace(' ', 'T')} className="u-syarat-saya-tenggat" />
       )}
       {aturan.length === 0 ? (
         <p className="u-syarat-saya-kosong">Tidak ada syarat khusus untuk langkah ini.</p>
