@@ -1,0 +1,408 @@
+// ================================================================ Pengajuan LPPM (siakad/lppm-pengajuan.tsx)
+// Berkas proposal per jenis, linimasa proses, proposal KKN mahasiswa, verifikasi LP2M.
+
+.u-lppm {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.u-lppm-kartu {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  min-width: 0;
+}
+.u-lppm-periode {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.u-lppm-kepala {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+  align-items: flex-start;
+  > div:first-child {
+    min-width: 0;
+    flex: 1 1 18rem;
+  }
+}
+.u-lppm-baris-lencana {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  align-items: center;
+}
+.u-lppm-judul {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.u-lppm-judul-periode,
+.u-lppm-judul-kartu {
+  margin: 0 0 0.125rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.u-lppm-redup {
+  color: var(--u-muted-foreground);
+  font-size: 0.875rem;
+  margin: 0;
+  svg {
+    display: inline-block;
+    width: 0.875rem;
+    height: 0.875rem;
+    vertical-align: -2px;
+  }
+}
+.u-lppm-pre {
+  white-space: pre-line;
+}
+.u-lppm-aksi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+.u-lppm-bagian {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    svg {
+      width: 0.9375rem;
+      height: 0.9375rem;
+      color: var(--u-muted-foreground);
+    }
+  }
+}
+.u-lppm-form {
+  display: grid;
+  gap: 0.875rem;
+}
+.u-lppm-form-kisi {
+  display: grid;
+  gap: 0.875rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+.u-lppm-daftar {
+  margin: 0;
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+.u-lppm-catatan {
+  margin: 0.375rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--u-border-strong, var(--u-border));
+  border-radius: 0 var(--u-radius-sm, 6px) var(--u-radius-sm, 6px) 0;
+  background: var(--u-muted, transparent);
+  white-space: pre-line;
+  font-size: 0.875rem;
+}
+
+// Berkas per jenis
+.u-lppm-berkas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  > li {
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-md, 10px);
+    padding: 0.75rem;
+    display: grid;
+    gap: 0.5rem;
+    min-width: 0;
+    &[data-kurang] {
+      border-style: dashed;
+      border-color: var(--u-warning, #d97706);
+    }
+  }
+}
+.u-lppm-berkas-kepala {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+.u-lppm-berkas-ikon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: var(--u-muted);
+  color: var(--u-muted-foreground);
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  [data-lengkap] > .u-lppm-berkas-kepala > & {
+    background: color-mix(in srgb, var(--u-success, #16a34a) 14%, transparent);
+    color: var(--u-success, #16a34a);
+  }
+}
+.u-lppm-berkas-nama {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 0.125rem;
+  strong {
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+  span {
+    color: var(--u-muted-foreground);
+    font-size: 0.8125rem;
+  }
+}
+.u-lppm-wajib {
+  margin-left: 0.375rem;
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--u-danger, #dc2626) 12%, transparent);
+  color: var(--u-danger, #dc2626) !important;
+  font-size: 0.6875rem !important;
+  font-weight: 600;
+  vertical-align: 1px;
+}
+.u-lppm-unggah {
+  flex: none;
+  position: relative;
+  cursor: pointer;
+  input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+  }
+  input:disabled {
+    cursor: progress;
+  }
+  input:focus-visible + .u-button {
+    outline: 2px solid var(--u-ring, var(--u-primary));
+    outline-offset: 2px;
+  }
+}
+.u-lppm-berkas-file {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 2.75rem;
+  display: grid;
+  gap: 0.25rem;
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    > svg {
+      flex: none;
+      width: 1rem;
+      height: 1rem;
+      color: var(--u-muted-foreground);
+    }
+  }
+  .u-lppm-redup {
+    flex: none;
+    font-size: 0.8125rem;
+  }
+}
+.u-lppm-tautan {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--u-primary);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  text-align: left;
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Linimasa
+.u-lppm-riwayat {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  > li {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.5rem 1fr;
+    gap: 0.75rem;
+    padding-bottom: 0.875rem;
+    &:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: calc(0.75rem - 1px);
+      top: 1.625rem;
+      bottom: 0.125rem;
+      width: 2px;
+      background: var(--u-border);
+    }
+    > div {
+      display: grid;
+      gap: 0.125rem;
+      min-width: 0;
+      strong {
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+    }
+  }
+}
+.u-lppm-riwayat-ikon {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--u-muted-foreground);
+  svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+  [data-nada='selesai'] > & {
+    color: var(--u-success, #16a34a);
+  }
+  [data-nada='perlu'] > & {
+    color: var(--u-warning, #d97706);
+  }
+  [data-nada='ditolak'] > & {
+    color: var(--u-danger, #dc2626);
+  }
+}
+
+// Daftar ringkas proposal anggota kelompok
+.u-lppm-daftar-ringkas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.375rem;
+  li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-md, 10px);
+    > span:first-child {
+      display: grid;
+      min-width: 0;
+      strong {
+        font-size: 0.875rem;
+        font-weight: 600;
+        overflow-wrap: anywhere;
+      }
+    }
+  }
+}
+
+// Verifikasi LP2M
+.u-lppm-rekap {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+}
+.u-lppm-rekap-kotak {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md, 10px);
+  background: var(--u-card, var(--u-background));
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  span {
+    color: var(--u-muted-foreground);
+    font-size: 0.8125rem;
+  }
+  strong {
+    font-size: 1.375rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  &:hover {
+    border-color: var(--u-border-strong, var(--u-border));
+  }
+  &[data-aktif] {
+    border-color: var(--u-primary);
+    box-shadow: inset 0 0 0 1px var(--u-primary);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--u-ring, var(--u-primary));
+    outline-offset: 2px;
+  }
+}
+.u-lppm-saring {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  > * {
+    flex: 1 1 12rem;
+    min-width: 0;
+  }
+}
+.u-lppm-sel {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+  strong {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  span {
+    color: var(--u-muted-foreground);
+    font-size: 0.8125rem;
+  }
+}
+.u-lppm-putuskan {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg, 12px);
+  padding: 1rem;
+  background: var(--u-muted, transparent);
+  h4 {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+}
+
+@media (max-width: 640px) {
+  .u-lppm-kartu {
+    padding: 0.875rem;
+  }
+  .u-lppm-berkas-kepala {
+    flex-wrap: wrap;
+  }
+  .u-lppm-unggah {
+    margin-left: 2.75rem;
+  }
+  .u-lppm-berkas-file {
+    padding-left: 0;
+  }
+}
