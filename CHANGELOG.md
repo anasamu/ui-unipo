@@ -10,6 +10,16 @@
   - Sudah dipasang di: `PilihEntitas` jenis prodi dan fakultas (opsi baru `tampil` di `SumberEntitas`), `PilihProdi`, saringan prodi, `TabelMahasiswa`, `TabelDosen`, `TabelMataKuliah` (kolom dan kartu; `KartuData` punya slot `prodi`), profil mahasiswa/dosen, kepala modul profil, dasbor per prodi (BAAK, PMB, tracer), transparansi biaya (`KolomRekap` punya `tampil`), kartu dan tabel prodi PMB, pilihan prodi maba, tugas akhir, alur akademik, migrasi kurikulum.
 - **Nomor SK yang bisa dicari**: `PilihNomorSK` mencari SK yang sudah tercatat di arsip surat keluar (dan sumber aplikasi lewat `cari`) atau memakai nomor baru; `IsianSK` menambah tanggal dan berkas SK (cari di berkas sendiri atau unggah, termasuk kamera/galeri di HP). Lampiran SK di aturan dinamis memakai `PilihNomorSK`.
 
+## 1.30.0 (2026-11-16)
+
+- **Manajer berkas per unit + periode akademik** (`unipo-ui/siakad`, API `/v1/berkas` SIAKAD 2026-11): `ManajerBerkas` menerima `unit` (ruang bersama BAAK, BAUK, SDM, LPM, PMB, LPPM, Humas, fakultas/prodi) dan `bagi` (folder yang dibagikan ke saya, hanya lihat/unduh/salin). Pilihan periode akademik (`periode`, `periodeAwal`) menyaring berkas dan memberi periode pada unggahan; menu "Periode akademik…" mengganti periode berkas.
+- Salin, potong, tempel (Ctrl+C/X/V) berkas dan folder, juga antar ruang (unit ↔ berkas saya) lewat papan klip bersama; "Buat salinan", "Salin ke…".
+- Menu **Baru**: folder, dokumen teks, catatan Markdown, tabel CSV (dibuat langsung tanpa unggah), unggah berkas, dan unggah folder dari komputer.
+- **Berbagi**: `DialogBagikanBerkas` ke orang (username), unit, atau tautan publik dengan kata sandi dan tanggal kedaluwarsa; daftar penerima, salin tautan, cabut. `DaftarDibagikan` (dibagikan ke saya / yang saya bagikan).
+- **Enkripsi isi** (AES-256-GCM di server): gembok pada berkas terenkripsi, tombol "Enkripsi" untuk unggahan saat kebijakan opsional, lencana "Terenkripsi" saat wajib, menu enkripsi/buka enkripsi berkas lama. `KebijakanEnkripsiBerkas` mengatur kebijakan global (Pustikom), unit, dan pengguna; `LencanaEnkripsi`.
+- `DriveBerkas`: berkas saya, semua ruang unit pengguna, dan yang dibagikan dalam satu komponen (`unitTampil` untuk membatasi unit di aplikasi bagian).
+- Hook baru: `useUnitBerkas`, `usePeriodeBerkas`, `useKebijakanBerkas`, `useDibagikanBerkas`, `usePapanBerkas`; `useFolderBerkas(modul, { unit, bagi, periode })`, `useAksiBerkas(modul, unit)` dengan `salinBerkas`, `salinFolder`, `ubahPeriode`, `enkripsi`, dan `pindahBerkas(..., tujuan)` antar ruang. `unggahKeBerkas` menerima `unit`, `periode`, `enkripsi`.
+
 ## 1.29.1 (2026-11-16)
 
 - `SegmentedControl` dengan banyak pilihan bisa digeser ke samping di layar sempit; label tidak terpecah dan halaman tidak melebar (mis. Batas waktu input dan Antrean Neo Feeder di BAAK).
