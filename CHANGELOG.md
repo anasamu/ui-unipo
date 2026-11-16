@@ -1,6 +1,6 @@
 # Catatan perubahan
 
-## 1.36.0 (2026-11-16)
+## 1.37.0 (2026-11-16)
 
 - **Login dua langkah SSO** (`unipo-ui`, butuh SSO dengan `/api/akun/dua-langkah`, lihat docs/DUA_LANGKAH.md di repo sso_unipo):
   - `PengaturanDuaLangkah`: status, saran mengaktifkan, wizard 3 langkah (pilih metode, pindai QR atau masukkan kode kiriman, simpan kode cadangan), buat kode cadangan baru, ganti metode, minta kode lagi di semua perangkat, dan matikan. Tindakan sensitif meminta kode yang berlaku (atau kode cadangan); untuk metode email/WhatsApp ada tombol kirim kode.
