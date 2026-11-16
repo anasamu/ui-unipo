@@ -1,5 +1,13 @@
 # Catatan perubahan
 
+## 1.29.0 (2026-11-16)
+
+- **Persuratan per unit kerja** (`unipo-ui/siakad`, API `/v1/arsip`): `PersuratanUnit` memasang surat masuk dan keluar satu unit (BAAK, BAUK, SDM, LPM, PMB, atau unit arsip lain) dalam satu halaman, cukup dengan kode unit arsip: `<PersuratanUnit kodeUnit="baak" />`.
+  - Tab surat masuk, surat keluar, disposisi saya, nomor & templat (admin/sekretaris/arsiparis), dan petugas surat (admin/pimpinan). Tab dan tombol mengikuti `peran_saya` di unit; pengguna tanpa peran tetap melihat disposisi untuknya.
+  - Memakai komponen yang sudah ada: `CatatArsipSurat`, `EditorSuratKeluar` (layar penuh), `PengaturanPenomoran`, `KelolaTemplatSurat`.
+  - Bagian yang bisa dipakai terpisah: `DaftarSuratUnit`, `DetailSuratArsip` (tindakan sesuai `hak` surat: sunting, disposisi, ajukan, setujui/kembalikan, beri nomor, kirim, selesai, arsipkan, batalkan; buka file lewat SDK), `KotakDisposisiSaya` (proses, selesai dengan laporan, kembalikan), `KelolaPetugasSurat` (pimpinan penandatangan, admin, sekretaris, arsiparis, staf).
+  - Hook dan sumber: `useUnitArsipKode`, `useRingkasSuratSaya`, `bukaFileArsip`, `SUMBER_PENGGUNA_ARSIP` (pemilih akun lewat `/v1/arsip/pengguna`, cukup scope `arsip:read`).
+
 ## 1.28.2 (2026-11-16)
 
 - **Responsif di peramban ponsel**: `usePlatform().mobile` kini juga bernilai `true` di peramban web dengan layar ≤ 639 px (sebelumnya hanya di aplikasi native). Semua komponen yang punya tata letak ponsel ikut berpindah otomatis saat dibuka di HP: dialog jadi lembar bawah, `Kasir` dengan bilah bawah, `BukuKas` dan `JurnalUmum` sebagai daftar, `ProgressLangkah` ringkas, `SidebarModul`/`MenuAtas` sebagai laci, pengolah dokumen ringkas. Field baru `sempit` dan konstanta `MEDIA_SEMPIT`; berubah langsung saat layar diputar atau jendela diubah ukurannya.
