@@ -88,10 +88,7 @@ const UNTUK_NOMOR: Record<PenomoranArsip['untuk'], string> = {
 };
 const RESET_NOMOR: Record<PenomoranArsip['reset'], string> = { tahunan: 'Mulai dari 1 tiap tahun', bulanan: 'Mulai dari 1 tiap bulan', tidak: 'Tidak pernah diulang' };
 
-const GET =
-  <T,>(path: string, query?: Record<string, unknown>) =>
-  (s: ReturnType<typeof useSiakad>, signal: AbortSignal) =>
-    s.request<T>({ method: 'GET', path, query: query as never }, { signal });
+const GET = <T,>(path: string, query?: Record<string, unknown>) => (s: ReturnType<typeof useSiakad>, signal: AbortSignal) => s.request<T>({ method: 'GET', path, query: query as never }, { signal });
 
 /** Daftar klasifikasi arsip (kode klasifikasi surat) dari `/v1/arsip`, untuk pilihan di formulir surat. */
 export function useKlasifikasiArsip() {
@@ -103,10 +100,7 @@ export function useJenisNaskahArsip() {
 }
 /** Daftar lokasi simpan arsip fisik (gedung, lemari, rak) milik unit. */
 export function useLokasiArsip(unitId?: number | null) {
-  return useSiakadQuery<LokasiArsip[]>(['arsip/lokasi', unitId ?? null], GET('/v1/arsip/lokasi', { unit_id: unitId ?? undefined, aktif: 1, per_page: 300 }), {
-    enabled: Boolean(unitId),
-    staleTime: 300_000,
-  });
+  return useSiakadQuery<LokasiArsip[]>(['arsip/lokasi', unitId ?? null], GET('/v1/arsip/lokasi', { unit_id: unitId ?? undefined, aktif: 1, per_page: 300 }), { enabled: Boolean(unitId), staleTime: 300_000 });
 }
 
 /** Pratinjau nomor berikutnya (tanpa memakai nomor), atau contoh dari `format` yang sedang disunting. */
@@ -152,12 +146,7 @@ function PilihKlasifikasi({ nilai, ganti, id }: { nilai: number | null; ganti: (
 
 // ---------------------------------------------------------------- kop dari templat dokumen
 
-const isiToken = (t: string | undefined, data: Record<string, string>) =>
-  (t ?? '')
-    .replace(/\{([a-z_]+)\}/g, (_m, k: string) => data[k] ?? '')
-    .replace(/\s*·\s*(·\s*)+/g, ' · ')
-    .replace(/^\s*·\s*|\s*·\s*$/g, '')
-    .trim();
+const isiToken = (t: string | undefined, data: Record<string, string>) => (t ?? '').replace(/\{([a-z_]+)\}/g, (_m, k: string) => data[k] ?? '').replace(/\s*·\s*(·\s*)+/g, ' · ').replace(/^\s*·\s*|\s*·\s*$/g, '').trim();
 
 /** Kop surat dari templat dokumen yang berlaku (GET /v1/dokumen/templat/efektif), sama dengan kop di PDF. */
 export function KopTemplatDokumen({ efektif, logo }: { efektif: TemplatEfektif | undefined; logo?: string }) {
@@ -230,7 +219,9 @@ export function PengaturanPenomoran({ unitId, className }: PengaturanPenomoranPr
   return (
     <div className={['u-psr', className].filter(Boolean).join(' ')}>
       <div className="u-psr-alat">
-        {!unitId && bolehAtur.length > 1 && <Select<number> aria-label="Unit" value={uid} onValueChange={(v) => setPilih(v)} options={bolehAtur.map((u) => ({ value: u.id, label: u.nama }))} />}
+        {!unitId && bolehAtur.length > 1 && (
+          <Select<number> aria-label="Unit" value={uid} onValueChange={(v) => setPilih(v)} options={bolehAtur.map((u) => ({ value: u.id, label: u.nama }))} />
+        )}
         <Button onClick={() => setSunting('baru')} disabled={!uid}>
           <Plus />
           Tambah format
@@ -318,19 +309,7 @@ function KartuNomorBerlaku({ unitId, untuk }: { unitId: number | null; untuk: Pe
   );
 }
 
-function FormPenomoran({
-  unitId,
-  awal,
-  jenis,
-  tutup,
-  simpan,
-}: {
-  unitId: number;
-  awal: PenomoranArsip | null;
-  jenis: JenisNaskahArsip[];
-  tutup: () => void;
-  simpan: (body: Record<string, unknown>, id?: number) => Promise<void>;
-}) {
+function FormPenomoran({ unitId, awal, jenis, tutup, simpan }: { unitId: number; awal: PenomoranArsip | null; jenis: JenisNaskahArsip[]; tutup: () => void; simpan: (body: Record<string, unknown>, id?: number) => Promise<void> }) {
   const [untuk, setUntuk] = React.useState<PenomoranArsip['untuk']>(awal?.untuk ?? 'surat_keluar');
   const [jenisId, setJenisId] = React.useState<number | null>(awal?.jenis_id ?? null);
   const [format, setFormat] = React.useState(awal?.format ?? '{nomor:3}/{kode_unit}/{klasifikasi}/{bulan_romawi}/{tahun}');
@@ -389,19 +368,10 @@ function FormPenomoran({
       <div className="u-psr-form">
         <FormGrid>
           <Field label="Dipakai untuk">
-            <Select<PenomoranArsip['untuk']>
-              value={untuk}
-              onValueChange={(v) => v && setUntuk(v)}
-              options={(Object.keys(UNTUK_NOMOR) as PenomoranArsip['untuk'][]).map((u) => ({ value: u, label: UNTUK_NOMOR[u] }))}
-            />
+            <Select<PenomoranArsip['untuk']> value={untuk} onValueChange={(v) => v && setUntuk(v)} options={(Object.keys(UNTUK_NOMOR) as PenomoranArsip['untuk'][]).map((u) => ({ value: u, label: UNTUK_NOMOR[u] }))} />
           </Field>
           <Field label="Jenis naskah" optional description="Kosong = semua jenis.">
-            <Select<number | null>
-              value={jenisId}
-              onValueChange={setJenisId}
-              placeholder="Semua jenis"
-              options={[{ value: null, label: 'Semua jenis' }, ...jenis.map((j) => ({ value: j.id as number | null, label: `${j.nama} (${j.kode})` }))]}
-            />
+            <Select<number | null> value={jenisId} onValueChange={setJenisId} placeholder="Semua jenis" options={[{ value: null, label: 'Semua jenis' }, ...jenis.map((j) => ({ value: j.id as number | null, label: `${j.nama} (${j.kode})` }))]} />
           </Field>
         </FormGrid>
         <Field label="Format" error={galatFormat ?? undefined} description="Klik penanda untuk menyisipkan di posisi kursor.">
@@ -421,11 +391,7 @@ function FormPenomoran({
         </div>
         <FormGrid>
           <Field label="Nomor urut">
-            <Select<PenomoranArsip['reset']>
-              value={reset}
-              onValueChange={(v) => v && setReset(v)}
-              options={(Object.keys(RESET_NOMOR) as PenomoranArsip['reset'][]).map((r) => ({ value: r, label: RESET_NOMOR[r] }))}
-            />
+            <Select<PenomoranArsip['reset']> value={reset} onValueChange={(v) => v && setReset(v)} options={(Object.keys(RESET_NOMOR) as PenomoranArsip['reset'][]).map((r) => ({ value: r, label: RESET_NOMOR[r] }))} />
           </Field>
           <Field label="Aktif" orientation="horizontal">
             <Switch checked={aktif} onCheckedChange={setAktif} />
@@ -598,10 +564,7 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, tin
     setGalat(null);
     try {
       // Penanda diisi di browser persis seperti server; penanda tanpa nilai tetap {{nama}}.
-      const isiJadi = isiTemplat(isi, d.data, {
-        unit: unitAktif ? { nama: unitAktif.nama, singkatan: unitAktif.singkatan } : null,
-        surat: { tanggal_surat: d.tanggal, perihal: d.perihal, lampiran: d.lampiran },
-      });
+      const isiJadi = isiTemplat(isi, d.data, { unit: unitAktif ? { nama: unitAktif.nama, singkatan: unitAktif.singkatan } : null, surat: { tanggal_surat: d.tanggal, perihal: d.perihal, lampiran: d.lampiran } });
       const body = {
         jenis_id: d.jenisId,
         klasifikasi_id: d.klasifikasiId,
@@ -641,14 +604,7 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, tin
         <tbody>
           <tr>
             <td style={{ width: '15%' }}>Nomor</td>
-            <td>
-              :{' '}
-              {ada.data?.nomor_surat ?? (
-                <span className="u-psr-nomor-nanti" title="Nomor diberikan saat surat disetujui">
-                  {nomor.data?.berikutnya ?? '…'}
-                </span>
-              )}
-            </td>
+            <td>: {ada.data?.nomor_surat ?? <span className="u-psr-nomor-nanti" title="Nomor diberikan saat surat disetujui">{nomor.data?.berikutnya ?? '…'}</span>}</td>
             <td className="ub-rata-kanan" style={{ width: '32%' }}>
               {tanggalSurat(d.tanggal)}
             </td>
@@ -746,12 +702,7 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, tin
         </Field>
       </FormGrid>
       <Field label="Jenis naskah" optional description="Menentukan kode jenis di nomor dan klasifikasi bawaan.">
-        <Select<number | null>
-          value={d.jenisId}
-          placeholder="Pilih jenis"
-          onValueChange={(v) => ubah({ jenisId: v })}
-          options={[{ value: null, label: 'Tanpa jenis' }, ...(jenis.data ?? []).map((j) => ({ value: j.id as number | null, label: `${j.nama} (${j.kode})` }))]}
-        />
+        <Select<number | null> value={d.jenisId} placeholder="Pilih jenis" onValueChange={(v) => ubah({ jenisId: v })} options={[{ value: null, label: 'Tanpa jenis' }, ...(jenis.data ?? []).map((j) => ({ value: j.id as number | null, label: `${j.nama} (${j.kode})` }))]} />
       </Field>
       <Field label="Klasifikasi arsip" optional>
         <PilihKlasifikasi nilai={d.klasifikasiId} ganti={(v) => ubah({ klasifikasiId: v })} />
@@ -814,7 +765,7 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, tin
             Simpan konsep
           </Button>
         }
-        status={simpan === 'ok' ? 'Konsep tersimpan' : (galatIsian ?? (kosong ? 'Tulis isi surat di kertas' : 'Belum disimpan'))}
+        status={simpan === 'ok' ? 'Konsep tersimpan' : galatIsian ?? (kosong ? 'Tulis isi surat di kertas' : 'Belum disimpan')}
         panel={panel}
         panelJudul="Data surat"
         placeholder="Tulis isi surat di sini, atau pilih templat di panel kanan…"
@@ -944,10 +895,7 @@ export function CatatArsipSurat({ unitId, arahAwal = 'masuk', onSelesai, onBatal
             });
       for (const [i, berkas] of file.entries()) {
         setProses(`Mengunggah file ${i + 1} dari ${file.length}…`);
-        await siakad.request(
-          { method: 'POST', path: `/v1/arsip/surat/${encodeURIComponent(r.data.uuid)}/file`, body: { berkas, peran: i === 0 ? 'utama' : 'lampiran' }, multipart: true },
-          { timeout: 300_000 },
-        );
+        await siakad.request({ method: 'POST', path: `/v1/arsip/surat/${encodeURIComponent(r.data.uuid)}/file`, body: { berkas, peran: i === 0 ? 'utama' : 'lampiran' }, multipart: true }, { timeout: 300_000 });
       }
       invalidateSiakad('arsip/surat');
       onSelesai?.(r.data);
@@ -1045,12 +993,7 @@ export function CatatArsipSurat({ unitId, arahAwal = 'masuk', onSelesai, onBatal
       </Field>
       <FormGrid>
         <Field label="Jenis naskah" optional>
-          <Select<number | null>
-            value={f.jenisId}
-            placeholder="Pilih jenis"
-            onValueChange={(v) => ubah({ jenisId: v })}
-            options={[{ value: null, label: 'Tanpa jenis' }, ...(jenis.data ?? []).map((j) => ({ value: j.id as number | null, label: `${j.nama} (${j.kode})` }))]}
-          />
+          <Select<number | null> value={f.jenisId} placeholder="Pilih jenis" onValueChange={(v) => ubah({ jenisId: v })} options={[{ value: null, label: 'Tanpa jenis' }, ...(jenis.data ?? []).map((j) => ({ value: j.id as number | null, label: `${j.nama} (${j.kode})` }))]} />
         </Field>
         <Field label="Klasifikasi arsip" optional>
           <PilihKlasifikasi nilai={f.klasifikasiId} ganti={(v) => ubah({ klasifikasiId: v })} />
@@ -1080,12 +1023,7 @@ export function CatatArsipSurat({ unitId, arahAwal = 'masuk', onSelesai, onBatal
         </Field>
       </FormGrid>
       <Field label="Lokasi simpan fisik" optional description={lokasi.data?.length ? undefined : 'Belum ada lokasi; tambahkan di pengaturan arsip unit.'}>
-        <Select<number | null>
-          value={f.lokasiId}
-          placeholder="Tidak disimpan fisik"
-          onValueChange={(v) => ubah({ lokasiId: v })}
-          options={[{ value: null, label: 'Tidak disimpan fisik' }, ...(lokasi.data ?? []).map((l) => ({ value: l.id as number | null, label: `${l.kode} · ${l.nama}` }))]}
-        />
+        <Select<number | null> value={f.lokasiId} placeholder="Tidak disimpan fisik" onValueChange={(v) => ubah({ lokasiId: v })} options={[{ value: null, label: 'Tidak disimpan fisik' }, ...(lokasi.data ?? []).map((l) => ({ value: l.id as number | null, label: `${l.kode} · ${l.nama}` }))]} />
       </Field>
       {galat && <Alert variant="danger">{galat}</Alert>}
       <div className="u-psr-catat-aksi">

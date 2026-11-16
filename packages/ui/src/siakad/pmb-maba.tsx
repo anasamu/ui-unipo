@@ -33,6 +33,7 @@ import {
   Plus,
   Printer,
   QrCode,
+
   RefreshCw,
   ShieldAlert,
   ShieldCheck,
@@ -55,7 +56,18 @@ import { Cluster, Grid, PageHeader, Split, Stack, Text } from '../components/tat
 import { idPerangkatCbt, LembarUjian } from './cbt';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { WizardPendaftaranPmb } from './pmb';
-import { TautanPmb, hurufJudul, keadaanGelombang, labelTahunPmb, rentangPmb, tanggalPmb, urutkanGelombang, useGelombangPmb, usePmb, type SyaratBerkasPmb } from './pmb-publik';
+import {
+  TautanPmb,
+  hurufJudul,
+  keadaanGelombang,
+  labelTahunPmb,
+  rentangPmb,
+  tanggalPmb,
+  urutkanGelombang,
+  useGelombangPmb,
+  usePmb,
+  type SyaratBerkasPmb,
+} from './pmb-publik';
 
 /**
  * Area pendaftar PMB (`/v1/pmb/saya/*`): dasbor tahapan, pilih gelombang, formulir, berkas, tagihan dan pembayaran
@@ -245,20 +257,18 @@ export const LANGKAH_PMB = [
 /** Urutan (0-based) tahap pendaftaran PMB dari kodenya, untuk progres langkah calon mahasiswa; 0 bila tidak dikenal. */
 export function indeksTahapPmb(kode: string): number {
   return (
-    (
-      {
-        mengisi_formulir: 0,
-        perlu_perbaikan: 0,
-        menunggu_pembayaran: 1,
-        menunggu_verifikasi: 2,
-        seleksi: 3,
-        menunggu_pengumuman: 4,
-        tidak_lulus: 4,
-        lulus_seleksi: 5,
-        diterima: 6,
-      } as Record<string, number>
-    )[kode] ?? 0
-  );
+    {
+      mengisi_formulir: 0,
+      perlu_perbaikan: 0,
+      menunggu_pembayaran: 1,
+      menunggu_verifikasi: 2,
+      seleksi: 3,
+      menunggu_pengumuman: 4,
+      tidak_lulus: 4,
+      lulus_seleksi: 5,
+      diterima: 6,
+    } as Record<string, number>
+  )[kode] ?? 0;
 }
 const LABEL_FIELD: Record<string, string> = {
   'pribadi.nama': 'Nama lengkap',
@@ -302,22 +312,17 @@ function useBerkala(refetch: () => void, ms: number, aktif = true) {
   }, [ms, aktif]);
 }
 export const useAkunPendaftarPmb = () => useSiakadQuery<AkunPendaftarPmb>(['pmb-saya', 'akun'], (s, signal) => s.pmb.getSaya({}, { signal }) as never);
-export const useDaftarPendaftaranPmb = () =>
-  useSiakadQuery<PendaftaranRingkasPmb[]>(['pmb-saya', 'pendaftaran'], (s, signal) => s.pmb.getSayaPendaftaran({}, { signal }) as never, { staleTime: 15_000 });
+export const useDaftarPendaftaranPmb = () => useSiakadQuery<PendaftaranRingkasPmb[]>(['pmb-saya', 'pendaftaran'], (s, signal) => s.pmb.getSayaPendaftaran({}, { signal }) as never, { staleTime: 15_000 });
 export const usePendaftaranPmb = (id?: string | null) =>
   useSiakadQuery<PendaftaranPmb>(['pmb-saya', 'pendaftaran', id], (s, signal) => s.pmb.getSayaPendaftaranById(id!, {}, { signal }) as never, { enabled: !!id, staleTime: 15_000 });
 export const useTagihanPmb = (id?: string | null) =>
   useSiakadQuery<TagihanPmb[]>(['pmb-saya', 'tagihan', id], (s, signal) => s.pmb.getSayaPendaftaranByIdTagihan(id!, {}, { signal }) as never, { enabled: !!id, staleTime: 10_000 });
 export const useMetodeBayarPmb = () => useSiakadQuery<MetodeBayarPmb[]>(['pmb-saya', 'metode-bayar'], (s, signal) => s.pmb.getSayaPembayaranMetode({}, { signal }) as never, { staleTime: 300_000 });
 export function useTransaksiPmb(id: string, tagihan: number, aktif: boolean) {
-  const q = useSiakadQuery<TransaksiPmb | null>(
-    ['pmb-saya', 'transaksi', id, tagihan],
-    (s, signal) => s.pmb.getSayaPendaftaranByIdTagihanByTagihanBayar(id, tagihan, { segarkan: 1 } as never, { signal }) as never,
-    {
-      enabled: aktif,
-      staleTime: 0,
-    },
-  );
+  const q = useSiakadQuery<TransaksiPmb | null>(['pmb-saya', 'transaksi', id, tagihan], (s, signal) => s.pmb.getSayaPendaftaranByIdTagihanByTagihanBayar(id, tagihan, { segarkan: 1 } as never, { signal }) as never, {
+    enabled: aktif,
+    staleTime: 0,
+  });
   useBerkala(q.refetch, 20_000, aktif && !!q.data);
   return q;
 }
@@ -368,10 +373,7 @@ export function PendaftaranAktifPmbProvider({ children }: { children: React.Reac
   });
   const aktif = React.useMemo(() => {
     if (!daftar.length) return null;
-    return (
-      daftar.find((x) => x.id === dipilih) ??
-      [...daftar].sort((a, b) => Number(a.status === 'mengundurkan_diri') - Number(b.status === 'mengundurkan_diri') || b.dibuat_at.localeCompare(a.dibuat_at))[0]
-    );
+    return daftar.find((x) => x.id === dipilih) ?? [...daftar].sort((a, b) => Number(a.status === 'mengundurkan_diri') - Number(b.status === 'mengundurkan_diri') || b.dibuat_at.localeCompare(a.dibuat_at))[0];
   }, [daftar, dipilih]);
   const d = usePendaftaranPmb(aktif?.id);
   const pilih = React.useCallback((id: string) => {
@@ -631,14 +633,7 @@ export function RingkasTagihanPmb({ tagihan }: { tagihan: TagihanPmb[] }) {
   const aktif = tagihan.filter((t) => t.status !== 'batal');
   return (
     <Card>
-      <CardHeader
-        title="Tagihan"
-        action={
-          <TautanPmb href={rute.pembayaran} className="u-pmb-tautan">
-            Semua
-          </TautanPmb>
-        }
-      />
+      <CardHeader title="Tagihan" action={<TautanPmb href={rute.pembayaran} className="u-pmb-tautan">Semua</TautanPmb>} />
       <CardContent>
         {aktif.length === 0 ? (
           <Empty icon={<CreditCard aria-hidden />} title="Belum ada tagihan" description="Tagihan biaya pendaftaran muncul setelah formulir diajukan." />
@@ -668,14 +663,7 @@ export function JadwalTesPendaftarPmb({ jadwal }: { jadwal: JadwalTesPmb[] }) {
   const { rute } = usePmb();
   return (
     <Card>
-      <CardHeader
-        title="Jadwal tes"
-        action={
-          <TautanPmb href={rute.ujian} className="u-pmb-tautan">
-            Detail
-          </TautanPmb>
-        }
-      />
+      <CardHeader title="Jadwal tes" action={<TautanPmb href={rute.ujian} className="u-pmb-tautan">Detail</TautanPmb>} />
       <CardContent>
         {jadwal.length === 0 ? (
           <Empty icon={<CalendarClock aria-hidden />} title="Belum dijadwalkan" description="Panitia akan menempatkan Anda di sesi tes setelah pembayaran dan verifikasi." />
@@ -870,21 +858,7 @@ export function PilihGelombangPendaftarPmb({ awal, onDibuat, banner }: { awal?: 
 
 // ================================================================ Formulir
 /** Halaman formulir untuk pendaftaran aktif (wizard lengkap). */
-export function FormulirPendaftarPmb({
-  langkah,
-  onLangkahChange,
-  kodeReferal,
-  kunci,
-  kontak,
-  banner,
-}: {
-  langkah?: string | null;
-  onLangkahChange?: (id: string) => void;
-  kodeReferal?: string | null;
-  kunci?: React.ReactNode;
-  kontak?: React.ReactNode;
-  banner?: React.ReactNode;
-}) {
+export function FormulirPendaftarPmb({ langkah, onLangkahChange, kodeReferal, kunci, kontak, banner }: { langkah?: string | null; onLangkahChange?: (id: string) => void; kodeReferal?: string | null; kunci?: React.ReactNode; kontak?: React.ReactNode; banner?: React.ReactNode }) {
   const { aktif, memuatDaftar } = usePendaftaranAktifPmb();
   if (memuatDaftar) return <Memuat tinggi={420} />;
   if (!aktif) return <MulaiPendaftaranPmb nama="" />;
@@ -892,16 +866,7 @@ export function FormulirPendaftarPmb({
     <Stack gap={5}>
       {banner}
       <PageHeader title="Formulir pendaftaran" description={`${aktif.gelombang.nama}${aktif.no_pmb ? ` · No. ${aktif.no_pmb}` : ''}`} />
-      <WizardPendaftaranPmb
-        key={aktif.id}
-        id={aktif.id}
-        langkah={langkah}
-        onLangkahChange={onLangkahChange}
-        kodeReferal={kodeReferal}
-        kunci={kunci}
-        kontak={kontak}
-        onDiajukan={() => segarkanPendaftarPmb()}
-      />
+      <WizardPendaftaranPmb key={aktif.id} id={aktif.id} langkah={langkah} onLangkahChange={onLangkahChange} kodeReferal={kodeReferal} kunci={kunci} kontak={kontak} onDiajukan={() => segarkanPendaftarPmb()} />
     </Stack>
   );
 }
@@ -958,14 +923,7 @@ export function KartuSyaratBerkasPmb({ pendaftaranId, syarat, berkas, kunci }: {
           <Cluster justify="between" align="start" wrap={false}>
             <div>
               <Text weight="semibold">
-                {syarat.nama}{' '}
-                {syarat.wajib ? (
-                  <span className="u-pmb-wajib-tanda">*</span>
-                ) : (
-                  <Text as="span" size="xs" tone="muted">
-                    (opsional)
-                  </Text>
-                )}
+                {syarat.nama} {syarat.wajib ? <span className="u-pmb-wajib-tanda">*</span> : <Text as="span" size="xs" tone="muted">(opsional)</Text>}
               </Text>
               <Text size="xs" tone="muted">
                 {ekstensi.join(', ').toUpperCase()} · maks. {formatBytes(syarat.maks_kb * 1024)}
@@ -1081,19 +1039,8 @@ function PilihMetodeBayar({ pendaftaranId, tagihan, metode, onSelesai }: { penda
     const out: OpsiBayar[] = [];
     for (const p of [...metode].sort((a, b) => Number(b.utama) - Number(a.utama)))
       for (const m of p.metode) {
-        if (m.metode === 'va')
-          m.kanal.forEach((k) =>
-            out.push({ kunci: `${p.penyedia}|va|${k}`, penyedia: p.penyedia, metode: 'va', kanal: k, label: `Virtual account ${k.toUpperCase()}`, sub: 'Transfer dari m-banking / ATM' }),
-          );
-        else
-          out.push({
-            kunci: `${p.penyedia}|${m.metode}`,
-            penyedia: p.penyedia,
-            metode: m.metode,
-            kanal: null,
-            label: m.metode === 'qris' ? 'QRIS' : 'Metode lain',
-            sub: m.keterangan ?? (m.metode === 'qris' ? 'Semua bank & e-wallet' : `Kartu, e-wallet, gerai (${p.nama})`),
-          });
+        if (m.metode === 'va') m.kanal.forEach((k) => out.push({ kunci: `${p.penyedia}|va|${k}`, penyedia: p.penyedia, metode: 'va', kanal: k, label: `Virtual account ${k.toUpperCase()}`, sub: 'Transfer dari m-banking / ATM' }));
+        else out.push({ kunci: `${p.penyedia}|${m.metode}`, penyedia: p.penyedia, metode: m.metode, kanal: null, label: m.metode === 'qris' ? 'QRIS' : 'Metode lain', sub: m.keterangan ?? (m.metode === 'qris' ? 'Semua bank & e-wallet' : `Kartu, e-wallet, gerai (${p.nama})`) });
       }
     return out.filter((o, i, a) => a.findIndex((x) => x.metode === o.metode && x.kanal === o.kanal) === i);
   }, [metode]);
@@ -1103,12 +1050,7 @@ function PilihMetodeBayar({ pendaftaranId, tagihan, metode, onSelesai }: { penda
     setProses(true);
     setGalat(null);
     try {
-      await siakad.pmb.postSayaPendaftaranByIdTagihanByTagihanBayar(pendaftaranId, tagihan, {
-        penyedia: o.penyedia,
-        metode: o.metode,
-        kanal: o.kanal ?? undefined,
-        url_kembali: `${window.location.origin}${rute.pembayaran}`,
-      } as never);
+      await siakad.pmb.postSayaPendaftaranByIdTagihanByTagihanBayar(pendaftaranId, tagihan, { penyedia: o.penyedia, metode: o.metode, kanal: o.kanal ?? undefined, url_kembali: `${window.location.origin}${rute.pembayaran}` } as never);
       onSelesai();
     } catch (e) {
       setGalat(pesanGalat(e));
@@ -1228,19 +1170,7 @@ function TransaksiAktif({ pendaftaranId, tagihan, trx, onSegarkan }: { pendaftar
   );
 }
 
-function UnggahBukti({
-  open,
-  onOpenChange,
-  pendaftaranId,
-  tagihan,
-  onSelesai,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  pendaftaranId: string;
-  tagihan: TagihanPmb;
-  onSelesai: () => void;
-}) {
+function UnggahBukti({ open, onOpenChange, pendaftaranId, tagihan, onSelesai }: { open: boolean; onOpenChange: (o: boolean) => void; pendaftaranId: string; tagihan: TagihanPmb; onSelesai: () => void }) {
   const siakad = useSiakad();
   const [berkas, setBerkas] = React.useState<File | null>(null);
   const [jumlah, setJumlah] = React.useState(String(tagihan.total));
@@ -1331,12 +1261,7 @@ export function KartuTagihanPmb({ pendaftaranId, t, metode }: { pendaftaranId: s
         <Stack gap={5}>
           {t.status === 'lunas' && <Alert variant="success">Lunas pada {waktu(t.lunas_at)}. Terima kasih.</Alert>}
           {t.status === 'menunggu_konfirmasi' && <Alert variant="info">Bukti pembayaran sudah dikirim dan sedang diperiksa petugas keuangan (biasanya 1×24 jam kerja).</Alert>}
-          {online &&
-            (trx.data ? (
-              <TransaksiAktif pendaftaranId={pendaftaranId} tagihan={t.id} trx={trx.data} onSegarkan={segarkan} />
-            ) : (
-              !trx.loading && <PilihMetodeBayar pendaftaranId={pendaftaranId} tagihan={t.id} metode={metode} onSelesai={segarkan} />
-            ))}
+          {online && (trx.data ? <TransaksiAktif pendaftaranId={pendaftaranId} tagihan={t.id} trx={trx.data} onSegarkan={segarkan} /> : !trx.loading && <PilihMetodeBayar pendaftaranId={pendaftaranId} tagihan={t.id} metode={metode} onSelesai={segarkan} />)}
           {bisaBayar && !trx.data && (
             <Stack gap={2} className={online ? 'u-pmb-garis-atas' : undefined}>
               <Text weight="medium" size="sm">
@@ -1405,20 +1330,14 @@ export function PembayaranPendaftarPmb() {
       ) : tagihan.error ? (
         <Galat e={tagihan.error} ulang={tagihan.refetch} />
       ) : !data.length ? (
-        <Empty
-          bordered
-          icon={<CreditCard aria-hidden />}
-          title="Belum ada tagihan"
-          description={aktif.no_pmb ? 'Tidak ada tagihan untuk pendaftaran ini.' : 'Tagihan biaya pendaftaran dibuat setelah formulir diajukan.'}
-        />
+        <Empty bordered icon={<CreditCard aria-hidden />} title="Belum ada tagihan" description={aktif.no_pmb ? 'Tidak ada tagihan untuk pendaftaran ini.' : 'Tagihan biaya pendaftaran dibuat setelah formulir diajukan.'} />
       ) : (
         <>
           {data.map((t) => (
             <KartuTagihanPmb key={t.id} pendaftaranId={aktif.id} t={t} metode={metode.data ?? []} />
           ))}
           <Text size="xs" tone="muted">
-            <ShieldCheck aria-hidden className="u-pmb-ikon-teks" /> Pembayaran hanya ke nomor VA/QRIS yang tampil di halaman ini atau rekening resmi kampus. Panitia tidak pernah meminta transfer ke
-            rekening pribadi.
+            <ShieldCheck aria-hidden className="u-pmb-ikon-teks" /> Pembayaran hanya ke nomor VA/QRIS yang tampil di halaman ini atau rekening resmi kampus. Panitia tidak pernah meminta transfer ke rekening pribadi.
           </Text>
         </>
       )}
@@ -1894,17 +1813,7 @@ export function KekuatanPasswordPmb({ password }: { password: string }) {
 }
 
 /** Profil akun pendaftar, ganti password, keluar. */
-export function AkunPendaftarPmbHalaman({
-  onKeluar,
-  onPasswordDiganti,
-  onAkunBerubah,
-  banner,
-}: {
-  onKeluar: () => void;
-  onPasswordDiganti?: () => void;
-  onAkunBerubah?: (a: AkunPendaftarPmb) => void;
-  banner?: React.ReactNode;
-}) {
+export function AkunPendaftarPmbHalaman({ onKeluar, onPasswordDiganti, onAkunBerubah, banner }: { onKeluar: () => void; onPasswordDiganti?: () => void; onAkunBerubah?: (a: AkunPendaftarPmb) => void; banner?: React.ReactNode }) {
   const siakad = useSiakad();
   const toast = useToast();
   const q = useAkunPendaftarPmb();
@@ -1977,15 +1886,7 @@ export function AkunPendaftarPmbHalaman({
         </CardContent>
       </Card>
       <Card>
-        <CardHeader
-          title="Profil"
-          description={
-            <>
-              <Mail aria-hidden className="u-pmb-ikon-teks" />
-              Email tidak bisa diubah. Hubungi panitia bila perlu mengganti email.
-            </>
-          }
-        />
+        <CardHeader title="Profil" description={<><Mail aria-hidden className="u-pmb-ikon-teks" />Email tidak bisa diubah. Hubungi panitia bila perlu mengganti email.</>} />
         <CardContent>
           <Stack gap={4}>
             <Grid cols={2} gap={4}>
@@ -2033,3 +1934,4 @@ export function AkunPendaftarPmbHalaman({
     </Stack>
   );
 }
+

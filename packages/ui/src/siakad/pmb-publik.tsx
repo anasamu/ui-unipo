@@ -330,7 +330,10 @@ const JENJANG: Record<string, string> = { A: 'S3', B: 'S2', C: 'S1', D: 'D4', E:
 export const labelJenjang = (j?: string | null) => (j ? (JENJANG[j] ?? j) : 'S1');
 const KATA_KECIL = new Set(['dan', 'di', 'ke', 'dari', 'atau', 'untuk', 'pada', 'dengan', 'yang']);
 /** "FAKULTAS ILMU SOSIAL DAN ILMU POLITIK" -> "Fakultas Ilmu Sosial dan Ilmu Politik". */
-export const hurufJudul = (s: string) => s.toLowerCase().replace(/[\p{L}\p{N}]+/gu, (w, i: number) => (i > 0 && KATA_KECIL.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)));
+export const hurufJudul = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[\p{L}\p{N}]+/gu, (w, i: number) => (i > 0 && KATA_KECIL.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)));
 const rupiahAtauGratis = (n?: number | null) => (n == null ? '-' : n === 0 ? 'Gratis' : formatRupiah(n));
 const ya = (v: unknown) => v === true || v === 1 || v === '1';
 

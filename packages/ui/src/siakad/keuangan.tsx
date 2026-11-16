@@ -97,35 +97,8 @@ export interface KasUnitData {
   masuk: number;
   keluar: number;
   universitas: { saldo: number; masuk: number; keluar: number; jumlah_rekening: number };
-  rekening: Array<{
-    id: number;
-    kode: string;
-    nama: string;
-    jenis: string;
-    bank: string | null;
-    nomor_rekening: string | null;
-    unit_id: number | null;
-    unit: string | null;
-    utama: boolean;
-    aktif: boolean;
-    saldo: number;
-    masuk: number;
-    keluar: number;
-  }>;
-  unit: Array<{
-    id: number;
-    induk_id: number | null;
-    kode: string;
-    nama: string;
-    jenis: string;
-    kode_prodi: string | null;
-    kode_fakultas: string | null;
-    saldo_sendiri: number;
-    saldo: number;
-    masuk: number;
-    keluar: number;
-    jumlah_rekening: number;
-  }>;
+  rekening: Array<{ id: number; kode: string; nama: string; jenis: string; bank: string | null; nomor_rekening: string | null; unit_id: number | null; unit: string | null; utama: boolean; aktif: boolean; saldo: number; masuk: number; keluar: number }>;
+  unit: Array<{ id: number; induk_id: number | null; kode: string; nama: string; jenis: string; kode_prodi: string | null; kode_fakultas: string | null; saldo_sendiri: number; saldo: number; masuk: number; keluar: number; jumlah_rekening: number }>;
 }
 export interface BarisTransparansi {
   kode_prodi: string;
@@ -339,10 +312,7 @@ export function LaporanKeuangan({ jenis: jenisAwal = 'posisi', pilihJenis = true
       const d = ns.data;
       return {
         kolom: [{ label: 'Saldo awal' }, { label: 'Debit' }, { label: 'Kredit' }, { label: 'Saldo debit' }, { label: 'Saldo kredit' }],
-        baris: [
-          ...d.baris.map((a) => ({ label: a.nama, kode: a.kode, nilai: [a.saldo_awal, a.debit, a.kredit, a.saldo_debit, a.saldo_kredit], onClick: klik(a.id) })),
-          { jenis: 'total', label: 'Jumlah', nilai: [null, null, null, d.total_debit, d.total_kredit] },
-        ],
+        baris: [...d.baris.map((a) => ({ label: a.nama, kode: a.kode, nilai: [a.saldo_awal, a.debit, a.kredit, a.saldo_debit, a.saldo_kredit], onClick: klik(a.id) })), { jenis: 'total', label: 'Jumlah', nilai: [null, null, null, d.total_debit, d.total_kredit] }],
         lencana: <SeimbangBadge ok={d.seimbang} />,
       };
     }
@@ -471,14 +441,7 @@ export function KasUnit({ unit_id, onPilihUnit, onPilihRekening, className }: Ka
             ]}
           />
           {lihat === 'unit' ? (
-            <TabelRekap
-              kolom={kolomUnit}
-              baris={unit}
-              kunci={(u) => String(u.id)}
-              total={false}
-              onPilih={onPilihUnit ? (u) => onPilihUnit(u.id) : undefined}
-              kosong="Belum ada rekening kas per unit."
-            />
+            <TabelRekap kolom={kolomUnit} baris={unit} kunci={(u) => String(u.id)} total={false} onPilih={onPilihUnit ? (u) => onPilihUnit(u.id) : undefined} kosong="Belum ada rekening kas per unit." />
           ) : (
             <TabelRekap kolom={kolomRek} baris={d.rekening} kunci={(x) => String(x.id)} onPilih={onPilihRekening ? (x) => onPilihRekening(x.id) : undefined} />
           )}
@@ -510,8 +473,7 @@ export function TransparansiBiaya({ tahun_id, kode_fakultas, kode_prodi, semeste
   const [lihat, setLihat] = React.useState<'biaya' | 'prodi' | 'rinci'>('biaya');
   const q = useTransparansiBiaya({ tahun_id: th, kode_fakultas, kode_prodi });
   const d = q.data;
-  const tarif = (b: { tarif_min: number | null; tarif_max: number | null }) =>
-    b.tarif_min == null ? '–' : b.tarif_min === b.tarif_max ? formatRupiah(b.tarif_min) : `${formatRupiah(b.tarif_min)} – ${formatRupiah(b.tarif_max)}`;
+  const tarif = (b: { tarif_min: number | null; tarif_max: number | null }) => (b.tarif_min == null ? '–' : b.tarif_min === b.tarif_max ? formatRupiah(b.tarif_min) : `${formatRupiah(b.tarif_min)} – ${formatRupiah(b.tarif_max)}`);
   const real = <T extends RekapTransparansi>(): KolomRekap<T>[] =>
     denganRealisasi
       ? [
@@ -550,14 +512,7 @@ export function TransparansiBiaya({ tahun_id, kode_fakultas, kode_prodi, semeste
       periode={d ? `Semester ${semester?.find((s) => s.value === d.tahun_id)?.label ?? d.tahun_id}` : undefined}
       unit="Biro Administrasi Umum dan Keuangan"
       loading={q.loading && !d}
-      csv={
-        d
-          ? {
-              namaFile: `transparansi-biaya-${d.tahun_id}-${lihat}`,
-              data: () => (lihat === 'biaya' ? rekapKeCsv(kolomBiaya, d.per_jenis_biaya) : lihat === 'prodi' ? rekapKeCsv(kolomProdi, d.per_prodi) : rekapKeCsv(kolomRinci, d.baris)),
-            }
-          : undefined
-      }
+      csv={d ? { namaFile: `transparansi-biaya-${d.tahun_id}-${lihat}`, data: () => (lihat === 'biaya' ? rekapKeCsv(kolomBiaya, d.per_jenis_biaya) : lihat === 'prodi' ? rekapKeCsv(kolomProdi, d.per_prodi) : rekapKeCsv(kolomRinci, d.baris)) } : undefined}
       filter={
         <>
           {semester && semester.length > 0 && <Select<string> size="sm" aria-label="Semester" value={th} options={semester} onValueChange={setTh} />}
@@ -616,33 +571,12 @@ export function StatistikKeuangan({ tahun: awal, unit_id, className }: Statistik
   const r = d?.ringkas;
   const items: ItemStatistik[] = r
     ? [
-        {
-          label: `Penerimaan mahasiswa ${tahun}`,
-          nilai: r.penerimaan_mahasiswa,
-          format: 'rupiah-ringkas',
-          perubahan: r.pertumbuhan_persen,
-          ikon: <GraduationCap />,
-          tren: d!.penerimaan_bulanan.map((b) => b.jumlah),
-        },
-        {
-          label: 'Piutang semester berjalan',
-          nilai: r.piutang_semester,
-          format: 'rupiah-ringkas',
-          terbalik: true,
-          progres: r.persen_tertagih,
-          keterangan: r.persen_tertagih != null ? `${r.persen_tertagih.toFixed(1)}% tagihan sudah dibayar` : undefined,
-          ikon: <Scale />,
-        },
+        { label: `Penerimaan mahasiswa ${tahun}`, nilai: r.penerimaan_mahasiswa, format: 'rupiah-ringkas', perubahan: r.pertumbuhan_persen, ikon: <GraduationCap />, tren: d!.penerimaan_bulanan.map((b) => b.jumlah) },
+        { label: 'Piutang semester berjalan', nilai: r.piutang_semester, format: 'rupiah-ringkas', terbalik: true, progres: r.persen_tertagih, keterangan: r.persen_tertagih != null ? `${r.persen_tertagih.toFixed(1)}% tagihan sudah dibayar` : undefined, ikon: <Scale /> },
         { label: 'Penerimaan lain', nilai: r.penerimaan_lain, format: 'rupiah-ringkas', ikon: <PiggyBank /> },
         { label: 'Belanja unit', nilai: r.belanja, format: 'rupiah-ringkas', ikon: <Building2 /> },
         { label: 'Saldo kas hari ini', nilai: r.saldo_kas, format: 'rupiah-ringkas', ikon: <Landmark /> },
-        {
-          label: 'Surplus buku besar',
-          nilai: r.pendapatan_buku - r.beban_buku,
-          format: 'rupiah-ringkas',
-          nada: r.pendapatan_buku - r.beban_buku >= 0 ? 'success' : 'danger',
-          keterangan: `pendapatan ${formatRupiahRingkas(r.pendapatan_buku)} · beban ${formatRupiahRingkas(r.beban_buku)}`,
-        },
+        { label: 'Surplus buku besar', nilai: r.pendapatan_buku - r.beban_buku, format: 'rupiah-ringkas', nada: r.pendapatan_buku - r.beban_buku >= 0 ? 'success' : 'danger', keterangan: `pendapatan ${formatRupiahRingkas(r.pendapatan_buku)} · beban ${formatRupiahRingkas(r.beban_buku)}` },
       ]
     : [];
   const opsiTahun = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i).map((y) => ({ value: y, label: String(y) }));
@@ -654,24 +588,7 @@ export function StatistikKeuangan({ tahun: awal, unit_id, className }: Statistik
       unit="Biro Administrasi Umum dan Keuangan"
       loading={q.loading && !d}
       filter={<Select<number> size="sm" aria-label="Tahun" value={tahun} options={opsiTahun} onValueChange={(t) => t && setTahun(t)} />}
-      csv={
-        d
-          ? {
-              namaFile: `statistik-keuangan-${tahun}`,
-              data: () => ({
-                kolom: ['Bulan', 'Penerimaan mahasiswa', 'Tahun lalu', 'Pendapatan buku', 'Beban buku', 'Saldo kas'],
-                baris: d.penerimaan_bulanan.map((b, i) => [
-                  BULAN_PANJANG[i],
-                  b.jumlah,
-                  b.tahun_lalu,
-                  d.buku_besar_bulanan[i]?.pendapatan ?? 0,
-                  d.buku_besar_bulanan[i]?.beban ?? 0,
-                  d.buku_besar_bulanan[i]?.saldo_kas ?? 0,
-                ]),
-              }),
-            }
-          : undefined
-      }
+      csv={d ? { namaFile: `statistik-keuangan-${tahun}`, data: () => ({ kolom: ['Bulan', 'Penerimaan mahasiswa', 'Tahun lalu', 'Pendapatan buku', 'Beban buku', 'Saldo kas'], baris: d.penerimaan_bulanan.map((b, i) => [BULAN_PANJANG[i], b.jumlah, b.tahun_lalu, d.buku_besar_bulanan[i]?.pendapatan ?? 0, d.buku_besar_bulanan[i]?.beban ?? 0, d.buku_besar_bulanan[i]?.saldo_kas ?? 0]) }) } : undefined}
     >
       {q.error ? (
         <GalatApi error={q.error} onRetry={q.refetch} />
@@ -691,11 +608,7 @@ export function StatistikKeuangan({ tahun: awal, unit_id, className }: Statistik
               />
             </Panel>
             <Panel title="Per jenis biaya">
-              {d.per_jenis_biaya.length ? (
-                <DonutChart data={d.per_jenis_biaya.map((b) => ({ label: b.nama, value: b.jumlah }))} format={formatRupiahRingkas} centerLabel="Penerimaan" />
-              ) : (
-                <Empty title="Belum ada pembayaran" />
-              )}
+              {d.per_jenis_biaya.length ? <DonutChart data={d.per_jenis_biaya.map((b) => ({ label: b.nama, value: b.jumlah }))} format={formatRupiahRingkas} centerLabel="Penerimaan" /> : <Empty title="Belum ada pembayaran" />}
             </Panel>
             <Panel title="Pendapatan dan beban (buku besar)" span={2}>
               <GroupedBarChart
@@ -712,12 +625,7 @@ export function StatistikKeuangan({ tahun: awal, unit_id, className }: Statistik
               <BarList items={d.per_fakultas.map((f) => ({ label: f.nama_fakultas, value: f.jumlah, secondary: `${f.mahasiswa} mhs` }))} format={formatRupiahRingkas} />
             </Panel>
             <Panel title="Belanja per unit" span={2}>
-              <BarList
-                items={d.belanja_per_unit.map((u) => ({ label: u.unit, value: u.jumlah, secondary: `${u.pengajuan} pengajuan` }))}
-                format={formatRupiahRingkas}
-                limit={10}
-                empty="Belum ada belanja yang dibayar."
-              />
+              <BarList items={d.belanja_per_unit.map((u) => ({ label: u.unit, value: u.jumlah, secondary: `${u.pengajuan} pengajuan` }))} format={formatRupiahRingkas} limit={10} empty="Belum ada belanja yang dibayar." />
             </Panel>
             <Panel title="Metode pembayaran">
               <BarList items={d.metode_pembayaran.map((m) => ({ label: m.metode, value: m.jumlah, secondary: `${m.transaksi} trx` }))} format={formatRupiahRingkas} empty="Belum ada data metode." />

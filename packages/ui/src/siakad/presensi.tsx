@@ -616,17 +616,7 @@ async function buatDetektor(): Promise<Detektor> {
  * Kamera pemindai QR: BarcodeDetector bila peramban mendukung, selain itu jsQR (Safari iOS). `onBaca` dipanggil
  * sekali per isi QR yang berbeda; kamera berhenti saat `aktif` false.
  */
-export function KameraPindaiQr({
-  aktif,
-  onBaca,
-  onGalat,
-  className,
-}: {
-  aktif: boolean;
-  onBaca: (isi: string) => void;
-  /** Kamera tidak bisa dipakai (ditolak, tidak ada). */ onGalat?: (pesan: string) => void;
-  className?: string;
-}) {
+export function KameraPindaiQr({ aktif, onBaca, onGalat, className }: { aktif: boolean; onBaca: (isi: string) => void; /** Kamera tidak bisa dipakai (ditolak, tidak ada). */ onGalat?: (pesan: string) => void; className?: string }) {
   const video = React.useRef<HTMLVideoElement>(null);
   const kanvas = React.useRef<HTMLCanvasElement | null>(null);
   const [galat, setGalat] = React.useState<string | null>(null);
@@ -810,14 +800,7 @@ export function PindaiPresensi({ token, kirimLokasi = true, onBerhasil, classNam
           <Field label="Kode dari layar" description="6 huruf/angka yang dibacakan atau tampil di samping QR.">
             <Input
               value={kode}
-              onChange={(e) =>
-                setKode(
-                  e.target.value
-                    .toUpperCase()
-                    .replace(/[^A-Z0-9]/g, '')
-                    .slice(0, 8),
-                )
-              }
+              onChange={(e) => setKode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
               autoComplete="off"
               autoCapitalize="characters"
               inputMode="text"
@@ -836,15 +819,7 @@ export function PindaiPresensi({ token, kirimLokasi = true, onBerhasil, classNam
         </p>
       )}
       {galat && (
-        <Alert
-          variant="danger"
-          title="Presensi belum tercatat"
-          actions={
-            <Button size="sm" variant="ghost" onClick={() => setGalat(null)}>
-              Coba lagi
-            </Button>
-          }
-        >
+        <Alert variant="danger" title="Presensi belum tercatat" actions={<Button size="sm" variant="ghost" onClick={() => setGalat(null)}>Coba lagi</Button>}>
           {galat}
         </Alert>
       )}
@@ -1126,11 +1101,7 @@ export function DaftarHadirSesi({ sesiId, segarkanDetik = 10, className }: { ses
                     <td>
                       <div className="u-presensi-sel-status">
                         <BadgeStatusHadir status={p.status} terlambat={p.terlambat} />
-                        {p.izin && !p.status && (
-                          <Badge variant="info">
-                            {p.izin.jenis === 'sakit' ? 'Sakit' : 'Izin'} {p.izin.status}
-                          </Badge>
-                        )}
+                        {p.izin && !p.status && <Badge variant="info">{p.izin.jenis === 'sakit' ? 'Sakit' : 'Izin'} {p.izin.status}</Badge>}
                         {p.curiga && (
                           <Button size="xs" variant="ghost" title={p.alasan_curiga ?? undefined} loading={sibuk === kunci} onClick={() => void bersihkan(p)}>
                             <ShieldAlert aria-hidden /> Tandai sudah dicek
@@ -1403,30 +1374,8 @@ export function FormSesiPresensi({ open, onOpenChange, trigger, sesi, jenis: jen
                           <span>
                             {u.nama ?? u.subjek} <small>{u.jenis}</small>
                           </span>
-                          <Input
-                            size="sm"
-                            placeholder="Peran (opsional)"
-                            value={u.peran ?? ''}
-                            onChange={(e) =>
-                              set(
-                                'undangan',
-                                f.undangan.map((x, j) => (j === i ? { ...x, peran: e.target.value } : x)),
-                              )
-                            }
-                            aria-label="Peran"
-                          />
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            iconOnly
-                            aria-label={`Hapus ${u.nama ?? u.subjek}`}
-                            onClick={() =>
-                              set(
-                                'undangan',
-                                f.undangan.filter((_, j) => j !== i),
-                              )
-                            }
-                          >
+                          <Input size="sm" placeholder="Peran (opsional)" value={u.peran ?? ''} onChange={(e) => set('undangan', f.undangan.map((x, j) => (j === i ? { ...x, peran: e.target.value } : x)))} aria-label="Peran" />
+                          <Button size="xs" variant="ghost" iconOnly aria-label={`Hapus ${u.nama ?? u.subjek}`} onClick={() => set('undangan', f.undangan.filter((_, j) => j !== i))}>
                             <X aria-hidden />
                           </Button>
                         </li>
@@ -1500,18 +1449,7 @@ export function FormSesiPresensi({ open, onOpenChange, trigger, sesi, jenis: jen
                   {f.petugas.map((u) => (
                     <li key={u}>
                       <span>{u}</span>
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        iconOnly
-                        aria-label={`Hapus petugas ${u}`}
-                        onClick={() =>
-                          set(
-                            'petugas',
-                            f.petugas.filter((x) => x !== u),
-                          )
-                        }
-                      >
+                      <Button size="xs" variant="ghost" iconOnly aria-label={`Hapus petugas ${u}`} onClick={() => set('petugas', f.petugas.filter((x) => x !== u))}>
                         <X aria-hidden />
                       </Button>
                     </li>
@@ -1569,11 +1507,7 @@ export function DetailSesiPresensi({ sesiId, renderQr, onKembali, className }: {
   const kelola = s.hak?.kelola;
   const aksi = async (nama: string, body: Record<string, unknown> = {}, judul = 'Tersimpan') => {
     try {
-      await siakad.request<SesiPresensi>({
-        method: 'POST',
-        path: `${P}/sesi/${sesiId}/${nama}`,
-        body: { ...body, ...(nama === 'buka' ? { lokasi: await ambilLokasiPresensi(4000), perangkat: idPerangkatPresensi() } : {}) },
-      });
+      await siakad.request<SesiPresensi>({ method: 'POST', path: `${P}/sesi/${sesiId}/${nama}`, body: { ...body, ...(nama === 'buka' ? { lokasi: await ambilLokasiPresensi(4000), perangkat: idPerangkatPresensi() } : {}) } });
       invalidateSiakad('presensi');
       toast.add({ title: judul, type: 'success' });
     } catch (e) {
@@ -1698,9 +1632,7 @@ export function DetailSesiPresensi({ sesiId, renderQr, onKembali, className }: {
 }
 
 function JejakPindaiSesi({ sesiId }: { sesiId: string }) {
-  const q = useSiakadQuery<{ log: LogPindaiPresensi[] }>(['presensi', 'sesi', sesiId, 'log'], (s, signal) => s.request({ method: 'GET', path: `${P}/sesi/${sesiId}/log` }, { signal }), {
-    staleTime: 5_000,
-  });
+  const q = useSiakadQuery<{ log: LogPindaiPresensi[] }>(['presensi', 'sesi', sesiId, 'log'], (s, signal) => s.request({ method: 'GET', path: `${P}/sesi/${sesiId}/log` }, { signal }), { staleTime: 5_000 });
   if (q.loading && !q.data) return <Skeleton style={{ height: 200 }} />;
   if (q.error) return <GalatApi error={q.error} onRetry={q.refetch} />;
   return <TabelJejak log={q.data!.log} />;
@@ -2203,20 +2135,10 @@ export function FormTitikPresensi({ open, onOpenChange, titik, onSimpan }: { ope
         </div>
         <div className="u-presensi-form-baris">
           <Field label="Jenis">
-            <Pilihan
-              required
-              value={f.jenis}
-              onValueChange={(v) => v && set('jenis', v as TitikPresensi['jenis'])}
-              options={Object.entries(LABEL_JENIS_TITIK).map(([value, label]) => ({ value, label }))}
-            />
+            <Pilihan required value={f.jenis} onValueChange={(v) => v && set('jenis', v as TitikPresensi['jenis'])} options={Object.entries(LABEL_JENIS_TITIK).map(([value, label]) => ({ value, label }))} />
           </Field>
           <Field label="Untuk">
-            <Pilihan
-              required
-              value={f.untuk}
-              onValueChange={(v) => v && set('untuk', v as TitikPresensi['untuk'])}
-              options={Object.entries(LABEL_UNTUK_TITIK).map(([value, label]) => ({ value, label }))}
-            />
+            <Pilihan required value={f.untuk} onValueChange={(v) => v && set('untuk', v as TitikPresensi['untuk'])} options={Object.entries(LABEL_UNTUK_TITIK).map(([value, label]) => ({ value, label }))} />
           </Field>
         </div>
         <Field label="Unit" optional description="Pemilik titik; juga menentukan gaya QR.">
@@ -2387,3 +2309,4 @@ export function ModulPresensiSaya({ renderQr, className }: { renderQr?: RenderQr
 
 /** Pilihan untuk <Pilihan>: status hadir. */
 export const OPSI_STATUS_HADIR: SelectOption<string>[] = (['H', 'I', 'S', 'A'] as StatusHadir[]).map((v) => ({ value: v, label: LABEL_STATUS_HADIR[v] }));
+
