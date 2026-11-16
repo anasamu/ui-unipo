@@ -817,6 +817,14 @@
   padding: 3px;
   border-radius: calc(var(--u-radius) + 1px);
   background: var(--u-muted);
+  // Banyak pilihan di layar sempit: geser ke samping, tidak melebarkan halaman atau memecah label.
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  &::-webkit-scrollbar {
+    display: none;
+  }
   &[data-full-width] {
     display: flex;
     > * {
@@ -824,6 +832,8 @@
     }
   }
   > .u-toggle {
+    flex-shrink: 0;
+    white-space: nowrap;
     height: 1.875rem;
     border-radius: calc(var(--u-radius) - 2px);
     color: var(--u-muted-foreground);

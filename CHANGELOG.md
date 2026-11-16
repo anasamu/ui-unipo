@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.29.1 (2026-11-16)
+
+- `SegmentedControl` dengan banyak pilihan bisa digeser ke samping di layar sempit; label tidak terpecah dan halaman tidak melebar (mis. Batas waktu input dan Antrean Neo Feeder di BAAK).
+
 ## 1.29.0 (2026-11-16)
 
 - **Persuratan per unit kerja** (`unipo-ui/siakad`, API `/v1/arsip`): `PersuratanUnit` memasang surat masuk dan keluar satu unit (BAAK, BAUK, SDM, LPM, PMB, atau unit arsip lain) dalam satu halaman, cukup dengan kode unit arsip: `<PersuratanUnit kodeUnit="baak" />`.
