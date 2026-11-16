@@ -5,14 +5,14 @@
  * pencatatan arsip surat lama (unggah file + nomor dan metadata). Semua lewat /v1/arsip dan /v1/dokumen.
  */
 import * as React from 'react';
-import { Archive, FileUp, Hash, Pencil, Plus, Save, Trash2, Upload, X } from 'lucide-react';
+import { Archive, FileUp, Hash, LayoutTemplate, Pencil, Plus, Save, Trash2, Upload, WandSparkles, X } from 'lucide-react';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Empty } from '../components/display';
 import { Field, Input, RadioGroup, Switch, Textarea } from '../components/forms';
 import { ConfirmDialog, Dialog } from '../components/overlays';
 import { Combobox, Select } from '../components/select';
 import { FormGrid } from '../components/wizard';
-import { PENANDA_BAWAAN, isiTemplat, penandaIsian, tanggalSurat, type PenandaTemplat } from '../editor/dokumen/templat';
+import { PENANDA_BAWAAN, isiTemplat, tanggalSurat } from '../editor/dokumen/templat';
 import { MARGIN_SIAP, PengolahDokumen, type MarginKertas } from '../editor/pengolah/PengolahDokumen';
 import { penandaKeChip, teksPolos } from '../editor/pengolah/html';
 import type { UkuranKertas } from '../editor/dokumen/LembarSurat';
@@ -21,7 +21,19 @@ import { GalatApi } from './galat';
 import { useTemplatDokumen, type PengaturanDokumen, type TemplatEfektif } from './dokumen-terbit';
 import { useUnggahBerkas } from './berkas';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
-import { DaftarTujuan, bersihTujuan, tujuanLengkap, useTemplatSurat, useUnitArsipSaya, type SuratKeluar, type TujuanSuratInput, type UnitArsip } from './surat';
+import { DaftarTujuan, bersihTujuan, tujuanLengkap, useUnitArsipSaya, type SuratKeluar, type TujuanSuratInput, type UnitArsip } from './surat';
+import { PilihEntitas } from './pilih';
+import {
+  ISIAN_DARI_DATA,
+  PilihTemplatSurat,
+  isianTemplat,
+  jenisDariKode,
+  nilaiIsianSurat,
+  sumberIsianDari,
+  terapkanIsian,
+  type IsianSurat,
+  type TemplatTerpilih,
+} from './surat-galeri';
 
 // ---------------------------------------------------------------- data master arsip
 
@@ -436,6 +448,13 @@ export interface EditorSuratKeluarProps {
   onSelesai?: (surat: SuratArsip) => void;
   /** Tombol kembali/tutup di bilah atas. */
   onTutup?: () => void;
+  /**
+   * Untuk surat baru: buka galeri templat lebih dulu (bawaan true). Pengguna memilih templat (bawaan UNIPO, unit, atau
+   * bersama) lalu surat dibangkitkan dari isian, atau memilih kertas kosong.
+   */
+  galeriAwal?: boolean;
+  /** Templat yang langsung dimuat untuk surat baru (melewati galeri). */
+  templatAwal?: TemplatTerpilih | null;
   tinggi?: number | string;
   className?: string;
 }
@@ -469,7 +488,7 @@ function namaTujuan(t: TujuanSuratInput & { unit_nama?: string | null }) {
  * Panel samping berisi data surat, templat, dan isian penanda. Simpan sebagai konsep (POST/PUT /v1/arsip/surat-keluar);
  * nomor diberikan otomatis menurut format penomoran saat surat disetujui.
  */
-export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, tinggi = 'calc(100dvh - 6rem)', className }: EditorSuratKeluarProps) {
+export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, galeriAwal = true, templatAwal, tinggi = 'calc(100dvh - 6rem)', className }: EditorSuratKeluarProps) {
   const siakad = useSiakad();
   const unit = useUnitArsipSaya();
   const jenis = useJenisNaskahArsip();
@@ -493,7 +512,10 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, tin
   const [awalIsi, setAwalIsi] = React.useState('');
   const [simpan, setSimpan] = React.useState<'idle' | 'proses' | 'ok'>('idle');
   const [galat, setGalat] = React.useState<string | null>(null);
-  const [gantiTemplat, setGantiTemplat] = React.useState<number | null>(null);
+  const [gantiTemplat, setGantiTemplat] = React.useState<TemplatTerpilih | null>(null);
+  const [templat, setTemplat] = React.useState<TemplatTerpilih | null>(null);
+  const [galeri, setGaleri] = React.useState(() => !surat && !templatAwal && galeriAwal);
+  const [dibangkitkan, setDibangkitkan] = React.useState(false);
   const ubah = (x: Partial<DrafSurat>) => setD((v) => ({ ...v, ...x }));
 
   // Muat konsep yang ada.
@@ -520,7 +542,6 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, tin
 
   const uid = d.unitId ?? unitSaya[0]?.id ?? null;
   const unitAktif = (unit.data ?? []).find((u) => u.id === uid) as UnitArsip | undefined;
-  const templat = useTemplatSurat({ unit_id: uid, aktif: true });
   const efektif = useTemplatDokumen('surat_keluar', unitAktif?.kode ?? null);
   const tata = React.useMemo(() => tataLetakDariTemplat(efektif.data?.pengaturan), [efektif.data]);
   const [kertas, setKertas] = React.useState<UkuranKertas>('a4');
@@ -530,16 +551,45 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, tin
     setMargin(tata.margin);
   }, [tata]);
   const nomor = usePratinjauNomor({ unit_id: uid, untuk: 'surat_keluar', jenis_id: d.jenisId, klasifikasi_id: d.klasifikasiId, tanggal: d.tanggal });
-  const isian = React.useMemo(() => penandaIsian(isi), [isi]);
+  const isian = React.useMemo<IsianSurat[]>(() => isianTemplat(isi, templat?.isian), [isi, templat]);
+  const nilaiTampil = React.useMemo(() => nilaiIsianSurat(d.data, isian), [d.data, isian]);
+  const terisi = isian.filter((p2) => nilaiTampil[p2.nama]).length;
+  const sumberData = React.useMemo(() => sumberIsianDari(isian.map((p2) => p2.nama)), [isian]);
   const bawaanDipakai = React.useMemo(() => PENANDA_BAWAAN.filter((p) => isi.includes(`{{${p.nama}}}`)), [isi]);
 
-  const pakaiTemplat = (id: number | null) => {
-    const t = templat.data?.find((x) => x.id === id);
-    ubah({ templatId: id, ...(t?.perihal && !d.perihal ? { perihal: t.perihal } : {}), ...(t?.jenis_id && !d.jenisId ? { jenisId: t.jenis_id } : {}) });
-    if (t) {
-      setAwalIsi(penandaKeChip(t.isi));
-      setKunci((k) => k + 1);
+  const pakaiTemplat = (t: TemplatTerpilih | null) => {
+    setTemplat(t);
+    setDibangkitkan(false);
+    if (!t) {
+      ubah({ templatId: null });
+      return;
     }
+    const jenisId = t.jenis_id ?? jenisDariKode(jenis.data, t.jenis_kode);
+    ubah({ templatId: t.sumber === 'bawaan' ? null : (t.id ?? null), ...(t.perihal && !d.perihal ? { perihal: t.perihal } : {}), ...(jenisId && !d.jenisId ? { jenisId } : {}) });
+    setAwalIsi(penandaKeChip(t.isi));
+    setKunci((k) => k + 1);
+  };
+  const pilihDariGaleri = (t: TemplatTerpilih | null) => {
+    setGaleri(false);
+    if (t && teksPolos(isi)) setGantiTemplat(t);
+    else pakaiTemplat(t);
+  };
+  // Templat yang diberikan lewat props untuk surat baru.
+  const awalDipakai = React.useRef(false);
+  React.useEffect(() => {
+    if (surat || !templatAwal || awalDipakai.current || (templatAwal.jenis_kode && jenis.loading)) return;
+    awalDipakai.current = true;
+    pakaiTemplat(templatAwal);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templatAwal, surat, jenis.loading]);
+
+  /** Bangkitkan surat: penanda yang sudah diisi ditulis sebagai teks biasa di kertas (masih bisa disunting). */
+  const bangkitkan = () => {
+    const html = terapkanIsian(isi, { ...(unitAktif ? { unit: unitAktif.nama, unit_singkatan: unitAktif.singkatan ?? '' } : {}), ...nilaiTampil });
+    setAwalIsi(html);
+    setIsi(html);
+    setKunci((k) => k + 1);
+    setDibangkitkan(true);
   };
 
   const unggahBerkas = useUnggahBerkas({ visibilitas: 'publik', modul: 'arsip', kategori: 'gambar' });
@@ -564,7 +614,7 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, tin
     setGalat(null);
     try {
       // Penanda diisi di browser persis seperti server; penanda tanpa nilai tetap {{nama}}.
-      const isiJadi = isiTemplat(isi, d.data, { unit: unitAktif ? { nama: unitAktif.nama, singkatan: unitAktif.singkatan } : null, surat: { tanggal_surat: d.tanggal, perihal: d.perihal, lampiran: d.lampiran } });
+      const isiJadi = isiTemplat(isi, nilaiTampil, { unit: unitAktif ? { nama: unitAktif.nama, singkatan: unitAktif.singkatan } : null, surat: { tanggal_surat: d.tanggal, perihal: d.perihal, lampiran: d.lampiran } });
       const body = {
         jenis_id: d.jenisId,
         klasifikasi_id: d.klasifikasiId,
@@ -676,14 +726,71 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, tin
           <Select<number> value={uid} onValueChange={(v) => ubah({ unitId: v, templatId: null })} options={unitSaya.map((u) => ({ value: u.id, label: u.nama }))} />
         </Field>
       )}
-      <Field label="Templat" optional description="Memuat isi templat ke kertas. Isi yang sudah ditulis akan diganti.">
-        <Select<number | null>
-          value={d.templatId}
-          placeholder={templat.loading ? 'Memuat…' : 'Tanpa templat'}
-          onValueChange={(v) => (isi && v !== null && teksPolos(isi) ? setGantiTemplat(v) : pakaiTemplat(v))}
-          options={[{ value: null, label: 'Tanpa templat' }, ...(templat.data ?? []).map((t) => ({ value: t.id as number | null, label: t.nama }))]}
-        />
-      </Field>
+      <section className="u-psr-templat">
+        <h3 className="u-psr-sub">Templat</h3>
+        <div className="u-psr-templat-kartu">
+          <LayoutTemplate aria-hidden />
+          <div>
+            <p>{templat?.nama ?? (d.templatId ? 'Templat unit' : 'Tanpa templat')}</p>
+            <p className="u-psr-redup">{templat ? (templat.sumber === 'bawaan' ? 'Galeri UNIPO' : templat.sumber === 'unit' ? 'Templat unit' : 'Templat bersama') : 'Surat ditulis bebas di kertas'}</p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setGaleri(true)}>
+            {templat ? 'Ganti' : 'Pilih templat'}
+          </Button>
+        </div>
+      </section>
+      {(isian.length > 0 || bawaanDipakai.length > 0) && (
+        <section className="u-psr-isian">
+          <h3 className="u-psr-sub">
+            Isian surat
+            {isian.length > 0 && (
+              <Badge variant={terisi === isian.length ? 'success' : 'neutral'}>
+                {terisi}/{isian.length} terisi
+              </Badge>
+            )}
+          </h3>
+          {bawaanDipakai.length > 0 && <p className="u-psr-redup">Diisi otomatis: {bawaanDipakai.map((p2) => p2.label.toLowerCase()).join(', ')}.</p>}
+          {sumberData.map((sb) => (
+            <Field key={sb} label={ISIAN_DARI_DATA[sb].label} description="Mengisi beberapa isian sekaligus dari data SIAKAD.">
+              <PilihEntitas
+                jenis={sb}
+                value={null}
+                onValueChange={(_v, baris) => {
+                  if (!baris) return;
+                  const isi2: Record<string, string> = {};
+                  for (const [nama, f] of Object.entries(ISIAN_DARI_DATA[sb].penanda)) if (isian.some((p2) => p2.nama === nama)) isi2[nama] = f(baris);
+                  ubah({ data: { ...d.data, ...isi2 } });
+                }}
+              />
+            </Field>
+          ))}
+          {isian.map((p2) => (
+            <Field key={p2.nama} label={p2.label} description={p2.petunjuk}>
+              {p2.tipe === 'paragraf' ? (
+                <Textarea rows={3} value={d.data[p2.nama] ?? ''} placeholder={p2.contoh ?? `{{${p2.nama}}}`} onChange={(e) => ubah({ data: { ...d.data, [p2.nama]: e.target.value } })} />
+              ) : p2.tipe === 'tanggal' || p2.tipe === 'hari_tanggal' ? (
+                <Input type="date" value={/^\d{4}-\d{2}-\d{2}$/.test(d.data[p2.nama] ?? '') ? d.data[p2.nama] : ''} onChange={(e) => ubah({ data: { ...d.data, [p2.nama]: e.target.value } })} />
+              ) : (
+                <Input inputMode={p2.tipe === 'angka' ? 'numeric' : undefined} value={d.data[p2.nama] ?? ''} placeholder={p2.contoh ?? `{{${p2.nama}}}`} onChange={(e) => ubah({ data: { ...d.data, [p2.nama]: e.target.value } })} />
+              )}
+            </Field>
+          ))}
+          {isian.length > 0 && (
+            <>
+              <Button variant={terisi === isian.length ? 'primary' : 'outline'} disabled={!terisi} onClick={bangkitkan}>
+                <WandSparkles />
+                Bangkitkan surat
+              </Button>
+              <p className="u-psr-redup">
+                {terisi < isian.length
+                  ? 'Isian yang masih kosong tetap menjadi penanda kuning di kertas dan bisa diisi nanti.'
+                  : 'Semua isian ditulis ke kertas. Setelah itu isi surat masih bisa disunting bebas.'}
+              </p>
+            </>
+          )}
+          {dibangkitkan && isian.length === 0 && <Alert variant="success">Surat sudah dibangkitkan. Periksa kertas, lalu simpan konsep.</Alert>}
+        </section>
+      )}
       <Field label="Perihal" required>
         <Input value={d.perihal} maxLength={255} onChange={(e) => ubah({ perihal: e.target.value })} placeholder="Undangan rapat evaluasi perkuliahan" />
       </Field>
@@ -717,17 +824,6 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, tin
         <h3 className="u-psr-sub">Tujuan dan tembusan</h3>
         <DaftarTujuan nilai={d.tujuan} ganti={(t) => ubah({ tujuan: t })} />
       </section>
-      {(isian.length > 0 || bawaanDipakai.length > 0) && (
-        <section>
-          <h3 className="u-psr-sub">Isian penanda</h3>
-          {bawaanDipakai.length > 0 && <p className="u-psr-redup">Diisi otomatis: {bawaanDipakai.map((p2) => p2.label.toLowerCase()).join(', ')}.</p>}
-          {isian.map((p2: PenandaTemplat) => (
-            <Field key={p2.nama} label={p2.label}>
-              <Input value={d.data[p2.nama] ?? ''} placeholder={`{{${p2.nama}}}`} onChange={(e) => ubah({ data: { ...d.data, [p2.nama]: e.target.value } })} />
-            </Field>
-          ))}
-        </section>
-      )}
       {galat && <Alert variant="danger">{galat}</Alert>}
     </div>
   );
@@ -770,10 +866,11 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, tin
         panelJudul="Data surat"
         placeholder="Tulis isi surat di sini, atau pilih templat di panel kanan…"
       />
+      <PilihTemplatSurat open={galeri} onOpenChange={setGaleri} unitId={uid} onPilih={pilihDariGaleri} />
       <ConfirmDialog
         open={gantiTemplat !== null}
         onOpenChange={(o) => !o && setGantiTemplat(null)}
-        title="Ganti isi dengan templat?"
+        title={`Ganti isi dengan templat "${gantiTemplat?.nama ?? ''}"?`}
         description="Isi yang sudah ditulis di kertas akan diganti isi templat."
         confirmLabel="Ganti isi"
         tone="primary"

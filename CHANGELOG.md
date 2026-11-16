@@ -1,5 +1,14 @@
 # Catatan perubahan
 
+## 1.32.0 (2026-11-16)
+
+- **Buat surat dari templat** (`unipo-ui/siakad`, tanpa perubahan API): `EditorSuratKeluar` untuk surat baru kini membuka galeri templat lebih dulu (`galeriAwal`, bawaan true), jadi semua aplikasi yang memakai `PersuratanUnit` atau `EditorSuratKeluar` (fakultas, BAAK, BAUK, SDM, SPMI, PMB) langsung mendapatkannya.
+  - `PilihTemplatSurat`: cari, saring kategori, pratinjau di kertas dengan contoh data; berisi templat unit, templat bersama (/v1/arsip/template), dan 12 templat bawaan UNIPO (`TEMPLAT_SURAT_BAWAAN`): undangan, pemberitahuan, permohonan, pengantar, berita acara, keterangan aktif kuliah, rekomendasi mahasiswa, izin penelitian, surat tugas, keterangan dosen/pegawai, SK, dan edaran. Templat bawaan tidak perlu disimpan di server dulu.
+  - Isian bertipe di panel editor: tanggal (ditulis "17 November 2026" atau "Selasa, 17 November 2026"), paragraf, angka; tipe ditebak dari nama penanda untuk templat unit. "Ambil dari data mahasiswa/dosen" mengisi nama, NIM/NIDN, prodi, jabatan sekaligus dari SIAKAD.
+  - Tombol **Bangkitkan surat** menulis isian ke kertas sebagai teks biasa (masih bisa disunting); isian kosong tetap menjadi penanda kuning. Jenis naskah (nomor surat) dipilih otomatis dari templat.
+  - `KelolaTemplatSurat`: tombol **Salin dari galeri** untuk menjadikan templat bawaan sebagai templat unit lalu menyesuaikannya.
+  - Helper: `templatTerpilih`, `isianTemplat`, `nilaiIsianSurat`, `terapkanIsian`, `tipeIsianDariNama`, `hariTanggalSurat`, `jenisDariKode`, `ISIAN_DARI_DATA`.
+
 ## 1.31.1 (2026-11-16)
 
 - **Obrolan: pesan ke orang yang belum pernah membuka obrolan tidak lagi gagal** (butuh SIAKAD dengan `/v1/obrolan/susulan`). Pesan tetap terkirim dan terenkripsi; begitu penerima membuka obrolan dan perangkatnya membuat kunci, perangkat pengirim membungkus ulang kunci pesan untuk perangkat itu secara otomatis, lalu pesan terbuka sendiri. Server tetap tidak pernah memegang kunci pesan.

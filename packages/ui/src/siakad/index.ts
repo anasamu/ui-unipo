@@ -48,6 +48,7 @@ export * from './qr';
 export * from './dokumen-terbit';
 export * from './presensi';
 export * from './persuratan';
+export * from './surat-galeri';
 export * from './persuratan-unit';
 export * from './gaji';
 export * from './keuangan';
