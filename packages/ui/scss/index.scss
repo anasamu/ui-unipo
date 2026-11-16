@@ -3,6 +3,7 @@
 // Ganti tema saat runtime: :root { --u-primary: #0f766e; }
 @forward 'config';
 @use 'base';
+@use 'vendor/leaflet';
 @use 'components/actions';
 @use 'components/forms';
 @use 'components/overlays';
@@ -55,6 +56,8 @@
 @use 'components/kode-qr';
 @use 'components/dua-langkah';
 @use 'components/presensi';
+@use 'components/peta';
+@use 'components/presensi-kerja';
 @use 'components/laporan';
 @use 'components/progres';
 @use 'components/navigasi-modul';

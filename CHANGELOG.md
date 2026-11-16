@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.43.0 (2026-11-16)
+
+- 
+
 ## 1.42.0 (2026-11-16)
 
 - **Tab vertikal**: `Tabs` prop `orientation="vertical"` untuk sub tab yang banyak atau labelnya panjang (jenis riwayat pegawai, data master, bagian keuangan). Daftar tab di kiri, isi di kanan (`children` ikut tampil di kolom isi); di wadah lebih sempit dari 40rem daftar otomatis menjadi pilihan tarik-turun. Prop `aria-label` baru.
