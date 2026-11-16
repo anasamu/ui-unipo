@@ -64,3 +64,4 @@ export * from './cari-dokumen';
 export * from './prodi';
 export * from './isian-sk';
 export * from './jadwal-bentrok';
+export * from './pengajuan';

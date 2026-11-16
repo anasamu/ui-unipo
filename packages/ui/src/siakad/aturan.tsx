@@ -236,6 +236,15 @@ export interface HasilPeriksaAturan {
   dikecualikan: Array<string | { id: string; nama?: string; alasan?: string }>;
   batas: { waktu?: { mulai: string | null; selesai: string | null }; [target: string]: { op?: string; nilai?: number; mulai?: string | null; selesai?: string | null } | undefined };
   indikator: Record<string, unknown>;
+  /** Prasyarat bawaan titik (mis. status mahasiswa), selalu diperiksa walau belum ada aturan. SIAKAD terbaru. */
+  bawaan?: PrasyaratBawaan[];
+}
+export interface PrasyaratBawaan {
+  kode: string;
+  nama: string;
+  terpenuhi: boolean;
+  sekarang?: string | null;
+  pesan?: string | null;
 }
 export interface PeriksaAturanInput {
   titik: string;
@@ -2398,7 +2407,7 @@ export interface SyaratSayaProps {
   /** Titik, mis. `krs.ambil`, `wisuda.daftar`, `kkn.daftar`. */
   titik: string;
   tahunId?: string;
-  konteks?: Record<string, number>;
+  konteks?: Record<string, number | string>;
   /** NIM; bawaan dari akun yang masuk. */
   nim?: string;
   /** Titik kepegawaian (sdm.*): ID pegawai SDM; bawaan pegawai pemilik akun (dosen/tendik). */
@@ -2431,7 +2440,9 @@ export function SyaratSaya({ titik, tahunId, konteks, nim: nimProp, pegawaiId, j
   const kecuali = new Set(h.dikecualikan.map((d) => (typeof d === 'string' ? d : d.id)));
   const terap = new Set(h.diterapkan);
   const aturan = daftar.data.filter((a) => terap.has(a.id) || langgar.has(a.id) || ingat.has(a.id) || kecuali.has(a.id));
-  const lulus = aturan.filter((a) => !langgar.has(a.id)).length;
+  const bawaan = h.bawaan ?? [];
+  const lulus = aturan.filter((a) => !langgar.has(a.id)).length + bawaan.filter((b) => b.terpenuhi).length;
+  const total = aturan.length + bawaan.length;
   const w = h.batas?.waktu;
   const pos = w ? posisiBatasWaktu(w) : null;
   return (
@@ -2441,10 +2452,10 @@ export function SyaratSaya({ titik, tahunId, konteks, nim: nimProp, pegawaiId, j
           <p className="u-syarat-saya-judul">{judul ?? t?.judul ?? h.judul ?? titik}</p>
           <p className="u-syarat-saya-status">
             {h.boleh ? <CircleCheck aria-hidden /> : <CircleX aria-hidden />}
-            {h.boleh ? 'Anda memenuhi syarat' : `${aturan.length - lulus} syarat belum terpenuhi`}
+            {h.boleh ? 'Anda memenuhi syarat' : `${Math.max(1, total - lulus)} syarat belum terpenuhi`}
           </p>
         </div>
-        {aturan.length > 0 && <ProgressLingkar nilai={lulus} total={aturan.length} />}
+        {total > 0 && <ProgressLingkar nilai={lulus} total={total} />}
       </div>
       {w && pos && (
         <div className="u-syarat-saya-waktu" data-tahap={pos.tahap}>
@@ -2460,10 +2471,22 @@ export function SyaratSaya({ titik, tahunId, konteks, nim: nimProp, pegawaiId, j
       {w?.mulai && w.selesai && pos?.tahap === 'buka' && (
         <ProgressTenggat mulai={w.mulai.replace(' ', 'T')} selesai={w.selesai.length <= 10 ? w.selesai : w.selesai.replace(' ', 'T')} className="u-syarat-saya-tenggat" />
       )}
-      {aturan.length === 0 ? (
+      {total === 0 ? (
         <p className="u-syarat-saya-kosong">Tidak ada syarat khusus untuk langkah ini.</p>
       ) : (
         <ul className="u-syarat-saya-daftar">
+          {bawaan.map((b) => (
+            <li key={`bawaan-${b.kode}`} data-status={b.terpenuhi ? 'lulus' : 'gagal'}>
+              <span className="u-syarat-saya-ikon" aria-hidden>
+                {b.terpenuhi ? <CircleCheck /> : <CircleX />}
+              </span>
+              <div>
+                <strong>{b.nama}</strong>
+                <p>{b.terpenuhi ? 'Terpenuhi (syarat dasar SIAKAD).' : b.pesan}</p>
+              </div>
+              {!b.terpenuhi && <Badge variant="danger">Belum</Badge>}
+            </li>
+          ))}
           {aturan.map((a) => {
             const p = langgar.get(a.id) ?? ingat.get(a.id);
             const st = kecuali.has(a.id) ? 'dispensasi' : langgar.has(a.id) ? 'gagal' : ingat.has(a.id) ? 'peringatan' : 'lulus';
