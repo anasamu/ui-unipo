@@ -1,5 +1,13 @@
 # Catatan perubahan
 
+## 1.41.0 (2026-11-16)
+
+- **Data bertingkat (induk-anak) rapi dan seragam** untuk kategori aset, unit kerja, akun/COA, klasifikasi arsip, menu portal, standar SPMI, dan sejenisnya:
+  - `DataTable` prop `tree={{ parentKey }}`: anak menjorok di bawah induknya dengan garis penghubung, tombol buka/tutup per induk, jumlah turunan saat cabang tertutup, tombol Buka semua/Tutup semua. Bawaan mulai dari induk teratas (`defaultExpanded: false`); saat `filtered` semua cabang terbuka supaya hasil cari tidak tersembunyi. Ekspor CSV mengikuti urutan pohon.
+  - `PilihInduk`: pemilih induk berjenjang tanpa ID mentah (judul + kode), induk teratas tebal, saat dicari menampilkan jalur induk ("Peralatan Elektronik › Komputer"); `exclude` menyembunyikan data yang sedang diubah beserta turunannya.
+  - Utilitas untuk tabel/daftar buatan sendiri: `susunPohon`, `usePohon`, `turunanPohon`, `jalurPohon`, `SelPohon`, `OpsiPohon`, `TombolPohon`.
+  - Demo "Data bertingkat (induk-anak)" di galeri (kategori Tabel data).
+
 ## 1.40.0 (2026-11-16)
 
 - **Kepanitiaan ber-SK dengan hak akses yang disetujui Pustikom** (`unipo-ui/siakad`, butuh SIAKAD dengan `/v1/panitia`, lihat docs/PANITIA.md di repo siakad_unipo; scope `panitia:read panitia:write berkas:read berkas:write`):
