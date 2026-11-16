@@ -4,6 +4,7 @@ import { BookOpen, Briefcase, Building2, GraduationCap, Landmark, Network, UserR
 import { Combobox, OptionContent } from '../components/select';
 import type { ControlSize } from '../components/forms';
 import { Avatar } from '../components/display';
+import { Dialog } from '../components/overlays';
 import { useOptionalSiakad } from './provider';
 
 type Baris = Record<string, unknown>;
@@ -216,6 +217,22 @@ export interface PilihEntitasProps {
   size?: ControlSize;
   className?: string;
   'aria-label'?: string;
+  /**
+   * Izinkan menambah data baru bila yang dicari tidak ditemukan (tombol "Tambah …" di kaki daftar). Isi `form` untuk
+   * membuka dialog formulir (panggil `selesai(barisBaru)` setelah tersimpan), atau `onTambah` untuk menyimpan langsung.
+   * Data baru langsung terpilih.
+   */
+  tambah?: TambahEntitas;
+}
+
+export interface TambahEntitas {
+  /** Judul dialog. Bawaan "Tambah <nama entitas>". */
+  judul?: React.ReactNode;
+  label?: (kata: string) => React.ReactNode;
+  /** Tampilkan tombol tambah hanya bila pencarian tidak menemukan apa pun. */
+  hanyaKosong?: boolean;
+  form?: (ctx: { kata: string; selesai: (baris: Record<string, unknown> | null) => void }) => React.ReactNode;
+  onTambah?: (kata: string) => Promise<Record<string, unknown> | null>;
 }
 
 /**
@@ -229,7 +246,8 @@ export interface PilihEntitasProps {
  * <PilihEntitas jenis={jenisEntitasDariKolom(kolom.nama, kolom.keterangan) ?? 'pengguna'} ... />
  * ```
  */
-export function PilihEntitas({ jenis, value, defaultValue, onValueChange, query, load, limit = 20, placeholder, name, id, disabled, size, className, ...rest }: PilihEntitasProps) {
+export function PilihEntitas({ jenis, value, defaultValue, onValueChange, query, load, limit = 20, placeholder, name, id, disabled, size, className, tambah, ...rest }: PilihEntitasProps) {
+  const [dialogTambah, setDialogTambah] = React.useState<{ kata: string; selesai: (b: Baris | null) => void } | null>(null);
   const siakad = useOptionalSiakad();
   const src: SumberEntitas = typeof jenis === 'string' ? SUMBER_ENTITAS[jenis] : jenis;
   const kunciDari = React.useCallback((r: Baris) => teks(r[src.kunci]), [src.kunci]);
@@ -283,39 +301,62 @@ export function PilihEntitas({ jenis, value, defaultValue, onValueChange, query,
   }, [nilai, src.path, src.kunci]);
 
   const label = (r: Baris) => (r.__stub ? teks(r[src.kunci]) : src.judul(r) || kunciDari(r));
+  const opsiTambah = tambah
+    ? {
+        label: tambah.label ?? ((k: string) => (k ? `Tambah ${src.nama} “${k}”` : `Tambah ${src.nama} baru`)),
+        hanyaKosong: tambah.hanyaKosong,
+        onTambah: (kata: string): Promise<Baris | null> => {
+          if (tambah.form) return new Promise((resolve) => setDialogTambah({ kata, selesai: resolve }));
+          return tambah.onTambah ? tambah.onTambah(kata) : Promise.resolve(null);
+        },
+      }
+    : undefined;
+  const selesaiTambah = (b: Baris | null) => {
+    dialogTambah?.selesai(b);
+    setDialogTambah(null);
+    if (b) semua.current = null;
+  };
   return (
-    <Combobox<Baris>
-      {...rest}
-      id={id}
-      name={name}
-      size={size}
-      disabled={disabled}
-      className={className}
-      placeholder={placeholder ?? src.placeholder ?? `Cari ${src.nama}`}
-      icon={src.ikon}
-      loadItems={ambilDaftar}
-      value={item}
-      onValueChange={(r) => {
-        const k = r ? kunciDari(r) : null;
-        setItem(r);
-        setInner(k);
-        onValueChange?.(k, r);
-      }}
-      itemToString={label}
-      itemKey={kunciDari}
-      emptyText={`Tidak ada ${src.nama} yang cocok.`}
-      renderItem={(r) => (
-        <>
-          {src.avatar ? (
-            <Avatar name={label(r)} src={typeof r.foto === 'string' ? r.foto : undefined} size="sm" />
-          ) : (
-            <span className="u-option-media" data-shape="square">
-              {src.ikon ?? <Building2 size={14} />}
-            </span>
-          )}
-          <OptionContent title={label(r)} meta={src.meta?.(r)} />
-        </>
+    <>
+      <Combobox<Baris>
+        tambah={opsiTambah}
+        {...rest}
+        id={id}
+        name={name}
+        size={size}
+        disabled={disabled}
+        className={className}
+        placeholder={placeholder ?? src.placeholder ?? `Cari ${src.nama}`}
+        icon={src.ikon}
+        loadItems={ambilDaftar}
+        value={item}
+        onValueChange={(r) => {
+          const k = r ? kunciDari(r) : null;
+          setItem(r);
+          setInner(k);
+          onValueChange?.(k, r);
+        }}
+        itemToString={label}
+        itemKey={kunciDari}
+        emptyText={`Tidak ada ${src.nama} yang cocok.`}
+        renderItem={(r) => (
+          <>
+            {src.avatar ? (
+              <Avatar name={label(r)} src={typeof r.foto === 'string' ? r.foto : undefined} size="sm" />
+            ) : (
+              <span className="u-option-media" data-shape="square">
+                {src.ikon ?? <Building2 size={14} />}
+              </span>
+            )}
+            <OptionContent title={label(r)} meta={src.meta?.(r)} />
+          </>
+        )}
+      />
+      {tambah?.form && (
+        <Dialog open={Boolean(dialogTambah)} onOpenChange={(o) => !o && selesaiTambah(null)} title={tambah.judul ?? `Tambah ${src.nama}`}>
+          {dialogTambah && tambah.form({ kata: dialogTambah.kata, selesai: selesaiTambah })}
+        </Dialog>
       )}
-    />
+    </>
   );
 }

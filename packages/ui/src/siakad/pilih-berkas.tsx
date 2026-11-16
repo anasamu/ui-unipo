@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { Check, FileText, FolderOpen, ImageIcon, Search, Upload, X } from 'lucide-react';
 import { Button } from '../components/actions';
-import { Progress } from '../components/display';
+import { ProgressUnggah } from '../components/progres';
 import { Dialog } from '../components/overlays';
 import { formatBytes } from '../lib/format';
 import { cn } from '../lib/cn';
@@ -142,6 +142,7 @@ export function PilihBerkas({ value, onValueChange, accept, disabled, invalid, t
   const { data: info } = useInfoBerkas();
   const masuk = React.useRef<HTMLInputElement>(null);
   const [persen, setPersen] = React.useState<number | null>(null);
+  const [unggahan, setUnggahan] = React.useState<{ nama: string; ukuran: number } | null>(null);
   const [galat, setGalat] = React.useState<string | null>(null);
   const [buka, setBuka] = React.useState(false);
   const [kini, setKini] = React.useState<BerkasTerunggah | null>(null);
@@ -172,6 +173,7 @@ export function PilihBerkas({ value, onValueChange, accept, disabled, invalid, t
     batal.current = ctrl;
     setGalat(null);
     setPersen(0);
+    setUnggahan({ nama: file.name, ukuran: file.size });
     try {
       pakai(await unggah(file, setPersen, ctrl.signal));
     } catch (e) {
@@ -211,18 +213,7 @@ export function PilihBerkas({ value, onValueChange, accept, disabled, invalid, t
         }}
       />
       {persen !== null ? (
-        <div className="u-pilih-berkas-isi">
-          <span className="u-pilih-berkas-ikon">
-            <Upload aria-hidden />
-          </span>
-          <div className="u-pilih-berkas-teks">
-            <strong>Mengunggah… {persen}%</strong>
-            <Progress value={persen} size="sm" />
-          </div>
-          <Button variant="ghost" size="sm" iconOnly aria-label="Batalkan unggahan" onClick={() => batal.current?.abort()}>
-            <X />
-          </Button>
-        </div>
+        <ProgressUnggah nama={unggahan?.nama ?? 'Berkas'} ukuran={unggahan?.ukuran} persen={persen} onBatal={() => batal.current?.abort()} />
       ) : value ? (
         <div className="u-pilih-berkas-isi">
           <span className="u-pilih-berkas-ikon">{ikonBerkas(berkas?.mime)}</span>

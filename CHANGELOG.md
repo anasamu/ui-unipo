@@ -1,5 +1,43 @@
 # Catatan perubahan
 
+## 1.28.0 (2026-11-16)
+
+- 
+
+## 1.28.0 (2026-11-16)
+
+- **Progress bar** (`unipo-ui`): `ProgressLangkah` (segmen, titik, garis, vertikal, ringkas; di mobile langkah panjang diringkas), `ProgressBertumpuk`, `ProgressTarget`, `ProgressGauge` (ambang waspada/bahaya), `ProgressUnggah` (batal, ulangi), `ProgressTenggat` + `sisaWaktu`, `ProgressKuota`, `ProgressCincinBanyak`, `ProgressDaftar`, `ProgressTebal`, `ProgressTakTentu`, `ProgressHalaman`, `nadaAmbang`.
+  - Dipasang di komponen yang ada: `SyaratSaya` dan `KetentuanAturan` (tenggat), `PilihBerkas` (progres unggah), `KeuanganMahasiswa` (komposisi bayar).
+- **Navigasi per modul** (`unipo-ui`):
+  - `SidebarModul`, 7 varian: standar, ringkas, melayang, berkelompok, ganda, berwarna, garis. Di mobile menjadi laci kiri atau bilah bawah.
+  - `MenuUtama`, 6 varian: grid, daftar, kartu, mega, dok, ubin.
+  - `MenuAtas`, 6 varian: tab, pil, garis, segmen, remah, bilah. Item berlebih masuk "Lainnya". Di mobile varian bilah memakai laci.
+- **Cari atau unggah, pilih atau tambah**:
+  - `CariAtauUnggahDokumen` (`unipo-ui/siakad`) mencari di `/v1/berkas` atau sumber lain. Bila dokumen tidak ditemukan, pengguna bisa mengunggah atau menyeret berkas. Unggahan menampilkan progres, dan dokumen baru langsung terpilih.
+  - `PilihEntitas` mendapat prop `tambah` (formulir dialog atau simpan langsung).
+  - `Combobox` mendapat prop `tambah`.
+- **Kasir dan keuangan** (`unipo-ui/siakad`, API `/v1/keuangan`, `/v1/pmb/admin/tagihan`, `/v1/keu`):
+  - `Kasir` dengan konteks keuangan, fakultas, atau PMB. Mendukung keranjang, cicil, metode bayar, tombol nominal cepat, dan kembalian. Di mobile tampil sebagai bilah bawah dengan lembar bayar.
+  - `SesiKasir` untuk buka/tutup loket, dengan setoran dan selisih.
+  - `KwitansiPembayaran` ber-QR, siap cetak.
+  - `RiwayatPembayaranMahasiswa` (linimasa, tabel, kartu).
+  - `BukuKas`.
+  - `JurnalUmum`, `FormJurnal`, `DetailJurnal`.
+  - Hooks: `useKeuanganSaya`, `useKeuanganMahasiswa`, `useBukuKas`, `useDaftarJurnal`, `useJurnal`, `SUMBER_AKUN_KEU`.
+- **Widget per unit** (`unipo-ui/siakad`):
+  - `KartuWidget` dengan 5 varian: kartu, ringkas, cincin, baris, sorot.
+  - Widget per unit: `WidgetSdm`, `WidgetDosen`, `WidgetTendik`, `WidgetBaak`, `WidgetMahasiswa`, `WidgetSpmi`, `WidgetLppm`, `WidgetKeuangan`, `WidgetPmb`, `WidgetArsip`, `WidgetSurat`, `WidgetPresensi`.
+  - `KisiWidgetUnit`.
+  - `WidgetPengajuan` untuk melacak tahap pengajuan surat, cuti, dan dispensasi.
+- **Pengolah dokumen**:
+  - `tampilan="ringkas"`: bilah alat satu baris. Ini bawaan di mobile, dengan zoom pas layar.
+  - Panel navigasi judul (`navigasi`).
+  - Penanda simpan otomatis (`simpan`).
+  - Mode fokus dan layar penuh.
+  - Perkiraan waktu baca.
+- Situs dokumentasi: "Lihat kode" kini bertab per berkas. Tab pertama berisi berkas contoh lengkap dengan impornya. Bila contoh memakai komponen yang mengambil data, ada tab tambahan `main.tsx` (UnipoProvider), `siakad.ts` (klien SDK UNIPO), dan `sdk.ts` (panggilan SDK yang dijalankan komponen, hasil pemindaian kode sumber lewat `apps/docs/scripts/peta-sdk.mjs`).
+- Situs dokumentasi: pemilih perangkat global (otomatis, web, desktop, iOS, Android) memanggil `setelPlatform`. Semua pratinjau mengikuti perangkat yang dipilih, dan bisa diatur lewat `?perangkat=` atau `postMessage`.
+
 ## 1.27.1 (2026-11-16)
 
 - Terbitkan perubahan `KebijakanUnit`/`useDokumenKebijakan` (`fakultas`, `prodi`) yang tercatat di 1.27.0 tetapi belum ikut paket 1.27.0 di npm, karena nomor versinya bentrok dengan rilis aturan mutu.

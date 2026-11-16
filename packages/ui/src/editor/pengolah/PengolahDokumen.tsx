@@ -11,6 +11,13 @@ import {
   AlignRight,
   Baseline,
   Bold,
+  Check,
+  CloudOff,
+  Expand,
+  Focus,
+  ListTree,
+  LoaderCircle,
+  Shrink,
   Braces,
   CalendarDays,
   ChevronDown,
@@ -50,6 +57,7 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import { cn } from '../../lib/cn';
+import { usePlatform } from '../../lib/platform';
 import { Popover, Tooltip } from '../../components/overlays';
 import { pngDariSvgQr, svgKodeQr } from '../../lib/qr';
 import { PENANDA_BAWAAN, tanggalSurat, type PenandaTemplat } from '../dokumen/templat';
@@ -146,6 +154,15 @@ export interface PengolahDokumenProps {
   baca?: boolean;
   /** Tinggi editor (bawaan: 100% induk, minimal 32rem). */
   tinggi?: number | string;
+  /**
+   * Tampilan bilah alat: `pita` (tab ala pengolah kata) atau `ringkas` (satu baris alat yang paling sering dipakai).
+   * Bawaan: pita di desktop/web, ringkas di mobile (mengikuti setelPlatform).
+   */
+  tampilan?: 'pita' | 'ringkas';
+  /** Status simpan otomatis di bilah bawah. */
+  simpan?: { status: 'tersimpan' | 'menyimpan' | 'belum' | 'galat'; waktu?: string | Date | null };
+  /** Panel navigasi (daftar judul) terbuka sejak awal. */
+  navigasi?: boolean;
   /** Dapat objek editor (Tiptap) untuk perintah dari luar. */
   onSiap?: (editor: Editor) => void;
   className?: string;
@@ -166,7 +183,25 @@ const GAYA_PARAGRAF = [
 const LABEL_HURUF: Record<string, string> = { serif: 'Times New Roman', sans: 'Arial', mono: 'Courier New' };
 const LABEL_SPASI: Record<SpasiBaris, string> = { '1': '1,0', '115': '1,15', '15': '1,5', '2': '2,0' };
 
-function Tombol({ ikon, label, aktif, nonaktif, onClick, besar, teks, pintasan }: { ikon: React.ReactNode; label: string; aktif?: boolean; nonaktif?: boolean; onClick?: () => void; besar?: boolean; teks?: boolean; pintasan?: string }) {
+function Tombol({
+  ikon,
+  label,
+  aktif,
+  nonaktif,
+  onClick,
+  besar,
+  teks,
+  pintasan,
+}: {
+  ikon: React.ReactNode;
+  label: string;
+  aktif?: boolean;
+  nonaktif?: boolean;
+  onClick?: () => void;
+  besar?: boolean;
+  teks?: boolean;
+  pintasan?: string;
+}) {
   return (
     <Tooltip content={label} shortcut={pintasan}>
       <button
@@ -210,7 +245,21 @@ function PilihKecil({ label, nilai, opsi, ganti, lebar }: { label: string; nilai
   );
 }
 
-function PilihWarna({ label, ikon, warna, nilai, ganti, jenis }: { label: string; ikon: React.ReactNode; warna: readonly string[]; nilai: string | null; ganti: (v: string | null) => void; jenis: 'warna' | 'sorot' }) {
+function PilihWarna({
+  label,
+  ikon,
+  warna,
+  nilai,
+  ganti,
+  jenis,
+}: {
+  label: string;
+  ikon: React.ReactNode;
+  warna: readonly string[];
+  nilai: string | null;
+  ganti: (v: string | null) => void;
+  jenis: 'warna' | 'sorot';
+}) {
   const [buka, setBuka] = React.useState(false);
   return (
     <Popover
@@ -306,7 +355,12 @@ function SisipQr({ editor, unggah, bawaan }: { editor: Editor; unggah?: Pengolah
       const png = await pngDariSvgQr(svgKodeQr(isi.trim(), null, { ukuran: 512 }).svg, 512);
       if (!unggah) throw new Error('Unggah gambar belum tersedia di halaman ini.');
       const g = await unggah(new File([png], 'kode-qr.png', { type: 'image/png' }));
-      editor.chain().focus().setImage({ src: g.url, alt: `Kode QR: ${isi.trim()}` }).aturGambar({ lebar: '25' }).run();
+      editor
+        .chain()
+        .focus()
+        .setImage({ src: g.url, alt: `Kode QR: ${isi.trim()}` })
+        .aturGambar({ lebar: '25' })
+        .run();
       setBuka(false);
     } catch (e) {
       setGalat(e instanceof Error ? e.message : 'Gagal membuat kode QR.');
@@ -409,7 +463,11 @@ function SisipGambar({ editor, unggah }: { editor: Editor; unggah?: PengolahDoku
 function SisipPenanda({ editor, daftar }: { editor: Editor; daftar: PenandaTemplat[] }) {
   const [buka, setBuka] = React.useState(false);
   const [baru, setBaru] = React.useState('');
-  const nama = baru.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  const nama = baru
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '');
   const sisip = (n: string) => {
     editor.chain().focus().sisipPenanda(n).run();
     setBuka(false);
@@ -548,7 +606,9 @@ function cetakLembar(el: HTMLElement | null, kertas: UkuranKertas) {
   document.body.appendChild(frame);
   const d = frame.contentDocument;
   if (!d) return;
-  const gaya = Array.from(document.querySelectorAll('link[rel="stylesheet"], style')).map((n) => n.outerHTML).join('');
+  const gaya = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+    .map((n) => n.outerHTML)
+    .join('');
   const k = KERTAS[kertas];
   d.open();
   d.write(
@@ -591,9 +651,19 @@ export function PengolahDokumen({
   baca,
   tinggi,
   onSiap,
+  tampilan: tampilanProp,
+  simpan,
+  navigasi = false,
   className,
 }: PengolahDokumenProps) {
+  const plat = usePlatform();
+  const tampilan = tampilanProp ?? (plat.mobile ? 'ringkas' : 'pita');
   const [tab, setTab] = React.useState<Tab>('beranda');
+  const [navBuka, setNavBuka] = React.useState(navigasi);
+  const [fokus, setFokus] = React.useState(false);
+  const [penuh, setPenuh] = React.useState(false);
+  const akar = React.useRef<HTMLDivElement>(null);
+  const mejaRef = React.useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = React.useState(100);
   const [cari, setCari] = React.useState(false);
   const [panelBuka, setPanelBuka] = React.useState(true);
@@ -676,6 +746,14 @@ export function PengolahDokumen({
         bisaUndo: e.can().undo(),
         bisaRedo: e.can().redo(),
         kata: e.storage.characterCount.words() as number,
+        judul: (() => {
+          const out: Array<{ level: number; teks: string; pos: number }> = [];
+          e.state.doc.descendants((node: { type: { name: string }; attrs: { level?: number }; textContent: string }, pos: number) => {
+            if (node.type.name === 'heading') out.push({ level: node.attrs.level ?? 2, teks: node.textContent, pos });
+            return node.type.name !== 'heading';
+          });
+          return out;
+        })(),
         huruf_: e.storage.characterCount.characters() as number,
       };
     },
@@ -700,6 +778,26 @@ export function PengolahDokumen({
     return () => ro.disconnect();
   }, [tinggiHalaman]);
 
+  // Mobile: kertas dipaskan ke lebar layar.
+  React.useEffect(() => {
+    if (!plat.mobile) return;
+    const el = mejaRef.current;
+    if (!el) return;
+    const pas = () => setZoom(Math.max(40, Math.min(100, Math.floor(((el.clientWidth - 16) / ((k.lebar / 10) * CM_PX)) * 100))));
+    pas();
+    window.addEventListener('resize', pas);
+    return () => window.removeEventListener('resize', pas);
+  }, [plat.mobile, k.lebar]);
+  React.useEffect(() => {
+    const ubah = () => setPenuh(document.fullscreenElement === akar.current && Boolean(akar.current));
+    document.addEventListener('fullscreenchange', ubah);
+    return () => document.removeEventListener('fullscreenchange', ubah);
+  }, []);
+  const alihPenuh = () => {
+    if (document.fullscreenElement) void document.exitFullscreen?.();
+    else void akar.current?.requestFullscreen?.().catch(() => setPenuh((v) => !v));
+  };
+
   React.useEffect(() => {
     const kunci = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'h') && lembar.current?.closest('.u-pd')?.contains(document.activeElement)) {
@@ -723,8 +821,28 @@ export function PengolahDokumen({
         </Grup>
         <Grup label="Huruf">
           <div className="u-pd-baris">
-            <PilihKecil label="Jenis huruf" lebar={138} nilai={st.huruf} opsi={HURUF.map((h) => ({ nilai: h, label: LABEL_HURUF[h] }))} ganti={(v) => c().aturHuruf(v === 'serif' ? null : v).run()} />
-            <PilihKecil label="Ukuran huruf" lebar={58} nilai={st.uk} opsi={UKURAN_HURUF.map((u) => ({ nilai: u, label: u }))} ganti={(v) => c().aturUkuran(v === '12' ? null : v).run()} />
+            <PilihKecil
+              label="Jenis huruf"
+              lebar={138}
+              nilai={st.huruf}
+              opsi={HURUF.map((h) => ({ nilai: h, label: LABEL_HURUF[h] }))}
+              ganti={(v) =>
+                c()
+                  .aturHuruf(v === 'serif' ? null : v)
+                  .run()
+              }
+            />
+            <PilihKecil
+              label="Ukuran huruf"
+              lebar={58}
+              nilai={st.uk}
+              opsi={UKURAN_HURUF.map((u) => ({ nilai: u, label: u }))}
+              ganti={(v) =>
+                c()
+                  .aturUkuran(v === '12' ? null : v)
+                  .run()
+              }
+            />
           </div>
           <div className="u-pd-baris">
             <Tombol ikon={<Bold />} label="Tebal" pintasan="Ctrl+B" aktif={st.tebal} onClick={() => c().toggleBold().run()} />
@@ -751,7 +869,17 @@ export function PengolahDokumen({
             <Tombol ikon={<AlignCenter />} label="Rata tengah" pintasan="Ctrl+E" aktif={st.rata === 'tengah'} onClick={() => c().aturRata('tengah').run()} />
             <Tombol ikon={<AlignRight />} label="Rata kanan" pintasan="Ctrl+R" aktif={st.rata === 'kanan'} onClick={() => c().aturRata('kanan').run()} />
             <Tombol ikon={<AlignJustify />} label="Rata kiri-kanan" pintasan="Ctrl+J" aktif={st.rata === 'penuh'} onClick={() => c().aturRata('penuh').run()} />
-            <PilihKecil label="Spasi baris" lebar={66} nilai={st.spasi} opsi={(Object.keys(LABEL_SPASI) as SpasiBaris[]).map((s) => ({ nilai: s, label: LABEL_SPASI[s] }))} ganti={(v) => c().aturSpasiBaris(v as SpasiBaris).run()} />
+            <PilihKecil
+              label="Spasi baris"
+              lebar={66}
+              nilai={st.spasi}
+              opsi={(Object.keys(LABEL_SPASI) as SpasiBaris[]).map((s) => ({ nilai: s, label: LABEL_SPASI[s] }))}
+              ganti={(v) =>
+                c()
+                  .aturSpasiBaris(v as SpasiBaris)
+                  .run()
+              }
+            />
             <Tombol ikon={<span className="u-pd-ikon-teks">⇥</span>} label="Inden baris pertama" aktif={st.indenAwal} onClick={() => c().alihIndenAwal().run()} />
           </div>
         </Grup>
@@ -766,7 +894,10 @@ export function PengolahDokumen({
                 onClick={() => {
                   if (g.nilai === 'p') c().setParagraph().run();
                   else if (g.nilai === 'kutipan') c().toggleBlockquote().run();
-                  else c().setHeading({ level: Number(g.nilai.slice(1)) as 2 | 3 | 4 }).run();
+                  else
+                    c()
+                      .setHeading({ level: Number(g.nilai.slice(1)) as 2 | 3 | 4 })
+                      .run();
                 }}
               >
                 <span>AaBb</span>
@@ -806,7 +937,13 @@ export function PengolahDokumen({
     tata: (
       <>
         <Grup label="Kertas">
-          <PilihKecil label="Ukuran kertas" lebar={200} nilai={kertas} opsi={(Object.keys(KERTAS) as UkuranKertas[]).map((x) => ({ nilai: x, label: KERTAS[x].label }))} ganti={(v) => onKertasChange?.(v as UkuranKertas)} />
+          <PilihKecil
+            label="Ukuran kertas"
+            lebar={200}
+            nilai={kertas}
+            opsi={(Object.keys(KERTAS) as UkuranKertas[]).map((x) => ({ nilai: x, label: KERTAS[x].label }))}
+            ganti={(v) => onKertasChange?.(v as UkuranKertas)}
+          />
         </Grup>
         <Grup label="Margin">
           <PilihKecil
@@ -862,6 +999,9 @@ export function PengolahDokumen({
           <Tombol ikon={<ZoomIn />} label="Perbesar" onClick={() => setZoom((z) => Math.min(200, z + 10))} />
           {panel && <Tombol ikon={<PanelRight />} label="Panel data" aktif={panelBuka} onClick={() => setPanelBuka((v) => !v)} />}
           <Tombol ikon={<Pilcrow />} label="Tanda paragraf" aktif={tandaParagraf} onClick={() => setTandaParagraf((v) => !v)} />
+          <Tombol ikon={<ListTree />} label="Panel navigasi" aktif={navBuka} onClick={() => setNavBuka((v) => !v)} />
+          <Tombol ikon={<Focus />} label="Mode fokus" aktif={fokus} onClick={() => setFokus((v) => !v)} />
+          <Tombol ikon={penuh ? <Shrink /> : <Expand />} label={penuh ? 'Keluar layar penuh' : 'Layar penuh'} aktif={penuh} onClick={alihPenuh} />
         </Grup>
         <Grup label="Cetak">
           <Tombol ikon={<Printer />} label="Cetak" besar onClick={() => cetakLembar(lembar.current, kertas)} />
@@ -895,7 +1035,18 @@ export function PengolahDokumen({
       <>
         <Grup label="Ukuran">
           {(['25', '50', '75', '100'] as const).map((l) => (
-            <Tombol key={l} ikon={<FileImage />} label={`${l}%`} teks aktif={(st.gambarLebar ?? '100') === l} onClick={() => c().aturGambar({ lebar: l === '100' ? null : l }).run()} />
+            <Tombol
+              key={l}
+              ikon={<FileImage />}
+              label={`${l}%`}
+              teks
+              aktif={(st.gambarLebar ?? '100') === l}
+              onClick={() =>
+                c()
+                  .aturGambar({ lebar: l === '100' ? null : l })
+                  .run()
+              }
+            />
           ))}
         </Grup>
         <Grup label="Posisi">
@@ -929,15 +1080,90 @@ export function PengolahDokumen({
     zoom: zoom / 100,
   } as React.CSSProperties;
 
+  const ringkas = (
+    <div className="u-pd-ringkas" role="toolbar" aria-label="Alat dokumen">
+      <Tombol ikon={<Undo2 />} label="Urungkan" pintasan="Ctrl+Z" nonaktif={!st.bisaUndo} onClick={() => c().undo().run()} />
+      <Tombol ikon={<Redo2 />} label="Ulangi" pintasan="Ctrl+Y" nonaktif={!st.bisaRedo} onClick={() => c().redo().run()} />
+      <span className="u-pd-ringkas-sekat" />
+      <PilihKecil
+        label="Gaya paragraf"
+        lebar={104}
+        nilai={st.gaya}
+        opsi={GAYA_PARAGRAF.map((g) => ({ nilai: g.nilai, label: g.label }))}
+        ganti={(v) => {
+          if (v === 'p') c().setParagraph().run();
+          else if (v === 'kutipan') c().toggleBlockquote().run();
+          else
+            c()
+              .setHeading({ level: Number(v.slice(1)) as 2 | 3 | 4 })
+              .run();
+        }}
+      />
+      <Tombol ikon={<Bold />} label="Tebal" pintasan="Ctrl+B" aktif={st.tebal} onClick={() => c().toggleBold().run()} />
+      <Tombol ikon={<Italic />} label="Miring" pintasan="Ctrl+I" aktif={st.miring} onClick={() => c().toggleItalic().run()} />
+      <Tombol ikon={<Underline />} label="Garis bawah" pintasan="Ctrl+U" aktif={st.garisBawah} onClick={() => c().toggleUnderline().run()} />
+      <PilihWarna label="Stabilo" ikon={<Highlighter />} jenis="sorot" warna={WARNA_SOROT} nilai={st.sorot} ganti={(v) => c().aturSorot(v).run()} />
+      <span className="u-pd-ringkas-sekat" />
+      <Tombol ikon={<List />} label="Butir" aktif={st.bullet} onClick={() => c().toggleBulletList().run()} />
+      <Tombol ikon={<ListOrdered />} label="Penomoran" aktif={st.nomor} onClick={() => c().toggleOrderedList().run()} />
+      <Tombol ikon={<AlignLeft />} label="Rata kiri" aktif={st.rata === 'kiri'} onClick={() => c().aturRata('kiri').run()} />
+      <Tombol ikon={<AlignCenter />} label="Rata tengah" aktif={st.rata === 'tengah'} onClick={() => c().aturRata('tengah').run()} />
+      <Tombol ikon={<AlignJustify />} label="Rata kiri-kanan" aktif={st.rata === 'penuh'} onClick={() => c().aturRata('penuh').run()} />
+      <span className="u-pd-ringkas-sekat" />
+      <PilihTabel sisip={(b, k2) => c().insertTable({ rows: b, cols: k2, withHeaderRow: false }).run()} />
+      <SisipGambar editor={editor} unggah={unggah} />
+      {daftarPenanda.length > 0 && <SisipPenanda editor={editor} daftar={daftarPenanda} />}
+      <Tombol ikon={<Search />} label="Cari & ganti" onClick={() => setCari(true)} />
+      <Tombol ikon={<ListTree />} label="Panel navigasi" aktif={navBuka} onClick={() => setNavBuka((v) => !v)} />
+      {!plat.mobile && <Tombol ikon={<Focus />} label="Mode fokus" aktif={fokus} onClick={() => setFokus((v) => !v)} />}
+    </div>
+  );
+
+  const lompat = (pos: number) => {
+    editor
+      .chain()
+      .focus()
+      .setTextSelection(pos + 1)
+      .run();
+    const dom = editor.view.nodeDOM(pos) as HTMLElement | null;
+    dom?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+    if (plat.mobile) setNavBuka(false);
+  };
+  const menit = Math.max(1, Math.round(st.kata / 200));
+  const ikonSimpan = simpan ? (
+    simpan.status === 'menyimpan' ? (
+      <LoaderCircle className="u-pd-putar" />
+    ) : simpan.status === 'galat' ? (
+      <CloudOff />
+    ) : simpan.status === 'tersimpan' ? (
+      <Check />
+    ) : null
+  ) : null;
+  const teksSimpan = simpan
+    ? simpan.status === 'menyimpan'
+      ? 'Menyimpan…'
+      : simpan.status === 'galat'
+        ? 'Gagal menyimpan'
+        : simpan.status === 'belum'
+          ? 'Belum disimpan'
+          : `Tersimpan${simpan.waktu ? ` ${new Date(simpan.waktu).toTimeString().slice(0, 5)}` : ''}`
+    : null;
+
   return (
-    <div className={cn('u-pd', baca && 'is-baca', className)} style={{ height: tinggi }}>
+    <div ref={akar} className={cn('u-pd', baca && 'is-baca', fokus && 'is-fokus', penuh && 'is-penuh', className)} data-tampilan={tampilan} style={{ height: tinggi }}>
       {(judul || aksi) && (
         <div className="u-pd-atas">
           <div className="u-pd-judul">{judul}</div>
           <div className="u-pd-aksi">{aksi}</div>
         </div>
       )}
-      {!baca && (
+      {!baca && tampilan === 'ringkas' && (
+        <div className="u-pd-pita u-pd-pita-ringkas">
+          {ringkas}
+          {cari && <PanelCari editor={editor} tutup={() => setCari(false)} />}
+        </div>
+      )}
+      {!baca && tampilan === 'pita' && (
         <div className="u-pd-pita">
           <div className="u-pd-tab" role="tablist" aria-label="Pita menu">
             {tabs.map((t) => (
@@ -953,7 +1179,30 @@ export function PengolahDokumen({
         </div>
       )}
       <div className="u-pd-tubuh">
-        <div className="u-pd-meja">
+        {navBuka && (
+          <nav className="u-pd-navigasi" aria-label="Navigasi dokumen">
+            <div className="u-pd-panel-kepala">
+              <b>Navigasi</b>
+              <button type="button" className="u-pd-tb" aria-label="Tutup navigasi" onClick={() => setNavBuka(false)}>
+                ✕
+              </button>
+            </div>
+            {st.judul.length ? (
+              <ol>
+                {st.judul.map((j, i) => (
+                  <li key={i} data-level={j.level}>
+                    <button type="button" onClick={() => lompat(j.pos)}>
+                      {j.teks || <i>(judul kosong)</i>}
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="u-pd-navigasi-kosong">Pakai gaya Judul 1–3 agar bagian dokumen muncul di sini.</p>
+            )}
+          </nav>
+        )}
+        <div className="u-pd-meja" ref={mejaRef}>
           <div ref={lembar} className={cn('u-pd-lembar', tandaParagraf && 'is-tanda')} data-kertas={kertas} style={gayaLembar}>
             {kop && (
               <div className="u-pd-kop" title="Kop diatur di templat dokumen">
@@ -988,6 +1237,13 @@ export function PengolahDokumen({
         <span>
           Halaman {halaman} · {st.kata.toLocaleString('id-ID')} kata
         </span>
+        {!plat.mobile && <span className="u-pd-status-baca">± {menit} menit baca</span>}
+        {teksSimpan && (
+          <span className="u-pd-status-simpan" data-status={simpan!.status}>
+            {ikonSimpan}
+            {teksSimpan}
+          </span>
+        )}
         <span className="u-pd-status-teks">{status}</span>
         <span className="u-pd-zoom">
           {panel && !panelBuka && (

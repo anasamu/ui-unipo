@@ -20,6 +20,7 @@ import {
   Users,
   Wallet,
 } from 'lucide-react';
+import { ProgressBertumpuk } from '../components/progres';
 import { cn } from '../lib/cn';
 import { formatDate, formatNumber, formatRupiah } from '../lib/format';
 import { Badge, Button, Skeleton } from '../components/actions';
@@ -749,7 +750,15 @@ export function KeuanganMahasiswa({ nim: nimProp, className }: { nim?: string; c
               <dd>{formatRupiah(r.sisa)}</dd>
             </div>
           </dl>
-          <Progress value={persen} label="Terbayar" tone={r.sisa > 0 ? 'warning' : 'success'} format={(v) => `${v}%`} />
+          <ProgressBertumpuk
+            label={`Terbayar ${persen}%`}
+            total={r.tagihan}
+            legenda={false}
+            bagian={[
+              { label: 'Dibayar', nilai: r.dibayar, tone: 'success' },
+              { label: 'Potongan', nilai: r.potongan, tone: 'info' },
+            ]}
+          />
         </div>
       </div>
       {(d.invoice_aktif ?? []).length > 0 && (
