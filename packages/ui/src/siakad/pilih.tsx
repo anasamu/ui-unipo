@@ -6,6 +6,7 @@ import type { ControlSize } from '../components/forms';
 import { Avatar } from '../components/display';
 import { Dialog } from '../components/overlays';
 import { useOptionalSiakad } from './provider';
+import { BarisProdi, LogoFakultas, judulProdi, namaRapi, type ProdiReferensi } from './prodi';
 
 type Baris = Record<string, unknown>;
 const teks = (v: unknown) => (v == null ? '' : String(v));
@@ -37,6 +38,8 @@ export interface SumberEntitas {
   avatar?: boolean;
   ikon?: React.ReactNode;
   placeholder?: string;
+  /** Tampilan baris sendiri di daftar pilihan (menggantikan avatar/ikon + judul + meta). */
+  tampil?: (r: Baris) => React.ReactNode;
 }
 
 /** Sumber bawaan. Kunci objek ini dipakai sebagai `jenis` di <PilihEntitas jenis="mahasiswa" />. */
@@ -47,7 +50,7 @@ export const SUMBER_ENTITAS = {
     kunci: 'nim',
     satu: '/v1/mahasiswa/{id}',
     judul: (r) => teks(r.nama),
-    meta: (r) => gabung(r.nim, r.nama_prodi, r.tahun_masuk),
+    meta: (r) => gabung(r.nim, namaRapi(teks(r.nama_prodi)), r.tahun_masuk),
     avatar: true,
     ikon: <GraduationCap />,
     placeholder: 'Cari NIM atau nama mahasiswa',
@@ -58,7 +61,7 @@ export const SUMBER_ENTITAS = {
     kunci: 'nidn',
     satu: '/v1/dosen/{id}',
     judul: (r) => teks(r.nama_lengkap || r.nama),
-    meta: (r) => gabung(r.nidn && `NIDN ${r.nidn}`, r.jabatan_akademik, r.nama_prodi),
+    meta: (r) => gabung(r.nidn && `NIDN ${r.nidn}`, r.jabatan_akademik, namaRapi(teks(r.nama_prodi))),
     avatar: true,
     ikon: <UserRound />,
     placeholder: 'Cari NIDN atau nama dosen',
@@ -134,8 +137,10 @@ export const SUMBER_ENTITAS = {
     path: '/v1/referensi/prodi',
     kunci: 'kode_prodi',
     klien: true,
-    judul: (r) => gabung(r.kode_jenjang, r.nama_prodi).replace(' · ', ' '),
-    meta: (r) => gabung(r.kode_prodi, r.nama_fakultas),
+    judul: (r) => judulProdi(r as unknown as ProdiReferensi),
+    meta: (r) => gabung(r.kode_prodi, namaRapi(teks(r.nama_fakultas))),
+    // Logo fakultas, "S1 Teknik Sipil", kode + fakultas, lencana akreditasi dan status prodi.
+    tampil: (r) => <BarisProdi prodi={r as unknown as ProdiReferensi} ringkas />,
     ikon: <GraduationCap />,
     placeholder: 'Cari program studi',
   },
@@ -144,8 +149,14 @@ export const SUMBER_ENTITAS = {
     path: '/v1/referensi/fakultas',
     kunci: 'kode_fakultas',
     klien: true,
-    judul: (r) => teks(r.nama_fakultas || r.nama),
+    judul: (r) => namaRapi(teks(r.nama_fakultas || r.nama)),
     meta: (r) => teks(r.kode_fakultas),
+    tampil: (r) => (
+      <>
+        <LogoFakultas kode={teks(r.kode_fakultas)} nama={teks(r.nama_fakultas || r.nama)} logo={(r.logo as string | null | undefined) ?? null} ukuran="sm" />
+        <OptionContent title={namaRapi(teks(r.nama_fakultas || r.nama))} meta={teks(r.kode_fakultas)} />
+      </>
+    ),
     ikon: <Landmark />,
     placeholder: 'Cari fakultas',
   },
@@ -339,18 +350,22 @@ export function PilihEntitas({ jenis, value, defaultValue, onValueChange, query,
         itemToString={label}
         itemKey={kunciDari}
         emptyText={`Tidak ada ${src.nama} yang cocok.`}
-        renderItem={(r) => (
-          <>
-            {src.avatar ? (
-              <Avatar name={label(r)} src={typeof r.foto === 'string' ? r.foto : undefined} size="sm" />
-            ) : (
-              <span className="u-option-media" data-shape="square">
-                {src.ikon ?? <Building2 size={14} />}
-              </span>
-            )}
-            <OptionContent title={label(r)} meta={src.meta?.(r)} />
-          </>
-        )}
+        renderItem={(r) =>
+          src.tampil && !r.__stub ? (
+            src.tampil(r)
+          ) : (
+            <>
+              {src.avatar ? (
+                <Avatar name={label(r)} src={typeof r.foto === 'string' ? r.foto : undefined} size="sm" />
+              ) : (
+                <span className="u-option-media" data-shape="square">
+                  {src.ikon ?? <Building2 size={14} />}
+                </span>
+              )}
+              <OptionContent title={label(r)} meta={src.meta?.(r)} />
+            </>
+          )
+        }
       />
       {tambah?.form && (
         <Dialog open={Boolean(dialogTambah)} onOpenChange={(o) => !o && selesaiTambah(null)} title={tambah.judul ?? `Tambah ${src.nama}`}>

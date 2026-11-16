@@ -643,6 +643,11 @@
     height: 1.25rem;
   }
 }
+.u-kartu-data-prodi {
+  min-width: 0;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--u-border);
+}
 .u-kartu-data-badge {
   display: flex;
   flex-wrap: wrap;

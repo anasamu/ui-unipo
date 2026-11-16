@@ -487,6 +487,8 @@ export interface KolomRekap<T> {
   /** Jumlahkan di baris total. */
   total?: boolean;
   csv?: string;
+  /** Isi sel sendiri (mis. <LabelProdi />); `nilai` tetap dipakai untuk CSV dan total. */
+  tampil?: (b: T) => React.ReactNode;
 }
 
 /**
@@ -523,7 +525,9 @@ export function TabelRekap<T>({ kolom, baris, kunci, onPilih, total = true, koso
                 const angka = i > 0 && k.format !== 'teks';
                 return (
                   <td key={k.key} className={angka ? 'u-tl-angka' : undefined}>
-                    {k.batang && typeof v === 'number' ? (
+                    {k.tampil ? (
+                      k.tampil(b)
+                    ) : k.batang && typeof v === 'number' ? (
                       <span className="u-rekap-batang">
                         <i style={{ width: `${(Math.abs(v) / (maks[k.key] ?? 1)) * 100}%` }} data-nada={k.format === 'persen' ? (v >= 90 ? 'baik' : v >= 70 ? 'sedang' : 'buruk') : undefined} />
                         <span>{formatNilai(v, k.format ?? 'angka')}</span>

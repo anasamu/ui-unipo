@@ -50,6 +50,7 @@ import { AngkaBerjalan, Animasi } from '../components/animasi';
 import { ChatWidget, CtaBand, FactBoard, FeatureGrid, Gallery, SectionNav, SocialLinks, StatStrip, TestimonialGrid, Timeline, cocokkanFaq, type TimelineItem } from '../components/landing';
 import { Cluster, Container, Grid, KontenHtml, PageHeader, Split, Stack, Text, teksPolos } from '../components/tata-letak';
 import { pesanGalat, useSiakadQuery } from './provider';
+import { LabelProdi, LencanaAkreditasi, LogoFakultas, useProdiDariKode } from './prodi';
 
 /**
  * Halaman publik PMB (pmb.unipo.ac.id) di atas `GET /v1/pmb/info/*`: landing lengkap, detail gelombang, dan
@@ -802,11 +803,13 @@ export function JalurJadwalPmb({ jalur = [], gelombang = [], loading, id = 'jalu
 // ================================================================ Program studi
 function KartuProdi({ p, onBuka }: { p: ProdiLandingPmb; onBuka: () => void }) {
   const i = p.info;
+  const ref = useProdiDariKode(p.kode_prodi);
   return (
     <button type="button" className="u-pmb-prodi" onClick={onBuka}>
       {i?.gambar && <img src={i.gambar} alt="" loading="lazy" className="u-pmb-prodi-img" />}
       <span className="u-pmb-prodi-meta">
-        {labelJenjang(p.jenjang)}
+        <LogoFakultas kode={p.kode_fakultas ?? ref?.kode_fak} nama={ref?.nama_fakultas} ukuran="sm" />
+        {labelJenjang(p.jenjang ?? ref?.kode_jenjang)}
         {i?.unggulan && (
           <Badge variant="warning">
             <Star aria-hidden /> Unggulan
@@ -816,10 +819,14 @@ function KartuProdi({ p, onBuka }: { p: ProdiLandingPmb; onBuka: () => void }) {
       <span className="u-pmb-prodi-nama">{hurufJudul(p.nama_prodi ?? p.kode_prodi).replace(/\//g, '/​')}</span>
       {i?.tagline && <span className="u-pmb-prodi-tagline">{i.tagline}</span>}
       <span className="u-pmb-prodi-kaki">
-        {i?.akreditasi && (
-          <span>
-            <BadgeCheck aria-hidden /> Akreditasi {i.akreditasi}
-          </span>
+        {ref ? (
+          <LencanaAkreditasi prodi={ref} ringkas />
+        ) : (
+          i?.akreditasi && (
+            <span>
+              <BadgeCheck aria-hidden /> Akreditasi {i.akreditasi}
+            </span>
+          )
         )}
         {p.kuota ? (
           <span>
@@ -1683,7 +1690,9 @@ export function DetailGelombangPmb({ id }: { id: string | number }) {
                 <tbody>
                   {g.prodi.map((p) => (
                     <tr key={p.kode_prodi}>
-                      <td>{hurufJudul(p.nama_prodi ?? p.kode_prodi)}</td>
+                      <td>
+                        <LabelProdi kode={p.kode_prodi} nama={hurufJudul(p.nama_prodi ?? p.kode_prodi)} prodi={{ kode_jenjang: '' }} sub={false} />
+                      </td>
                       <td>{labelJenjang(p.jenjang)}</td>
                       <td style={{ textAlign: 'right' }}>{p.kuota ?? '-'}</td>
                       <td style={{ textAlign: 'right' }}>{p.jumlah_peminat}</td>

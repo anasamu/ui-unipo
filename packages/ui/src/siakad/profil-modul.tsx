@@ -34,6 +34,7 @@ import { Ilustrasi, type NamaIlustrasi } from '../ikon/ilustrasi';
 import { DataDiriMahasiswa, JadwalMengajar, MahasiswaBimbingan, RiwayatStudi, labelTahunAkademik } from './akademik';
 import { useAkunSaya } from './akun';
 import { GalatApi } from './galat';
+import { LabelProdi } from './prodi';
 import { invalidateSiakad, useSiakad, useSiakadQuery } from './provider';
 
 // ================================================================ Data /v1/profil/saya
@@ -104,12 +105,7 @@ export function KepalaProfilSaya({ aksi, className }: { aksi?: React.ReactNode; 
               <span>
                 {id.kunci_label} <b className="u-mono">{id.kunci}</b>
               </span>
-              {id.nama_prodi && (
-                <span>
-                  {id.jenjang ? `${id.jenjang} ` : ''}
-                  {id.nama_prodi}
-                </span>
-              )}
+              {(id.kode_prodi || id.nama_prodi) && <LabelProdi kode={id.kode_prodi} nama={id.nama_prodi} prodi={{ kode_jenjang: id.jenjang }} />}
             </p>
             {d.profil?.judul && <p className="u-modul-kepala-judul">{d.profil.judul}</p>}
           </div>

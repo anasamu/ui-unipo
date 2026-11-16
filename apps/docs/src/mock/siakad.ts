@@ -2,14 +2,29 @@
 // Semua nama dan nomor di sini fiktif.
 import { Siakad } from 'unipo-siakad-sdk';
 
+// Bentuk mengikuti GET /v1/referensi/prodi: kode_jenjang kode PDDikti (C = S1, E = D3), kode_fak, akreditasi BAN-PT/LAM dan masa berlakunya.
+const tglDariKini = (hari: number) => new Date(Date.now() + hari * 864e5).toISOString().slice(0, 10);
 const PRODI = [
-  { kode_prodi: '55201', nama_prodi: 'Informatika', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Ilmu Komputer', kode_fakultas: 'FIK' },
-  { kode_prodi: '57201', nama_prodi: 'Sistem Informasi', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Ilmu Komputer', kode_fakultas: 'FIK' },
-  { kode_prodi: '61201', nama_prodi: 'Manajemen', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Ekonomi', kode_fakultas: 'FE' },
-  { kode_prodi: '62201', nama_prodi: 'Akuntansi', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Ekonomi', kode_fakultas: 'FE' },
-  { kode_prodi: '54211', nama_prodi: 'Agroteknologi', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Pertanian', kode_fakultas: 'FP' },
-  { kode_prodi: '74201', nama_prodi: 'Ilmu Hukum', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Hukum', kode_fakultas: 'FH' },
-  { kode_prodi: '86206', nama_prodi: 'Pendidikan Guru SD', kode_jenjang: 'S1', nama_fakultas: 'Fakultas Keguruan', kode_fakultas: 'FKIP' },
+  { kode_prodi: '55201', nama_prodi: 'Informatika', kode_jenjang: 'C', nama_fakultas: 'Fakultas Ilmu Komputer', kode_fakultas: 'FIK', kode_fak: 'FIK', status_prodi: 'A', kode_akreditasi: 'Baik Sekali', tgl_akhir_sk_ban: tglDariKini(900), no_sk_ban: '1234/SK/LAM-INFOKOM/Ak/S/X/2024', gelar: 'S.Kom.' },
+  { kode_prodi: '57201', nama_prodi: 'Sistem Informasi', kode_jenjang: 'C', nama_fakultas: 'Fakultas Ilmu Komputer', kode_fakultas: 'FIK', kode_fak: 'FIK', status_prodi: 'A', kode_akreditasi: 'Baik', tgl_akhir_sk_ban: tglDariKini(120), no_sk_ban: '0871/SK/LAM-INFOKOM/Ak/S/III/2021', gelar: 'S.Kom.' },
+  { kode_prodi: '61201', nama_prodi: 'Manajemen', kode_jenjang: 'C', nama_fakultas: 'Fakultas Ekonomi', kode_fakultas: 'FE', kode_fak: 'FE', status_prodi: 'A', kode_akreditasi: 'B', tgl_akhir_sk_ban: tglDariKini(400), no_sk_ban: '4512/SK/BAN-PT/Akred/S/X/2021', gelar: 'S.M.' },
+  { kode_prodi: '62201', nama_prodi: 'Akuntansi', kode_jenjang: 'C', nama_fakultas: 'Fakultas Ekonomi', kode_fakultas: 'FE', kode_fak: 'FE', status_prodi: 'A', kode_akreditasi: 'Unggul', tgl_akhir_sk_ban: tglDariKini(1500), no_sk_ban: '0098/SK/LAMEMBA/Akred/S/I/2025', gelar: 'S.Ak.' },
+  { kode_prodi: '54211', nama_prodi: 'Agroteknologi', kode_jenjang: 'C', nama_fakultas: 'Fakultas Pertanian', kode_fakultas: 'FP', kode_fak: 'FP', status_prodi: 'A', kode_akreditasi: 'Baik', tgl_akhir_sk_ban: tglDariKini(700), no_sk_ban: '2210/SK/BAN-PT/Ak.Ppj/S/VI/2023', gelar: 'S.P.' },
+  { kode_prodi: '74201', nama_prodi: 'Ilmu Hukum', kode_jenjang: 'C', nama_fakultas: 'Fakultas Hukum', kode_fakultas: 'FH', kode_fak: 'FH', status_prodi: 'A', kode_akreditasi: 'Baik Sekali', tgl_akhir_sk_ban: tglDariKini(1100), no_sk_ban: '7711/SK/BAN-PT/Ak/S/XI/2024', gelar: 'S.H.' },
+  { kode_prodi: '86206', nama_prodi: 'Pendidikan Guru SD', kode_jenjang: 'C', nama_fakultas: 'Fakultas Keguruan', kode_fakultas: 'FKIP', kode_fak: 'FKIP', status_prodi: 'A', kode_akreditasi: '', tgl_akhir_sk_ban: null, no_sk_ban: '0', gelar: 'S.Pd.' },
+  { kode_prodi: '22201', nama_prodi: 'TEKNIK SIPIL', kode_jenjang: 'C', nama_fakultas: 'FAKULTAS TEKNIK DAN PERENCANAAN', kode_fakultas: 'FTP', kode_fak: 'FTP', status_prodi: 'A', kode_akreditasi: 'C', tgl_akhir_sk_ban: '2024-08-13', no_sk_ban: '3201/SK/BAN-PT/Akred/S/VIII/2019', gelar: 'S.T.' },
+  { kode_prodi: '61401', nama_prodi: 'Manajemen Pemasaran', kode_jenjang: 'E', nama_fakultas: 'Fakultas Ekonomi', kode_fakultas: 'FE', kode_fak: 'FE', status_prodi: 'B', kode_akreditasi: 'Baik', tgl_akhir_sk_ban: tglDariKini(60), no_sk_ban: '1290/SK/BAN-PT/Ak.Ppj/Dipl/IV/2022', gelar: 'A.Md.M.' },
+];
+// Logo fakultas contoh (SVG data URI); FTP dan FKIP sengaja tanpa logo agar tampil monogram.
+const logoSvg = (warna: string, huruf: string) =>
+  `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M32 3 58 13v18c0 15-11 26-26 30C17 57 6 46 6 31V13Z" fill="${warna}"/><path d="M32 9 52 17v14c0 12-8 21-20 24-12-3-20-12-20-24V17Z" fill="none" stroke="#fff" stroke-width="2" opacity=".6"/><text x="32" y="40" font-family="Arial" font-weight="700" font-size="${huruf.length > 2 ? 14 : 18}" fill="#fff" text-anchor="middle">${huruf}</text></svg>`)}`;
+const FAKULTAS = [
+  { kode_fakultas: 'FIK', nama_fakultas: 'Fakultas Ilmu Komputer', logo: logoSvg('#1d4ed8', 'FIK') },
+  { kode_fakultas: 'FE', nama_fakultas: 'Fakultas Ekonomi', logo: logoSvg('#b45309', 'FE') },
+  { kode_fakultas: 'FP', nama_fakultas: 'Fakultas Pertanian', logo: logoSvg('#15803d', 'FP') },
+  { kode_fakultas: 'FH', nama_fakultas: 'Fakultas Hukum', logo: logoSvg('#7f1d1d', 'FH') },
+  { kode_fakultas: 'FKIP', nama_fakultas: 'Fakultas Keguruan', logo: null },
+  { kode_fakultas: 'FTP', nama_fakultas: 'FAKULTAS TEKNIK DAN PERENCANAAN', logo: null },
 ];
 const prodiNama = (k: string) => PRODI.find((p) => p.kode_prodi === k)?.nama_prodi ?? '';
 
@@ -34,6 +49,7 @@ const MAHASISWA = Array.from({ length: 64 }, (_, i) => {
     nama: `${DEPAN[i % DEPAN.length]} ${BELAKANG[(i * 3) % BELAKANG.length]}`,
     kode_prodi: p.kode_prodi,
     nama_prodi: p.nama_prodi,
+    kode_jenjang: p.kode_jenjang,
     tahun_masuk: th,
     status_aktif: s,
     status_aktif_label: sl,
@@ -320,6 +336,7 @@ const ROUTES: Array<[RegExp, (u: URL, init?: RequestInit) => unknown]> = [
     }),
   ],
   [/\/v1\/referensi\/prodi$/, () => ({ data: PRODI })],
+  [/\/v1\/referensi\/fakultas$/, () => ({ data: FAKULTAS })],
   [/\/v1\/referensi\/tahun-akademik$/, () => ({ data: TAHUN })],
   [
     /\/v1\/mahasiswa$/,
@@ -450,7 +467,7 @@ let cadangan: ((u: URL, init?: RequestInit) => unknown) | null = null;
 export function setelCadangan(fn: (u: URL, init?: RequestInit) => unknown) {
   cadangan = fn;
 }
-export { MAHASISWA, DOSEN, PEGAWAI, MATA_KULIAH, PRODI };
+export { MAHASISWA, DOSEN, PEGAWAI, MATA_KULIAH, PRODI, FAKULTAS };
 
 export const mockFetch: typeof fetch = async (input, init) => {
   const u = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);

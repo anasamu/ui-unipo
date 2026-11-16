@@ -26,6 +26,7 @@ import {
 } from '../components/laporan';
 import { GalatApi } from './galat';
 import { useSiakadQuery } from './provider';
+import { LabelProdi, judulProdi, namaRapi } from './prodi';
 
 /*
  * Keuangan universitas (/v1/keu): laporan keuangan entitas nirlaba (ISAK 35) dari buku besar keu_jurnal, saldo kas per
@@ -486,12 +487,12 @@ export function TransparansiBiaya({ tahun_id, kode_fakultas, kode_prodi, semeste
       : [];
   const kolomBiaya: KolomRekap<TransparansiData['per_jenis_biaya'][number]>[] = [{ key: 'nama', label: 'Jenis biaya', nilai: (b) => b.nama_biaya, format: 'teks' }, ...real()];
   const kolomProdi: KolomRekap<TransparansiData['per_prodi'][number]>[] = [
-    { key: 'prodi', label: 'Program studi', nilai: (b) => b.nama_prodi, format: 'teks' },
-    { key: 'fak', label: 'Fakultas', nilai: (b) => b.nama_fakultas ?? '', format: 'teks' },
+    { key: 'prodi', label: 'Program studi', nilai: (b) => b.nama_prodi, format: 'teks', tampil: (b) => <LabelProdi kode={b.kode_prodi} nama={b.nama_prodi} sub={false} /> },
+    { key: 'fak', label: 'Fakultas', nilai: (b) => namaRapi(b.nama_fakultas), format: 'teks' },
     ...real(),
   ];
   const kolomRinci: KolomRekap<BarisTransparansi>[] = [
-    { key: 'prodi', label: 'Program studi', nilai: (b) => `${b.kode_jenjang ? `${b.kode_jenjang} ` : ''}${b.nama_prodi}`, format: 'teks' },
+    { key: 'prodi', label: 'Program studi', nilai: (b) => judulProdi(b), format: 'teks', tampil: (b) => <LabelProdi kode={b.kode_prodi} nama={b.nama_prodi} prodi={{ kode_jenjang: b.kode_jenjang }} /> },
     { key: 'biaya', label: 'Jenis biaya', nilai: (b) => b.nama_biaya, format: 'teks' },
     { key: 'tarif', label: 'Tarif', nilai: tarif, format: 'teks' },
     ...(denganRealisasi

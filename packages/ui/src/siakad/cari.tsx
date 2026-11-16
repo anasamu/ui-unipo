@@ -8,6 +8,7 @@ import { Avatar } from '../components/display';
 import { Badge } from '../components/actions';
 import { Bendera, daftarNegara, type Negara } from './negara';
 import { useOptionalSiakad, useSiakadQuery } from './provider';
+import { LogoFakultas, akreditasiProdi, judulProdi, namaRapi, type ProdiReferensi } from './prodi';
 
 /** Props bersama semua komponen Cari*. */
 export type CariProps<T> = Omit<ComboboxProps<T>, 'items' | 'loadItems' | 'itemToString' | 'itemKey' | 'renderItem'> & {
@@ -409,8 +410,10 @@ export function PilihProdi({ placeholder = 'Semua program studi', ...props }: Pi
   const { data } = useSiakadQuery(['referensi', 'prodi'], (s, signal) => s.referensi.getProdi({}, { signal }), { staleTime: 10 * 60_000 });
   const options: SelectOption<string>[] = (data ?? []).map((p) => ({
     value: String(p.kode_prodi),
-    label: `${p.kode_jenjang ? p.kode_jenjang + ' ' : ''}${p.nama_prodi}`,
-    group: p.nama_fakultas ?? undefined,
+    label: judulProdi(p as unknown as ProdiReferensi),
+    description: akreditasiProdi(p as unknown as ProdiReferensi).label,
+    icon: <LogoFakultas kode={String((p as Record<string, unknown>).kode_fak ?? '')} nama={p.nama_fakultas} ukuran="sm" />,
+    group: namaRapi(p.nama_fakultas) || undefined,
   }));
   return <Pilihan {...props} placeholder={placeholder} options={options} />;
 }

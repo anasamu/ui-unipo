@@ -1,5 +1,15 @@
 # Catatan perubahan
 
+## 1.30.0 (2026-11-16)
+
+- **Program studi dengan logo fakultas dan akreditasi** (`unipo-ui/siakad`, API `/v1/referensi/prodi` dan `/v1/referensi/fakultas`, tanpa perubahan API):
+  - `LogoFakultas`: logo dari `images/fakultas/` SIAKAD (ubah alamat dengan `aturAsalBerkasSiakad`), monogram berwarna (FT, FIK) bila belum diunggah atau gagal dimuat.
+  - `LencanaAkreditasi`: A/B/C atau Unggul/Baik Sekali/Baik, tooltip masa berlaku dan nomor SK, tanda "Masa berlaku habis" dan "Berakhir N hari lagi" (kurang dari 6 bulan).
+  - `DaftarProdi` (varian daftar per fakultas, kartu, ringkas; dengan pencarian), `BarisProdi`, dan `LabelProdi` (cukup isi `kode`; jenjang, fakultas, logo, akreditasi dilengkapi dari cache bersama, diam bila tidak punya izin).
+  - Helper: `jenjangProdi("C")` → "S1", `judulProdi`, `namaRapi` (nama huruf kapital semua jadi rapi), `akreditasiProdi`, `statusProdi`, `urlLogoSiakad`, `useProdiReferensi`, `useFakultasReferensi`, `useProdiDariKode`.
+  - Sudah dipasang di: `PilihEntitas` jenis prodi dan fakultas (opsi baru `tampil` di `SumberEntitas`), `PilihProdi`, saringan prodi, `TabelMahasiswa`, `TabelDosen`, `TabelMataKuliah` (kolom dan kartu; `KartuData` punya slot `prodi`), profil mahasiswa/dosen, kepala modul profil, dasbor per prodi (BAAK, PMB, tracer), transparansi biaya (`KolomRekap` punya `tampil`), kartu dan tabel prodi PMB, pilihan prodi maba, tugas akhir, alur akademik, migrasi kurikulum.
+- **Nomor SK yang bisa dicari**: `PilihNomorSK` mencari SK yang sudah tercatat di arsip surat keluar (dan sumber aplikasi lewat `cari`) atau memakai nomor baru; `IsianSK` menambah tanggal dan berkas SK (cari di berkas sendiri atau unggah, termasuk kamera/galeri di HP). Lampiran SK di aturan dinamis memakai `PilihNomorSK`.
+
 ## 1.29.1 (2026-11-16)
 
 - `SegmentedControl` dengan banyak pilihan bisa digeser ke samping di layar sempit; label tidak terpecah dan halaman tidak melebar (mis. Batas waktu input dan Antrean Neo Feeder di BAAK).

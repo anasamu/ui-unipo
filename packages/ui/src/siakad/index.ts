@@ -54,3 +54,5 @@ export * from './tugas-akhir';
 export * from './kasir';
 export * from './widget-unit';
 export * from './cari-dokumen';
+export * from './prodi';
+export * from './isian-sk';
