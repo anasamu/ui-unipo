@@ -1,5 +1,13 @@
 # Catatan perubahan
 
+## 1.34.0 (2026-11-16)
+
+- **Dokumen RPS, silabus, bahan ajar per mata kuliah, dan buku kurikulum** (`unipo-ui/siakad`, butuh SIAKAD dengan `/v1/kurikulum-obe/mk/{mk}/berkas`, `/mk-berkas/{id}`, `/kurikulum/{id}/buku`):
+  - `KelolaPerangkatMk` + `usePerangkatMk`: unggah RPS yang sudah ditandatangani, silabus, bahan ajar, modul ke berkas terpusat (`PilihBerkas`), lihat/unduh, ubah judul/jenis, hapus. Boleh bagi penyusun kurikulum prodi dan dosen koordinator/pengampu MK.
+  - `RuangMkKurikulum` punya tab baru "Dokumen RPS & bahan ajar".
+  - `BukuKurikulum` + `useBukuKurikulum`: buku kurikulum A4 (identitas dan SK, narasi Pasal 44, profil lulusan, CPL per ranah, bahan kajian, MK per semester dengan prasyarat/CPL/status RPS, deskripsi dan CPMK, ekuivalensi, peninjauan) dengan tombol cetak/simpan PDF. `RuangKurikulumObe` punya tab "Buku kurikulum".
+  - Hak `sahkan` dari API kini juga berlaku bagi dekan/wakil dekan untuk prodi di fakultasnya (izin `fakultas.kurikulum.sahkan`); `AlurKurikulum` otomatis menampilkan tombol pengesahan.
+
 ## 1.33.0 (2026-11-16)
 
 - **Kelola kurikulum OBE lengkap** (`unipo-ui/siakad`, API `/v1/kurikulum-obe`, tanpa perubahan API kecuali `hak`/`transisi_saya` pada detail kurikulum SIAKAD 2026-11-16). Sebelumnya komponen kurikulum hanya menampilkan data; sekarang semua langkah penyusunan bisa dikerjakan dari aplikasi:
