@@ -16,6 +16,7 @@ import {
   Download,
   EllipsisVertical,
   FileText,
+  Hourglass,
   Info,
   KeyRound,
   Lock,
@@ -162,6 +163,7 @@ function cuplikan(p: PesanObrolan | null, r: RuangObrolanData, saya: string): st
   if (!p) return 'Belum ada pesan';
   if (p.status === 'dihapus') return 'Pesan dihapus';
   if (p.status === 'tak_terbaca') return 'Pesan terenkripsi (tidak terbaca di perangkat ini)';
+  if (p.status === 'menunggu') return 'Menunggu pesan…';
   const i = p.isi;
   if (!i) return '';
   const siapa = p.pengirim === saya ? 'Anda: ' : r.jenis === 'grup' ? `${namaDepan(r.anggota.find((a) => a.id === p.pengirim)?.nama ?? '')}: ` : '';
@@ -343,7 +345,7 @@ export function DaftarPengguna({ onPilih, pilihBanyak, terpilih = [], onTerpilih
                 </span>
               </span>
               {!o.punya_kunci && (
-                <Tooltip content="Belum pernah membuka obrolan, jadi belum punya kunci enkripsi.">
+                <Tooltip content="Belum pernah membuka obrolan. Pesan tetap bisa dikirim dan terbuka saat ia membukanya.">
                   <Badge variant="neutral">Belum aktif</Badge>
                 </Tooltip>
               )}
@@ -397,6 +399,7 @@ export function DaftarObrolan({ aktif, onPilih, className }: DaftarObrolanProps)
             ) : (
               <span className="u-ob-baris-sub">
                 {p?.status === 'tak_terbaca' && <Lock aria-hidden />}
+                {p?.status === 'menunggu' && <Hourglass aria-hidden />}
                 {p?.status === 'dihapus' && <Ban aria-hidden />}
                 {cuplikan(p, r, saya)}
               </span>
@@ -576,10 +579,11 @@ interface GelembungProps {
   onLompat: (uuid: string) => void;
 }
 
-function statusBaca(p: PesanObrolan, r: RuangObrolanData, saya: string): 'mengirim' | 'gagal' | 'terkirim' | 'diterima' | 'dibaca' {
+function statusBaca(p: PesanObrolan, r: RuangObrolanData, saya: string): 'mengirim' | 'gagal' | 'menunggu' | 'terkirim' | 'diterima' | 'dibaca' {
   if (p.status === 'mengirim' || p.status === 'gagal') return p.status;
   const lain = r.anggota.filter((a) => a.id !== saya);
   if (!lain.length) return 'terkirim';
+  if (lain.every((a) => !a.punya_kunci)) return 'menunggu';
   if (lain.every((a) => (a.dibaca_sampai ?? 0) >= p.id)) return 'dibaca';
   if (lain.every((a) => (a.diterima_sampai ?? 0) >= p.id || (a.dibaca_sampai ?? 0) >= p.id)) return 'diterima';
   return 'terkirim';
@@ -633,6 +637,10 @@ const Gelembung = React.memo(function Gelembung({ p, r, saya, awalKelompok, akhi
             <span className="u-ob-pesan-sistem">
               <Ban aria-hidden /> Pesan ini dihapus
             </span>
+          ) : p.status === 'menunggu' ? (
+            <span className="u-ob-pesan-sistem">
+              <Hourglass aria-hidden /> Menunggu pesan ini. Pesan terbuka otomatis begitu {nama} daring.
+            </span>
           ) : p.status === 'tak_terbaca' ? (
             <span className="u-ob-pesan-sistem">
               <Lock aria-hidden /> Pesan terenkripsi ini tidak bisa dibuka di perangkat ini. Pulihkan kunci dari cadangan untuk membacanya.
@@ -679,6 +687,11 @@ const Gelembung = React.memo(function Gelembung({ p, r, saya, awalKelompok, akhi
             {p.diubah && <span>diubah</span>}
             <time dateTime={p.dibuat_at}>{jam(p.dibuat_at)}</time>
             {st === 'mengirim' && <Clock aria-label="Mengirim" />}
+            {st === 'menunggu' && (
+              <Tooltip content={`Terkirim ke server. Terbuka untuk ${namaDepan(r.anggota.find((a) => a.id !== saya)?.nama ?? 'penerima')} begitu ia membuka obrolan.`}>
+                <Hourglass aria-label="Menunggu penerima mengaktifkan obrolan" />
+              </Tooltip>
+            )}
             {st === 'terkirim' && <Check aria-label="Terkirim" />}
             {st === 'diterima' && <CheckCheck aria-label="Diterima" />}
             {st === 'dibaca' && <CheckCheck className="u-ob-meta-dibaca" aria-label="Dibaca" />}
@@ -703,14 +716,22 @@ const Gelembung = React.memo(function Gelembung({ p, r, saya, awalKelompok, akhi
         )}
         {p.status === 'gagal' && (
           <div className="u-ob-gagal" role="alert">
-            <AlertTriangle aria-hidden />
-            {p.galat ?? 'Gagal mengirim.'}
-            <button type="button" onClick={() => void mesin.kirimUlang(r.id, p).catch(() => {})}>
-              Kirim ulang
-            </button>
-            <button type="button" onClick={() => mesin.buangGagal(r.id, p.uuid)}>
-              Buang
-            </button>
+            <p className="u-ob-gagal-isi">
+              <AlertTriangle aria-hidden />
+              <span>
+                <strong>Belum terkirim.</strong> {p.galat}
+              </span>
+            </p>
+            <span className="u-ob-gagal-aksi">
+              <button type="button" onClick={() => void mesin.kirimUlang(r.id, p).catch(() => {})}>
+                <RotateCcw aria-hidden />
+                Kirim ulang
+              </button>
+              <button type="button" onClick={() => mesin.buangGagal(r.id, p.uuid)}>
+                <Trash2 aria-hidden />
+                Hapus
+              </button>
+            </span>
           </div>
         )}
       </div>
@@ -1377,7 +1398,7 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
           <p className="u-ob-pita" data-nada="info">
             <Info aria-hidden />
             <span>
-              {belumSiap.map((a) => namaDepan(a.nama)).join(', ')} belum pernah membuka obrolan, jadi belum punya kunci enkripsi. Pesan bisa dikirim setelah {belumSiap.length > 1 ? 'mereka' : 'ia'}{' '}
+              {belumSiap.map((a) => namaDepan(a.nama)).join(', ')} belum pernah membuka obrolan. Pesan tetap terkirim dan terbuka otomatis begitu {belumSiap.length > 1 ? 'mereka' : 'ia'}{' '}
               membukanya.
             </span>
           </p>

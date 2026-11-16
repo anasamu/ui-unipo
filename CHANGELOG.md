@@ -1,5 +1,13 @@
 # Catatan perubahan
 
+## 1.31.1 (2026-11-16)
+
+- **Obrolan: pesan ke orang yang belum pernah membuka obrolan tidak lagi gagal** (butuh SIAKAD dengan `/v1/obrolan/susulan`). Pesan tetap terkirim dan terenkripsi; begitu penerima membuka obrolan dan perangkatnya membuat kunci, perangkat pengirim membungkus ulang kunci pesan untuk perangkat itu secara otomatis, lalu pesan terbuka sendiri. Server tetap tidak pernah memegang kunci pesan.
+  - Pengirim melihat ikon jam pasir ("menunggu penerima mengaktifkan obrolan"), penerima melihat "Menunggu pesan ini" sampai kuncinya tiba.
+  - Kontak yang baru pertama kali mengaktifkan obrolan tidak lagi memunculkan peringatan "kunci keamanan berubah".
+  - `kriptoObrolan.bungkusSusulan`, `kriptoObrolan.kunciSusulan`; `dekripsiPesan` menerima `kunciTukarPengirim`. Status pesan baru `menunggu`.
+- **Pesan gagal kirim lebih rapi**: kotak merah ringkas "Belum terkirim. <alasan>" dengan tombol "Kirim ulang" dan "Hapus"; alasan yang jelas untuk jaringan putus, batas kirim per menit, lampiran terlalu besar, dan gangguan server.
+
 ## 1.31.0 (2026-11-16)
 
 - **Program studi dengan logo fakultas dan akreditasi** (`unipo-ui/siakad`, API `/v1/referensi/prodi` dan `/v1/referensi/fakultas`, tanpa perubahan API):

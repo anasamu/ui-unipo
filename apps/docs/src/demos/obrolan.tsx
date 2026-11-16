@@ -38,7 +38,7 @@ export const meta: DemoMeta = {
     'Server tetap melihat metadata: siapa mengobrol dengan siapa, waktu, ukuran pesan, dan judul grup. Ini bukan double ratchet Signal: bila kunci privat sebuah perangkat dicuri, pesan lama untuk perangkat itu bisa dibuka. Cabut perangkat yang hilang di Pengaturan.',
     'Kunci hanya ada di browser. Agar pesan lama terbaca di browser lain, buat cadangan kunci dengan sandi (PBKDF2 600.000 iterasi + AES-GCM); sandi tidak dikirim ke server.',
     'Realtime memakai long-poll GET /v1/obrolan/peristiwa (hosting cPanel tidak mendukung WebSocket). Semua komponen di halaman berbagi satu koneksi.',
-    'Pendaftar PMB hanya bisa menghubungi panitia PMB, admin, dan operator (OBROLAN_LEVEL_UNTUK_PENDAFTAR). Obrolan langsung butuh penerima yang pernah membuka obrolan (punya kunci); di grup, anggota tanpa kunci hanya tidak bisa membaca pesan yang dikirim sebelum mereka mengaktifkannya.',
+    'Pendaftar PMB hanya bisa menghubungi panitia PMB, admin, dan operator (OBROLAN_LEVEL_UNTUK_PENDAFTAR). Pesan tetap bisa dikirim ke orang yang belum pernah membuka obrolan (belum punya kunci). Begitu ia membukanya, perangkat pengirim membungkus ulang kunci pesan untuk perangkat barunya secara otomatis (GET/POST /v1/obrolan/susulan), jadi pesan terbuka tanpa server pernah memegang kuncinya. Perangkat tambahan milik orang yang sudah punya kunci tetap memakai cadangan kunci.',
     'Di halaman ini server dan kontaknya tiruan, tetapi enkripsinya sungguhan: kontak tiruan memegang kunci perangkat sendiri dan membuka pesan Anda seperti aplikasi penerima. Riwayat contoh hilang saat halaman dimuat ulang.',
   ],
 };
@@ -79,8 +79,8 @@ export function Pengguna() {
                 <strong>{dipilih.nama}</strong>
                 <div style={{ color: 'var(--u-muted-foreground)', fontSize: 'var(--u-text-sm)' }}>{dipilih.peran}</div>
               </div>
-              <TombolObrolan pemilik={dipilih.id} disabled={!dipilih.punya_kunci} />
-              {!dipilih.punya_kunci && <small style={{ color: 'var(--u-muted-foreground)' }}>Belum pernah membuka obrolan, jadi belum punya kunci enkripsi.</small>}
+              <TombolObrolan pemilik={dipilih.id} />
+              {!dipilih.punya_kunci && <small style={{ color: 'var(--u-muted-foreground)' }}>Belum pernah membuka obrolan. Pesan tetap terkirim dan terbuka saat ia membukanya.</small>}
             </>
           ) : (
             <span style={{ color: 'var(--u-muted-foreground)' }}>Pilih seseorang di daftar. TombolObrolan membuka obrolan di chat mengambang atau kotak obrolan yang terpasang.</span>

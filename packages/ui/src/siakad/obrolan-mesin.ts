@@ -3,12 +3,14 @@ import {
   buatCadangan,
   buatKunciPerangkat,
   bukaCadangan,
+  bungkusSusulan,
   dekripsiBerkas,
   dekripsiPesan,
   enkripsiBerkas,
   enkripsiPesan,
   hapusKunci,
   kriptoDidukung,
+  kunciSusulan,
   muatKunci,
   nomorKeamanan,
   publikRaw,
@@ -38,7 +40,12 @@ export interface OrangObrolan {
   diterima_sampai?: number;
 }
 
-export type StatusPesan = 'mengirim' | 'terkirim' | 'gagal' | 'dihapus' | 'tak_terbaca';
+/**
+ * `menunggu`: pesan dikirim sebelum perangkat ini punya kunci; kuncinya menyusul otomatis saat perangkat pengirim
+ * daring. `tak_terbaca`: pesan dikirim sebelum perangkat ini terdaftar padahal pemiliknya sudah punya perangkat lain
+ * (perlu pulihkan cadangan kunci).
+ */
+export type StatusPesan = 'mengirim' | 'terkirim' | 'gagal' | 'dihapus' | 'tak_terbaca' | 'menunggu';
 
 export interface PesanObrolan {
   /** ID server (0 selama masih dikirim). */
@@ -115,6 +122,8 @@ interface PesanServer {
   efemeral: string | null;
   tanda: string | null;
   kunci: string | null;
+  /** Kunci untuk perangkat ini akan disusulkan perangkat pengirim. */
+  menunggu?: boolean;
   lampiran: string[];
   dihapus: boolean;
   kedaluwarsa_at: string | null;
@@ -150,7 +159,14 @@ function galatTeks(e: unknown): string {
   if (!x) return 'Terjadi kesalahan.';
   if (x.status === 0) return 'Tidak tersambung ke server.';
   if (x.status === 403 && (x as { code?: string }).code === 'diblokir') return 'Pesan tidak bisa dikirim ke obrolan ini.';
+  if (x.status === 429) return 'Terlalu banyak pesan dalam semenit. Tunggu sebentar lalu kirim ulang.';
+  if (x.status === 413) return 'Lampiran terlalu besar.';
+  if ((x.status ?? 0) >= 500) return 'Server sedang bermasalah. Coba kirim ulang sebentar lagi.';
   return x.message || 'Terjadi kesalahan.';
+}
+
+function namaPendek(nama: string): string {
+  return nama.split(/\s+/)[0] ?? nama;
 }
 
 function namaPerangkat(): string {
@@ -173,6 +189,8 @@ export class MesinObrolan {
   private bacaTimer = new Map<string, ReturnType<typeof setTimeout>>();
   private urlBerkas = new Map<string, Promise<string>>();
   private mulaiPromise: Promise<void> | null = null;
+  private susulanJalan: Promise<void> | null = null;
+  private susulanLagi = false;
   readonly ruangNama: string;
 
   constructor(private siakad: Siakad) {
@@ -277,6 +295,7 @@ export class MesinObrolan {
       await this.muatRuang();
       this.set({ status: 'siap' });
       this.jalankanUmpan(saya.tunggu_maks);
+      this.susulkan();
     } catch (e) {
       this.set({ status: 'galat', galat: galatTeks(e) });
     }
@@ -330,7 +349,9 @@ export class MesinObrolan {
       status: 'terkirim',
     };
     if (p.dihapus) return { ...dasar, status: 'dihapus' };
-    const h = await dekripsiPesan(p, { ruang, saya: this.kunci!, kunciTandaPengirim: await this.kunciTanda(p.pengirim, p.perangkat).catch(() => null) });
+    if (!p.kunci && p.menunggu) return { ...dasar, status: 'menunggu' };
+    const kunciTukarPengirim = kunciSusulan(p.kunci) ? ((await this.kunciDari([p.pengirim]).catch(() => ({}) as Record<string, KunciPublikPerangkat[]>))[p.pengirim] ?? []).map((d) => d.kunci_tukar) : [];
+    const h = await dekripsiPesan(p, { ruang, saya: this.kunci!, kunciTandaPengirim: await this.kunciTanda(p.pengirim, p.perangkat).catch(() => null), kunciTukarPengirim });
     if (!h.ok) return { ...dasar, status: h.alasan === 'dihapus' ? 'dihapus' : 'tak_terbaca' };
     return { ...dasar, isi: h.isi, terverifikasi: h.terverifikasi };
   }
@@ -378,7 +399,7 @@ export class MesinObrolan {
     try {
       const r = await this.req<RuangServer>('GET', `/ruang/${id}`, { query: { perangkat: this.kunci.id } });
       const lama = this.s.ruang[id];
-      const terakhir = r.pesan_terakhir ? (lama?.pesan_terakhir?.id === r.pesan_terakhir.id ? lama.pesan_terakhir : await this.buka(id, r.pesan_terakhir)) : null;
+      const terakhir = r.pesan_terakhir ? (lama?.pesan_terakhir?.id === r.pesan_terakhir.id && lama.pesan_terakhir.status !== 'menunggu' ? lama.pesan_terakhir : await this.buka(id, r.pesan_terakhir)) : null;
       this.pasangRuang({ ...r, pesan_terakhir: terakhir });
     } catch (e) {
       if ((e as { status?: number }).status === 404) this.buangRuang(id);
@@ -446,6 +467,58 @@ export class MesinObrolan {
     });
   }
 
+  /** Muat ulang pesan terbaru ruang (mis. setelah kunci susulan tiba) tanpa membuang pesan yang sedang dikirim. */
+  private async muatUlangPesan(id: string) {
+    const x = this.s.pesan[id];
+    if (!this.kunci || !x?.dimuat) return;
+    const r = await this.req<{ pesan: PesanServer[]; lagi: boolean }>('GET', `/ruang/${id}/pesan`, { query: { perangkat: this.kunci.id, limit: 50 } });
+    const baru = await Promise.all(r.pesan.map((p) => this.buka(id, p)));
+    this.setPesan(id, (y) => {
+      const ada = new Map(y.daftar.map((p) => [p.uuid, p]));
+      for (const p of baru) ada.set(p.uuid, p);
+      return { ...y, daftar: [...ada.values()].sort((a, b) => (a.id || Infinity) - (b.id || Infinity)) };
+    });
+  }
+
+  // ---------------------------------------------------------------- kunci susulan
+
+  /**
+   * Bungkus ulang kunci pesan kiriman saya untuk anggota yang baru mengaktifkan obrolan (belum punya kunci saat pesan
+   * dikirim). Dijalankan saat mesin mulai dan setiap kali kontak mendaftarkan perangkat. Server tidak pernah melihat
+   * kunci pesan; ia hanya menyimpan hasil bungkusan untuk perangkat tujuan.
+   */
+  private susulkan() {
+    if (this.susulanJalan) {
+      this.susulanLagi = true;
+      return;
+    }
+    this.susulanJalan = (async () => {
+      for (let putaran = 0; putaran < 5 && this.kunci; putaran++) {
+        this.susulanLagi = false;
+        const daftar = await this.req<Array<{ uuid: string; efemeral: string; kunci: string; tujuan: Array<{ id: string; kunci_tukar: string }> }>>('GET', '/susulan', {
+          query: { perangkat: this.kunci.id },
+        });
+        if (!daftar.length) break;
+        const kunci: Array<{ pesan: string; perangkat: string; kunci: string }> = [];
+        for (const p of daftar) {
+          const hasil = await bungkusSusulan(p, { saya: this.kunci, tujuan: p.tujuan }).catch(() => ({}) as Record<string, string>);
+          for (const [perangkat, k] of Object.entries(hasil)) kunci.push({ pesan: p.uuid, perangkat, kunci: k });
+        }
+        if (!kunci.length) break;
+        const r = await this.req<{ disimpan: number }>('POST', '/susulan', { body: { perangkat: this.kunci.id, kunci } });
+        if (!r.disimpan && !this.susulanLagi) break;
+      }
+    })()
+      .catch(() => {})
+      .finally(() => {
+        this.susulanJalan = null;
+        if (this.susulanLagi) {
+          this.susulanLagi = false;
+          this.susulkan();
+        }
+      });
+  }
+
   private setPesan(id: string, fn: (x: KeadaanObrolan['pesan'][string]) => KeadaanObrolan['pesan'][string]) {
     this.set((s) => ({ pesan: { ...s.pesan, [id]: fn(s.pesan[id] ?? { daftar: [], lagi: false, dimuat: false, memuat: false }) } }));
   }
@@ -506,8 +579,9 @@ export class MesinObrolan {
       const d = (e as { details?: { kode?: string; pemilik?: string[] } }).details;
       let galat = galatTeks(e);
       if (d?.kode === 'penerima_belum_siap') {
-        const nama = (d.pemilik ?? []).map((p) => ruang.anggota.find((a) => a.id === p)?.nama ?? p).join(', ');
-        galat = `${nama} belum pernah membuka obrolan, jadi belum punya kunci enkripsi. Pesan bisa dikirim setelah mereka membukanya.`;
+        // Server lama (sebelum kunci susulan): penerima belum punya kunci.
+        const nama = (d.pemilik ?? []).map((p) => namaPendek(ruang.anggota.find((a) => a.id === p)?.nama ?? p)).join(', ');
+        galat = `${nama} belum mengaktifkan obrolan.`;
       }
       this.setPesan(ruangId, (x) => ({ ...x, daftar: x.daftar.map((p) => (p.uuid === uuid ? { ...p, status: 'gagal', galat } : p)) }));
       throw new Error(galat);
@@ -784,6 +858,7 @@ export class MesinObrolan {
   private async olah(daftar: Array<{ jenis: string; data: Record<string, unknown> }>) {
     const segarkan = new Set<string>();
     const muatBaru = new Set<string>();
+    const muatUlang = new Set<string>();
     for (const e of daftar) {
       const ruang = e.data.ruang as string | undefined;
       switch (e.jenis) {
@@ -833,13 +908,29 @@ export class MesinObrolan {
         case 'perangkat': {
           const p = e.data.pemilik as string;
           this.kunciPublik.delete(p);
-          if (p === this.s.saya?.id) void this.muatPerangkat().catch(() => {});
-          else this.set((s) => ({ kunciBerubah: { ...s.kunciBerubah, [p]: true } }));
+          if (p === this.s.saya?.id) {
+            void this.muatPerangkat().catch(() => {});
+            break;
+          }
+          // Kontak yang baru pertama kali mengaktifkan obrolan bukan "kunci berubah": cukup perbarui status dan
+          // susulkan kunci pesan yang sudah dikirim kepadanya.
+          const ruangnya = Object.values(this.s.ruang).filter((r) => r.anggota.some((a) => a.id === p));
+          const pertama = ruangnya.length > 0 && ruangnya.every((r) => r.anggota.some((a) => a.id === p && !a.punya_kunci));
+          if (!pertama) this.set((s) => ({ kunciBerubah: { ...s.kunciBerubah, [p]: true } }));
+          ruangnya.forEach((r) => segarkan.add(r.id));
+          this.susulkan();
           break;
         }
+        case 'kunci':
+          if (ruang) {
+            muatUlang.add(ruang);
+            segarkan.add(ruang);
+          }
+          break;
       }
     }
     await Promise.all([...muatBaru].map((r) => this.muatBaru(r).catch(() => {})));
+    await Promise.all([...muatUlang].map((r) => this.muatUlangPesan(r).catch(() => {})));
     await Promise.all([...segarkan].map((r) => this.segarkanRuang(r)));
   }
 
