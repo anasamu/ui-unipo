@@ -1,5 +1,12 @@
 # Catatan perubahan
 
+## 1.39.0 (2026-11-16)
+
+- **Pengajuan mahasiswa ke unit lain, ujung ke ujung** (`unipo-ui/siakad`, butuh SIAKAD dengan prasyarat pengajuan 2026-11-16, docs/PRASYARAT.md):
+  - `PengajuanMahasiswa`: satu ruang bertab untuk pengajuan status akademik (cuti, aktif kembali, non-aktif, mengundurkan diri, pindah) ke BAAK/prodi, permohonan surat/layanan, pendaftaran beasiswa, pendaftaran MBKM, dan dispensasi bayar. Syarat diperiksa sebelum mengisi (`SyaratSaya` dengan konteks jenis/kode/jumlah lampiran), dokumen pendukung dikirim bersama pengajuan (`lampiran`), status + catatan unit pemroses, lampiran bisa dilengkapi, batalkan, kirim ulang setelah perbaikan.
+  - `LinimasaPengajuan` (GET `{path}/{id}/riwayat`, semua sumber pusat data), `LampiranPengajuan`, `IsianLampiranPengajuan`, `LencanaStatusPengajuan`; bisa dipakai juga di sisi verifikator.
+  - `SyaratSaya` menampilkan prasyarat bawaan SIAKAD (`bawaan`, mis. status mahasiswa aktif) di samping aturan dinamis; `konteks` kini boleh berisi teks (mis. `jenis_pengajuan`).
+
 ## 1.38.0 (2026-11-16)
 
 - **Pengajuan ke LP2M dengan proposal, dokumen pendukung, dan riwayat proses** (`unipo-ui/siakad`, butuh SIAKAD dengan `/v1/lppm/kkn/proposal` dan entitas file `kkn_proposal`):
