@@ -43,6 +43,7 @@ import { PilihEntitas, type SumberEntitas } from './pilih';
 import { PilihBerkas } from './pilih-berkas';
 import { KodeQrSiakad } from './qr';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { PilihLokasiPeta, titikDariTeks } from '../components/peta';
 
 /*
  * Presensi QR (/v1/presensi) untuk mahasiswa (kuliah), dosen (mengajar dan kerja), tendik (kerja), dan kegiatan.
@@ -2145,17 +2146,15 @@ export function FormTitikPresensi({ open, onOpenChange, titik, onSimpan }: { ope
           <PilihEntitas jenis="unit" value={f.unit} onValueChange={(v) => set('unit', v)} />
         </Field>
         <Field label="Lokasi" error={galat.lokasi} optional={!f.wajib_lokasi}>
-          <div className="u-presensi-form-baris">
-            <Input value={f.lokasi} onChange={(e) => set('lokasi', e.target.value)} placeholder="lat,lng" inputMode="decimal" />
-            <Button variant="outline" onClick={async () => (await ambilLokasiPresensi().then((l) => l && set('lokasi', l))) ?? undefined}>
-              <MapPin aria-hidden /> Pakai lokasi saya
-            </Button>
-          </div>
+          <PilihLokasiPeta
+            value={titikDariTeks(f.lokasi)}
+            onChange={(t) => set('lokasi', t ? `${t.lat},${t.lng}` : '')}
+            radius={Number(f.radius_m) || 150}
+            onRadiusChange={(m) => set('radius_m', String(m))}
+            tinggi={260}
+          />
         </Field>
         <div className="u-presensi-form-baris">
-          <Field label="Radius (meter)">
-            <Input type="number" min={10} max={5000} value={f.radius_m} onChange={(e) => set('radius_m', e.target.value)} />
-          </Field>
           <Field label="QR berganti tiap (detik)">
             <Input type="number" min={10} max={300} value={f.interval_detik} onChange={(e) => set('interval_detik', e.target.value)} />
           </Field>
