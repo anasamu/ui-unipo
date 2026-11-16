@@ -1,5 +1,14 @@
 # Catatan perubahan
 
+## 1.28.1 (2026-11-16)
+
+- 
+
+## 1.28.1 (2026-11-16)
+
+- JSDoc untuk 34 ekspor yang belum terdokumentasi (mis. `Rating`, `sisaWaktu`, `usePmb`, `useRuteLms`, `BadgeStatusSesi`, hook laporan keuangan `/v1/keu`). Dengan ini setiap ekspor punya penjelasan di referensi api.unipo.ac.id.
+- Situs dokumentasi: `SIAKAD_TS` dan `mainTsx` diekspor dari `apps/docs/src/kode-contoh.js` untuk tab kode di api_unipo.
+
 ## 1.28.0 (2026-11-16)
 
 - 
