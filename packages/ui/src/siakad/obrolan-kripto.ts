@@ -115,13 +115,16 @@ function imporPublik(raw: string, alg: typeof ECDH | typeof ECDSA): Promise<Cryp
   return p;
 }
 
-async function kunciBungkus(rahasia: ArrayBuffer, uuidPesan: string, idPerangkat: string): Promise<CryptoKey> {
+async function kunciBungkus(rahasia: ArrayBuffer, uuidPesan: string, idPerangkat: string, jenis: 'kunci' | 'susulan' = 'kunci'): Promise<CryptoKey> {
   const hk = await subtle().importKey('raw', rahasia, 'HKDF', false, ['deriveKey']);
-  return subtle().deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: enc.encode(uuidPesan), info: enc.encode(`${VERSI}|kunci|${idPerangkat}`) }, hk, { name: 'AES-KW', length: 256 }, false, [
+  return subtle().deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: enc.encode(uuidPesan), info: enc.encode(`${VERSI}|${jenis}|${idPerangkat}`) }, hk, { name: 'AES-KW', length: 256 }, false, [
     'wrapKey',
     'unwrapKey',
   ]);
 }
+
+/** Awalan kunci susulan dari server: dibungkus dengan ECDH perangkat pengirim x perangkat ini (bukan kunci efemeral). */
+const SUSULAN = 's1.';
 
 // ---------------------------------------------------------------- pesan
 
@@ -182,6 +185,60 @@ export async function enkripsiPesan(isi: IsiPesan, opsi: { ruang: string; pengir
   return { uuid, perangkat: dev, sandi: sandiB64, iv: ivB64, efemeral, tanda, kunci };
 }
 
+/**
+ * Bungkus ulang kunci pesan untuk perangkat anggota yang belum punya kunci saat pesan dikirim (kunci susulan).
+ * Perangkat pengirim membuka kunci pesan miliknya, lalu membungkusnya dengan ECDH (kunci tukar perangkat ini x kunci
+ * tukar perangkat tujuan). Hasil: {id_perangkat_tujuan: kunci AES-KW base64}. Butir yang gagal dilewati.
+ */
+export async function bungkusSusulan(
+  p: { uuid: string; efemeral: string; kunci: string },
+  opsi: { saya: KunciPerangkat; tujuan: Array<{ id: string; kunci_tukar: string }> },
+): Promise<Record<string, string>> {
+  const s = subtle();
+  const rahasiaSaya = await s.deriveBits({ name: 'ECDH', public: await imporPublik(p.efemeral, ECDH) }, opsi.saya.tukar.privateKey, 256);
+  const cek = await s.unwrapKey('raw', dariB64(p.kunci), await kunciBungkus(rahasiaSaya, p.uuid, opsi.saya.id), 'AES-KW', 'AES-GCM', true, ['decrypt']);
+  const out: Record<string, string> = {};
+  await Promise.all(
+    opsi.tujuan.map(async (t) => {
+      try {
+        const rahasia = await s.deriveBits({ name: 'ECDH', public: await imporPublik(t.kunci_tukar, ECDH) }, opsi.saya.tukar.privateKey, 256);
+        out[t.id] = keB64(await s.wrapKey('raw', cek, await kunciBungkus(rahasia, p.uuid, t.id, 'susulan'), 'AES-KW'));
+      } catch {
+        /* kunci publik tujuan tidak sah: lewati */
+      }
+    }),
+  );
+  return out;
+}
+
+async function bukaKunciPesan(
+  p: { uuid: string; efemeral: string; kunci: string },
+  saya: KunciPerangkat,
+  kunciTukarPengirim: string[],
+): Promise<CryptoKey> {
+  const s = subtle();
+  if (!p.kunci.startsWith(SUSULAN)) {
+    const rahasia = await s.deriveBits({ name: 'ECDH', public: await imporPublik(p.efemeral, ECDH) }, saya.tukar.privateKey, 256);
+    return s.unwrapKey('raw', dariB64(p.kunci), await kunciBungkus(rahasia, p.uuid, saya.id), 'AES-KW', 'AES-GCM', false, ['decrypt']);
+  }
+  // Kunci susulan bisa dibungkus perangkat mana pun milik pengirim: coba satu per satu (AES-KW menolak kunci yang salah).
+  const bungkus = dariB64(p.kunci.slice(SUSULAN.length));
+  for (const pub of kunciTukarPengirim) {
+    try {
+      const rahasia = await s.deriveBits({ name: 'ECDH', public: await imporPublik(pub, ECDH) }, saya.tukar.privateKey, 256);
+      return await s.unwrapKey('raw', bungkus, await kunciBungkus(rahasia, p.uuid, saya.id, 'susulan'), 'AES-KW', 'AES-GCM', false, ['decrypt']);
+    } catch {
+      /* coba perangkat berikutnya */
+    }
+  }
+  throw new Error('Kunci susulan tidak cocok dengan perangkat pengirim mana pun.');
+}
+
+/** Kunci pesan ini kunci susulan (perlu kunci tukar perangkat pengirim untuk membukanya). */
+export function kunciSusulan(kunci: string | null | undefined): boolean {
+  return Boolean(kunci?.startsWith(SUSULAN));
+}
+
 export type HasilDekripsi = { ok: true; isi: IsiPesan; terverifikasi: boolean } | { ok: false; alasan: 'tanpa_kunci' | 'rusak' | 'dihapus' };
 
 /**
@@ -190,14 +247,13 @@ export type HasilDekripsi = { ok: true; isi: IsiPesan; terverifikasi: boolean } 
  */
 export async function dekripsiPesan(
   p: { uuid: string; perangkat: string; sandi: string | null; iv: string | null; efemeral: string | null; tanda: string | null; kunci: string | null; dihapus?: boolean },
-  opsi: { ruang: string; saya: KunciPerangkat; kunciTandaPengirim: string | null },
+  opsi: { ruang: string; saya: KunciPerangkat; kunciTandaPengirim: string | null; kunciTukarPengirim?: string[] },
 ): Promise<HasilDekripsi> {
   if (p.dihapus || !p.sandi || !p.iv || !p.efemeral) return { ok: false, alasan: 'dihapus' };
   if (!p.kunci) return { ok: false, alasan: 'tanpa_kunci' };
   const s = subtle();
   try {
-    const rahasia = await s.deriveBits({ name: 'ECDH', public: await imporPublik(p.efemeral, ECDH) }, opsi.saya.tukar.privateKey, 256);
-    const cek = await s.unwrapKey('raw', dariB64(p.kunci), await kunciBungkus(rahasia, p.uuid, opsi.saya.id), 'AES-KW', 'AES-GCM', false, ['decrypt']);
+    const cek = await bukaKunciPesan({ uuid: p.uuid, efemeral: p.efemeral, kunci: p.kunci }, opsi.saya, opsi.kunciTukarPengirim ?? []);
     const sandi = dariB64(p.sandi);
     const teks = await s.decrypt({ name: 'AES-GCM', iv: dariB64(p.iv), additionalData: aad(opsi.ruang, p.uuid, p.perangkat) }, cek, sandi);
     let terverifikasi = false;

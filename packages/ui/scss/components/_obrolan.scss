@@ -668,7 +668,8 @@
     opacity: 0.6;
   }
   &[data-status='dihapus'],
-  &[data-status='tak_terbaca'] {
+  &[data-status='tak_terbaca'],
+  &[data-status='menunggu'] {
     background: transparent !important;
     color: var(--u-muted-foreground) !important;
     border: 1px dashed var(--u-border);
@@ -904,30 +905,68 @@
   }
 }
 .u-ob-gagal {
-  max-width: 22rem;
-  margin-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  max-width: min(22rem, 100%);
+  margin-top: 0.3125rem;
   font-size: var(--u-text-xs);
   line-height: var(--u-leading-snug);
-  color: var(--u-danger-text, var(--u-danger));
   .u-ob-pesan[data-saya] & {
-    text-align: right;
+    align-items: flex-end;
+    margin-left: auto;
   }
   svg {
-    width: 0.85rem;
-    height: 0.85rem;
-    margin-right: 0.25rem;
-    vertical-align: -0.15rem;
+    display: block;
+    flex: none;
+    width: 0.875rem;
+    height: 0.875rem;
   }
-  button {
-    margin-left: 0.5rem;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: inherit;
-    font: inherit;
+}
+.u-ob-gagal-isi {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--u-radius-md);
+  background: var(--u-danger-soft, color-mix(in oklab, var(--u-danger) 10%, transparent));
+  color: var(--u-danger-text, var(--u-danger));
+  text-align: left;
+  > svg {
+    margin-top: 0.0625rem;
+  }
+  strong {
     font-weight: var(--u-weight-semibold);
-    text-decoration: underline;
+  }
+}
+.u-ob-gagal-aksi {
+  display: inline-flex;
+  gap: 0.25rem;
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.1875rem 0.5rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-full);
+    background: var(--u-background);
+    color: var(--u-foreground);
+    font: inherit;
+    font-weight: var(--u-weight-medium, 500);
     cursor: pointer;
+    &:hover {
+      background: var(--u-muted);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--u-ring, var(--u-primary));
+      outline-offset: 1px;
+    }
+    svg {
+      width: 0.75rem;
+      height: 0.75rem;
+    }
   }
 }
 .u-ob-aksi {

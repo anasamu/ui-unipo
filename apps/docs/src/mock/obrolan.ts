@@ -3,8 +3,8 @@ import { tambahRute } from './siakad';
 
 /**
  * Server obrolan tiruan (/v1/obrolan) yang mengikuti aturan app/Modules/Obrolan: kunci harus dibungkus untuk tepat
- * semua perangkat aktif anggota (409 perangkat_berubah), penerima obrolan langsung wajib punya kunci (409
- * penerima_belum_siap), blokir, pesan menghilang, long-poll peristiwa. Server tiruan ini juga tidak pernah melihat
+ * semua perangkat aktif anggota (409 perangkat_berubah), penerima yang belum punya kunci tidak menghalangi (kuncinya
+ * disusulkan lewat /susulan begitu ia membuka obrolan), blokir, pesan menghilang, long-poll peristiwa. Server tiruan ini juga tidak pernah melihat
  * teks: kontak tiruan (bot) memegang kunci perangkat sungguhan, membuka pesan Anda dengan kunci privatnya, lalu
  * membalas dengan pesan terenkripsi.
  */
@@ -181,6 +181,7 @@ function bentukPesan(p: Pesan, dev: string) {
     efemeral: p.efemeral,
     tanda: p.tanda,
     kunci: p.dihapus ? null : (p.kunci[dev] ?? null),
+    menunggu: !p.dihapus && !p.kunci[dev] && !Object.keys(p.kunci).some((d) => DEV.find((x) => x.id === d)?.pemilik === DEV.find((x) => x.id === dev)?.pemilik),
     lampiran: p.lampiran,
     dihapus: p.dihapus,
     kedaluwarsa_at: p.kedaluwarsa_at,
@@ -468,7 +469,10 @@ async function botMenanggapi(r: Ruang, p: Pesan) {
   if (!dev) return;
   // Bot membuka pesan dengan kunci privat perangkatnya sendiri, persis seperti aplikasi penerima.
   const pengirim = DEV.find((x) => x.id === p.perangkat);
-  const h = await K.dekripsiPesan({ ...p, kunci: p.kunci[dev.id] ?? null }, { ruang: r.id, saya: dev.priv!, kunciTandaPengirim: pengirim?.kunci_tanda ?? null });
+  const h = await K.dekripsiPesan(
+    { ...p, kunci: p.kunci[dev.id] ?? null },
+    { ruang: r.id, saya: dev.priv!, kunciTandaPengirim: pengirim?.kunci_tanda ?? null, kunciTukarPengirim: pengirim ? [pengirim.kunci_tukar] : [] },
+  );
   if (!h.ok || h.isi.t === 'reaksi' || h.isi.t === 'ubah') return;
   if (r.jenis === 'grup' && Math.random() < 0.3) return;
   await tunda(500);
@@ -481,6 +485,37 @@ async function botMenanggapi(r: Ruang, p: Pesan) {
   const kutip = /\?\s*$/.test(h.isi.isi ?? '') ? { ke: p.uuid, kutip: { pengirim: p.pengirim, isi: (h.isi.isi ?? '').slice(0, 160) } } : {};
   const baru = await kirimSebagai(dev, r, { v: 1, t: 'teks', isi: jawab, ...kutip });
   umpan(anggotaAktif(r), 'pesan', { ruang: r.id, id: baru.id, uuid: baru.uuid, pengirim: b.id, perangkat: dev.id });
+}
+
+/**
+ * Kontak tiruan yang belum pernah membuka obrolan "membukanya" beberapa detik setelah Anda mengirim pesan: perangkatnya
+ * mendaftarkan kunci, aplikasi Anda menerima peristiwa `perangkat` lalu menyusulkan kunci pesan, dan ia membalas.
+ */
+const diaktifkan = new Set<string>();
+function aktifkanNanti(id: string) {
+  const o = orang(id);
+  if (!o?.tanpaKunci || diaktifkan.has(id)) return;
+  diaktifkan.add(id);
+  setTimeout(async () => {
+    await buatDev(id, 'Chrome di Android', 0);
+    o.tanpaKunci = false;
+    o.daring = true;
+    umpan([SAYA_ID], 'perangkat', { pemilik: id });
+  }, 6000);
+}
+
+function susulanTertunda(dev: Dev) {
+  return PESAN.filter((p) => p.pengirim === SAYA_ID && !p.dihapus && p.kunci[dev.id])
+    .map((p) => {
+      const r = RUANG.find((x) => x.id === p.ruang);
+      const pemilikKunci = new Set(Object.keys(p.kunci).map((d) => DEV.find((x) => x.id === d)?.pemilik));
+      const tujuan = (r ? anggotaAktif(r) : [])
+        .filter((a) => a !== SAYA_ID && !pemilikKunci.has(a) && !BLOKIR.has(a))
+        .flatMap(aktif)
+        .map((d) => ({ id: d.id, pemilik: d.pemilik, kunci_tukar: d.kunci_tukar }));
+      return { uuid: p.uuid, ruang: p.ruang, perangkat: p.perangkat, efemeral: p.efemeral!, kunci: p.kunci[dev.id], tujuan };
+    })
+    .filter((x) => x.tujuan.length);
 }
 
 // ---------------------------------------------------------------- rute
@@ -695,7 +730,7 @@ tambahRute(/^\/v1\/obrolan\//, async (u, init) => {
       const lebih = Object.keys(kunci).filter((k) => !harus.includes(k));
       if (kurang.length || lebih.length) return galat(409, 'conflict', 'Daftar perangkat anggota berubah. Muat ulang kunci lalu kirim lagi.', { kode: 'perangkat_berubah', kurang, lebih });
       const tanpa = anggotaAktif(r).filter((p) => !aktif(p).length);
-      if (tanpa.length && r.jenis === 'langsung') return galat(409, 'conflict', 'Sebagian anggota belum mengaktifkan obrolan terenkripsi.', { kode: 'penerima_belum_siap', pemilik: tanpa });
+      tanpa.forEach(aktifkanNanti);
       const waktu = sekarang();
       const p: Pesan = {
         id: ++idPesan,
@@ -719,7 +754,7 @@ tambahRute(/^\/v1\/obrolan\//, async (u, init) => {
       saya.arsip = false;
       umpan(anggotaAktif(r), 'pesan', { ruang: r.id, id: p.id, uuid: p.uuid, pengirim: SAYA_ID, perangkat: dev.id });
       void botMenanggapi(r, p);
-      return { __status: 201, data: bentukPesan(p, dev.id) };
+      return { __status: 201, data: { ...bentukPesan(p, dev.id), menunggu_penerima: tanpa } };
     }
     if ((x = sub.match(/^\/pesan\/([\w-]+)\/hapus$/))) {
       const p = PESAN.find((y) => y.ruang === r.id && y.uuid === x![1]);
@@ -751,6 +786,28 @@ tambahRute(/^\/v1\/obrolan\//, async (u, init) => {
   if ((x = path.match(/^\/lampiran\/([\w-]+)$/))) {
     const d = LAMPIRAN.get(x[1]);
     return d ? { __mentah: d } : galat(404, 'not_found', 'Lampiran tidak ditemukan atau sudah dihapus.');
+  }
+
+  if (path === '/susulan') {
+    const dev = devSaya(m === 'GET' ? q('perangkat') : b.perangkat);
+    if (!dev) return galat(409, 'perangkat_tidak_aktif', 'Perangkat ini belum terdaftar atau sudah dicabut.');
+    const tertunda = susulanTertunda(dev);
+    if (m === 'GET') return { data: tertunda };
+    let disimpan = 0;
+    const tanggapi = new Set<Pesan>();
+    for (const x of (b.kunci ?? []) as Array<{ pesan: string; perangkat: string; kunci: string }>) {
+      const t = tertunda.find((y) => y.uuid === x.pesan)?.tujuan.find((y) => y.id === x.perangkat);
+      const p = PESAN.find((y) => y.uuid === x.pesan);
+      if (!t || !p) continue;
+      p.kunci[x.perangkat] = `s1.${x.kunci}`;
+      disimpan++;
+      tanggapi.add(p);
+    }
+    // Tanggapi pesan terakhir saja, seperti orang yang baru membuka obrolan.
+    const terakhir = [...tanggapi].pop();
+    const r = terakhir && RUANG.find((x) => x.id === terakhir.ruang);
+    if (terakhir && r) void botMenanggapi(r, terakhir);
+    return { data: { disimpan } };
   }
 
   if (path === '/peristiwa') {
