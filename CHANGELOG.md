@@ -1,5 +1,12 @@
 # Catatan perubahan
 
+## 1.36.0 (2026-11-16)
+
+- **Mode pemeliharaan per aplikasi dari Pustikom** (`unipo-ui/siakad`, butuh SSO dengan `/app/status` dan BFF dengan `GET /bff/pemeliharaan`):
+  - `GerbangPemeliharaan` punya prop `bff` (mis. `bff="/bff"`): status diambil dari BFF saat dibuka, saat tab kembali dilihat, dan tiap 60 detik. Saat pemeliharaan, pengguna melihat `ModePemeliharaan` dengan pesan dan perkiraan selesai dari Pustikom; pengelola (`lolos`, mis. ADMIN) tetap melihat aplikasi dengan pita "Mode pemeliharaan aktif" (`bypassNotice` untuk mengganti teksnya).
+  - `usePemeliharaanBff(bff)` dan tipe `StatusPemeliharaanBff` untuk dipakai sendiri.
+  - `fetchPemeliharaan` juga membaca perkiraan selesai dari jawaban 503 BFF (`pemeliharaan.sampai`).
+
 ## 1.35.0 (2026-11-16)
 
 - **Aturan biaya dan pembagiannya** (`unipo-ui/siakad`, butuh SIAKAD dengan `/v1/biaya`): biaya yang ditagih ke mahasiswa/PMB (UKT, uang gedung, biaya ujian, formulir) dengan komponen pembagian ke yayasan, rektorat, fakultas, prodi, unit lain, pejabat, atau pegawai (persen, nominal, sisa). Aturan wajib ber-SK dari storage dan ditetapkan WR bidang keuangan.
