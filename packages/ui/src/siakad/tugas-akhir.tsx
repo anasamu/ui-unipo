@@ -31,6 +31,7 @@ import { useUnggahBerkas } from './berkas';
 import { GalatApi } from './galat';
 import { PilihEntitas, type SumberEntitas } from './pilih';
 import { invalidateSiakad, pesanGalat, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
+import { LabelProdi, namaRapi } from './prodi';
 
 /*
  * Tugas akhir/skripsi (/v1/ta) dan syarat kelulusan mahasiswa (/v1/kelulusan): mahasiswa mengajukan judul dengan
@@ -197,7 +198,7 @@ export const SUMBER_DOSEN_TA: SumberEntitas = {
   kunci: 'nidn',
   saringKunci: 'nidn',
   judul: (r) => String(r.nama ?? r.nidn ?? ''),
-  meta: (r) => [r.nidn && `NIDN ${String(r.nidn)}`, r.jabatan_akademik, r.nama_prodi].filter(Boolean).join(' · '),
+  meta: (r) => [r.nidn && `NIDN ${String(r.nidn)}`, r.jabatan_akademik, namaRapi(r.nama_prodi as string | null)].filter(Boolean).join(' · '),
   avatar: true,
   placeholder: 'Cari NIDN atau nama dosen',
 };
@@ -911,8 +912,9 @@ export function DetailPengajuanJudul({ id, onSelesai }: { id: number | string; o
         </Badge>
         <h3 className="u-ta-judul-pengajuan">{p.judul}</h3>
         <p className="u-ta-redup">
-          {p.nama_mahasiswa ?? p.nim} · {p.nim} · {p.nama_prodi ?? p.kode_prodi}
+          {p.nama_mahasiswa ?? p.nim} · {p.nim}
         </p>
+        <LabelProdi kode={p.kode_prodi} nama={p.nama_prodi} />
       </div>
       <RingkasanPengajuan p={p} />
       <IsiNaskah p={p} />
@@ -1007,7 +1009,7 @@ export function DaftarValidasiJudul({ awal = 'saya', className }: DaftarValidasi
                 <div className="u-ta-daftar-utama">
                   <strong>{r.judul}</strong>
                   <span className="u-ta-redup">
-                    {r.nama_mahasiswa ?? r.nim} · {r.nim} · {r.nama_prodi ?? r.kode_prodi}
+                    {r.nama_mahasiswa ?? r.nim} · {r.nim} · {namaRapi(r.nama_prodi ?? r.kode_prodi)}
                   </span>
                 </div>
                 <div className="u-ta-daftar-meta">

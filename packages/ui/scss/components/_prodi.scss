@@ -1,0 +1,260 @@
+@use '../mixins' as *;
+
+// Program studi: logo fakultas, lencana akreditasi, baris/label/daftar prodi (siakad/prodi.tsx).
+
+// ================================================================ Logo fakultas
+.u-logo-fak {
+  --u-logo-fak-s: 2.25rem;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--u-logo-fak-s);
+  height: var(--u-logo-fak-s);
+  border-radius: var(--u-radius-md);
+  border: 1px solid var(--u-border);
+  background: var(--u-surface);
+  overflow: hidden;
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 2px;
+  }
+  &[data-ukuran='sm'] {
+    --u-logo-fak-s: 1.75rem;
+    border-radius: var(--u-radius-sm);
+  }
+  &[data-ukuran='lg'] {
+    --u-logo-fak-s: 3rem;
+    border-radius: var(--u-radius-lg);
+  }
+  &[data-monogram] {
+    border-color: hsl(var(--u-logo-fak-h, 210) 45% 82%);
+    background: hsl(var(--u-logo-fak-h, 210) 60% 94%);
+    color: hsl(var(--u-logo-fak-h, 210) 55% 30%);
+    font-weight: 700;
+    font-size: calc(var(--u-logo-fak-s) * 0.34);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+}
+.dark,
+[data-theme='dark'] {
+  .u-logo-fak[data-monogram] {
+    border-color: hsl(var(--u-logo-fak-h, 210) 30% 30%);
+    background: hsl(var(--u-logo-fak-h, 210) 35% 18%);
+    color: hsl(var(--u-logo-fak-h, 210) 70% 82%);
+  }
+}
+
+// ================================================================ Lencana akreditasi
+.u-lencana-akred {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  .u-badge {
+    white-space: nowrap;
+  }
+  svg {
+    flex: none;
+  }
+}
+
+// ================================================================ Baris prodi (daftar, pilihan)
+.u-baris-prodi {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  width: 100%;
+}
+.u-baris-prodi-teks,
+.u-label-prodi-teks {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+  flex: 1;
+}
+.u-baris-prodi-judul,
+.u-label-prodi-judul {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--u-foreground);
+}
+.u-baris-prodi-jenjang {
+  flex: none;
+  padding: 0.0625rem 0.375rem;
+  border-radius: var(--u-radius-sm);
+  background: color-mix(in oklab, var(--u-primary) 12%, transparent);
+  color: var(--u-primary);
+  font-size: var(--u-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.u-baris-prodi-nama,
+.u-label-prodi-nama {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.u-baris-prodi-meta,
+.u-label-prodi-sub {
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.u-baris-prodi-lencana {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  flex: none;
+}
+@container (max-width: 26rem) {
+  .u-baris-prodi {
+    flex-wrap: wrap;
+  }
+  .u-baris-prodi-lencana {
+    width: 100%;
+    justify-content: flex-start;
+    padding-left: calc(2.25rem + 0.75rem);
+  }
+}
+
+// ================================================================ Label prodi (tabel, kartu, profil)
+.u-label-prodi {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  max-width: 100%;
+  vertical-align: middle;
+  .u-label-prodi-judul {
+    font-weight: 500;
+  }
+  .u-lencana-akred .u-badge {
+    font-size: 0.6875rem;
+  }
+  &[data-ukuran='md'] {
+    gap: 0.625rem;
+    .u-label-prodi-judul {
+      font-weight: 600;
+    }
+  }
+}
+
+// ================================================================ Daftar prodi
+.u-daftar-prodi {
+  display: grid;
+  gap: 1rem;
+  container-type: inline-size;
+}
+.u-daftar-prodi-grup {
+  display: grid;
+  gap: 0.5rem;
+  > header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    h4 {
+      margin: 0;
+      font-size: var(--u-text-sm);
+      font-weight: 600;
+    }
+    span:last-child {
+      margin-left: auto;
+      font-size: var(--u-text-xs);
+      color: var(--u-muted-foreground);
+    }
+  }
+}
+.u-daftar-prodi-isi {
+  display: grid;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-surface);
+  overflow: hidden;
+}
+.u-daftar-prodi-butir {
+  display: flex;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  & + & {
+    border-top: 1px solid var(--u-border);
+  }
+  &:is(a, button) {
+    cursor: pointer;
+    transition: background-color 120ms ease;
+    &:hover {
+      background: var(--u-muted);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--u-primary);
+      outline-offset: -2px;
+    }
+  }
+  &[data-aktif] {
+    background: color-mix(in oklab, var(--u-primary) 8%, transparent);
+    box-shadow: inset 3px 0 0 var(--u-primary);
+  }
+}
+.u-daftar-prodi[data-varian='ringkas'] .u-daftar-prodi-butir {
+  padding: 0.5rem 0.75rem;
+}
+.u-daftar-prodi[data-varian='kartu'] {
+  .u-daftar-prodi-isi {
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+    gap: 0.75rem;
+    border: 0;
+    background: none;
+    overflow: visible;
+  }
+  .u-daftar-prodi-butir {
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-lg);
+    background: var(--u-surface);
+    padding: 1rem;
+    & + .u-daftar-prodi-butir {
+      border-top: 1px solid var(--u-border);
+    }
+  }
+  .u-baris-prodi {
+    flex-wrap: wrap;
+  }
+  .u-baris-prodi-lencana {
+    width: 100%;
+    justify-content: flex-start;
+    padding-left: calc(2.25rem + 0.75rem);
+  }
+}
+.u-daftar-prodi-muat {
+  display: grid;
+  gap: 0.5rem;
+  .u-skeleton {
+    height: 3.25rem;
+  }
+}
+.u-daftar-prodi-kosong {
+  margin: 0;
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+}
+@media (prefers-reduced-motion: reduce) {
+  .u-daftar-prodi-butir {
+    transition: none;
+  }
+}

@@ -9,6 +9,7 @@ import { LineChart, SegmentBar } from '../components/charts';
 import { Sheet } from '../components/overlays';
 import { pesanGalat, useSiakadQuery, type QueryState } from './provider';
 import { KodeLaporan } from '../components/galat';
+import { LabelProdi } from './prodi';
 
 /*
  * Detail data akademik dari API SIAKAD: profil mahasiswa (biodata, riwayat studi, KRS, KHS, transkrip),
@@ -158,10 +159,7 @@ export function KartuProfilMahasiswa({ nim, aksi, className }: { nim: string; ak
           <h3>{m.nama ?? nim}</h3>
           <p>
             <Mono>{m.nim ?? nim}</Mono>
-            <span>
-              {m.kode_jenjang ? `${m.kode_jenjang} ` : ''}
-              {m.nama_prodi ?? m.kode_prodi}
-            </span>
+            <LabelProdi kode={m.kode_prodi} nama={m.nama_prodi} prodi={{ kode_jenjang: m.kode_jenjang }} />
           </p>
           <div className="u-profil-tags">
             <Badge variant={st.variant} dot>
@@ -210,7 +208,7 @@ export function DataDiriMahasiswa({ nim, className }: { nim: string; className?:
         <h4>Akademik</h4>
         <DescriptionList
           items={[
-            { label: 'Program studi', value: `${m.kode_jenjang ? m.kode_jenjang + ' ' : ''}${m.nama_prodi ?? '–'}` },
+            { label: 'Program studi', value: m.kode_prodi || m.nama_prodi ? <LabelProdi kode={m.kode_prodi} nama={m.nama_prodi} prodi={{ kode_jenjang: m.kode_jenjang }} /> : '–' },
             { label: 'Status masuk', value: m.status_masuk === 'P' ? 'Pindahan' : m.status_masuk === 'B' ? 'Baru' : (m.status_masuk ?? '–') },
             { label: 'Masuk', value: `${labelTahunAkademik(m.semester_masuk)}${m.tanggal_masuk ? ` · ${formatDate(m.tanggal_masuk, 'medium')}` : ''}` },
             { label: 'Batas studi', value: labelTahunAkademik(m.batas_studi) },
@@ -605,10 +603,7 @@ export function KartuProfilDosen({ nidn, aksi, className }: { nidn: string; aksi
           <h3>{nama || nidn}</h3>
           <p>
             <Mono>NIDN {d.nidn ?? nidn}</Mono>
-            <span>
-              {d.kode_jenjang ? `${d.kode_jenjang} ` : ''}
-              {d.nama_prodi ?? d.kode_prodi ?? '–'}
-            </span>
+            {d.kode_prodi || d.nama_prodi ? <LabelProdi kode={d.kode_prodi} nama={d.nama_prodi} prodi={{ kode_jenjang: d.kode_jenjang }} /> : <span>–</span>}
           </p>
           <div className="u-profil-tags">
             <Badge variant={d.status_aktif === 'A' || d.status === 'A' ? 'success' : 'neutral'} dot>

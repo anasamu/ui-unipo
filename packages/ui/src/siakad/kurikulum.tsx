@@ -8,6 +8,7 @@ import { Alert, Empty, Progress, ProgressRing, Table, TableContainer } from '../
 import { ActivityFeed, Panel, SegmentBar, StatCard, StatGrid } from '../components/charts';
 import { Sheet } from '../components/overlays';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakadQuery, type QueryState } from './provider';
+import { LabelProdi } from './prodi';
 import { KodeLaporan } from '../components/galat';
 
 /*
@@ -1058,10 +1059,9 @@ export function StatusMigrasiKurikulum({ onPilihProdi, className }: { onPilihPro
             <li key={p.kode_prodi}>
               <Tag className="u-migrasi-row" {...(onPilihProdi ? { type: 'button' as const, onClick: () => onPilihProdi(p) } : {})}>
                 <span className="u-migrasi-prodi">
-                  <b>{p.nama_prodi}</b>
+                  <LabelProdi kode={p.kode_prodi} nama={p.nama_prodi} prodi={{ kode_jenjang: p.jenjang }} sub={false} />
                   <small>
                     {[
-                      p.jenjang,
                       p.lama?.jumlah_semester ? `${p.lama.jumlah_semester} semester data lama` : null,
                       p.terbit_terakhir ? `terbit ${p.terbit_terakhir.tahun_id}` : p.impor_terakhir ? `impor ${p.impor_terakhir.tahun_id}` : null,
                     ]

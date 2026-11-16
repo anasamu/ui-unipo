@@ -49,6 +49,7 @@ import {
 } from '../components/charts';
 import { pesanGalat, useSiakadQuery, type QueryState } from './provider';
 import { KodeLaporan } from '../components/galat';
+import { LabelProdi } from './prodi';
 
 /*
  * Widget per fitur untuk tiap unit kerja (BAAK, keuangan, kepegawaian, SPMI, LPPM, arsip, humas, PMB, tracer).
@@ -331,7 +332,7 @@ export const MahasiswaPerProdi = buatWidget('MahasiswaPerProdi', useRingkasAkade
     items={[...(d?.per_prodi ?? [])]
       .sort((a, b) => n(b.mahasiswa_aktif) - n(a.mahasiswa_aktif))
       .map((p) => ({
-        label: `${p.jenjang ? p.jenjang + ' ' : ''}${p.nama_prodi}`,
+        label: <LabelProdi kode={p.kode_prodi} nama={p.nama_prodi} prodi={{ kode_jenjang: p.jenjang }} sub={false} />,
         value: n(p.mahasiswa_aktif),
         secondary: p.persen_krs != null ? `KRS ${formatPersen(n(p.persen_krs), 0)}` : undefined,
       }))}
@@ -346,7 +347,7 @@ export const RasioDosenPerProdi = buatWidget('RasioDosenPerProdi', useRingkasAka
     format={(v) => `1 : ${formatNumber(v, { maximumFractionDigits: 0 })}`}
     items={(d?.per_prodi ?? [])
       .filter((p) => n(p.dosen) > 0)
-      .map((p) => ({ label: p.nama_prodi, value: n(p.mahasiswa_aktif) / n(p.dosen), secondary: `${formatNumber(n(p.dosen))} dosen` }))
+      .map((p) => ({ label: <LabelProdi kode={p.kode_prodi} nama={p.nama_prodi} prodi={{ kode_jenjang: p.jenjang }} sub={false} />, value: n(p.mahasiswa_aktif) / n(p.dosen), secondary: `${formatNumber(n(p.dosen))} dosen` }))
       .sort((a, b) => b.value - a.value)}
   />
 ));
@@ -1327,7 +1328,7 @@ export const PeminatPerProdi = buatWidget('PeminatPerProdi', useStatistikPmb, { 
     limit={10}
     items={[...(d?.per_prodi ?? [])]
       .sort((a, b) => n(b.peminat) - n(a.peminat))
-      .map((p) => ({ label: p.nama_prodi ?? p.kode_prodi, value: n(p.peminat), secondary: `${formatNumber(n(p.pilihan_pertama))} pilihan 1` }))}
+      .map((p) => ({ label: <LabelProdi kode={p.kode_prodi} nama={p.nama_prodi} sub={false} />, value: n(p.peminat), secondary: `${formatNumber(n(p.pilihan_pertama))} pilihan 1` }))}
   />
 ));
 /** Dari mana pendaftar mengenal UNIPO. */
@@ -1444,7 +1445,7 @@ export const KeterlacakanPerProdi = buatWidget('KeterlacakanPerProdi', useStatis
     max={100}
     format={(v) => formatPersen(v, 0)}
     items={(d?.per_prodi ?? [])
-      .map((p) => ({ label: p.nama_prodi ?? p.kode_prodi, value: n(p.jumlah) ? (n(p.terlacak) / n(p.jumlah)) * 100 : 0, secondary: `${formatNumber(n(p.terlacak))}/${formatNumber(n(p.jumlah))}` }))
+      .map((p) => ({ label: <LabelProdi kode={p.kode_prodi} nama={p.nama_prodi} sub={false} />, value: n(p.jumlah) ? (n(p.terlacak) / n(p.jumlah)) * 100 : 0, secondary: `${formatNumber(n(p.terlacak))}/${formatNumber(n(p.jumlah))}` }))
       .sort((a, b) => b.value - a.value)}
   />
 ));

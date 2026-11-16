@@ -55,6 +55,7 @@ import { CentangSukses } from '../components/animasi';
 import { Cluster, Grid, PageHeader, Split, Stack, Text } from '../components/tata-letak';
 import { idPerangkatCbt, LembarUjian } from './cbt';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { LabelProdi } from './prodi';
 import { WizardPendaftaranPmb } from './pmb';
 import {
   TautanPmb,
@@ -1575,7 +1576,7 @@ export function KartuPesertaPmb({ pendaftaranId }: { pendaftaranId: string }) {
                   <>
                     {k.pilihan.map((x) => (
                       <span key={x.urut} className="u-pmb-blok">
-                        {x.urut}. {hurufJudul(x.nama_prodi ?? x.kode_prodi)}
+                        {x.urut}. <LabelProdi kode={x.kode_prodi} nama={hurufJudul(x.nama_prodi ?? x.kode_prodi)} sub={false} />
                       </span>
                     ))}
                   </>
@@ -1724,9 +1725,7 @@ export function HasilSeleksiPmb() {
               {detail.pilihan.map((x) => (
                 <li key={x.urut}>
                   <span className="u-pmb-urut">{x.urut}</span>
-                  <span>
-                    <strong>{hurufJudul(x.nama_prodi ?? '')}</strong>
-                  </span>
+                  <LabelProdi kode={x.kode_prodi} nama={hurufJudul(x.nama_prodi ?? '')} ukuran="md" />
                   {x.diterima ? (
                     <Badge variant="success">Diterima{x.nim ? ` · ${x.nim}` : ''}</Badge>
                   ) : x.lulus ? (

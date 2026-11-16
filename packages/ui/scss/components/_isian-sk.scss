@@ -1,0 +1,17 @@
+// Isian SK: nomor SK yang bisa dicari + tanggal + berkas SK (siakad/isian-sk.tsx).
+.u-isian-sk {
+  display: grid;
+  gap: 1rem;
+  container-type: inline-size;
+}
+.u-isian-sk-rinci {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+@container (min-width: 34rem) {
+  .u-isian-sk-rinci {
+    grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+    align-items: start;
+  }
+}

@@ -49,6 +49,7 @@ import { GalatApi } from './galat';
 import { PilihEntitas } from './pilih';
 import { PilihBerkas } from './pilih-berkas';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { PilihNomorSK } from './isian-sk';
 
 /*
  * Aturan akademik, kelulusan, dan keuangan dinamis (/v1/aturan): aturan disusun di satu titik penerapan (langkah
@@ -1964,7 +1965,18 @@ export function FormLampiranAturan({
           <PilihBerkas value={isi.berkas_id || null} onValueChange={(v) => set('berkas_id', v ?? '')} accept=".pdf,.jpg,.jpeg,.png" invalid={Boolean(galat.berkas_id)} />
         </Field>
         <Field label="Nomor" required={isi.jenis === 'sk'} optional={isi.jenis !== 'sk'} error={galat.nomor || undefined}>
-          <Input value={isi.nomor} maxLength={100} placeholder="mis. 123/UNIPO/SK/XII/2026" onChange={(e) => set('nomor', e.target.value)} />
+          {isi.jenis === 'sk' ? (
+            <PilihNomorSK
+              value={isi.nomor || null}
+              onValueChange={(nomor, sk) => {
+                set('nomor', nomor ?? '');
+                if (sk?.tanggal && !isi.tanggal) set('tanggal', sk.tanggal);
+                if (sk?.perihal && !isi.perihal) set('perihal', sk.perihal);
+              }}
+            />
+          ) : (
+            <Input value={isi.nomor} maxLength={100} placeholder="mis. 123/UNIPO/SK/XII/2026" onChange={(e) => set('nomor', e.target.value)} />
+          )}
         </Field>
         <Field label="Tanggal" required={isi.jenis === 'sk'} optional={isi.jenis !== 'sk'} error={galat.tanggal || undefined}>
           <IsianTanggal value={isi.tanggal || null} onValueChange={(v) => set('tanggal', v)} />

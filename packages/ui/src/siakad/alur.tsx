@@ -10,6 +10,7 @@ import { Select } from '../components/select';
 import { labelTahunAkademik } from './akademik';
 import { GalatApi } from './galat';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { LabelProdi } from './prodi';
 
 const HARI: Record<string, string> = { '1': 'Senin', '2': 'Selasa', '3': 'Rabu', '4': 'Kamis', '5': 'Jumat', '6': 'Sabtu', '7': 'Minggu' };
 const hari = (h?: string | number | null) => (h === null || h === undefined || h === '' ? '' : (HARI[String(h)] ?? String(h)));
@@ -526,8 +527,9 @@ function DetailKrsPaIsi({ nim, tahunId }: { nim: string; tahunId?: string }) {
         <div>
           <p className="u-alur-judul">{d.mahasiswa.nama}</p>
           <p className="u-alur-meta">
-            {d.mahasiswa.nim} · {d.mahasiswa.nama_prodi ?? d.mahasiswa.kode_prodi} · angkatan {d.mahasiswa.angkatan}
+            {d.mahasiswa.nim} · angkatan {d.mahasiswa.angkatan}
           </p>
+          <LabelProdi kode={d.mahasiswa.kode_prodi} nama={d.mahasiswa.nama_prodi} />
         </div>
         <Badge variant={STATUS_KRS[d.status].v} dot>
           {STATUS_KRS[d.status].label}

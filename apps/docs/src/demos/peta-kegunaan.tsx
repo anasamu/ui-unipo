@@ -547,6 +547,15 @@ const PETA: Baris[] = [
     scope: 'mahasiswa:read, dosen:read',
     halaman: 'sdk-pilih',
   },
+  {
+    k: 'Pengelola',
+    kegunaan: 'Daftar dan label program studi: logo fakultas, S1/D3, akreditasi dan masa berlakunya',
+    komponen: 'DaftarProdi, LabelProdi, LencanaAkreditasi, LogoFakultas',
+    dari: 'unipo-ui/siakad',
+    api: '/v1/referensi/prodi, /v1/referensi/fakultas',
+    scope: 'referensi:read',
+    halaman: 'prodi',
+  },
   { k: 'Pengelola', kegunaan: 'CRUD generik untuk sumber data yang belum punya widget', komponen: 'HalamanModul, KelolaSumber', dari: 'unipo-ui/katalog', api: 'semua /v1', halaman: 'katalog' },
 ];
 

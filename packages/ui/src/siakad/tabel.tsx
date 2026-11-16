@@ -10,6 +10,7 @@ import { filterToQuery, useFilterParams, type FilterField, type FilterValues } f
 import type { MenuEntry } from '../components/overlays';
 import { formatDate } from '../lib/format';
 import { useSiakadQuery } from './provider';
+import { LabelProdi } from './prodi';
 import { SheetDetailDosen, SheetDetailMahasiswa, SheetDetailMataKuliah } from './akademik';
 import {
   AKSES_ARSIP,
@@ -114,12 +115,15 @@ export function KartuData({
   title,
   subtitle,
   badge,
+  prodi,
   meta,
 }: {
   media?: React.ReactNode;
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   badge?: React.ReactNode;
+  /** Baris program studi, mis. <LabelProdi kode="22201" /> (logo fakultas + akreditasi). */
+  prodi?: React.ReactNode;
   meta?: Array<{ label: string; value: React.ReactNode }>;
 }) {
   return (
@@ -132,6 +136,7 @@ export function KartuData({
         </div>
       </div>
       {badge && <div className="u-kartu-data-badge">{badge}</div>}
+      {prodi && <div className="u-kartu-data-prodi">{prodi}</div>}
       {meta && meta.length > 0 && (
         <dl className="u-kartu-data-meta">
           {meta.map((m) => (
@@ -287,11 +292,11 @@ export const TabelMahasiswa = makeTabel<Row>({
       title={r.nama}
       subtitle={
         <>
-          <Mono>{r.nim}</Mono> · {r.kode_jenjang ? r.kode_jenjang + ' ' : ''}
-          {r.nama_prodi ?? '–'}
+          <Mono>{r.nim}</Mono>
         </>
       }
       badge={<StatusBadge tone={toneOf(TONE_MHS, r.status_aktif)}>{r.status_aktif_label ?? r.status_aktif}</StatusBadge>}
+      prodi={r.kode_prodi || r.nama_prodi ? <LabelProdi kode={r.kode_prodi} nama={r.nama_prodi} prodi={{ kode_jenjang: r.kode_jenjang }} /> : undefined}
       meta={[meta('Angkatan', r.tahun_masuk), meta('IPK', r.ipk != null ? Number(r.ipk).toFixed(2) : null), meta('Kelas', KELAS[r.kelas] ?? r.kelas)]}
     />
   ),
@@ -304,7 +309,7 @@ export const TabelMahasiswa = makeTabel<Row>({
       cell: (r) => <CellPrimary media={<Avatar name={String(r.nama ?? r.nim)} src={r.foto} size="sm" />} title={r.nama} subtitle={<Mono>{r.nim}</Mono>} />,
     },
     { key: 'nim', header: 'NIM', defaultHidden: true, mobile: 'hidden' },
-    { key: 'nama_prodi', header: 'Program studi', cell: (r) => `${r.kode_jenjang ? r.kode_jenjang + ' ' : ''}${r.nama_prodi ?? '–'}`, value: (r) => r.nama_prodi },
+    { key: 'nama_prodi', header: 'Program studi', cell: (r) => <LabelProdi kode={r.kode_prodi} nama={r.nama_prodi} prodi={{ kode_jenjang: r.kode_jenjang }} />, value: (r) => r.nama_prodi },
     { key: 'tahun_masuk', header: 'Angkatan', shrink: true },
     { key: 'kelas', header: 'Kelas', shrink: true, cell: (r) => KELAS[r.kelas] ?? r.kelas ?? '–' },
     { key: 'semester', header: 'Smt', align: 'end', shrink: true, defaultHidden: true },
@@ -340,9 +345,10 @@ export const TabelDosen = makeTabel<Row>({
         title={r.nama_lengkap ?? r.nama}
         subtitle={
           <>
-            NIDN <Mono>{r.nidn}</Mono> · {r.nama_prodi ?? '–'}
+            NIDN <Mono>{r.nidn}</Mono>
           </>
         }
+        prodi={r.kode_prodi || r.nama_prodi ? <LabelProdi kode={r.kode_prodi} nama={r.nama_prodi} /> : undefined}
         badge={
           <StatusBadge tone={v === 'A' || v === 'aktif' ? 'success' : v === 'T' ? 'info' : 'neutral'}>
             {({ A: 'Aktif', T: 'Tugas belajar', C: 'Cuti', K: 'Keluar' } as Record<string, string>)[v] ?? v}
@@ -370,7 +376,7 @@ export const TabelDosen = makeTabel<Row>({
         />
       ),
     },
-    { key: 'nama_prodi', header: 'Homebase' },
+    { key: 'nama_prodi', header: 'Homebase', value: (r) => r.nama_prodi, cell: (r) => (r.kode_prodi || r.nama_prodi ? <LabelProdi kode={r.kode_prodi} nama={r.nama_prodi} /> : '–') },
     { key: 'jabatan_akademik', header: 'Jabatan akademik', cell: (r) => r.jabatan_akademik ?? <Muted>Belum ada</Muted> },
     { key: 'pendidikan', header: 'Pendidikan', shrink: true, defaultHidden: true },
     {
@@ -492,7 +498,8 @@ export const TabelMataKuliah = makeTabel<Row>({
           {r.sifat === 'P' ? <Badge>Pilihan</Badge> : r.sifat === 'W' ? <Badge variant="primary">Wajib</Badge> : null}
         </>
       }
-      meta={[meta('Semester', r.semester), meta('Prodi', r.kode_prodi)]}
+      prodi={r.kode_prodi ? <LabelProdi kode={r.kode_prodi} /> : undefined}
+      meta={[meta('Semester', r.semester)]}
     />
   ),
   columns: [
@@ -501,7 +508,7 @@ export const TabelMataKuliah = makeTabel<Row>({
     { key: 'sks_mk', header: 'SKS', align: 'end', shrink: true, mobile: 'badge', cell: (r) => <Badge variant="outline">{r.sks_mk ?? '–'} SKS</Badge> },
     { key: 'semester', header: 'Semester', align: 'end', shrink: true },
     { key: 'sifat', header: 'Sifat', shrink: true, cell: (r) => (r.sifat === 'P' ? <Badge>Pilihan</Badge> : r.sifat === 'W' ? <Badge variant="primary">Wajib</Badge> : '–') },
-    { key: 'kode_prodi', header: 'Prodi', shrink: true, defaultHidden: true },
+    { key: 'kode_prodi', header: 'Prodi', defaultHidden: true, cell: (r) => (r.kode_prodi ? <LabelProdi kode={r.kode_prodi} sub={false} /> : '–') },
   ],
 });
 

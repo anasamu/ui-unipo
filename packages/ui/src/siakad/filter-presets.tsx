@@ -3,13 +3,21 @@ import * as React from 'react';
 import { Archive, BadgeCheck, Briefcase, Building2, Calendar, CircleDot, Clock, Flag, FolderOpen, GraduationCap, Inbox, Layers, Lock, Send, ShieldCheck, Users } from 'lucide-react';
 import { FilterBar, type FilterBarProps, type FilterField, type FilterOption } from '../components/filter';
 import { useSiakadQuery } from './provider';
+import { LogoFakultas, judulProdi, type ProdiReferensi } from './prodi';
 
 const opt = (pairs: Array<[string, string]>): FilterOption[] => pairs.map(([value, label]) => ({ value, label, text: label }));
 
 /** Opsi program studi dari SDK (referensi.getProdi), untuk dipakai di saringan mana pun. */
 export function useProdiOptions(): FilterOption[] {
   const { data } = useSiakadQuery(['referensi', 'prodi'], (s, signal) => s.referensi.getProdi({}, { signal }), { staleTime: 10 * 60_000 });
-  return React.useMemo(() => (data ?? []).map((p) => ({ value: String(p.kode_prodi), label: `${p.kode_jenjang ?? ''} ${p.nama_prodi ?? ''}`.trim(), text: String(p.nama_prodi ?? '') })), [data]);
+  return React.useMemo(
+    () =>
+      (data ?? []).map((p) => {
+        const r = p as unknown as ProdiReferensi;
+        return { value: String(p.kode_prodi), label: judulProdi(r), text: `${judulProdi(r)} ${p.kode_prodi}`, icon: <LogoFakultas kode={r.kode_fak} nama={r.nama_fakultas} ukuran="sm" /> };
+      }),
+    [data],
+  );
 }
 
 /** Opsi tahun akademik dari SDK (referensi.getTahunAkademik). */
