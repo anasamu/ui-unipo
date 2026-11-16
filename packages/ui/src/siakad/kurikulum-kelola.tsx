@@ -3110,15 +3110,15 @@ export function RuangKurikulumObe({ kurikulumId, hak: batas, tab: tabProp, onTab
   const [ubah, setUbah] = React.useState(false);
   const r = k?.ringkasan ?? {};
   const item: Array<{ value: TabRuangKurikulum; label: string; count?: number; icon: React.ReactNode }> = [
-    { value: 'ringkasan', label: 'Ringkasan & validasi', icon: <ShieldCheck /> },
-    { value: 'cpl', label: 'Profil lulusan & CPL', count: n(r.cpl) || undefined, icon: <Target /> },
+    { value: 'ringkasan', label: 'Ringkasan', icon: <ShieldCheck /> },
+    { value: 'cpl', label: 'Profil & CPL', count: n(r.cpl) || undefined, icon: <Target /> },
     { value: 'bk', label: 'Bahan kajian', count: n(r.bahan_kajian) || undefined, icon: <BookOpen /> },
     { value: 'mk', label: 'Mata kuliah', count: n(r.mata_kuliah) || undefined, icon: <Layers /> },
     { value: 'matriks', label: 'Matriks', icon: <Network /> },
     { value: 'ekuivalensi', label: 'Ekuivalensi', icon: <ClipboardList /> },
     { value: 'capaian', label: 'Capaian CPL', icon: <GraduationCap /> },
     { value: 'peninjauan', label: 'Peninjauan', icon: <FileText /> },
-    ...(h.migrasi ? [{ value: 'terbit' as const, label: 'Terbit ke SIAKAD', icon: <Upload /> }] : []),
+    ...(h.migrasi ? [{ value: 'terbit' as const, label: 'Terbit', icon: <Upload /> }] : []),
   ];
   return (
     <div className={cn('u-kk', className)}>

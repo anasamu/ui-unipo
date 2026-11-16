@@ -56,6 +56,14 @@
 }
 .u-kk-toolbar {
   justify-content: space-between;
+  > :is(input, .u-input, [class*='u-input']):first-child,
+  > .u-kk-catatan:first-child {
+    flex: 1 1 16rem;
+    max-width: 28rem;
+  }
+  > .u-kk-catatan:first-child {
+    max-width: none;
+  }
 }
 .u-kk-simpan {
   justify-content: flex-end;
@@ -110,8 +118,17 @@
     color: var(--u-destructive);
   }
 }
+.u-kk {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
 .u-kk-kembali {
-  align-self: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 // ---------------------------------------------------------------- Alur susun → sahkan → berlaku
@@ -190,8 +207,31 @@
 // ---------------------------------------------------------------- Ringkasan & sebaran semester
 .u-kk-mk-ringkas {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
   gap: 0.75rem;
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-lg);
+    background: var(--u-card);
+    min-width: 0;
+    > b {
+      font-size: 1.375rem;
+      line-height: 1.2;
+      font-weight: var(--u-weight-semibold);
+      font-variant-numeric: tabular-nums;
+    }
+    > span {
+      font-size: 0.8125rem;
+      color: var(--u-muted-foreground);
+    }
+    &[data-warn] > b {
+      color: var(--u-warning, #b45309);
+    }
+  }
 }
 .u-kk-semester {
   border: 1px solid var(--u-border);
@@ -317,10 +357,22 @@
   }
 }
 .u-kk-cpmk-kepala {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.375rem 0.625rem;
+  > p {
+    margin: 0;
+    line-height: 1.5;
+  }
+  > .u-kk-cpmk-cpl {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  > :last-child:not(.u-kk-cpmk-cpl):not(p) {
+    grid-column: 3;
+    grid-row: 1;
+  }
 }
 .u-kk-cpmk-cpl {
   display: inline-flex;
@@ -377,6 +429,10 @@
   textarea,
   input {
     min-width: 8rem;
+  }
+  td:nth-child(-n + 2) input {
+    width: 4.5rem;
+    min-width: 0;
   }
 }
 
