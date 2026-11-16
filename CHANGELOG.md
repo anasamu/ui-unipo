@@ -1,5 +1,12 @@
 # Catatan perubahan
 
+## 1.36.0 (2026-11-16)
+
+- **Login dua langkah SSO** (`unipo-ui`, butuh SSO dengan `/api/akun/dua-langkah`, lihat docs/DUA_LANGKAH.md di repo sso_unipo):
+  - `PengaturanDuaLangkah`: status, saran mengaktifkan, wizard 3 langkah (pilih metode, pindai QR atau masukkan kode kiriman, simpan kode cadangan), buat kode cadangan baru, ganti metode, minta kode lagi di semua perangkat, dan matikan. Tindakan sensitif meminta kode yang berlaku (atau kode cadangan); untuk metode email/WhatsApp ada tombol kirim kode.
+  - Metode aplikasi authenticator (Google Authenticator dan sejenisnya) selalu ada; kode lewat email/WhatsApp hanya muncul bila SSO melaporkan integrasinya aktif (`metode_tersedia`).
+  - `DialogKodeCadangan` (salin, unduh .txt, cetak, wajib dicentang), `apiDuaLangkahBff(csrf, basis)` untuk BFF aplikasi (`/bff/keamanan`), tipe `ApiDuaLangkah`, `StatusDuaLangkah`, `MulaiDuaLangkah`, `GalatDuaLangkah`, `labelMetodeDuaLangkah`.
+
 ## 1.35.0 (2026-11-16)
 
 - **Aturan biaya dan pembagiannya** (`unipo-ui/siakad`, butuh SIAKAD dengan `/v1/biaya`): biaya yang ditagih ke mahasiswa/PMB (UKT, uang gedung, biaya ujian, formulir) dengan komponen pembagian ke yayasan, rektorat, fakultas, prodi, unit lain, pejabat, atau pegawai (persen, nominal, sisa). Aturan wajib ber-SK dari storage dan ditetapkan WR bidang keuangan.
