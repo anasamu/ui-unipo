@@ -1,5 +1,14 @@
 # Catatan perubahan
 
+## 1.38.0 (2026-11-16)
+
+- **Pengajuan ke LP2M dengan proposal, dokumen pendukung, dan riwayat proses** (`unipo-ui/siakad`, butuh SIAKAD dengan `/v1/lppm/kkn/proposal` dan entitas file `kkn_proposal`):
+  - `BerkasLppm`: proposal dan dokumen pendukung per jenis (`BERKAS_USULAN_LPPM`, `BERKAS_PROPOSAL_KKN`, atau daftar sendiri) untuk entitas LPPM mana pun (usulan, kkn_proposal, laporan, ...). Unggah ke `/v1/berkas` (bertahap untuk file besar) lalu ditautkan dengan `berkas_id`; lihat, unduh, hapus selama pengajuan bisa diubah; jenis wajib yang kosong ditandai.
+  - `RiwayatLppm` + `useRiwayatKegiatanLppm`: linimasa proses dari `lppm_log` (diajukan, persetujuan fakultas, review, keputusan LP2M, perbaikan) beserta catatannya, berwarna sesuai hasil. `LABEL_AKSI_LPPM` untuk label aksi.
+  - `ProposalKknSaya` (mahasiswa): daftar KKN saat pendaftaran dibuka, susun proposal penelitian/pengabdian/program kerja KKN, lampirkan berkas, cek kelengkapan, ajukan ke LP2M, perbaiki saat diminta revisi, lihat keputusan dan riwayat, serta proposal anggota kelompok.
+  - `VerifikasiProposalKkn` (tim LP2M): rekap per status, filter periode/status/kata kunci, detail proposal dengan berkas dan riwayat, keputusan terima/minta perbaikan/tolak dengan catatan untuk mahasiswa.
+  - `StatusProposalKknBadge`, `AlurProposalKkn`, `LABEL_STATUS_PROPOSAL_KKN`.
+
 ## 1.37.0 (2026-11-16)
 
 - **Login dua langkah SSO** (`unipo-ui`, butuh SSO dengan `/api/akun/dua-langkah`, lihat docs/DUA_LANGKAH.md di repo sso_unipo):
