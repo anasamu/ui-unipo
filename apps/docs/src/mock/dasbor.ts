@@ -143,7 +143,8 @@ const capaian = (kunci: string, total: number, terisi: number, mel: number, ter:
   persen_terpenuhi: Math.round(((mel + ter) / (mel + ter + tidak)) * 1000) / 10,
   persen_terisi: Math.round((terisi / total) * 1000) / 10,
 });
-tambahRute(/\/v1\/spmi\/dasbor$/, () => ({
+// periode_id=999: belum ada periode SPMI (API menjawab 404).
+tambahRute(/\/v1\/spmi\/dasbor$/, (u) => u.searchParams.get('periode_id') === '999' ? { __status: 404, error: { code: 'not_found', message: 'Data tidak ditemukan.' } } : ({
   data: {
     periode: { id: 2, nama: '2026', tahun: 2026 },
     unit_id: null,

@@ -16,6 +16,7 @@ import {
   DasborPmb,
   DasborSpmi,
   DasborTracer,
+  RingkasanSpmi,
 } from 'unipo-ui/siakad';
 import { DashboardGrid, Select } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
@@ -35,6 +36,7 @@ export const meta: DemoMeta = {
     Keuangan: 'DasborKeuangan (keu.getSerapan)',
     Kepegawaian: 'DasborKepegawaian (sdm.getLaporanRingkasan)',
     Spmi: 'DasborSpmi (spmi.getDasbor)',
+    SpmiKosong: 'RingkasanSpmi saat belum ada periode SPMI (API 404): keadaan kosong, bukan galat',
     Lppm: 'DasborLppm (lppm.getRekapDasbor)',
     Arsip: 'DasborArsip (arsip.getLaporanRingkasan)',
     Humas: 'DasborHumas (humas.getRingkasan)',
@@ -110,6 +112,9 @@ export function Kepegawaian() {
 }
 export function Spmi() {
   return <DasborSpmi />;
+}
+export function SpmiKosong() {
+  return <RingkasanSpmi periodeId={999} />;
 }
 export function Lppm() {
   return <DasborLppm tahun={2026} hrefTugas={{ usulan_menunggu_review: '#review' }} />;

@@ -127,9 +127,11 @@ export interface PageHeaderProps extends Omit<React.HTMLAttributes<HTMLElement>,
   backLabel?: string;
   /** Remah roti di atas judul. */
   breadcrumb?: React.ReactNode;
+  /** Ikon fitur di kiri judul (petak berwarna lembut), mis. <ClipboardCheck />. */
+  icon?: React.ReactNode;
 }
 /** Judul halaman aplikasi: remah roti/kembali, eyebrow, judul + lencana, deskripsi, dan aksi. */
-export function PageHeader({ title, description, eyebrow, actions, badge, back, backLabel = 'Kembali', breadcrumb, className, ...props }: PageHeaderProps) {
+export function PageHeader({ title, description, eyebrow, actions, badge, back, backLabel = 'Kembali', breadcrumb, icon, className, ...props }: PageHeaderProps) {
   const tombolKembali =
     typeof back === 'function' ? (
       <button type="button" className="u-page-back" onClick={back}>
@@ -145,18 +147,30 @@ export function PageHeader({ title, description, eyebrow, actions, badge, back, 
         ),
       })
     ) : null;
+  const teks = (
+    <div className="u-page-header-text">
+      {eyebrow && <p className="u-page-eyebrow">{eyebrow}</p>}
+      <h1 className="u-page-title">
+        {title}
+        {badge && <span className="u-page-badge">{badge}</span>}
+      </h1>
+      {description && <p className="u-page-desc">{description}</p>}
+    </div>
+  );
   return (
-    <header className={cn('u-page-header', className)} {...props}>
+    <header className={cn('u-page-header', className)} data-icon={dataFlag(Boolean(icon))} {...props}>
       {(breadcrumb || tombolKembali) && <div className="u-page-header-top">{breadcrumb ?? tombolKembali}</div>}
       <div className="u-page-header-row">
-        <div className="u-page-header-text">
-          {eyebrow && <p className="u-page-eyebrow">{eyebrow}</p>}
-          <h1 className="u-page-title">
-            {title}
-            {badge && <span className="u-page-badge">{badge}</span>}
-          </h1>
-          {description && <p className="u-page-desc">{description}</p>}
-        </div>
+        {icon ? (
+          <div className="u-page-header-lead">
+            <span className="u-page-icon" aria-hidden>
+              {icon}
+            </span>
+            {teks}
+          </div>
+        ) : (
+          teks
+        )}
         {actions && <div className="u-page-actions">{actions}</div>}
       </div>
     </header>

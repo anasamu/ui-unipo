@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { BookOpen, ClipboardList, GraduationCap, Wallet } from 'lucide-react';
-import { Accordion, Breadcrumb, Button, Pagination, Progress, ProgressRing, Stepper, Tabs } from 'unipo-ui';
+import { BookOpen, ClipboardCheck, ClipboardList, GraduationCap, Wallet } from 'lucide-react';
+import { Accordion, Badge, Breadcrumb, Button, PageHeader, Pagination, Progress, ProgressRing, Stepper, Tabs } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 import { jsxProps } from '../Playground';
 
@@ -17,6 +17,7 @@ export const meta: DemoMeta = {
     LangkahVertikal: 'Stepper vertikal',
     Halaman: 'Pagination',
     Jejak: 'Breadcrumb',
+    KepalaHalaman: 'PageHeader dengan ikon, lencana, dan breadcrumb',
     Faq: 'Accordion',
     Kemajuan: 'Progress',
   },
@@ -147,5 +148,19 @@ export function Kemajuan() {
       <ProgressRing value={3.71} max={4} label="3,71" size={88} thickness={8} />
       <ProgressRing value={62} tone="warning" />
     </div>
+  );
+}
+
+export function KepalaHalaman() {
+  return (
+    <PageHeader
+      icon={<ClipboardCheck />}
+      eyebrow="Penjaminan mutu"
+      title="Audit mutu internal"
+      badge={<Badge variant="info">Periode 2026</Badge>}
+      description="Jadwal desk evaluation, visitasi, dan temuan per unit."
+      breadcrumb={<Breadcrumb items={[{ label: 'Beranda', href: '#' }, { label: 'SPMI', href: '#' }, { label: 'AMI' }]} />}
+      actions={<Button size="sm">Tambah audit</Button>}
+    />
   );
 }

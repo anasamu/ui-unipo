@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { ArrowRight, BookOpenCheck, FileText, GraduationCap, IdCard, PartyPopper, Wallet } from 'lucide-react';
 import { cn } from '../lib/cn';
+import { Tautan, type RenderLink } from '../lib/tautan';
 import { formatDate, formatRupiah } from '../lib/format';
 import { Button, Skeleton } from '../components/actions';
 import { Card, CardContent, CardHeader } from '../components/display';
@@ -29,25 +30,28 @@ function salam(d = new Date()): string {
 
 export interface SapaanBerandaProps {
   nama?: React.ReactNode;
-  /** Baris kedua, mis. prodi atau unit. */
+  /** Baris kedua, mis. prodi atau unit. Boleh berisi blok (dirender di dalam `div`). */
   keterangan?: React.ReactNode;
   ilustrasi?: NamaIlustrasi;
-  /** Tombol di kanan (mis. "Lihat profil"). */
+  /** Lencana di bawah keterangan, terpisah dari tombol (mis. peran, unit, status sesi). */
+  lencana?: React.ReactNode;
+  /** Tombol atau kontrol (mis. "Lihat profil", pilihan gelombang). */
   aksi?: React.ReactNode;
   className?: string;
 }
 
-/** Kepala beranda: salam sesuai jam, nama, tanggal hari ini, dan ilustrasi peran. */
-export function SapaanBeranda({ nama, keterangan, ilustrasi, aksi, className }: SapaanBerandaProps) {
+/** Kepala beranda: salam sesuai jam, nama, tanggal hari ini, lencana, aksi, dan ilustrasi peran. */
+export function SapaanBeranda({ nama, keterangan, ilustrasi, lencana, aksi, className }: SapaanBerandaProps) {
   return (
     <section className={cn('u-beranda-sapaan', className)}>
-      <div>
+      <div className="u-beranda-sapaan-isi">
         <p className="u-beranda-tanggal">{formatDate(new Date(), 'full')}</p>
         <h2>
           {salam()}
           {nama ? <>, {nama}</> : null}
         </h2>
-        {keterangan && <p className="u-beranda-ket">{keterangan}</p>}
+        {keterangan && <div className="u-beranda-ket">{keterangan}</div>}
+        {lencana && <div className="u-beranda-sapaan-lencana">{lencana}</div>}
         {aksi && <div className="u-beranda-sapaan-aksi">{aksi}</div>}
       </div>
       {ilustrasi && <Ilustrasi nama={ilustrasi} ekspresi="senang" lebar={190} className="u-beranda-ilus" />}
@@ -66,12 +70,66 @@ export interface AksiCepatItem {
   href?: string;
   /** Bungkus pemicu, mis. (t) => <ModalAmbilKrs trigger={t} />. */
   modal?: (trigger: React.ReactElement) => React.ReactNode;
+  /** Warna petak ikon. Bawaan: primary. */
+  warna?: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+  /** Lencana di pojok kanan, mis. jumlah antrean atau "Baru". */
+  badge?: React.ReactNode;
+  /** Baris kecil di bawah keterangan, mis. "3 menunggu" atau tenggat. */
+  meta?: React.ReactNode;
 }
 
+export interface AksiCepatProps {
+  items: AksiCepatItem[];
+  /**
+   * Jumlah kolom paling banyak (bawaan 4). Kolom dihitung dari lebar wadah lalu diseimbangkan menurut jumlah item
+   * (5 → 3+2, 7 → 4+3), jadi tidak ada baris berisi satu petak bila bisa dihindari. Di layar sempit turun mengikuti `min`.
+   */
+  kolom?: number;
+  /** Lebar minimum petak sebelum turun baris (CSS length). Bawaan 13.5rem. */
+  min?: string;
+  /** Render tautan lewat router (SPA). Bawaan: `<a href>` atau PenyediaTautan. */
+  renderLink?: RenderLink;
+  className?: string;
+}
+
+/** Kolom seimbang: n petak dibagi rata ke baris (5 → 3+2, 7 → 4+3), paling banyak `muat` kolom. */
+const kolomSeimbang = (n: number, muat: number) => {
+  const m = Math.max(1, muat);
+  return n <= m ? Math.max(1, n) : Math.ceil(n / Math.ceil(n / m));
+};
+/** Panjang CSS sederhana (px/rem/em) ke piksel. */
+const kePiksel = (v: string, el: HTMLElement) => {
+  const x = parseFloat(v);
+  if (!Number.isFinite(x)) return 216;
+  if (v.trim().endsWith('px')) return x;
+  const akar = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  return v.trim().endsWith('em') && !v.trim().endsWith('rem') ? x * (parseFloat(getComputedStyle(el).fontSize) || akar) : x * akar;
+};
+
 /** Deret petak aksi cepat; tiap petak bisa membuka modal fitur, tautan, atau fungsi. */
-export function AksiCepat({ items, className }: { items: AksiCepatItem[]; className?: string }) {
+export function AksiCepat({ items, kolom, min, renderLink, className }: AksiCepatProps) {
+  const ref = React.useRef<HTMLUListElement>(null);
+  const n = items.length;
+  // Jumlah kolom dihitung dari lebar wadah lalu diseimbangkan (tanpa baris berisi satu petak bila bisa dihindari).
+  const [muat, setMuat] = React.useState<number | null>(null);
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const hitung = () => {
+      const cs = getComputedStyle(el);
+      const jarak = parseFloat(cs.columnGap) || 12;
+      const lebarMin = kePiksel(cs.getPropertyValue('--aksi-min') || '13.5rem', el);
+      setMuat(Math.max(1, Math.floor((el.clientWidth + jarak) / (lebarMin + jarak))));
+    };
+    hitung();
+    const ro = new ResizeObserver(hitung);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [min]);
+  const k = kolomSeimbang(n, Math.min(kolom ?? 4, muat ?? kolom ?? 4));
+  const gaya = { '--aksi-kolom': k, ...(min ? { '--aksi-min': min } : {}) } as React.CSSProperties;
   return (
-    <ul className={cn('u-aksi-cepat', className)}>
+    <ul ref={ref} className={cn('u-aksi-cepat', className)} style={gaya}>
       {items.map((a) => {
         const isi = (
           <>
@@ -81,18 +139,26 @@ export function AksiCepat({ items, className }: { items: AksiCepatItem[]; classN
             <span className="u-aksi-cepat-teks">
               <b>{a.label}</b>
               {a.description && <small>{a.description}</small>}
+              {a.meta && <span className="u-aksi-cepat-meta">{a.meta}</span>}
             </span>
+            {a.badge != null && a.badge !== false && <span className="u-aksi-cepat-badge">{a.badge}</span>}
           </>
         );
-        const tombol = a.href ? (
-          <a className="u-aksi-cepat-item" href={a.href}>
-            {isi}
-          </a>
-        ) : (
-          <button type="button" className="u-aksi-cepat-item" onClick={a.onClick}>
-            {isi}
-          </button>
-        );
+        const tombol =
+          a.href && a.modal ? (
+            // Pemicu modal tetap <a> biasa supaya ref/props pemicu diteruskan apa adanya.
+            <a className="u-aksi-cepat-item" href={a.href} data-warna={a.warna}>
+              {isi}
+            </a>
+          ) : a.href ? (
+            <Tautan className="u-aksi-cepat-item" href={a.href} data-warna={a.warna} renderLink={renderLink}>
+              {isi}
+            </Tautan>
+          ) : (
+            <button type="button" className="u-aksi-cepat-item" data-warna={a.warna} onClick={a.onClick}>
+              {isi}
+            </button>
+          );
         return <li key={a.key}>{a.modal ? a.modal(tombol) : tombol}</li>;
       })}
     </ul>

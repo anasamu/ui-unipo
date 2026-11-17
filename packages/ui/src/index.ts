@@ -2,6 +2,7 @@
 // widget per fitur di 'unipo-ui/widgets'.
 export * from './lib/cn';
 export * from './lib/format';
+export * from './lib/tautan';
 export * from './components/actions';
 export * from './components/forms';
 export * from './components/select';

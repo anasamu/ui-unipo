@@ -659,6 +659,12 @@
       border-color: color-mix(in oklab, var(--u-success) 40%, var(--u-border));
       background: color-mix(in oklab, var(--u-success) 5%, var(--u-card));
     }
+    // Tahap yang sedang dikerjakan (CycleStep status 'berjalan').
+    &[data-status='berjalan'] {
+      border-color: var(--u-primary);
+      background: color-mix(in oklab, var(--u-primary) 7%, var(--u-card));
+      box-shadow: 0 0 0 1px var(--u-primary);
+    }
   }
 }
 .u-cycle-mark {
@@ -678,6 +684,11 @@
   [data-done] > & {
     background: var(--u-success);
     color: #fff;
+  }
+  [data-status='berjalan'] > & {
+    background: var(--u-primary);
+    color: var(--u-primary-foreground, #fff);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--u-primary) 22%, transparent);
   }
 }
 .u-cycle-label {
@@ -739,6 +750,12 @@
   > [data-span='full'] {
     grid-column: 1 / -1;
   }
+}
+// Pilihan eksplisit: panel satu baris sama tinggi (mis. beranda berisi daftar/antrean). Pasang lewat
+// <DashboardGrid className="u-dash-rata">.
+.u-dash-rata > .u-dash,
+.u-dash[data-rata='stretch'] {
+  align-items: stretch;
 }
 @container (min-width: 640px) {
   .u-dash {
