@@ -1613,7 +1613,7 @@
 }
 .u-ob-apung-panel {
   width: min(24rem, calc(100vw - 3rem));
-  height: min(40rem, calc(100dvh - 8rem));
+  height: min(40rem, calc(100dvh - 8rem - var(--u-offset-atas, 0px)));
   overflow: hidden;
   border: 1px solid var(--u-border);
   border-radius: var(--u-radius-xl);

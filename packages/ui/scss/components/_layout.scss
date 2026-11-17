@@ -279,15 +279,16 @@
 .u-app-shell {
   display: grid;
   grid-template-columns: auto 1fr;
-  min-height: 100dvh;
+  // --u-offset-atas: tinggi bilah tetap di tepi atas (mis. BilahMenyamar), 0 bila tidak ada.
+  min-height: calc(100dvh - var(--u-offset-atas, 0px));
   background: var(--u-background);
 }
 .u-app-shell-sidebar {
   position: sticky;
-  top: 0;
+  top: var(--u-offset-atas, 0px);
   // Di atas bilah atas (z 20) supaya bayangan sidebar (efek bayangan terangkat/melayang) tidak tertutup.
   z-index: 21;
-  height: 100dvh;
+  height: calc(100dvh - var(--u-offset-atas, 0px));
 }
 .u-app-shell-main {
   display: flex;
@@ -296,7 +297,7 @@
 }
 .u-topbar {
   position: sticky;
-  top: 0;
+  top: var(--u-offset-atas, 0px);
   z-index: 20;
   display: flex;
   align-items: center;
@@ -474,7 +475,7 @@
   min-width: 0;
   &[data-sticky] {
     position: sticky;
-    top: 5rem;
+    top: calc(5rem + var(--u-offset-atas, 0px));
   }
 }
 .u-side-widget {

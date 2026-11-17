@@ -6,7 +6,7 @@
 .u-mh-bilah {
   position: fixed;
   z-index: 1000;
-  top: 0;
+  top: var(--u-offset-atas, 0px);
   left: 0;
   right: 0;
   height: var(--u-mh-tebal, 3px);

@@ -41,6 +41,7 @@ export * from './profil-kampus';
 export * from './obrolan';
 export * from './notifikasi';
 export * from './pengumuman-lintas';
+export * from './bilah-menyamar';
 export * from './berkas-cepat';
 export * from './kerangka-aplikasi';
 export * from './pmb-maba';
