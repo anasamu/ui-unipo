@@ -13,6 +13,7 @@ import {
   IdCard,
   Mail,
   MapPin,
+  Paperclip,
   Pencil,
   Phone,
   Plus,
@@ -29,13 +30,14 @@ import { Field, Input, Switch, Textarea } from '../components/forms';
 import { GridForm, IsianTanggal, PanelForm, Pilihan, opsiDariPeta } from '../components/formulir';
 import { PETUNJUK_ISIAN, PilihKecamatan } from './kelengkapan';
 import { ModalFitur } from '../components/modal-fitur';
-import { ConfirmDialog } from '../components/overlays';
+import { ConfirmDialog, Dialog, useToast } from '../components/overlays';
+import { Dropzone, FileList } from '../components/calendar';
 import { Ilustrasi, type NamaIlustrasi } from '../ikon/ilustrasi';
 import { DataDiriMahasiswa, JadwalMengajar, MahasiswaBimbingan, RiwayatStudi, labelTahunAkademik } from './akademik';
 import { useAkunSaya } from './akun';
 import { GalatApi } from './galat';
 import { LabelProdi } from './prodi';
-import { invalidateSiakad, useSiakad, useSiakadQuery } from './provider';
+import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 
 // ================================================================ Data /v1/profil/saya
 
@@ -441,6 +443,7 @@ const RIWAYAT: Record<JenisRiwayatProfil, { judul: string; ilus: NamaIlustrasi; 
       { k: 'institusi', label: 'Institusi', wajib: true },
       { k: 'program_studi', label: 'Program studi/jurusan' },
       { k: 'gelar', label: 'Gelar' },
+      { k: 'negara', label: 'Negara' },
       { k: 'tahun_masuk', label: 'Tahun masuk', tipe: 'angka' },
       { k: 'tahun_lulus', label: 'Tahun lulus', tipe: 'angka' },
       { k: 'masih_studi', label: 'Masih studi', tipe: 'bool' },
@@ -514,7 +517,19 @@ const label_ = (s: string) => s.replace(/_/g, ' ');
  * Riwayat milik sendiri (pendidikan, pekerjaan, prestasi, organisasi) dari /v1/profil/{jenis}?username=…: linimasa
  * dengan tambah, ubah, dan hapus. Formulir mengikuti kolom tabel profil_riwayat_*; server memvalidasi ulang.
  */
-export function RiwayatProfilSaya({ jenis, className }: { jenis: JenisRiwayatProfil; className?: string }) {
+export interface RiwayatProfilSayaProps {
+  jenis: JenisRiwayatProfil;
+  /**
+   * Judul di atas linimasa (bawaan nama riwayat). `false` menyembunyikan judul (mis. halaman sudah punya PageHeader);
+   * tombol Tambah tetap tampil di kanan.
+   */
+  judul?: React.ReactNode | false;
+  /** Tombol "Bukti & lampiran" per baris: unggah dan hapus berkas lewat /v1/profil/{jenis}/{id}/berkas (LampiranProfil). */
+  lampiran?: Omit<LampiranProfilProps, 'path' | 'id' | 'berkas' | 'className'>;
+  className?: string;
+}
+
+export function RiwayatProfilSaya({ jenis, judul, lampiran, className }: RiwayatProfilSayaProps) {
   const siakad = useSiakad();
   const akun = useAkunSaya({ foto: false });
   const username = akun.data?.akun.username;
@@ -530,6 +545,7 @@ export function RiwayatProfilSaya({ jenis, className }: { jenis: JenisRiwayatPro
     setFormMentah(r);
   };
   const [hapus, setHapus] = React.useState<Row | null>(null);
+  const [berkas, setBerkas] = React.useState<Row | null>(null);
   const [salah, setSalah] = React.useState<Record<string, string>>({});
   if (q.error) return <GalatApi error={q.error} onRetry={q.refetch} className={className} />;
   if (!q.data) return <Skeleton className={className} height={200} />;
@@ -551,7 +567,7 @@ export function RiwayatProfilSaya({ jenis, className }: { jenis: JenisRiwayatPro
       ) : (
         <>
           <header className="u-modul-riwayat-kepala">
-            <h4>{def.judul}</h4>
+            {judul === false ? <span /> : <h4>{judul ?? def.judul}</h4>}
             {tambah}
           </header>
           <ol className="u-modul-linimasa">
@@ -564,6 +580,11 @@ export function RiwayatProfilSaya({ jenis, className }: { jenis: JenisRiwayatPro
                   <small>{def.waktu(r)}</small>
                 </div>
                 <div className="u-modul-aksi">
+                  {lampiran && (
+                    <Button size="xs" variant="ghost" iconOnly aria-label="Bukti & lampiran" onClick={() => setBerkas(r)}>
+                      <Paperclip />
+                    </Button>
+                  )}
                   <Button
                     size="xs"
                     variant="ghost"
@@ -673,6 +694,154 @@ export function RiwayatProfilSaya({ jenis, className }: { jenis: JenisRiwayatPro
         onConfirm={async () => {
           await siakad.request({ method: 'POST', path: `/v1/profil/${jenis}/${hapus!.id}/hapus` });
           invalidateSiakad('profil');
+        }}
+      />
+      {lampiran && (
+        <Dialog
+          open={berkas != null}
+          onOpenChange={(o) => !o && setBerkas(null)}
+          title="Bukti & lampiran"
+          description={berkas ? [def.judulBaris(berkas), def.sub(berkas)].filter(Boolean).join(' · ') : undefined}
+          size="md"
+        >
+          {berkas && <LampiranProfil path={jenis} id={berkas.id} {...lampiran} />}
+        </Dialog>
+      )}
+    </div>
+  );
+}
+
+// ================================================================ Lampiran baris profil
+
+/** Satu berkas yang melekat pada baris profil (dokumen, riwayat, permohonan). */
+export interface BerkasProfil {
+  uuid: string;
+  jenis?: string;
+  nama: string;
+  mime?: string;
+  ukuran: number;
+  created_at?: string | null;
+}
+
+export interface LampiranProfilProps {
+  /** Jenis baris di /v1/profil, mis. `dokumen`, `pendidikan`, `permohonan`. */
+  path: string;
+  id: number | string;
+  /** Berkas yang sudah diketahui. Bila kosong, diambil dari GET /v1/profil/{path}/{id}. */
+  berkas?: BerkasProfil[];
+  /** Hanya lihat (mis. dokumen terverifikasi, petugas verifikasi): tanpa unggah dan hapus. */
+  terkunci?: boolean;
+  /** Batas ukuran per berkas (MB). Bawaan 20. */
+  maksMb?: number;
+  /** Tipe berkas yang diterima. Bawaan PDF, JPG, PNG, WEBP. */
+  accept?: string;
+  /** Jenis berkas yang dikirim saat unggah (bawaan `utama`). */
+  jenisUnggah?: string;
+  judulUnggah?: React.ReactNode;
+  keterangan?: React.ReactNode;
+  /**
+   * Alamat untuk membuka berkas di tab baru (mis. lewat BFF: `/bff/api/v1/profil/{path}/{id}/berkas/{uuid}`). Tanpa
+   * ini, nama berkas tidak bertaut.
+   */
+  urlBerkas?: (path: string, id: number | string, uuid: string) => string;
+  /** Dipanggil setelah unggah atau hapus berhasil. */
+  onBerubah?: () => void;
+  className?: string;
+}
+
+/**
+ * Panel lampiran satu baris profil: daftar berkas (buka di tab baru, hapus dengan konfirmasi) dan unggah lewat
+ * Dropzone ke POST /v1/profil/{path}/{id}/berkas (multipart). Dipakai DokumenSaya, RiwayatProfilSaya, dan antrean
+ * verifikasi petugas.
+ */
+export function LampiranProfil({
+  path,
+  id,
+  berkas: berkasProp,
+  terkunci,
+  maksMb = 20,
+  accept = 'application/pdf,image/jpeg,image/png,image/webp',
+  jenisUnggah = 'utama',
+  judulUnggah,
+  keterangan,
+  urlBerkas,
+  onBerubah,
+  className,
+}: LampiranProfilProps) {
+  const siakad = useSiakad();
+  const toast = useToast();
+  const q = useSiakadQuery<{ berkas?: BerkasProfil[] }>(
+    ['profil', path, 'rinci', id],
+    (s, signal) => s.request<{ berkas?: BerkasProfil[] }>({ method: 'GET', path: `/v1/profil/${path}/${id}` }, { signal }),
+    {
+      enabled: berkasProp === undefined,
+      staleTime: 0,
+    },
+  );
+  const [unggah, setUnggah] = React.useState(false);
+  const [galat, setGalat] = React.useState<string | null>(null);
+  const [hapus, setHapus] = React.useState<BerkasProfil | null>(null);
+  const daftar = berkasProp ?? q.data?.berkas;
+  const segarkan = () => {
+    if (berkasProp === undefined) q.refetch();
+    invalidateSiakad('profil');
+    onBerubah?.();
+  };
+  const kirim = async (files: File[]) => {
+    const f = files[0];
+    if (!f) return;
+    setGalat(null);
+    setUnggah(true);
+    try {
+      await siakad.request({ method: 'POST', path: `/v1/profil/${path}/${id}/berkas`, body: { berkas: f, jenis: jenisUnggah }, multipart: true });
+      toast.add({ title: `${f.name} terunggah`, type: 'success' });
+      segarkan();
+    } catch (e) {
+      setGalat(pesanGalat(e));
+    } finally {
+      setUnggah(false);
+    }
+  };
+  if (q.error && berkasProp === undefined) return <GalatApi error={q.error} onRetry={q.refetch} className={className} />;
+  return (
+    <div className={cn('u-lampiran-profil', className)}>
+      {!daftar ? (
+        <Skeleton height={56} />
+      ) : daftar.length > 0 ? (
+        <FileList
+          files={daftar.map((b) => ({ id: b.uuid, name: b.nama, size: b.ukuran, url: urlBerkas?.(path, id, b.uuid) }))}
+          onRemove={terkunci ? undefined : (uuid) => setHapus(daftar.find((b) => b.uuid === uuid) ?? null)}
+        />
+      ) : terkunci ? (
+        <Alert variant="warning">Belum ada berkas terlampir.</Alert>
+      ) : null}
+      {galat && <Alert variant="danger">{galat}</Alert>}
+      {!terkunci && (
+        <Dropzone
+          onFiles={(f) => void kirim(f)}
+          accept={accept}
+          maxSize={maksMb * 1024 * 1024}
+          disabled={unggah}
+          title={unggah ? 'Mengunggah…' : (judulUnggah ?? (daftar?.length ? 'Tambah berkas' : undefined))}
+          hint={keterangan ?? `PDF, JPG, PNG, atau WEBP, maksimal ${maksMb} MB`}
+          onReject={setGalat}
+        />
+      )}
+      <ConfirmDialog
+        open={hapus != null}
+        onOpenChange={(o) => !o && setHapus(null)}
+        title="Hapus berkas ini?"
+        description={hapus?.nama}
+        confirmLabel="Hapus berkas"
+        tone="danger"
+        onConfirm={async () => {
+          try {
+            await siakad.request({ method: 'POST', path: `/v1/profil/${path}/${id}/berkas/${hapus!.uuid}/hapus` });
+            toast.add({ title: 'Berkas dihapus', type: 'success' });
+            segarkan();
+          } catch (e) {
+            toast.add({ title: 'Gagal menghapus', description: pesanGalat(e), type: 'error' });
+          }
         }}
       />
     </div>

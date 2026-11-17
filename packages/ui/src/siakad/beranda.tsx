@@ -168,8 +168,22 @@ export interface BerandaSayaProps {
   onBukaKeuangan?: () => void;
   /** Tautan "Semua pengumuman". */
   hrefPengumuman?: string;
+  /**
+   * Nyalakan/matikan widget bawaan (bawaan semua menyala sesuai peran). Aplikasi yang hanya boleh memanggil sebagian
+   * API (mis. Profil: /v1/profil, /v1/kelengkapan) mematikan widget yang datanya tidak bisa diambil:
+   * `layanan` (aksi cepat KRS, cek lulus, wisuda, ajukan layanan), `akademik` (profil + KRS mahasiswa), `tagihan`,
+   * `mengajar` (profil dosen, jadwal, mahasiswa PA), `kepegawaian` (tendik), `pengumuman`, `kalender`,
+   * `kelengkapan` (pengingat data PDDikti).
+   */
+  widget?: Partial<Record<WidgetBeranda, boolean>>;
+  /** Isi tambahan kolom utama (di bawah widget bawaan), mis. ringkasan khusus aplikasi. */
+  utama?: React.ReactNode;
+  /** Isi tambahan kolom samping (di atas pengumuman). */
+  samping?: React.ReactNode;
   className?: string;
 }
+
+export type WidgetBeranda = 'layanan' | 'akademik' | 'tagihan' | 'mengajar' | 'kepegawaian' | 'pengumuman' | 'kalender' | 'kelengkapan';
 
 const ILUS: Record<PeranProfil, NamaIlustrasi> = { mahasiswa: 'mahasiswa', alumni: 'wisuda', dosen: 'dosen', tendik: 'tendik', pengguna: 'mahasiswa' };
 
@@ -178,8 +192,9 @@ const ILUS: Record<PeranProfil, NamaIlustrasi> = { mahasiswa: 'mahasiswa', alumn
  * cek kelulusan / daftar wisuda. Dosen: jadwal mengajar, mahasiswa PA. Tendik: kepegawaian. Semua: pengumuman sesuai
  * akun dan kalender akademik.
  */
-export function BerandaSaya({ aksiTambahan = [], onBukaProfil, onBukaKeuangan, hrefPengumuman, className }: BerandaSayaProps) {
+export function BerandaSaya({ aksiTambahan = [], onBukaProfil, onBukaKeuangan, hrefPengumuman, widget = {}, utama, samping: sampingTambahan, className }: BerandaSayaProps) {
   const p = useProfilSaya();
+  const w = (k: WidgetBeranda) => widget[k] !== false;
   const [wisuda, setWisuda] = React.useState(false);
   if (p.error) return <GalatApi error={p.error} onRetry={p.refetch} className={className} />;
   if (!p.data)
@@ -198,7 +213,7 @@ export function BerandaSaya({ aksiTambahan = [], onBukaProfil, onBukaKeuangan, h
   const dosen = peran === 'dosen';
 
   const aksi: AksiCepatItem[] = [
-    ...(mhs
+    ...(mhs && w('layanan')
       ? [
           { key: 'krs', label: 'Ambil KRS', description: 'Pilih kelas semester ini', icon: <BookOpenCheck />, modal: (t: React.ReactElement) => <ModalAmbilKrs trigger={t} /> },
           {
@@ -211,34 +226,41 @@ export function BerandaSaya({ aksiTambahan = [], onBukaProfil, onBukaKeuangan, h
           { key: 'wisuda', label: 'Daftar wisuda', description: 'Bila syarat terpenuhi', icon: <PartyPopper />, onClick: () => setWisuda(true) },
         ]
       : []),
-    {
-      key: 'layanan',
-      label: 'Ajukan layanan',
-      description: mhs ? 'Surat aktif kuliah, cuti, transkrip' : 'Surat tugas, keterangan, lainnya',
-      icon: <FileText />,
-      modal: (t: React.ReactElement) => <ModalAjukanLayanan trigger={t} />,
-    },
+    ...(w('layanan')
+      ? [
+          {
+            key: 'layanan',
+            label: 'Ajukan layanan',
+            description: mhs ? 'Surat aktif kuliah, cuti, transkrip' : 'Surat tugas, keterangan, lainnya',
+            icon: <FileText />,
+            modal: (t: React.ReactElement) => <ModalAjukanLayanan trigger={t} />,
+          },
+        ]
+      : []),
     ...(onBukaProfil ? [{ key: 'profil', label: 'Profil saya', description: 'Data pribadi dan riwayat', icon: <IdCard />, onClick: onBukaProfil }] : []),
-    ...(mhs && onBukaKeuangan ? [{ key: 'keu', label: 'Keuangan', description: 'UKT dan riwayat bayar', icon: <Wallet />, onClick: onBukaKeuangan }] : []),
+    ...(mhs && onBukaKeuangan && w('tagihan') ? [{ key: 'keu', label: 'Keuangan', description: 'UKT dan riwayat bayar', icon: <Wallet />, onClick: onBukaKeuangan }] : []),
     ...aksiTambahan,
   ];
 
   const samping = (
     <>
-      {mhs && <TagihanSaya nim={kunci} onLihat={onBukaKeuangan} />}
-      <Panel
-        title="Pengumuman untuk Anda"
-        action={
-          hrefPengumuman && (
-            <Button size="sm" variant="ghost" render={<a href={hrefPengumuman} />}>
-              Semua <ArrowRight />
-            </Button>
-          )
-        }
-      >
-        <PengumumanSaya jumlah={5} />
-      </Panel>
-      <KalenderSidebar limit={4} />
+      {mhs && w('tagihan') && <TagihanSaya nim={kunci} onLihat={onBukaKeuangan} />}
+      {sampingTambahan}
+      {w('pengumuman') && (
+        <Panel
+          title="Pengumuman untuk Anda"
+          action={
+            hrefPengumuman && (
+              <Button size="sm" variant="ghost" render={<a href={hrefPengumuman} />}>
+                Semua <ArrowRight />
+              </Button>
+            )
+          }
+        >
+          <PengumumanSaya jumlah={5} />
+        </Panel>
+      )}
+      {w('kalender') && <KalenderSidebar limit={4} />}
     </>
   );
 
@@ -256,11 +278,11 @@ export function BerandaSaya({ aksiTambahan = [], onBukaProfil, onBukaKeuangan, h
           )
         }
       />
-      {(mhs || dosen) && <PengingatKelengkapan onBuka={onBukaProfil} />}
-      <AksiCepat items={aksi} />
+      {(mhs || dosen) && w('kelengkapan') && <PengingatKelengkapan onBuka={onBukaProfil} />}
+      {aksi.length > 0 && <AksiCepat items={aksi} />}
       <div className="u-beranda-grid">
         <div className="u-beranda-utama">
-          {mhs && (
+          {mhs && w('akademik') && (
             <>
               <KartuProfilMahasiswa nim={kunci} />
               <Panel title="KRS semester ini">
@@ -268,7 +290,7 @@ export function BerandaSaya({ aksiTambahan = [], onBukaProfil, onBukaKeuangan, h
               </Panel>
             </>
           )}
-          {dosen && (
+          {dosen && w('mengajar') && (
             <>
               <KartuProfilDosen nidn={kunci} />
               <Panel title="Jadwal mengajar">
@@ -279,11 +301,12 @@ export function BerandaSaya({ aksiTambahan = [], onBukaProfil, onBukaKeuangan, h
               </Panel>
             </>
           )}
-          {!mhs && !dosen && <KepegawaianSaya />}
+          {peran === 'tendik' && w('kepegawaian') && <KepegawaianSaya />}
+          {utama}
         </div>
         <aside className="u-beranda-samping">{samping}</aside>
       </div>
-      {mhs && <ModalDaftarWisuda open={wisuda} onOpenChange={setWisuda} />}
+      {mhs && w('layanan') && <ModalDaftarWisuda open={wisuda} onOpenChange={setWisuda} />}
     </div>
   );
 }

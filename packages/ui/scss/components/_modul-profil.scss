@@ -100,7 +100,9 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
   gap: 1rem;
-  align-items: start;
+  // Kartu dalam satu baris sama tinggi (simetris), isi tetap rata atas.
+  align-items: stretch;
+  align-content: start;
 }
 .u-modul-penuh {
   grid-column: 1 / -1;
@@ -113,11 +115,14 @@
   border-radius: var(--u-radius-lg);
   background: var(--u-card);
   min-width: 0;
+  align-content: start;
   > header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
+    // Tinggi sama dengan atau tanpa tombol Ubah agar judul antarkartu sejajar.
+    min-height: 2rem;
   }
   h4 {
     margin: 0;
@@ -354,5 +359,14 @@
   dd {
     font-size: var(--u-text-base);
     white-space: nowrap;
+  }
+}
+// LampiranProfil: daftar berkas + unggah satu baris profil.
+.u-lampiran-profil {
+  display: grid;
+  gap: var(--u-space-3);
+  min-width: 0;
+  .u-file-list {
+    margin: 0;
   }
 }
