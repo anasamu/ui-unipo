@@ -278,3 +278,32 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+// Aturan warna lanjutan (status, latar, primer gelap, bayangan)
+.u-tema-lanjut {
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius);
+  padding: 0.75rem 1rem;
+  > summary {
+    cursor: pointer;
+    font-size: var(--u-text-sm);
+    font-weight: 600;
+    &:focus-visible {
+      outline: 2px solid var(--u-ring);
+      outline-offset: 2px;
+    }
+  }
+  &[open] > summary {
+    margin-bottom: 0.5rem;
+  }
+  > .u-field-description {
+    margin: 0 0 0.75rem;
+  }
+}
+.u-tema-warna > .u-tema-warna-otomatis {
+  width: auto;
+  padding-inline: 0.75rem;
+  background: var(--u-surface);
+  color: var(--u-foreground);
+  font-size: var(--u-text-xs);
+}

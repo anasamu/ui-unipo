@@ -7,6 +7,7 @@
 - **Notifikasi** (`unipo-ui/siakad`): `TombolNotifikasi` (lencana jumlah belum dibaca dari `GET /v1/notif/ringkas` tiap 60 detik selama tab terlihat, panel kotak masuk, klik = tandai dibaca lalu buka tautan, "Tandai semua dibaca") dan hook `useNotifikasi`. Token tanpa akses (401/403/404) menyembunyikan ikon tanpa pesan galat.
 - **Pesan masuk** (`unipo-ui/siakad`): `TombolPesan` (lencana pesan belum dibaca + obrolan terbaru dengan cuplikan yang didekripsi di browser) dan `bukaRuangObrolan(id)` untuk membuka satu ruang di `ChatMengambang`.
 - **Efek bayangan di pengaturan tema**: opsi tema baru `elevasi` (`datar`, `normal`, `terangkat`, `melayang`) menentukan permukaan yang berbayang: kartu, panel, kartu statistik, sidebar, dan bilah atas. Tersedia di `PengaturanTema` (pilihan "Efek bayangan"), `buatTema`, dan token CSS `--u-elevation-card`, `--u-elevation-card-hover`, `--u-elevation-bar`. Bawaan `normal` sama dengan tampilan sebelumnya. Server SIAKAD dan `/ui/tema.css` di api.unipo.ac.id perlu versi yang menerima kunci `elevasi`.
+- **Aturan warna di pengaturan tema**: bagian "Aturan warna lanjutan" di `PengaturanTema` untuk warna sukses, peringatan, bahaya, informasi, latar halaman terang/gelap, warna utama mode gelap (dengan pilihan Otomatis), dan opsi tema baru `warnaBayangan` (warna bayangan; kosong = abu netral).
 - **`PintasanFitur`**: grid pintasan untuk beranda dari menu yang sama dengan sidebar.
 - Dokumentasi: halaman **Mulai › Kerangka aplikasi** dengan contoh lengkap, notifikasi, pesan, pencarian, pintasan, dan perbandingan efek bayangan.
 

@@ -233,6 +233,20 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
               </div>
               <PilihWarna label="Warna utama" nilai={lengkap.primary} daftar={PRIMER} warisan={dariWarisan('primary')} onChange={(v) => ubahTema('primary', v)} />
               <PilihWarna label="Warna aksen" nilai={lengkap.secondary} daftar={SEKUNDER} warisan={dariWarisan('secondary')} onChange={(v) => ubahTema('secondary', v)} />
+              <details className="u-tema-lanjut">
+                <summary>Aturan warna lanjutan</summary>
+                <p className="u-field-description">Warna status, latar halaman, warna utama mode gelap, dan warna bayangan. Pilih Otomatis untuk memakai warna turunan bawaan.</p>
+                <div className="u-tema-dua">
+                  <PilihWarna label="Sukses" nilai={lengkap.success} daftar={['#15803d', '#16a34a', '#0f766e', '#059669']} warisan={dariWarisan('success')} onChange={(v) => ubahTema('success', v)} />
+                  <PilihWarna label="Peringatan" nilai={lengkap.warning} daftar={['#d97706', '#ca8a04', '#ea580c', '#b45309']} warisan={dariWarisan('warning')} onChange={(v) => ubahTema('warning', v)} />
+                  <PilihWarna label="Bahaya" nilai={lengkap.danger} daftar={['#dc2626', '#b91c1c', '#e11d48', '#be123c']} warisan={dariWarisan('danger')} onChange={(v) => ubahTema('danger', v)} />
+                  <PilihWarna label="Informasi" nilai={lengkap.info} daftar={['#0284c7', '#2563eb', '#0891b2', '#4f46e5']} warisan={dariWarisan('info')} onChange={(v) => ubahTema('info', v)} />
+                  <PilihWarna label="Latar halaman terang" nilai={lengkap.latar} daftar={['#ffffff', '#fbfbf9', '#f8fafc', '#fdfcf8']} warisan={dariWarisan('latar')} otomatis onChange={(v) => ubahTema('latar', v)} />
+                  <PilihWarna label="Latar halaman gelap" nilai={lengkap.latarGelap} daftar={['#0d0f14', '#0f172a', '#111111', '#14161c']} warisan={dariWarisan('latarGelap')} otomatis onChange={(v) => ubahTema('latarGelap', v)} />
+                  <PilihWarna label="Warna utama mode gelap" nilai={lengkap.primaryGelap} daftar={[]} warisan={dariWarisan('primaryGelap')} otomatis onChange={(v) => ubahTema('primaryGelap', v)} />
+                  <PilihWarna label="Warna bayangan" nilai={lengkap.warnaBayangan} daftar={['#101828', '#0f172a', '#1c1917']} warisan={dariWarisan('warnaBayangan')} otomatis onChange={(v) => ubahTema('warnaBayangan', v)} />
+                </div>
+              </details>
               <div className="u-tema-dua">
                 <Field label="Nuansa abu-abu">
                   <Select size="sm" value={lengkap.netral} onValueChange={(v) => v && ubahTema('netral', v)} options={Object.entries(NETRAL).map(([value, n]) => ({ value: value as OpsiTema['netral'], label: n.label }))} aria-label="Nuansa abu-abu" />
@@ -331,17 +345,22 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
   );
 }
 
-function PilihWarna({ label, nilai, daftar, warisan, onChange }: { label: string; nilai: string; daftar: string[]; warisan?: boolean | undefined; onChange: (v: string) => void }) {
+function PilihWarna({ label, nilai, daftar, warisan, otomatis, onChange }: { label: string; nilai: string; daftar: string[]; warisan?: boolean | undefined; otomatis?: boolean; onChange: (v: string) => void }) {
   const [teks, setTeks] = React.useState(nilai);
   React.useEffect(() => setTeks(nilai), [nilai]);
   return (
     <Field label={<>{label}{warisan && <Badge variant="neutral" className="u-tema-warisan">diwarisi</Badge>}</>}>
       <div className="u-tema-warna">
+        {otomatis && (
+          <button type="button" className="u-tema-warna-otomatis" aria-pressed={!nilai} onClick={() => onChange('')}>
+            Otomatis
+          </button>
+        )}
         {daftar.map((c) => (
           <button key={c} type="button" title={c} aria-label={`${label} ${c}`} aria-pressed={nilai === c} style={{ background: c }} onClick={() => onChange(c)} />
         ))}
         <label className="u-tema-warna-bebas" title="Pilih warna bebas">
-          <input type="color" value={nilai} onChange={(e) => onChange(e.target.value)} aria-label={`${label} bebas`} />
+          <input type="color" value={nilai || '#808080'} onChange={(e) => onChange(e.target.value)} aria-label={`${label} bebas`} />
         </label>
         <Input
           size="sm"
@@ -352,6 +371,7 @@ function PilihWarna({ label, nilai, daftar, warisan, onChange }: { label: string
           onBlur={() => {
             const h = hexValid(teks);
             if (h) onChange(h);
+            else if (otomatis && !teks.trim()) onChange('');
             else setTeks(nilai);
           }}
         />
