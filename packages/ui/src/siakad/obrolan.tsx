@@ -558,23 +558,29 @@ function BerkasLampiran({ b, ruangId }: { b: Berkas; ruangId: string }) {
     }
   };
   return (
-    <span className="u-ob-berkas-kotak">
-      <button type="button" className="u-ob-berkas" onClick={unduh} disabled={memuat} title={galat ?? undefined}>
-        <span className="u-ob-berkas-ikon" aria-hidden>
-          <FileText />
+    <div className="u-ob-berkas" title={galat ?? undefined}>
+      <span className="u-ob-berkas-ikon" aria-hidden>
+        <FileText />
+      </span>
+      <span className="u-ob-berkas-teks">
+        <span className="u-ob-berkas-nama" title={b.nama}>
+          {b.nama}
         </span>
-        <span className="u-ob-berkas-teks">
-          <span className="u-ob-berkas-nama">{b.nama}</span>
-          <span className="u-ob-berkas-sub">{galat ? 'Gagal mengunduh, coba lagi' : `${formatBytes(b.ukuran)} · ${(b.nama.split('.').pop() ?? '').toUpperCase()}`}</span>
-        </span>
-        {memuat ? <Spinner size="sm" /> : <Download aria-hidden />}
-      </button>
-      <Tooltip content="Simpan ke Berkas saya (salinan tidak terenkripsi end-to-end)">
-        <button type="button" className="u-ob-berkas-simpan" aria-label={`Simpan ${b.nama} ke Berkas saya`} disabled={proses} onClick={(e) => (e.stopPropagation(), void simpan(ruangId, [b]))}>
-          {proses ? <Spinner size="sm" /> : <FolderDown aria-hidden />}
-        </button>
-      </Tooltip>
-    </span>
+        <span className="u-ob-berkas-sub">{galat ? 'Gagal mengunduh, coba lagi' : `${formatBytes(b.ukuran)} · ${(b.nama.split('.').pop() ?? '').toUpperCase()}`}</span>
+      </span>
+      <span className="u-ob-berkas-aksi">
+        <Tooltip content="Unduh">
+          <button type="button" className="u-ob-berkas-tombol" aria-label={`Unduh ${b.nama}`} disabled={memuat} onClick={(e) => (e.stopPropagation(), void unduh())}>
+            {memuat ? <Spinner size="sm" /> : <Download aria-hidden />}
+          </button>
+        </Tooltip>
+        <Tooltip content="Simpan ke Berkas saya (salinan tidak terenkripsi end-to-end)">
+          <button type="button" className="u-ob-berkas-tombol" aria-label={`Simpan ${b.nama} ke Berkas saya`} disabled={proses} onClick={(e) => (e.stopPropagation(), void simpan(ruangId, [b]))}>
+            {proses ? <Spinner size="sm" /> : <FolderDown aria-hidden />}
+          </button>
+        </Tooltip>
+      </span>
+    </div>
   );
 }
 
