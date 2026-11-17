@@ -148,12 +148,13 @@ export function Sidebar({ brand, groups, activeKey, header, footer, user, collap
   // Mode accordion: simpan satu kunci sub-menu yang terbuka. Awalnya sub-menu yang memuat halaman aktif,
   // dan ikut berpindah saat halaman aktif pindah ke sub-menu lain.
   const induk = (key?: string) => groups.flatMap((g) => g.items).find((it) => it.children?.length && containsActive(it, key))?.key ?? null;
-  const [openKey, setOpenKey] = React.useState<string | null>(() => induk(activeKey));
+  // `indukAktif` ikut dihitung ulang saat `groups` berubah, karena menu sering baru lengkap setelah peran pengguna dimuat
+  // (sub menu halaman aktif harus tetap terbuka walau grupnya muncul belakangan).
+  const indukAktif = induk(activeKey);
+  const [openKey, setOpenKey] = React.useState<string | null>(indukAktif);
   React.useEffect(() => {
-    const k = induk(activeKey);
-    if (k) setOpenKey(k);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeKey]);
+    if (indukAktif) setOpenKey(indukAktif);
+  }, [activeKey, indukAktif]);
   return (
     <aside className={cn('u-sidebar', className)} data-collapsed={dataFlag(collapsed)}>
       <div className="u-sidebar-brand">

@@ -33,6 +33,8 @@ export interface SelectProps<V> {
   'aria-label'?: string;
 }
 
+const KOSONG = '\u0000kosong';
+
 /** Pilihan tunggal dari daftar pendek yang sudah diketahui (≤ ±30 butir). Untuk daftar panjang/berasal dari API, pakai Combobox. */
 export function Select<V = string>({ options, placeholder = 'Pilih…', size, className, value, defaultValue, onValueChange, ...props }: SelectProps<V>) {
   const groups = React.useMemo(() => {
@@ -44,12 +46,16 @@ export function Select<V = string>({ options, placeholder = 'Pilih…', size, cl
     }
     return [...map.entries()];
   }, [options]);
+  // Base UI menganggap nilai '' sebagai "belum memilih" sehingga opsi seperti { value: '', label: 'Semua status' } tampil
+  // sebagai placeholder "Pilih…". Nilai '' diganti penanda internal lalu dikembalikan ke '' saat berubah.
+  const enc = (v: V | null | undefined) => (v === ('' as unknown as V) ? (KOSONG as unknown as V) : v);
+  const dec = (v: V | null) => (v === (KOSONG as unknown as V) ? ('' as unknown as V) : v);
   return (
     <BaseSelect.Root<V>
-      items={options.map((o) => ({ value: o.value, label: o.label }))}
-      value={value}
-      defaultValue={defaultValue}
-      onValueChange={(v) => onValueChange?.(v as V | null)}
+      items={options.map((o) => ({ value: enc(o.value) as V, label: o.label }))}
+      value={value === undefined ? undefined : (enc(value) ?? null)}
+      defaultValue={defaultValue === undefined ? undefined : enc(defaultValue)}
+      onValueChange={(v) => onValueChange?.(dec(v as V | null))}
       disabled={props.disabled}
       name={props.name}
       required={props.required}
@@ -68,7 +74,7 @@ export function Select<V = string>({ options, placeholder = 'Pilih…', size, cl
                 {gi > 0 && <BaseSelect.Separator className="u-listbox-separator" />}
                 {g && <BaseSelect.GroupLabel className="u-listbox-group-label">{g}</BaseSelect.GroupLabel>}
                 {items.map((o) => (
-                  <BaseSelect.Item key={String(o.value)} value={o.value} disabled={o.disabled} className="u-listbox-item">
+                  <BaseSelect.Item key={String(o.value)} value={enc(o.value)} disabled={o.disabled} className="u-listbox-item">
                     {o.icon}
                     <span className="u-option-text">
                       <BaseSelect.ItemText>{o.label}</BaseSelect.ItemText>

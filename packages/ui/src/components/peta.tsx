@@ -49,6 +49,12 @@ export interface UbinPeta {
   url: string;
   atribusi: string;
   maxZoom?: number;
+  /**
+   * Kebijakan perujuk (referrer) untuk gambar ubin. Server OpenStreetMap menolak ubin (gambar "Access blocked" 403) bila
+   * permintaan tidak membawa perujuk, yang terjadi pada aplikasi ber-header `Referrer-Policy: same-origin`/`no-referrer`.
+   * Bawaan `strict-origin-when-cross-origin`: hanya asal situs (tanpa path/query) yang dikirim ke server ubin.
+   */
+  referrerPolicy?: ReferrerPolicy | false;
 }
 
 /** Ubin bawaan OpenStreetMap. Untuk lalu lintas besar, pakai server ubin sendiri/penyedia lain lewat prop `ubin`. */
@@ -134,7 +140,7 @@ export function Peta({
         const L = ((mod as unknown as { default?: L }).default ?? mod) as L;
         if (batal || !elRef.current) return;
         map = L.map(elRef.current, { zoomControl: false, scrollWheelZoom: zoomGulir, attributionControl: true }).setView([pusat?.lat ?? PUSAT_BAWAAN.lat, pusat?.lng ?? PUSAT_BAWAAN.lng], pusat ? zoom : 5);
-        L.tileLayer(ubin.url, { attribution: ubin.atribusi, maxZoom: ubin.maxZoom ?? 19 }).addTo(map);
+        L.tileLayer(ubin.url, { attribution: ubin.atribusi, maxZoom: ubin.maxZoom ?? 19, referrerPolicy: ubin.referrerPolicy ?? 'strict-origin-when-cross-origin' } as LeafletNS.TileLayerOptions).addTo(map);
         L.control.zoom({ position: 'bottomright', zoomInTitle: 'Perbesar', zoomOutTitle: 'Perkecil' }).addTo(map);
         map.attributionControl.setPrefix(false);
         map.on('click', (e: LeafletNS.LeafletMouseEvent) => cb.current.onKlik?.({ lat: e.latlng.lat, lng: e.latlng.lng }));

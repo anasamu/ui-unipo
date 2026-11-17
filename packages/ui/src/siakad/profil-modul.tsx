@@ -852,6 +852,13 @@ const JUDUL_RIWAYAT_SDM: Record<string, string> = {
   sertifikasi: 'Sertifikasi',
   penghargaan: 'Penghargaan',
   keluarga: 'Keluarga',
+  tes: 'Tes bahasa',
+  disiplin: 'Hukuman disiplin',
+  pekerjaan: 'Pengalaman kerja',
+  organisasi: 'Organisasi profesi',
+  gaji: 'Gaji berkala',
+  tunjangan: 'Tunjangan',
+  unit: 'Unit kerja',
 };
 
 /**
