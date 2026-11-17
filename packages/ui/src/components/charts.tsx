@@ -4,6 +4,7 @@ import { ArrowDownRight, ArrowUpRight, Check, Minus } from 'lucide-react';
 import { cn, dataFlag } from '../lib/cn';
 import { formatNumber } from '../lib/format';
 import { Skeleton } from './actions';
+import { Tautan, useRenderLink, type RenderLink } from '../lib/tautan';
 
 /**
  * Grafik ringan tanpa pustaka luar (SVG + CSS). Warna kategori memakai --u-chart-1 … --u-chart-8 dengan urutan tetap
@@ -110,18 +111,45 @@ export interface StatCardProps {
   /** Isi kecil di bawah, mis. Progress. */
   footer?: React.ReactNode;
   href?: string;
+  /** Render `href` lewat router (SPA). Bawaan: `<a href>` atau PenyediaTautan. */
+  renderLink?: RenderLink;
   loading?: boolean;
   tone?: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
   className?: string;
 }
 
 /** Kartu angka utama: label, nilai besar, perubahan naik/turun dengan ikon, sparkline, dan keterangan. */
-export function StatCard({ label, value, delta, deltaLabel = 'dari periode lalu', inverse, deltaUnit = '%', hint, icon, trend, footer, href, loading, tone = 'primary', className }: StatCardProps) {
+export function StatCard({
+  label,
+  value,
+  delta,
+  deltaLabel = 'dari periode lalu',
+  inverse,
+  deltaUnit = '%',
+  hint,
+  icon,
+  trend,
+  footer,
+  href,
+  renderLink,
+  loading,
+  tone = 'primary',
+  className,
+}: StatCardProps) {
   const arah = delta == null ? null : delta > 0 ? 'naik' : delta < 0 ? 'turun' : 'tetap';
   const baik = arah === 'tetap' || arah == null ? null : (arah === 'naik') !== !!inverse;
-  const Tag = href ? 'a' : 'div';
-  return (
-    <Tag className={cn('u-stat', className)} data-tone={tone} {...(href ? { href } : {})}>
+  const bungkus = (isi: React.ReactNode) =>
+    href ? (
+      <Tautan className={cn('u-stat', className)} data-tone={tone} href={href} renderLink={renderLink}>
+        {isi}
+      </Tautan>
+    ) : (
+      <div className={cn('u-stat', className)} data-tone={tone}>
+        {isi}
+      </div>
+    );
+  return bungkus(
+    <>
       <div className="u-stat-top">
         <span className="u-stat-label">{label}</span>
         {icon && <span className="u-stat-icon">{icon}</span>}
@@ -149,7 +177,7 @@ export function StatCard({ label, value, delta, deltaLabel = 'dari periode lalu'
         </div>
       )}
       {footer}
-    </Tag>
+    </>,
   );
 }
 
@@ -951,25 +979,32 @@ export function BudgetMeter({
 export interface CycleStep {
   label: React.ReactNode;
   done: boolean;
+  /** Status rinci; `berjalan` = tahap yang sedang dikerjakan (ditandai jelas, bukan sekadar "belum"). Bawaan dari `done`. */
+  status?: 'selesai' | 'berjalan' | 'belum';
   detail?: React.ReactNode;
 }
 
-/** Tahapan siklus (mis. PPEPP SPMI) dengan tanda terpenuhi dan bukti singkat. */
+const LABEL_TAHAP = { selesai: ' (terpenuhi)', berjalan: ' (sedang berjalan)', belum: ' (belum)' } as const;
+
+/** Tahapan siklus (mis. PPEPP SPMI) dengan tanda terpenuhi, tahap berjalan, dan bukti singkat. */
 export function CycleSteps({ steps, className }: { steps: CycleStep[]; className?: string }) {
   return (
     <ol className={cn('u-cycle', className)}>
-      {steps.map((s, i) => (
-        <li key={i} data-done={dataFlag(s.done)}>
-          <span className="u-cycle-mark" aria-hidden>
-            {s.done ? <Check /> : i + 1}
-          </span>
-          <span className="u-cycle-label">
-            {s.label}
-            <span className="u-sr-only">{s.done ? ' (terpenuhi)' : ' (belum)'}</span>
-          </span>
-          {s.detail && <span className="u-cycle-detail">{s.detail}</span>}
-        </li>
-      ))}
+      {steps.map((s, i) => {
+        const st = s.status ?? (s.done ? 'selesai' : 'belum');
+        return (
+          <li key={i} data-done={dataFlag(st === 'selesai')} data-status={st} aria-current={st === 'berjalan' ? 'step' : undefined}>
+            <span className="u-cycle-mark" aria-hidden>
+              {st === 'selesai' ? <Check /> : i + 1}
+            </span>
+            <span className="u-cycle-label">
+              {s.label}
+              <span className="u-sr-only">{LABEL_TAHAP[st]}</span>
+            </span>
+            {s.detail && <span className="u-cycle-detail">{s.detail}</span>}
+          </li>
+        );
+      })}
     </ol>
   );
 }
@@ -1008,10 +1043,21 @@ export function Panel({
 }
 
 /** Grid dasbor 3 kolom yang turun ke 2 dan 1 kolom sesuai lebar wadah. Anak bisa diberi `span` lewat Panel. */
-export function DashboardGrid({ children, className }: { children: React.ReactNode; className?: string }) {
+export function DashboardGrid({
+  children,
+  rata,
+  className,
+}: {
+  children: React.ReactNode;
+  /** `stretch`: panel satu baris sama tinggi. Bawaan `start`: tinggi panel mengikuti isinya. */
+  rata?: 'start' | 'stretch';
+  className?: string;
+}) {
   return (
     <div className={cn('u-dash-wrap', className)}>
-      <div className="u-dash">{children}</div>
+      <div className="u-dash" data-rata={rata}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -1030,7 +1076,19 @@ export interface ActionItem {
 }
 
 /** Antrean kerja yang perlu ditangani (mis. usulan menunggu review). Baris bernilai nol diredam, bukan disembunyikan. */
-export function ActionList({ items, loading, className }: { items: ActionItem[]; loading?: boolean; className?: string }) {
+export function ActionList({
+  items,
+  loading,
+  renderLink,
+  className,
+}: {
+  items: ActionItem[];
+  loading?: boolean;
+  /** Render `href` lewat router (SPA). Bawaan: `<a href>` atau PenyediaTautan. */
+  renderLink?: RenderLink;
+  className?: string;
+}) {
+  const render = useRenderLink(renderLink);
   if (loading) return <Skeleton className={className} style={{ height: items.length * 44 || 132 }} />;
   return (
     <ul className={cn('u-actions-list', className)}>
@@ -1055,9 +1113,9 @@ export function ActionList({ items, loading, className }: { items: ActionItem[];
         return (
           <li key={it.key ?? i} data-zero={dataFlag(it.count === 0)}>
             {it.href ? (
-              <a href={it.href} className="u-actions-row">
+              <Tautan href={it.href} className="u-actions-row" renderLink={render}>
                 {isi}
-              </a>
+              </Tautan>
             ) : it.onClick ? (
               <button type="button" className="u-actions-row" onClick={it.onClick}>
                 {isi}
@@ -1083,7 +1141,22 @@ export interface FeedItem {
 }
 
 /** Linimasa ringkas (aktivitas terbaru, antrean review, jadwal terbit). */
-export function ActivityFeed({ items, loading, empty = 'Belum ada aktivitas.', className }: { items: FeedItem[]; loading?: boolean; empty?: React.ReactNode; className?: string }) {
+export function ActivityFeed({
+  items,
+  loading,
+  empty = 'Belum ada aktivitas.',
+  renderLink,
+  className,
+}: {
+  items: FeedItem[];
+  loading?: boolean;
+  /** Isi saat kosong; boleh berupa blok (mis. <Empty />). */
+  empty?: React.ReactNode;
+  /** Render `href` lewat router (SPA). Bawaan: `<a href>` atau PenyediaTautan. */
+  renderLink?: RenderLink;
+  className?: string;
+}) {
+  const render = useRenderLink(renderLink);
   if (loading)
     return (
       <div className={cn('u-feed', className)}>
@@ -1092,7 +1165,7 @@ export function ActivityFeed({ items, loading, empty = 'Belum ada aktivitas.', c
         ))}
       </div>
     );
-  if (!items.length) return <p className="u-chart-empty">{empty}</p>;
+  if (!items.length) return <div className={cn('u-chart-empty', className)}>{empty}</div>;
   return (
     <ol className={cn('u-feed', className)}>
       {items.map((it) => (
@@ -1102,9 +1175,9 @@ export function ActivityFeed({ items, loading, empty = 'Belum ada aktivitas.', c
           </span>
           <span className="u-feed-body">
             {it.href ? (
-              <a href={it.href} className="u-feed-title">
+              <Tautan href={it.href} className="u-feed-title" renderLink={render}>
                 {it.title}
-              </a>
+              </Tautan>
             ) : (
               <span className="u-feed-title">{it.title}</span>
             )}
