@@ -10,20 +10,22 @@ export const meta: DemoMeta = {
   order: 6,
   badge: 'baru',
   description:
-    'Unit membuat pengumuman singkat yang tampil di semua aplikasi sasaran: aplikasi dasbor (otomatis lewat KerangkaAplikasi), portal publik (KerangkaPortal), dan SIAKAD lama. Cara tampil dipilih per pengumuman: pita di atas, banner di atas isi, popup, toast dari kanan, atau bilah bawah ponsel. Sasaran: aplikasi, unit (beserta turunannya), peran RBAC, dan jenis pengguna; dengan jadwal tayang dan tutup per akun.',
-  importLine: "import { KelolaPengumuman, FormPengumuman, PengumumanTampil, usePengumumanTayang } from 'unipo-ui/siakad';",
+    'Unit membuat pengumuman singkat yang tampil di semua aplikasi sasaran: aplikasi dasbor (otomatis lewat KerangkaAplikasi), portal publik (KerangkaPortal), dan SIAKAD lama. Cara tampil dipilih per pengumuman: pita di atas, banner di atas isi, popup, toast dari kanan, atau bilah bawah ponsel. Sasaran: aplikasi, unit (beserta turunannya), dan peran (termasuk jenis akun mahasiswa, dosen, tendik, alumni, pendaftar PMB), plus saklar publik tanpa login; dengan jadwal tayang dan tutup per akun. Tautan Selengkapnya dipilih dari berita, pengumuman, atau agenda portal yang terbit.',
+  importLine: "import { KelolaPengumuman, PanelPengumuman, FormPengumuman, PengumumanTampil, usePengumumanTayang } from 'unipo-ui/siakad';",
   demos: {
     Mode: 'Pratinjau setiap cara tampil dan nada',
   },
   props: [
-    ['KelolaPengumuman aplikasi', 'string', 'Halaman kelola: daftar dengan status tayang, buat/ubah dengan pratinjau, arsipkan, hapus. Sasaran aplikasi bawaan = aplikasi ini.'],
-    ['FormPengumuman awal / aplikasiBawaan / onSelesai', 'PengumumanKelola / string[] / fungsi', 'Formulir dengan pratinjau langsung, pemilih unit (PilihEntitas), peran, jenis pengguna, jadwal, dan perkiraan penerima.'],
+    ['KelolaPengumuman aplikasi', 'string', 'Halaman kelola: ringkasan yang sedang tayang, tab status (aktif, terjadwal, draf, berakhir, arsip) dengan pencarian dan saring cara tampil, daftar rata kiri dengan aksi ubah, pratinjau, duplikat, arsipkan/pulihkan, hapus. Sasaran aplikasi bawaan = aplikasi ini.'],
+    ['PanelPengumuman open / onOpenChange / awal / salin / aplikasiBawaan / onSelesai', 'boolean / fungsi / PengumumanKelola / boolean / string[] / fungsi', 'Buat/ubah/duplikat di panel samping (layar penuh di ponsel): bagian Isi, Tampilan, Sasaran, Jadwal, pratinjau menempel, kaki Batal/Simpan draf/Terbitkan, konfirmasi bila belum disimpan.'],
+    ['FormPengumuman awal / salin / aplikasiBawaan / onSelesai / onBatal', 'PengumumanKelola / boolean / string[] / fungsi / fungsi', 'Isian yang sama untuk halaman sendiri (tanpa panel).'],
     ['PengumumanTampil aplikasi / situs / bagian', "string / string / ('atas' | 'isi' | 'lapis')[]", 'Tampilkan pengumuman sesuai mode. Sudah dipasang KerangkaAplikasi (prop pengumuman) dan KerangkaPortal.'],
     ['KerangkaAplikasi pengumuman', 'boolean | { aplikasi }', 'Bawaan true dengan kode aplikasi = kode.'],
   ],
   notes: [
     'API: GET /v1/notif/pita?aplikasi=<kode>[&situs=<kode>] untuk yang tayang, POST /v1/notif/pita/{id}/tutup, dan /v1/notif/pita/kelola untuk pengelola (izin pengumuman:kelola).',
-    'Pengelola unit hanya bisa menyasar unitnya dan unit di bawahnya. Pengumuman publik dari unit hanya tampil di situs portal unit itu; pengumuman publik universitas hanya dari Humas atau admin.',
+    'Peran khusus jenis akun: akun:mahasiswa, akun:dosen, akun:tendik, akun:alumni, akun:pendaftar (grup "Jenis akun" di pemilih peran). Rekaman lama dengan jenis pengguna tetap berlaku.',
+    'Pengelola unit hanya bisa menyasar unitnya dan unit di bawahnya, dan hanya memilih konten portal situs unitnya atau universitas sebagai tautan (URL bebas hanya untuk tingkat universitas). Pengumuman publik dari unit hanya tampil di situs portal unit itu; pengumuman publik universitas hanya dari Humas atau admin.',
     'Popup tampil satu per satu menurut prioritas, sekali per akun atau setiap membuka aplikasi. Toast bisa hilang sendiri. Semua menghormati prefers-reduced-motion.',
   ],
 };
