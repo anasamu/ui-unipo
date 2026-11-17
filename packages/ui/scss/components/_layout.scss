@@ -65,6 +65,26 @@
   gap: 0.5rem;
   min-height: 3.75rem;
   padding: 0.75rem 0.75rem 0.5rem 1rem;
+  // Logo mengisi sisa ruang dan boleh menyempit; tombol ciutkan tidak pernah tertimpa teks.
+  > :first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .u-app-logo-tagline {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    white-space: normal;
+    line-height: 1.3;
+  }
+  .u-sidebar-toggle {
+    flex: none;
+    align-self: flex-start;
+    margin-top: 0.125rem;
+    color: var(--u-muted-foreground);
+  }
 }
 .u-sidebar-header {
   padding: 0.25rem 0.75rem 0.5rem;

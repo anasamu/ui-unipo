@@ -1,8 +1,17 @@
 # Catatan perubahan
 
+## 1.44.0 (2026-11-17)
+
+- **Peta tidak lagi diblokir OpenStreetMap**: ubin peta (`Peta`, `PilihLokasiPeta`, presensi kerja) dikirim dengan `referrerpolicy="strict-origin-when-cross-origin"`. Sebelumnya aplikasi ber-header `Referrer-Policy: same-origin` (SDM, fakultas) memuat ubin tanpa perujuk dan server OSM membalas gambar "Access blocked" 403. Bisa diubah lewat `ubin.referrerPolicy`.
+- **`Select` dengan opsi bernilai `''`** (mis. "Semua status", "Semua jenis") kini menampilkan label opsi itu, bukan placeholder "Pilih…". Nilai yang dikirim ke `onValueChange` tetap `''`.
+- **Kepala sidebar**: nama/tagline aplikasi tidak lagi tertimpa tombol ciutkan menu; tagline panjang turun ke baris kedua (maksimal dua baris).
+- **Sub menu sidebar** yang memuat halaman aktif kini ikut terbuka walau grup menunya baru muncul setelah peran pengguna dimuat.
+- **Cincin fokus tab bergaris bawah** membulat dan berjarak dari teks (sebelumnya kotak siku yang menempel).
+- **Ringkasan kepegawaian saya**: jenis riwayat tes, disiplin, pekerjaan, organisasi, gaji, tunjangan, dan unit diberi judul yang rapi.
+
 ## 1.43.0 (2026-11-16)
 
-- 
+- Komponen presensi kerja berbasis lokasi dan `Peta`/`PilihLokasiPeta`.
 
 ## 1.42.0 (2026-11-16)
 

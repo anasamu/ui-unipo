@@ -350,6 +350,14 @@
     padding-inline: 0.125rem;
     height: 2.5rem;
     border-radius: 0;
+    // Cincin fokus membulat dan tidak menempel pada teks (sebelumnya kotak siku sempit).
+    &:focus-visible {
+      outline: 0;
+      border-radius: calc(var(--u-radius) - 4px);
+      box-shadow:
+        0 0 0 2px var(--u-background),
+        0 0 0 4px color-mix(in oklab, var(--u-ring) 70%, transparent);
+    }
   }
   .u-tabs-list[data-variant='pill'] > & {
     height: 1.875rem;
