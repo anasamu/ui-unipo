@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { Download, File, FileArchive, FileImage, FileSpreadsheet, FileText, FolderOpen, Upload } from 'lucide-react';
+import { Download, File, FileArchive, FileImage, FileSpreadsheet, FileText, Folder, FolderOpen, Upload } from 'lucide-react';
 import { Button, Skeleton } from '../components/actions';
 import { Empty } from '../components/display';
 import { Dialog, Popover } from '../components/overlays';
@@ -8,6 +8,7 @@ import { cn } from '../lib/cn';
 import { formatBytes } from '../lib/format';
 import { unggahKeBerkas, type BerkasTerunggah, type InfoBerkas, type OpsiUnggahBerkas } from './berkas';
 import { DriveBerkas } from './drive-berkas';
+import { useDibagikanBerkas, type BagiBerkas } from './berkas-ruang';
 import { invalidateSiakad, useOptionalSiakad } from './provider';
 import { waktuRelatif } from './notifikasi';
 
@@ -51,11 +52,13 @@ export function TombolBerkas({ jumlah = 6, onKelola, unitTampil, modul, unit, ka
   const [tersedia, setTersedia] = React.useState(true);
   const [info, setInfo] = React.useState<InfoBerkas | null>(null);
   const [buka, setBuka] = React.useState(false);
-  const [drive, setDrive] = React.useState(false);
+  const [drive, setDrive] = React.useState<false | 'saya' | 'dibagikan'>(false);
+  const [tab, setTab] = React.useState<'terbaru' | 'dibagikan'>('terbaru');
   const [daftar, setDaftar] = React.useState<Berkas[] | null>(null);
   const [unggahan, setUnggahan] = React.useState<Unggahan[]>([]);
   const [seret, setSeret] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const bagi = useDibagikanBerkas('masuk', buka && tab === 'dibagikan' && tersedia);
 
   React.useEffect(() => {
     if (!siakad) return;
@@ -117,10 +120,10 @@ export function TombolBerkas({ jumlah = 6, onKelola, unitTampil, modul, unit, ka
     }
   };
 
-  const kelola = () => {
+  const kelola = (ruang: 'saya' | 'dibagikan' = 'saya') => {
     setBuka(false);
-    if (onKelola) onKelola();
-    else setDrive(true);
+    if (onKelola && ruang === 'saya') onKelola();
+    else setDrive(ruang);
   };
 
   return (
@@ -193,49 +196,92 @@ export function TombolBerkas({ jumlah = 6, onKelola, unitTampil, modul, unit, ka
             ))}
           </div>
         )}
-        <div className="u-kabar-sub">Terbaru</div>
-        {daftar === null ? (
+        <div className="u-kabar-tab u-berkas-cepat-tab" role="tablist">
+          <button type="button" role="tab" aria-selected={tab === 'terbaru'} onClick={() => setTab('terbaru')}>
+            Terbaru
+          </button>
+          <button type="button" role="tab" aria-selected={tab === 'dibagikan'} onClick={() => setTab('dibagikan')}>
+            Dibagikan dengan saya
+          </button>
+        </div>
+        {tab === 'terbaru' ? (
+          daftar === null ? (
+            <div className="u-kabar-daftar" aria-busy>
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} height={40} />
+              ))}
+            </div>
+          ) : daftar.length ? (
+            <div className="u-kabar-daftar" role="list">
+              {daftar.map((b) => (
+                <BarisBerkas key={b.id} b={b} keterangan={`${formatBytes(b.ukuran)}${b.dibuat_at ? ` · ${waktuRelatif(b.dibuat_at)}` : ''}`} onUnduh={() => void unduh(b)} />
+              ))}
+            </div>
+          ) : (
+            <Empty icon={<FolderOpen />} title="Belum ada berkas" description="Berkas yang Anda unggah tampil di sini." />
+          )
+        ) : bagi.loading && !bagi.data ? (
           <div className="u-kabar-daftar" aria-busy>
             {[0, 1, 2].map((i) => (
               <Skeleton key={i} height={40} />
             ))}
           </div>
-        ) : daftar.length ? (
+        ) : (bagi.data?.dibagikan ?? []).length ? (
           <div className="u-kabar-daftar" role="list">
-            {daftar.map((b) => (
-              <div key={b.id} role="listitem" className="u-kabar-item u-berkas-cepat-item">
-                <span className="u-berkas-cepat-ikon" aria-hidden>
-                  <IkonBerkas b={b} />
-                </span>
-                <span className="u-kabar-item-teks">
-                  <span className="u-kabar-item-atas">
-                    <b title={b.nama}>{b.nama}</b>
+            {(bagi.data?.dibagikan ?? []).slice(0, jumlah * 2).map((x: BagiBerkas) =>
+              x.jenis === 'berkas' && x.berkas ? (
+                <BarisBerkas
+                  key={x.id}
+                  b={x.berkas as Berkas}
+                  keterangan={[formatBytes(x.berkas.ukuran), x.dibuat_oleh ? `dari ${x.dibuat_oleh}` : '', x.dibuat_at ? waktuRelatif(x.dibuat_at) : ''].filter(Boolean).join(' · ')}
+                  onUnduh={() => void unduh(x.berkas as Berkas)}
+                />
+              ) : (
+                <button key={x.id} type="button" role="listitem" className="u-kabar-item u-berkas-cepat-item" onClick={() => kelola('dibagikan')}>
+                  <span className="u-berkas-cepat-ikon" aria-hidden>
+                    <Folder />
                   </span>
-                  <span className="u-kabar-item-isi">
-                    {formatBytes(b.ukuran)}
-                    {b.dibuat_at ? ` · ${waktuRelatif(b.dibuat_at)}` : ''}
+                  <span className="u-kabar-item-teks">
+                    <span className="u-kabar-item-atas">
+                      <b title={x.folder?.nama}>{x.folder?.nama ?? 'Folder'}</b>
+                    </span>
+                    <span className="u-kabar-item-isi">{['Folder', x.dibuat_oleh ? `dari ${x.dibuat_oleh}` : '', x.dibuat_at ? waktuRelatif(x.dibuat_at) : ''].filter(Boolean).join(' · ')}</span>
                   </span>
-                </span>
-                <Button variant="ghost" size="xs" iconOnly aria-label={`Unduh ${b.nama}`} onClick={() => void unduh(b)}>
-                  <Download />
-                </Button>
-              </div>
-            ))}
+                </button>
+              ),
+            )}
           </div>
         ) : (
-          <Empty icon={<FolderOpen />} title="Belum ada berkas" description="Berkas yang Anda unggah tampil di sini." />
+          <Empty icon={<FolderOpen />} title="Belum ada yang dibagikan" description="Berkas dan folder yang dibagikan orang lain kepada Anda tampil di sini." />
         )}
         <div className="u-kabar-kaki">
-          <Button variant="ghost" size="sm" onClick={kelola}>
+          <Button variant="ghost" size="sm" onClick={() => kelola(tab === 'dibagikan' ? 'dibagikan' : 'saya')}>
             Kelola berkas
           </Button>
         </div>
       </Popover>
-      {!onKelola && (
-        <Dialog open={drive} onOpenChange={setDrive} title="Kelola berkas" size="full" className="u-berkas-dialog">
-          {drive && <DriveBerkas modul={modul} unitTampil={unitTampil} tinggi="100%" />}
-        </Dialog>
-      )}
+      <Dialog open={drive !== false} onOpenChange={(o) => !o && setDrive(false)} title="Kelola berkas" size="full" className="u-berkas-dialog">
+        {drive && <DriveBerkas modul={modul} unitTampil={unitTampil} ruangAwal={drive} tinggi="100%" />}
+      </Dialog>
     </>
+  );
+}
+
+function BarisBerkas({ b, keterangan, onUnduh }: { b: Berkas; keterangan: string; onUnduh: () => void }) {
+  return (
+    <div role="listitem" className="u-kabar-item u-berkas-cepat-item">
+      <span className="u-berkas-cepat-ikon" aria-hidden>
+        <IkonBerkas b={b} />
+      </span>
+      <span className="u-kabar-item-teks">
+        <span className="u-kabar-item-atas">
+          <b title={b.nama}>{b.nama}</b>
+        </span>
+        <span className="u-kabar-item-isi">{keterangan}</span>
+      </span>
+      <Button variant="ghost" size="xs" iconOnly aria-label={`Unduh ${b.nama}`} onClick={onUnduh}>
+        <Download />
+      </Button>
+    </div>
   );
 }
