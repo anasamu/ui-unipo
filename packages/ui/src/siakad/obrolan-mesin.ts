@@ -1,13 +1,10 @@
 import type { Siakad } from 'unipo-siakad-sdk';
 import {
   buatCadangan,
-  buatKunciPerangkat,
   bukaCadangan,
   bungkusSusulan,
   dekripsiBerkas,
   dekripsiPesan,
-  enkripsiBerkas,
-  enkripsiPesan,
   hapusKunci,
   kriptoDidukung,
   kunciSusulan,
@@ -19,6 +16,7 @@ import {
   type IsiPesan,
   type KunciPerangkat,
   type KunciPublikPerangkat,
+  kunciPesanMentah,
 } from './obrolan-kripto';
 import { unggahKeBerkas, type InfoBerkas } from './berkas';
 import { rapikanSegmen } from './manajer-berkas';
@@ -126,6 +124,9 @@ interface PesanServer {
   efemeral: string | null;
   tanda: string | null;
   kunci: string | null;
+  /** "server" = isi dibuka SIAKAD untuk anggota (field `isi`); "perangkat" = pesan end-to-end lama. */
+  enkripsi?: 'server' | 'perangkat';
+  isi?: IsiPesan | null;
   /** Kunci untuk perangkat ini akan disusulkan perangkat pengirim. */
   menunggu?: boolean;
   lampiran: string[];
@@ -188,18 +189,6 @@ function galatTeks(e: unknown): string {
   if (x.status === 413) return 'Lampiran terlalu besar.';
   if ((x.status ?? 0) >= 500) return 'Server sedang bermasalah. Coba kirim ulang sebentar lagi.';
   return x.message || 'Terjadi kesalahan.';
-}
-
-function namaPendek(nama: string): string {
-  return nama.split(/\s+/)[0] ?? nama;
-}
-
-function namaPerangkat(): string {
-  if (typeof navigator === 'undefined') return 'Perangkat';
-  const ua = navigator.userAgent;
-  const b = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
-  const o = /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Windows/.test(ua) ? 'Windows' : /Mac OS/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : '';
-  return o ? `${b} di ${o}` : b;
 }
 
 export class MesinObrolan {
@@ -272,10 +261,6 @@ export class MesinObrolan {
   }
 
   private async mulaiSungguh() {
-    if (!kriptoDidukung()) {
-      this.set({ status: 'tidak_didukung', galat: 'Browser ini tidak mendukung enkripsi. Buka lewat HTTPS dengan browser terbaru.' });
-      return;
-    }
     this.set({ status: 'memuat', galat: null });
     try {
       const saya = await this.req<{
@@ -289,38 +274,23 @@ export class MesinObrolan {
         tunggu_maks: number;
         lampiran_mb: number;
       }>('GET', '/saya');
-      let k = await muatKunci(this.ruangNama, saya.id);
-      let sarankan = false;
-      if (k && !saya.perangkat.some((p) => p.id === k!.id)) {
-        // Perangkat ini dicabut dari perangkat lain: buang kuncinya.
-        await hapusKunci(this.ruangNama, saya.id);
-        k = null;
-      }
-      let daftar = saya.perangkat;
-      if (!k) {
-        k = await buatKunciPerangkat(saya.id);
-        const d = await this.req<PerangkatObrolan & { kunci_tukar: string }>('POST', '/perangkat', {
-          body: { nama: namaPerangkat(), kunci_tukar: await publikRaw(k.tukar.publicKey), kunci_tanda: await publikRaw(k.tanda.publicKey) },
-        });
-        k.id = d.id;
-        await simpanKunci(this.ruangNama, k);
-        daftar = [...daftar, d];
-        sarankan = saya.cadangan_ada;
-      }
+      // Obrolan dienkripsi di server: tidak ada kunci perangkat baru. Kunci perangkat lama (bila browser ini masih
+      // menyimpannya) hanya dipakai untuk membuka pesan end-to-end lama lalu memindahkannya ke enkripsi server.
+      let k = kriptoDidukung() ? await muatKunci(this.ruangNama, saya.id).catch(() => null) : null;
+      if (k && !saya.perangkat.some((p) => p.id === k!.id)) k = null;
       this.kunci = k;
       this.set({
         saya: { id: saya.id, nama: saya.nama, peran: saya.peran, jenis: saya.jenis },
-        perangkat: k.id,
-        perangkatSaya: daftar,
+        perangkat: k?.id ?? null,
+        perangkatSaya: saya.perangkat,
         cadanganAda: saya.cadangan_ada,
-        sarankanPulihkan: sarankan,
+        sarankanPulihkan: false,
         setelan: { ...AWAL.setelan, ...saya.setelan },
         lampiranMb: saya.lampiran_mb,
       });
       await this.muatRuang();
       this.set({ status: 'siap' });
       this.jalankanUmpan(saya.tunggu_maks);
-      this.susulkan();
     } catch (e) {
       this.set({ status: 'galat', galat: galatTeks(e) });
     }
@@ -374,11 +344,32 @@ export class MesinObrolan {
       status: 'terkirim',
     };
     if (p.dihapus) return { ...dasar, status: 'dihapus' };
-    if (!p.kunci && p.menunggu) return { ...dasar, status: 'menunggu' };
+    if (p.enkripsi === 'server') return p.isi ? { ...dasar, isi: p.isi, terverifikasi: true } : { ...dasar, status: 'tak_terbaca' };
+    // Pesan end-to-end lama: hanya bisa dibuka browser yang masih memegang kunci perangkat lamanya.
+    if (!this.kunci || !p.kunci) return { ...dasar, status: 'tak_terbaca' };
     const kunciTukarPengirim = kunciSusulan(p.kunci) ? ((await this.kunciDari([p.pengirim]).catch(() => ({}) as Record<string, KunciPublikPerangkat[]>))[p.pengirim] ?? []).map((d) => d.kunci_tukar) : [];
     const h = await dekripsiPesan(p, { ruang, saya: this.kunci!, kunciTandaPengirim: await this.kunciTanda(p.pengirim, p.perangkat).catch(() => null), kunciTukarPengirim });
     if (!h.ok) return { ...dasar, status: h.alasan === 'dihapus' ? 'dihapus' : 'tak_terbaca' };
+    this.pindahkanKeServer(ruang, p, kunciTukarPengirim);
     return { ...dasar, isi: h.isi, terverifikasi: h.terverifikasi };
+  }
+
+  private dipindah = new Set<string>();
+
+  /** Sekali per pesan, diam-diam: kirim kunci pesan lama agar SIAKAD menyimpannya terenkripsi server. */
+  private pindahkanKeServer(ruang: string, p: PesanServer, kunciTukarPengirim: string[]) {
+    if (!this.kunci || !p.kunci || !p.efemeral || this.dipindah.has(p.uuid)) return;
+    this.dipindah.add(p.uuid);
+    const kunci = this.kunci;
+    void (async () => {
+      const mentah = await kunciPesanMentah({ uuid: p.uuid, efemeral: p.efemeral!, kunci: p.kunci! }, kunci, kunciTukarPengirim);
+      const baru = await this.req<PesanServer>('POST', `/ruang/${ruang}/pesan/${p.uuid}/pindah-server`, { body: { kunci: mentah } });
+      if (baru.isi) {
+        // Lampiran lama kini terenkripsi server: pakai isi dari server (tanpa kunci browser).
+        this.urlBerkas.forEach((_, id) => baru.isi?.berkas?.some((b) => b.id === id) && this.urlBerkas.delete(id));
+        this.setPesan(ruang, (x) => ({ ...x, daftar: x.daftar.map((q) => (q.uuid === p.uuid ? { ...q, isi: q.diubah ? { ...baru.isi!, isi: q.isi?.isi } : baru.isi! } : q)) }));
+      }
+    })().catch(() => {});
   }
 
   /** Terapkan reaksi dan suntingan ke pesan sasaran; keduanya tidak tampil sebagai gelembung sendiri. */
@@ -408,8 +399,7 @@ export class MesinObrolan {
   // ---------------------------------------------------------------- ruang
 
   async muatRuang() {
-    if (!this.kunci) return;
-    const daftar = await this.req<RuangServer[]>('GET', '/ruang', { query: { perangkat: this.kunci.id } });
+    const daftar = await this.req<RuangServer[]>('GET', '/ruang', { query: { perangkat: this.kunci?.id } });
     const ruang: Record<string, RuangObrolanData> = {};
     await Promise.all(
       daftar.map(async (r) => {
@@ -420,9 +410,8 @@ export class MesinObrolan {
   }
 
   private async segarkanRuang(id: string) {
-    if (!this.kunci) return;
     try {
-      const r = await this.req<RuangServer>('GET', `/ruang/${id}`, { query: { perangkat: this.kunci.id } });
+      const r = await this.req<RuangServer>('GET', `/ruang/${id}`, { query: { perangkat: this.kunci?.id } });
       const lama = this.s.ruang[id];
       const terakhir = r.pesan_terakhir ? (lama?.pesan_terakhir?.id === r.pesan_terakhir.id && lama.pesan_terakhir.status !== 'menunggu' ? lama.pesan_terakhir : await this.buka(id, r.pesan_terakhir)) : null;
       this.pasangRuang({ ...r, pesan_terakhir: terakhir });
@@ -452,10 +441,10 @@ export class MesinObrolan {
 
   /** Muat pesan ruang (terbaru). */
   async bukaRuang(id: string) {
-    if (!this.kunci || this.s.pesan[id]?.dimuat || this.s.pesan[id]?.memuat) return;
+    if (this.s.pesan[id]?.dimuat || this.s.pesan[id]?.memuat) return;
     this.setPesan(id, (x) => ({ ...x, memuat: true }));
     try {
-      const r = await this.req<{ pesan: PesanServer[]; lagi: boolean }>('GET', `/ruang/${id}/pesan`, { query: { perangkat: this.kunci.id, limit: 50 } });
+      const r = await this.req<{ pesan: PesanServer[]; lagi: boolean }>('GET', `/ruang/${id}/pesan`, { query: { perangkat: this.kunci?.id, limit: 50 } });
       const daftar = await Promise.all([...r.pesan].reverse().map((p) => this.buka(id, p)));
       this.setPesan(id, () => ({ daftar, lagi: r.lagi, dimuat: true, memuat: false }));
     } catch (e) {
@@ -466,11 +455,11 @@ export class MesinObrolan {
 
   async muatLebihLama(id: string) {
     const x = this.s.pesan[id];
-    if (!this.kunci || !x?.lagi || x.memuat) return;
+    if (!x?.lagi || x.memuat) return;
     const tertua = x.daftar.find((p) => p.id > 0)?.id;
     this.setPesan(id, (y) => ({ ...y, memuat: true }));
     try {
-      const r = await this.req<{ pesan: PesanServer[]; lagi: boolean }>('GET', `/ruang/${id}/pesan`, { query: { perangkat: this.kunci.id, sebelum: tertua, limit: 50 } });
+      const r = await this.req<{ pesan: PesanServer[]; lagi: boolean }>('GET', `/ruang/${id}/pesan`, { query: { perangkat: this.kunci?.id, sebelum: tertua, limit: 50 } });
       const lama = await Promise.all([...r.pesan].reverse().map((p) => this.buka(id, p)));
       this.setPesan(id, (y) => ({ ...y, daftar: [...lama, ...y.daftar], lagi: r.lagi, memuat: false }));
     } catch {
@@ -480,9 +469,9 @@ export class MesinObrolan {
 
   private async muatBaru(id: string) {
     const x = this.s.pesan[id];
-    if (!this.kunci || !x?.dimuat) return;
+    if (!x?.dimuat) return;
     const terbaru = [...x.daftar].reverse().find((p) => p.id > 0)?.id ?? 0;
-    const r = await this.req<{ pesan: PesanServer[]; lagi: boolean }>('GET', `/ruang/${id}/pesan`, { query: { perangkat: this.kunci.id, setelah: terbaru, limit: 200 } });
+    const r = await this.req<{ pesan: PesanServer[]; lagi: boolean }>('GET', `/ruang/${id}/pesan`, { query: { perangkat: this.kunci?.id, setelah: terbaru, limit: 200 } });
     if (!r.pesan.length) return;
     const baru = await Promise.all(r.pesan.map((p) => this.buka(id, p)));
     this.setPesan(id, (y) => {
@@ -495,8 +484,8 @@ export class MesinObrolan {
   /** Muat ulang pesan terbaru ruang (mis. setelah kunci susulan tiba) tanpa membuang pesan yang sedang dikirim. */
   private async muatUlangPesan(id: string) {
     const x = this.s.pesan[id];
-    if (!this.kunci || !x?.dimuat) return;
-    const r = await this.req<{ pesan: PesanServer[]; lagi: boolean }>('GET', `/ruang/${id}/pesan`, { query: { perangkat: this.kunci.id, limit: 50 } });
+    if (!x?.dimuat) return;
+    const r = await this.req<{ pesan: PesanServer[]; lagi: boolean }>('GET', `/ruang/${id}/pesan`, { query: { perangkat: this.kunci?.id, limit: 50 } });
     const baru = await Promise.all(r.pesan.map((p) => this.buka(id, p)));
     this.setPesan(id, (y) => {
       const ada = new Map(y.daftar.map((p) => [p.uuid, p]));
@@ -521,7 +510,7 @@ export class MesinObrolan {
       for (let putaran = 0; putaran < 5 && this.kunci; putaran++) {
         this.susulanLagi = false;
         const daftar = await this.req<Array<{ uuid: string; efemeral: string; kunci: string; tujuan: Array<{ id: string; kunci_tukar: string }> }>>('GET', '/susulan', {
-          query: { perangkat: this.kunci.id },
+          query: { perangkat: this.kunci?.id },
         });
         if (!daftar.length) break;
         const kunci: Array<{ pesan: string; perangkat: string; kunci: string }> = [];
@@ -530,7 +519,7 @@ export class MesinObrolan {
           for (const [perangkat, k] of Object.entries(hasil)) kunci.push({ pesan: p.uuid, perangkat, kunci: k });
         }
         if (!kunci.length) break;
-        const r = await this.req<{ disimpan: number }>('POST', '/susulan', { body: { perangkat: this.kunci.id, kunci } });
+        const r = await this.req<{ disimpan: number }>('POST', '/susulan', { body: { perangkat: this.kunci?.id, kunci } });
         if (!r.disimpan && !this.susulanLagi) break;
       }
     })()
@@ -561,13 +550,13 @@ export class MesinObrolan {
   private async kirimIsi(ruangId: string, isi: IsiPesan, lampiran: string[] = [], uuid = uuidAcak()): Promise<void> {
     const ruang = this.s.ruang[ruangId];
     const saya = this.s.saya;
-    if (!ruang || !saya || !this.kunci) throw new Error('Obrolan belum siap.');
+    if (!ruang || !saya) throw new Error('Obrolan belum siap.');
     const tampil = isi.t !== 'reaksi' && isi.t !== 'ubah';
     const sementara: PesanObrolan = {
       id: 0,
       uuid,
       pengirim: saya.id,
-      perangkat: this.kunci.id,
+      perangkat: '',
       dibuat_at: new Date().toISOString(),
       kedaluwarsa_at: null,
       status: 'mengirim',
@@ -575,25 +564,9 @@ export class MesinObrolan {
       terverifikasi: true,
     };
     this.setPesan(ruangId, (x) => ({ ...x, daftar: [...x.daftar.filter((p) => p.uuid !== uuid), sementara] }));
-    const kirim = async (segar: boolean): Promise<PesanServer> => {
-      const anggota = ruang.anggota.map((a) => a.id);
-      if (segar) anggota.forEach((a) => this.kunciPublik.delete(a));
-      const kunci = await this.kunciDari(anggota);
-      const penerima = Object.values(kunci).flat();
-      const e = await enkripsiPesan(isi, { ruang: ruangId, pengirim: this.kunci!, penerima, uuid });
-      return this.req<PesanServer>('POST', `/ruang/${ruangId}/pesan`, { body: { ...e, lampiran } });
-    };
     try {
-      let hasil: PesanServer;
-      try {
-        hasil = await kirim(false);
-      } catch (e) {
-        const d = (e as { status?: number; details?: { kode?: string } }).details;
-        if ((e as { status?: number }).status === 409 && d?.kode === 'perangkat_berubah') {
-          await this.segarkanRuang(ruangId);
-          hasil = await kirim(true);
-        } else throw e;
-      }
+      // Isi dikirim lewat HTTPS dan dienkripsi SIAKAD dengan kunci ruang sebelum disimpan.
+      const hasil = await this.req<PesanServer>('POST', `/ruang/${ruangId}/pesan`, { body: { uuid, isi, lampiran } });
       const jadi: PesanObrolan = { ...sementara, id: hasil.id, dibuat_at: hasil.dibuat_at, kedaluwarsa_at: hasil.kedaluwarsa_at, status: 'terkirim' };
       this.setPesan(ruangId, (x) => ({ ...x, daftar: x.daftar.map((p) => (p.uuid === uuid ? jadi : p)) }));
       if (tampil) {
@@ -601,13 +574,7 @@ export class MesinObrolan {
         if (r) this.pasangRuang({ ...r, pesan_terakhir: jadi, pesan_terakhir_at: hasil.dibuat_at, dibaca_sampai: hasil.id, arsip: false });
       }
     } catch (e) {
-      const d = (e as { details?: { kode?: string; pemilik?: string[] } }).details;
-      let galat = galatTeks(e);
-      if (d?.kode === 'penerima_belum_siap') {
-        // Server lama (sebelum kunci susulan): penerima belum punya kunci.
-        const nama = (d.pemilik ?? []).map((p) => namaPendek(ruang.anggota.find((a) => a.id === p)?.nama ?? p)).join(', ');
-        galat = `${nama} belum mengaktifkan obrolan.`;
-      }
+      const galat = galatTeks(e);
       this.setPesan(ruangId, (x) => ({ ...x, daftar: x.daftar.map((p) => (p.uuid === uuid ? { ...p, status: 'gagal', galat } : p)) }));
       throw new Error(galat);
     }
@@ -634,18 +601,18 @@ export class MesinObrolan {
 
   async kirimBerkas(ruangId: string, files: File[], keterangan = '', balas?: PesanObrolan): Promise<void> {
     const maks = this.s.lampiranMb * 1048576;
-    const besar = files.find((f) => f.size > maks - 64);
+    const besar = files.find((f) => f.size > maks);
     if (besar) throw new Error(`${besar.name} lebih dari ${this.s.lampiranMb} MB.`);
     const berkas: NonNullable<IsiPesan['berkas']> = [];
     for (const f of files.slice(0, 10)) {
-      const { sandi, kunci, iv } = await enkripsiBerkas(await f.arrayBuffer());
+      // Isi asli diunggah lewat HTTPS; SIAKAD mengenkripsinya dengan kunci ruang sebelum disimpan.
       const r = await this.req<{ id: string }>('POST', `/ruang/${ruangId}/lampiran`, {
-        body: { berkas: { data: sandi, filename: 'lampiran.bin', contentType: 'application/octet-stream' } },
+        body: { berkas: { data: f, filename: 'lampiran.bin', contentType: 'application/octet-stream' }, enkripsi: 'server' },
         multipart: true,
         timeout: 300_000,
       });
       const ukur = f.type.startsWith('image/') ? await ukuranGambar(f) : null;
-      berkas.push({ id: r.id, nama: f.name, mime: f.type || 'application/octet-stream', ukuran: f.size, kunci, iv, ...(ukur ?? {}) });
+      berkas.push({ id: r.id, nama: f.name, mime: f.type || 'application/octet-stream', ukuran: f.size, ...(ukur ?? {}) });
     }
     const isi: IsiPesan = { v: 1, t: 'berkas', berkas, isi: keterangan || undefined };
     if (balas?.isi) {
@@ -715,8 +682,9 @@ export class MesinObrolan {
         const r = await this.siakad.request<{ bytes: Uint8Array<ArrayBuffer> } | ArrayBuffer>({ method: 'GET', path: `${P}/lampiran/${b.id}` }, { timeout: 300_000 });
         const d = r.data as unknown;
         const bytes = d instanceof ArrayBuffer ? new Uint8Array(d) : d instanceof Blob ? new Uint8Array(await d.arrayBuffer()) : (d as { bytes: Uint8Array }).bytes;
-        const buka = await dekripsiBerkas(new Uint8Array(bytes) as Uint8Array<ArrayBuffer>, b.kunci, b.iv);
-        return URL.createObjectURL(new Blob([buka], { type: b.mime }));
+        // Lampiran lama (dienkripsi browser) masih perlu dibuka di sini; lampiran baru sudah dibuka SIAKAD.
+        const buka = b.kunci && b.iv ? await dekripsiBerkas(new Uint8Array(bytes) as Uint8Array<ArrayBuffer>, b.kunci, b.iv) : bytes;
+        return URL.createObjectURL(new Blob([buka as BlobPart], { type: b.mime }));
       })();
       u.catch(() => this.urlBerkas.delete(b.id));
       this.urlBerkas.set(b.id, u);
@@ -793,8 +761,7 @@ export class MesinObrolan {
   }
 
   async muatArsip(): Promise<RuangObrolanData[]> {
-    if (!this.kunci) return [];
-    const d = await this.req<RuangServer[]>('GET', '/ruang', { query: { perangkat: this.kunci.id, arsip: 1 } });
+    const d = await this.req<RuangServer[]>('GET', '/ruang', { query: { perangkat: this.kunci?.id, arsip: 1 } });
     const hasil = await Promise.all(d.map(async (r) => ({ ...r, pesan_terakhir: r.pesan_terakhir ? await this.buka(r.id, r.pesan_terakhir) : null })));
     // Disimpan di peta ruang (tanpa masuk urutan) agar ruang arsip bisa dibuka.
     this.set((s) => ({ ruang: { ...s.ruang, ...Object.fromEntries(hasil.map((r) => [r.id, r])) } }));

@@ -19,7 +19,6 @@ import {
   FolderDown,
   Hourglass,
   Info,
-  KeyRound,
   Lock,
   LogOut,
   MessageCircle,
@@ -33,9 +32,7 @@ import {
   Search,
   Send,
   Settings,
-  ShieldAlert,
   ShieldCheck,
-  Smartphone,
   SmilePlus,
   Timer,
   Trash2,
@@ -62,7 +59,7 @@ export * as kriptoObrolan from './obrolan-kripto';
 // ================================================================ hook & util
 
 /**
- * Keadaan obrolan terenkripsi end-to-end (`/v1/obrolan`) untuk komponen kustom. Semua komponen obrolan di halaman
+ * Keadaan obrolan (`/v1/obrolan`, terenkripsi di server) untuk komponen kustom. Semua komponen obrolan di halaman
  * berbagi satu mesin per instans Siakad: satu kunci perangkat, satu koneksi realtime.
  */
 export function useObrolan(): { mesin: MesinObrolan; keadaan: KeadaanObrolan } {
@@ -161,7 +158,7 @@ function terakhirAktif(s: string | null): string {
 function cuplikan(p: PesanObrolan | null, r: RuangObrolanData, saya: string): string {
   if (!p) return 'Belum ada pesan';
   if (p.status === 'dihapus') return 'Pesan dihapus';
-  if (p.status === 'tak_terbaca') return 'Pesan terenkripsi (tidak terbaca di perangkat ini)';
+  if (p.status === 'tak_terbaca') return 'Pesan lama tidak tersedia';
   if (p.status === 'menunggu') return 'Menunggu pesan…';
   const i = p.isi;
   if (!i) return '';
@@ -438,7 +435,7 @@ export function DaftarObrolan({ aktif, onPilih, className }: DaftarObrolanProps)
             </div>
           ))
         ) : daftar.length === 0 && !q ? (
-          <Empty icon={<MessageCircle />} title="Belum ada obrolan" description="Mulai obrolan dengan dosen, mahasiswa, atau staf. Semua pesan terenkripsi end-to-end." />
+          <Empty icon={<MessageCircle />} title="Belum ada obrolan" description="Mulai obrolan dengan dosen, mahasiswa, atau staf. Pesan dan lampiran disimpan terenkripsi di server UNIPO. Hanya anggota obrolan yang bisa membukanya." />
         ) : daftar.length === 0 && !daftarArsip?.length ? (
           <p className="u-ob-petunjuk">Tidak ada obrolan yang cocok.</p>
         ) : (
@@ -490,7 +487,7 @@ function useSimpanKeBerkas() {
         toast.add({
           type: 'success',
           title: otomatis ? 'Salinan disimpan ke Berkas saya' : berkas.length > 1 ? `${berkas.length} berkas disimpan ke Berkas saya` : 'Disimpan ke Berkas saya',
-          description: `${folder}. Salinan ini tidak terenkripsi end-to-end.`,
+          description: `${folder}.`,
         });
       } catch (e) {
         toast.add({ type: 'warning', title: otomatis ? 'Pesan terkirim, salinan ke Berkas saya gagal' : 'Gagal menyimpan ke Berkas saya', description: pesanGalat(e) });
@@ -574,7 +571,7 @@ function BerkasLampiran({ b, ruangId }: { b: Berkas; ruangId: string }) {
             {memuat ? <Spinner size="sm" /> : <Download aria-hidden />}
           </button>
         </Tooltip>
-        <Tooltip content="Simpan ke Berkas saya (salinan tidak terenkripsi end-to-end)">
+        <Tooltip content="Simpan ke Berkas saya">
           <button type="button" className="u-ob-berkas-tombol" aria-label={`Simpan ${b.nama} ke Berkas saya`} disabled={proses} onClick={(e) => (e.stopPropagation(), void simpan(ruangId, [b]))}>
             {proses ? <Spinner size="sm" /> : <FolderDown aria-hidden />}
           </button>
@@ -632,7 +629,6 @@ function statusBaca(p: PesanObrolan, r: RuangObrolanData, saya: string): 'mengir
   if (p.status === 'mengirim' || p.status === 'gagal') return p.status;
   const lain = r.anggota.filter((a) => a.id !== saya);
   if (!lain.length) return 'terkirim';
-  if (lain.every((a) => !a.punya_kunci)) return 'menunggu';
   if (lain.every((a) => (a.dibaca_sampai ?? 0) >= p.id)) return 'dibaca';
   if (lain.every((a) => (a.diterima_sampai ?? 0) >= p.id || (a.dibaca_sampai ?? 0) >= p.id)) return 'diterima';
   return 'terkirim';
@@ -690,13 +686,9 @@ const Gelembung = React.memo(function Gelembung({ p, r, saya, awalKelompok, akhi
             <span className="u-ob-pesan-sistem">
               <Ban aria-hidden /> Pesan ini dihapus
             </span>
-          ) : p.status === 'menunggu' ? (
+          ) : p.status === 'tak_terbaca' || p.status === 'menunggu' ? (
             <span className="u-ob-pesan-sistem">
-              <Hourglass aria-hidden /> Menunggu pesan ini. Pesan terbuka otomatis begitu {nama} daring.
-            </span>
-          ) : p.status === 'tak_terbaca' ? (
-            <span className="u-ob-pesan-sistem">
-              <Lock aria-hidden /> Pesan terenkripsi ini tidak bisa dibuka di perangkat ini. Pulihkan kunci dari cadangan untuk membacanya.
+              <Hourglass aria-hidden /> Pesan lama tidak tersedia
             </span>
           ) : isi ? (
             <>
@@ -731,20 +723,10 @@ const Gelembung = React.memo(function Gelembung({ p, r, saya, awalKelompok, akhi
             </>
           ) : null}
           <span className="u-ob-meta">
-            {p.terverifikasi === false && (
-              <Tooltip content="Tanda tangan perangkat pengirim tidak cocok. Periksa nomor keamanan.">
-                <ShieldAlert className="u-ob-meta-bahaya" aria-label="Tidak terverifikasi" />
-              </Tooltip>
-            )}
             {p.kedaluwarsa_at && <Timer aria-label="Pesan menghilang" />}
             {p.diubah && <span>diubah</span>}
             <time dateTime={p.dibuat_at}>{jam(p.dibuat_at)}</time>
             {st === 'mengirim' && <Clock aria-label="Mengirim" />}
-            {st === 'menunggu' && (
-              <Tooltip content={`Terkirim ke server. Terbuka untuk ${namaDepan(r.anggota.find((a) => a.id !== saya)?.nama ?? 'penerima')} begitu ia membuka obrolan.`}>
-                <Hourglass aria-label="Menunggu penerima mengaktifkan obrolan" />
-              </Tooltip>
-            )}
             {st === 'terkirim' && <Check aria-label="Terkirim" />}
             {st === 'diterima' && <CheckCheck aria-label="Diterima" />}
             {st === 'dibaca' && <CheckCheck className="u-ob-meta-dibaca" aria-label="Dibaca" />}
@@ -832,7 +814,11 @@ function hue(s: string): number {
 
 // ================================================================ Nomor keamanan
 
-/** Nomor keamanan 60 angka antara pengguna ini dan `pemilik`. Cocokkan di kedua layar untuk memastikan tidak ada pihak ketiga. */
+/**
+ * Nomor keamanan 60 angka dari kunci perangkat lama (enkripsi end-to-end sebelum 2026-11-17). Tidak dipakai lagi di
+ * komponen obrolan sejak pesan dienkripsi di server; dipertahankan untuk kompatibilitas impor.
+ * @deprecated
+ */
 export function NomorKeamanan({ pemilik, nama }: { pemilik: string; nama: string }) {
   const { mesin } = useObrolan();
   const [nomor, setNomor] = React.useState<string[] | null>(null);
@@ -873,7 +859,6 @@ function InfoRuang({ r, open, onOpenChange, onKeluar }: { r: RuangObrolanData; o
   const lawan = lawanDari(r, saya);
   const admin = r.peran_saya === 'admin';
   const [judul, setJudul] = React.useState(r.judul ?? '');
-  const [periksa, setPeriksa] = React.useState<OrangObrolan | null>(null);
   const [tambah, setTambah] = React.useState(false);
   const [baru, setBaru] = React.useState<OrangObrolan[]>([]);
   const [galat, setGalat] = React.useState<string | null>(null);
@@ -912,10 +897,9 @@ function InfoRuang({ r, open, onOpenChange, onKeluar }: { r: RuangObrolanData; o
 
           <section className="u-ob-info-bagian">
             <h4>
-              <ShieldCheck aria-hidden /> Enkripsi end-to-end
+              <ShieldCheck aria-hidden /> Keamanan
             </h4>
-            <p className="u-ob-petunjuk">Pesan dan lampiran dikunci di perangkat Anda dan hanya bisa dibuka perangkat anggota obrolan ini. Server SIAKAD hanya menyimpan data terenkripsi.</p>
-            {lawan ? <NomorKeamanan pemilik={lawan.id} nama={namaDepan(lawan.nama)} /> : <p className="u-ob-petunjuk">Periksa nomor keamanan per anggota lewat tombol kunci di daftar anggota.</p>}
+            <p className="u-ob-petunjuk">Pesan dan lampiran disimpan terenkripsi di server UNIPO. Hanya anggota obrolan yang bisa membukanya.</p>
           </section>
 
           <section className="u-ob-info-bagian">
@@ -971,13 +955,6 @@ function InfoRuang({ r, open, onOpenChange, onKeluar }: { r: RuangObrolanData; o
                     </span>
                     <span className="u-ob-baris-sub">{a.peran}</span>
                   </span>
-                  {a.id !== saya && (
-                    <Tooltip content="Nomor keamanan">
-                      <Button size="sm" variant="ghost" iconOnly aria-label={`Nomor keamanan ${a.nama}`} onClick={() => setPeriksa(a)}>
-                        <KeyRound />
-                      </Button>
-                    </Tooltip>
-                  )}
                   {admin && a.id !== saya && (
                     <Menu
                       items={[
@@ -1014,9 +991,6 @@ function InfoRuang({ r, open, onOpenChange, onKeluar }: { r: RuangObrolanData; o
         </div>
       </Dialog>
 
-      <Dialog open={Boolean(periksa)} onOpenChange={(o) => !o && setPeriksa(null)} title={`Nomor keamanan ${periksa?.nama ?? ''}`} size="sm">
-        {periksa && <NomorKeamanan pemilik={periksa.id} nama={namaDepan(periksa.nama)} />}
-      </Dialog>
 
       <Dialog
         open={tambah}
@@ -1270,7 +1244,6 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
   const lawan = lawanDari(r, saya);
   const ketik = Object.keys(k.ketik[id] ?? {}).filter((p) => p !== saya);
   const namaKetik = ketik.map((p) => namaDepan(r.anggota.find((a) => a.id === p)?.nama ?? ''));
-  const kunciBerubah = r.anggota.filter((a) => a.id !== saya && k.kunciBerubah[a.id]);
   const subjudul = ketik.length
     ? r.jenis === 'grup'
       ? `${namaKetik.join(', ')} mengetik…`
@@ -1280,10 +1253,9 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
         ? 'daring'
         : terakhirAktif(lawan.terakhir_aktif) || lawan.peran
       : r.anggota.map((a) => (a.id === saya ? 'Anda' : namaDepan(a.nama))).join(', ');
-  const belumSiap = r.anggota.filter((a) => a.id !== saya && !a.punya_kunci);
 
   const menuRuang: MenuEntry[] = [
-    { label: r.jenis === 'grup' ? 'Info grup' : 'Info dan nomor keamanan', icon: <Info />, onSelect: () => setInfo(true) },
+    { label: r.jenis === 'grup' ? 'Info grup' : 'Info obrolan', icon: <Info />, onSelect: () => setInfo(true) },
     { label: r.bisu ? 'Bunyikan notifikasi' : 'Bisukan notifikasi', icon: r.bisu ? <Bell /> : <BellOff />, onSelect: () => void mesin.ubahRuang(id, { bisu: !r.bisu }) },
     { label: r.sematkan ? 'Lepas sematan' : 'Sematkan', icon: r.sematkan ? <PinOff /> : <Pin />, onSelect: () => void mesin.ubahRuang(id, { sematkan: !r.sematkan }) },
     { label: r.arsip ? 'Keluarkan dari arsip' : 'Arsipkan', icon: r.arsip ? <ArchiveRestore /> : <Archive />, onSelect: () => void mesin.ubahRuang(id, { arsip: !r.arsip }) },
@@ -1363,8 +1335,8 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
             </span>
           </span>
         </button>
-        <Tooltip content="Terenkripsi end-to-end. Klik untuk nomor keamanan.">
-          <Button variant="ghost" size="sm" iconOnly aria-label="Terenkripsi end-to-end" onClick={() => setInfo(true)}>
+        <Tooltip content="Info obrolan">
+          <Button variant="ghost" size="sm" iconOnly aria-label="Info obrolan" onClick={() => setInfo(true)}>
             <Lock />
           </Button>
         </Tooltip>
@@ -1383,15 +1355,6 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
         )}
       </header>
 
-      {kunciBerubah.length > 0 && (
-        <div className="u-ob-pita" data-nada="peringatan" role="status">
-          <ShieldAlert aria-hidden />
-          <span>Kunci keamanan {kunciBerubah.map((a) => namaDepan(a.nama)).join(', ')} berubah, biasanya karena perangkat baru.</span>
-          <button type="button" onClick={() => setInfo(true)}>
-            Periksa
-          </button>
-        </div>
-      )}
 
       <div className="u-ob-pesan-daftar" ref={daftarRef} onScroll={onGulir} role="log" aria-live="polite" aria-label={`Pesan dengan ${judulRuang(r, saya)}`}>
         {x?.memuat && (
@@ -1402,7 +1365,7 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
         {x?.dimuat && !x.lagi && (
           <div className="u-ob-sambut">
             <Lock aria-hidden />
-            <p>Pesan dan lampiran di obrolan ini terenkripsi end-to-end. Hanya anggota obrolan yang bisa membacanya, server SIAKAD pun tidak.</p>
+            <p>Pesan dan lampiran disimpan terenkripsi di server UNIPO. Hanya anggota obrolan yang bisa membukanya.</p>
           </div>
         )}
         {r.kedaluwarsa_detik > 0 && (
@@ -1450,15 +1413,6 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
       )}
 
       <footer className="u-ob-penulis">
-        {belumSiap.length > 0 && (
-          <p className="u-ob-pita" data-nada="info">
-            <Info aria-hidden />
-            <span>
-              {belumSiap.map((a) => namaDepan(a.nama)).join(', ')} belum pernah membuka obrolan. Pesan tetap terkirim dan terbuka otomatis begitu {belumSiap.length > 1 ? 'mereka' : 'ia'}{' '}
-              membukanya.
-            </span>
-          </p>
-        )}
         {galatKirim && (
           <Alert variant="danger" className="u-ob-galat-kirim">
             {galatKirim}
@@ -1507,7 +1461,7 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
           }}
         >
           <input ref={fileRef} type="file" multiple hidden onChange={(e) => (tambahBerkas(e.target.files), (e.target.value = ''))} />
-          <Tooltip content={`Lampirkan berkas (maks. ${k.lampiranMb} MB, dienkripsi sebelum diunggah)`}>
+          <Tooltip content={`Lampirkan berkas (maks. ${k.lampiranMb} MB)`}>
             <Button type="button" variant="ghost" size="sm" iconOnly aria-label="Lampirkan berkas" onClick={() => fileRef.current?.click()} disabled={Boolean(ubah) || unggah || !siap}>
               <Paperclip />
             </Button>
@@ -1550,7 +1504,7 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
       {seret && (
         <div className="u-ob-seret" aria-hidden>
           <Paperclip />
-          Lepas untuk melampirkan (dienkripsi sebelum diunggah)
+          Lepas untuk melampirkan
         </div>
       )}
 
@@ -1576,19 +1530,15 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
 export interface PengaturanObrolanProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tab?: 'perangkat' | 'cadangan' | 'privasi' | 'berkas' | 'blokir';
+  tab?: 'privasi' | 'berkas' | 'blokir';
 }
 
-/** Perangkat tertaut, cadangan kunci (dengan sandi), privasi (status daring, tanda dibaca), salinan lampiran ke Berkas saya, dan daftar blokir. */
-export function PengaturanObrolan({ open, onOpenChange, tab: tabAwal = 'perangkat' }: PengaturanObrolanProps) {
+/** Privasi (status daring, tanda dibaca), salinan lampiran ke Berkas saya, dan daftar blokir. */
+export function PengaturanObrolan({ open, onOpenChange, tab: tabAwal = 'privasi' }: PengaturanObrolanProps) {
   const { mesin, keadaan: k } = useObrolan();
   const [tab, setTab] = React.useState(tabAwal);
   const [galat, setGalat] = React.useState<string | null>(null);
-  const [cabut, setCabut] = React.useState<string | null>(null);
   const [blokir, setBlokir] = React.useState<Array<{ id: string; nama: string; peran: string }> | null>(null);
-  const [sandi, setSandi] = React.useState('');
-  const [sandi2, setSandi2] = React.useState('');
-  const [sandiPulih, setSandiPulih] = React.useState('');
   const [proses, setProses] = React.useState<string | null>(null);
   const [berhasil, setBerhasil] = React.useState<string | null>(null);
 
@@ -1597,7 +1547,6 @@ export function PengaturanObrolan({ open, onOpenChange, tab: tabAwal = 'perangka
     setTab(tabAwal);
     setGalat(null);
     setBerhasil(null);
-    void mesin.muatPerangkat().catch(() => {});
     mesin
       .daftarBlokir()
       .then(setBlokir)
@@ -1618,8 +1567,6 @@ export function PengaturanObrolan({ open, onOpenChange, tab: tabAwal = 'perangka
     }
   };
 
-  const sandiLemah = sandi.length > 0 && sandi.length < 10;
-  const sandiBeda = sandi2.length > 0 && sandi !== sandi2;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title="Pengaturan obrolan" size="md">
@@ -1629,99 +1576,6 @@ export function PengaturanObrolan({ open, onOpenChange, tab: tabAwal = 'perangka
         value={tab}
         onValueChange={(v) => (setTab(v), setGalat(null), setBerhasil(null))}
         items={[
-          {
-            value: 'perangkat',
-            label: 'Perangkat',
-            content: (
-              <div className="u-ob-atur">
-                <p className="u-ob-petunjuk">Setiap browser punya kunci enkripsi sendiri. Pesan baru dikunci untuk semua perangkat aktif. Cabut perangkat yang hilang atau tidak dipakai.</p>
-                {k.perangkatSaya.map((d) => (
-                  <div key={d.id} className="u-ob-baris">
-                    <span className="u-ob-avatar-grup" data-size="sm" aria-hidden>
-                      <Smartphone />
-                    </span>
-                    <span className="u-ob-baris-teks">
-                      <span className="u-ob-baris-nama">
-                        {d.nama}
-                        {d.id === k.perangkat && <Badge variant="success">Perangkat ini</Badge>}
-                      </span>
-                      <span className="u-ob-baris-sub">
-                        Sidik{' '}
-                        {d.sidik
-                          .slice(0, 16)
-                          .replace(/(.{4})/g, '$1 ')
-                          .trim()}{' '}
-                        · {d.terakhir_aktif ? terakhirAktif(d.terakhir_aktif) : `ditambahkan ${waktuSingkat(d.dibuat_at).toLowerCase()}`}
-                      </span>
-                    </span>
-                    <Button size="sm" variant="ghost" onClick={() => setCabut(d.id)}>
-                      {d.id === k.perangkat ? 'Keluar' : 'Cabut'}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ),
-          },
-          {
-            value: 'cadangan',
-            label: 'Cadangan kunci',
-            content: (
-              <div className="u-ob-atur">
-                <p className="u-ob-petunjuk">
-                  Kunci hanya ada di browser ini. Buat cadangan terenkripsi dengan sandi agar pesan lama tetap terbaca saat Anda pindah browser. Sandi tidak dikirim ke server; bila lupa, cadangan
-                  tidak bisa dibuka siapa pun.
-                </p>
-                <Alert variant={k.cadanganAda ? 'success' : 'warning'} icon={<KeyRound />}>
-                  {k.cadanganAda ? 'Cadangan kunci tersimpan.' : 'Belum ada cadangan kunci.'}
-                </Alert>
-                <form
-                  className="u-ob-atur-form"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (sandi.length < 10 || sandi !== sandi2) return;
-                    void jalan('cadangan', () => mesin.simpanCadanganKunci(sandi), 'Cadangan kunci disimpan.').then(() => (setSandi(''), setSandi2('')));
-                  }}
-                >
-                  <Field label="Sandi cadangan" description="Minimal 10 karakter, berbeda dari password SIAKAD." error={sandiLemah ? 'Sandi terlalu pendek.' : undefined}>
-                    <Input type="password" value={sandi} onChange={(e) => setSandi(e.target.value)} autoComplete="new-password" />
-                  </Field>
-                  <Field label="Ulangi sandi" error={sandiBeda ? 'Sandi tidak sama.' : undefined}>
-                    <Input type="password" value={sandi2} onChange={(e) => setSandi2(e.target.value)} autoComplete="new-password" />
-                  </Field>
-                  <div className="u-ob-atur-aksi">
-                    <Button type="submit" loading={proses === 'cadangan'} disabled={sandi.length < 10 || sandi !== sandi2}>
-                      {k.cadanganAda ? 'Perbarui cadangan' : 'Buat cadangan'}
-                    </Button>
-                    {k.cadanganAda && (
-                      <Button type="button" variant="ghost" loading={proses === 'hapus'} onClick={() => void jalan('hapus', () => mesin.hapusCadanganKunci(), 'Cadangan kunci dihapus.')}>
-                        Hapus cadangan
-                      </Button>
-                    )}
-                  </div>
-                </form>
-                {k.cadanganAda && (
-                  <form
-                    className="u-ob-atur-form"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      if (!sandiPulih) return;
-                      void jalan('pulih', () => mesin.pulihkan(sandiPulih), 'Kunci dipulihkan. Pesan lama sekarang terbaca di browser ini.').then(() => setSandiPulih(''));
-                    }}
-                  >
-                    <h4>Pulihkan di browser ini</h4>
-                    <Field label="Sandi cadangan">
-                      <Input type="password" value={sandiPulih} onChange={(e) => setSandiPulih(e.target.value)} autoComplete="current-password" />
-                    </Field>
-                    <div className="u-ob-atur-aksi">
-                      <Button type="submit" variant="outline" loading={proses === 'pulih'} disabled={!sandiPulih}>
-                        Pulihkan kunci
-                      </Button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            ),
-          },
           {
             value: 'privasi',
             label: 'Privasi',
@@ -1756,9 +1610,8 @@ export function PengaturanObrolan({ open, onOpenChange, tab: tabAwal = 'perangka
                   </span>
                   <Switch checked={k.setelan.simpan_kirim} onCheckedChange={(v) => void jalan('setelan', () => mesin.simpanSetelan({ simpan_kirim: v }))} />
                 </label>
-                <Alert variant="warning" icon={<FolderDown />}>
-                  Salinan di Berkas saya tidak terenkripsi end-to-end: berkas didekripsi di browser ini lalu disimpan seperti berkas biasa (ikut aturan dan enkripsi manajer berkas). Lampiran di obrolan
-                  tetap terenkripsi end-to-end.
+                <Alert variant="info" icon={<FolderDown />}>
+                  Salinan di Berkas saya mengikuti aturan dan enkripsi manajer berkas (ruang pribadi Anda).
                 </Alert>
                 <p className="u-ob-petunjuk">Berkas dari orang lain bisa disimpan lewat tombol Simpan ke Berkas saya pada lampiran atau menu pesan.</p>
               </div>
@@ -1797,21 +1650,6 @@ export function PengaturanObrolan({ open, onOpenChange, tab: tabAwal = 'perangka
             ),
           },
         ]}
-      />
-      <ConfirmDialog
-        open={Boolean(cabut)}
-        onOpenChange={(o) => !o && setCabut(null)}
-        title={cabut === k.perangkat ? 'Keluarkan browser ini dari obrolan?' : 'Cabut perangkat ini?'}
-        description={
-          cabut === k.perangkat
-            ? 'Kunci di browser ini dihapus dan pesan lama tidak terbaca lagi di sini kecuali dipulihkan dari cadangan. Browser ini akan mendapat kunci baru.'
-            : 'Perangkat itu tidak bisa membaca pesan baru lagi. Kontak Anda akan melihat bahwa kunci keamanan Anda berubah.'
-        }
-        confirmLabel={cabut === k.perangkat ? 'Keluarkan browser ini' : 'Cabut perangkat'}
-        onConfirm={async () => {
-          if (cabut) await mesin.cabutPerangkat(cabut);
-          setCabut(null);
-        }}
       />
     </Dialog>
   );
@@ -1932,7 +1770,7 @@ function PanelObrolan({
             </Button>
           </Tooltip>
           <Tooltip content="Pengaturan obrolan">
-            <Button variant="ghost" size="sm" iconOnly aria-label="Pengaturan obrolan" onClick={() => setAtur('perangkat')} disabled={k.status !== 'siap'}>
+            <Button variant="ghost" size="sm" iconOnly aria-label="Pengaturan obrolan" onClick={() => setAtur('privasi')} disabled={k.status !== 'siap'}>
               <Settings />
             </Button>
           </Tooltip>
@@ -1953,29 +1791,9 @@ function PanelObrolan({
             {k.galat}
           </Alert>
         )}
-        {k.sarankanPulihkan && (
-          <Alert
-            variant="info"
-            className="u-ob-sisi-alert"
-            icon={<KeyRound />}
-            title="Browser baru"
-            actions={
-              <>
-                <Button size="sm" onClick={() => setAtur('cadangan')}>
-                  Pulihkan kunci
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => mesin.abaikanPulihkan()}>
-                  Nanti
-                </Button>
-              </>
-            }
-          >
-            Pulihkan kunci dari cadangan agar pesan lama terbaca di sini.
-          </Alert>
-        )}
         <DaftarObrolan aktif={aktif} onPilih={setAktif} />
         <p className="u-ob-kaki">
-          <Lock aria-hidden /> Terenkripsi end-to-end
+          <Lock aria-hidden /> Terenkripsi di server UNIPO
         </p>
       </div>
     );
@@ -1993,7 +1811,7 @@ function PanelObrolan({
               className="u-ob-kosong"
               icon={<ShieldCheck />}
               title="Obrolan aman SIAKAD"
-              description="Pilih obrolan atau mulai yang baru. Pesan dan lampiran dienkripsi di perangkat Anda; server hanya menyimpan data yang tidak bisa dibaca."
+              description="Pilih obrolan atau mulai yang baru. Pesan dan lampiran disimpan terenkripsi di server UNIPO. Hanya anggota obrolan yang bisa membukanya."
               actions={
                 <Button variant="outline" onClick={() => setLayar('baru')} disabled={k.status !== 'siap'}>
                   <MessageSquarePlus aria-hidden /> Obrolan baru
@@ -2003,7 +1821,7 @@ function PanelObrolan({
           )}
         </div>
       </div>
-      <PengaturanObrolan open={atur !== null} onOpenChange={(o) => !o && setAtur(null)} tab={atur ?? 'perangkat'} />
+      <PengaturanObrolan open={atur !== null} onOpenChange={(o) => !o && setAtur(null)} tab={atur ?? 'privasi'} />
     </div>
   );
 }
