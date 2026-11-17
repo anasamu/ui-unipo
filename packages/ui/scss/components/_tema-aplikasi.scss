@@ -307,3 +307,158 @@
   color: var(--u-foreground);
   font-size: var(--u-text-xs);
 }
+
+// Pratinjau mini Sidebar & Header (PengaturanTema)
+.u-tema-kelompok {
+  margin-top: 0.25rem;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  font-weight: 600;
+}
+.u-tema-kerangka-pratinjau {
+  --tkp-sb: var(--u-surface);
+  --tkp-hd: var(--u-background);
+  --tkp-garis: var(--u-border);
+  --tkp-isi: color-mix(in oklab, var(--u-foreground) 14%, transparent);
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  height: 8rem;
+  overflow: hidden;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius);
+  background: var(--u-background);
+  i {
+    display: block;
+    border-radius: 3px;
+  }
+  &[data-mini] {
+    grid-template-columns: 1.75rem 1fr;
+  }
+  &[data-sb='gelap'] {
+    --tkp-sb: #171a21;
+  }
+  &[data-sb='utama'] {
+    --tkp-sb: var(--u-primary);
+  }
+  &[data-sb='menyatu'] {
+    --tkp-sb: var(--u-background);
+  }
+  &[data-hd='utama'] {
+    --tkp-hd: var(--u-primary);
+  }
+}
+.u-tkp-sb {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border-inline-end: 1px solid var(--tkp-garis);
+  background: var(--tkp-sb);
+  i {
+    height: 6px;
+    background: color-mix(in oklab, currentColor 22%, transparent);
+    color: var(--u-foreground);
+    [data-sb='gelap'] &,
+    [data-sb='utama'] & {
+      color: #fff;
+    }
+  }
+  .u-tkp-logo {
+    height: 10px;
+    width: 70%;
+    margin-bottom: 4px;
+    background: var(--u-primary);
+    [data-sb='utama'] & {
+      background: #fff;
+    }
+  }
+  .u-tkp-pin {
+    height: 6px;
+    width: 55%;
+    background: var(--u-secondary);
+  }
+  i[data-aktif] {
+    background: color-mix(in oklab, var(--u-primary) 35%, transparent);
+    [data-aktif='garis'] & {
+      background: none;
+      box-shadow: inset 2px 0 0 var(--u-primary);
+    }
+    [data-aktif='pil'] & {
+      background: var(--u-primary);
+      border-radius: 999px;
+    }
+  }
+}
+.u-tkp-kaki {
+  margin-top: auto;
+  height: 8px;
+  border-top: 1px solid var(--tkp-garis);
+}
+.u-tkp-utama {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.u-tkp-hd {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--tkp-garis);
+  background: var(--tkp-hd);
+  [data-ringkas] & {
+    height: 14px;
+  }
+  [data-hd='polos'] &,
+  [data-hd='utama'] & {
+    border-bottom-color: transparent;
+  }
+  [data-hd='bayang'] & {
+    border-bottom-color: transparent;
+    box-shadow: 0 2px 4px rgb(0 0 0 / 0.12);
+  }
+  i {
+    height: 5px;
+    background: color-mix(in oklab, var(--u-foreground) 25%, transparent);
+    [data-hd='utama'] & {
+      background: rgb(255 255 255 / 0.6);
+    }
+  }
+  .u-tkp-judul {
+    width: 18%;
+  }
+  .u-tkp-cari {
+    width: 22%;
+    height: 8px;
+    margin-inline-start: auto;
+    border: 1px solid var(--tkp-garis);
+    background: none;
+    &[data-tengah] {
+      width: 30%;
+      margin-inline: auto;
+    }
+  }
+  .u-tkp-ikon {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    &:first-of-type {
+      margin-inline-start: auto;
+    }
+  }
+  .u-tkp-cari + .u-tkp-ikon {
+    margin-inline-start: 0;
+  }
+}
+.u-tkp-isi {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 8px;
+  i {
+    height: 28px;
+    background: var(--tkp-isi);
+    border-radius: 4px;
+  }
+}

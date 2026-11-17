@@ -216,12 +216,14 @@ export interface MenuProps {
   items: MenuEntry[];
   align?: 'start' | 'center' | 'end';
   side?: 'top' | 'bottom' | 'left' | 'right';
+  /** Buka saat kursor di atas pemicu (mis. sub menu sidebar mini). */
+  openOnHover?: boolean;
 }
 /** Menu tarik-turun untuk aksi baris tabel, profil pengguna, dsb. */
-export function Menu({ trigger, items, align = 'end', side = 'bottom' }: MenuProps) {
+export function Menu({ trigger, items, align = 'end', side = 'bottom', openOnHover }: MenuProps) {
   return (
     <BaseMenu.Root>
-      <BaseMenu.Trigger render={trigger} />
+      <BaseMenu.Trigger render={trigger} openOnHover={openOnHover} delay={openOnHover ? 80 : undefined} />
       <BaseMenu.Portal>
         <BaseMenu.Positioner className="u-popup-positioner" align={align} side={side} sideOffset={6}>
           <BaseMenu.Popup className="u-menu">

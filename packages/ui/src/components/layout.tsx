@@ -56,7 +56,31 @@ export interface SidebarProps {
    * Isi `false` agar setiap sub-menu bisa dibuka bersamaan.
    */
   accordion?: boolean;
+  /**
+   * Kunci localStorage untuk mengingat sub menu yang terbuka (mis. "unipo.sidebar.bauk"). Kosong = tidak diingat.
+   */
+  ingat?: string;
+  /** Kaki sidebar yang selalu tampil di bawah (juga saat mode ikon), tidak ikut gulir: status, versi, hak cipta. */
+  footerTetap?: React.ReactNode;
   className?: string;
+}
+
+function bacaIngat(kunci?: string): string | null {
+  if (!kunci) return null;
+  try {
+    return localStorage.getItem(kunci);
+  } catch {
+    return null;
+  }
+}
+function simpanIngat(kunci: string | undefined, nilai: string | null) {
+  if (!kunci) return;
+  try {
+    if (nilai) localStorage.setItem(kunci, nilai);
+    else localStorage.removeItem(kunci);
+  } catch {
+    /* penyimpanan diblokir */
+  }
 }
 
 function containsActive(item: NavItem, key?: string): boolean {
@@ -118,12 +142,13 @@ function NavTree({
       <Menu
         side="right"
         align="start"
+        openOnHover
         trigger={
           <button type="button" className="u-nav-item" data-active={dataFlag(childActive)} aria-label={typeof item.label === 'string' ? item.label : undefined}>
             <span className="u-nav-icon">{item.icon}</span>
           </button>
         }
-        items={[{ type: 'label', label: item.label }, ...item.children.map((c) => ({ label: c.label, href: c.href, onSelect: c.onClick }))]}
+        items={[{ type: 'label', label: item.label }, ...item.children.map((c) => ({ label: c.label, href: c.href, onSelect: c.onClick, icon: c.key === activeKey ? <span className="u-nav-flyout-aktif" aria-hidden /> : undefined }))]}
       />
     );
   }
@@ -146,16 +171,20 @@ function NavTree({
 }
 
 /** Sidebar aplikasi dasbor (SIAKAD, Pustikom, LMS, fakultas): grup menu, sub-menu, lencana, profil, mode rail. */
-export function Sidebar({ brand, groups, activeKey, header, footer, user, collapsed, onCollapsedChange, renderLink, accordion = true, className }: SidebarProps) {
+export function Sidebar({ brand, groups, activeKey, header, footer, user, collapsed, onCollapsedChange, renderLink, accordion = true, ingat, footerTetap, className }: SidebarProps) {
   // Mode accordion: simpan satu kunci sub-menu yang terbuka. Awalnya sub-menu yang memuat halaman aktif,
   // dan ikut berpindah saat halaman aktif pindah ke sub-menu lain.
   const induk = (key?: string) => groups.flatMap((g) => g.items).find((it) => it.children?.length && containsActive(it, key))?.key ?? null;
   // `indukAktif` ikut dihitung ulang saat `groups` berubah, karena menu sering baru lengkap setelah peran pengguna dimuat
   // (sub menu halaman aktif harus tetap terbuka walau grupnya muncul belakangan).
   const indukAktif = induk(activeKey);
-  const [openKey, setOpenKey] = React.useState<string | null>(indukAktif);
+  const [openKey, setOpenKeyDalam] = React.useState<string | null>(() => indukAktif ?? bacaIngat(ingat));
+  const setOpenKey = (k: string | null) => {
+    setOpenKeyDalam(k);
+    simpanIngat(ingat, k);
+  };
   React.useEffect(() => {
-    if (indukAktif) setOpenKey(indukAktif);
+    if (indukAktif) setOpenKeyDalam(indukAktif);
   }, [activeKey, indukAktif]);
   return (
     <aside className={cn('u-sidebar', className)} data-collapsed={dataFlag(collapsed)}>
@@ -188,6 +217,7 @@ export function Sidebar({ brand, groups, activeKey, header, footer, user, collap
         ))}
       </nav>
       {footer && !collapsed && <div className="u-sidebar-footer">{footer}</div>}
+      {footerTetap && <div className="u-sidebar-tetap">{footerTetap}</div>}
       {user && (
         <div className="u-sidebar-user">
           <Menu
@@ -222,12 +252,14 @@ export interface AppShellProps {
   topbar?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  /** Atribut data tambahan di elemen akar (mis. gaya bilah atas dari tema). */
+  atribut?: Record<`data-${string}`, string | undefined>;
 }
 /** Kerangka halaman dasbor: sidebar tetap di desktop, laci (sheet) di ponsel. */
-export function AppShell({ sidebar, topbar, children, className }: AppShellProps) {
+export function AppShell({ sidebar, topbar, children, className, atribut }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   return (
-    <div className={cn('u-app-shell', className)} data-collapsed={dataFlag(sidebar.props.collapsed)}>
+    <div className={cn('u-app-shell', className)} data-collapsed={dataFlag(sidebar.props.collapsed)} {...atribut}>
       <div className="u-app-shell-sidebar">{sidebar}</div>
       <div className="u-app-shell-main">
         <header className="u-topbar">

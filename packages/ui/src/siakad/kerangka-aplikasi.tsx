@@ -1,15 +1,17 @@
 'use client';
 import * as React from 'react';
-import { Monitor, Moon, Search, Sun } from 'lucide-react';
+import { Monitor, Moon, Pin, PinOff, Search, Sun } from 'lucide-react';
 import { Button } from '../components/actions';
 import type { AkunPengguna, MenuAkunProps, TemaAkun } from '../components/akun';
 import { LogoAplikasi } from '../components/identity';
-import { AppShell, SearchTrigger, Sidebar, type NavGroup, type SidebarProps, type SidebarUser } from '../components/layout';
+import { AppShell, SearchTrigger, Sidebar, type NavGroup, type NavItem, type SidebarProps, type SidebarUser } from '../components/layout';
 import { Tooltip } from '../components/overlays';
 import { fiturDariMenu, labelPintasanCari, PencarianFitur, usePintasanCari, type ItemFitur } from '../components/pencarian-fitur';
 import { NavigasiBawah, type ItemNavigasiBawah } from '../components/platform';
 import { cn } from '../lib/cn';
-import { MenuAkunSiakad } from './akun';
+import { MenuAkunSiakad, useAkunSaya } from './akun';
+import { useOptionalSiakad } from './provider';
+import { useTemaAplikasi } from './tema-aplikasi';
 import { TombolBerkas, type TombolBerkasProps } from './berkas-cepat';
 import { TombolNotifikasi, type OpsiNotifikasi } from './notifikasi';
 import { ChatMengambang, TombolPesan } from './obrolan';
@@ -80,6 +82,16 @@ export interface KerangkaAplikasiProps {
   navBawah?: ItemNavigasiBawah[];
   /** Kunci aktif navigasi bawah. Bawaan bagian pertama activeKey. */
   navBawahAktif?: string;
+  /** Versi aplikasi di kaki sidebar, mis. dari package.json lewat `define` Vite (`__VERSI__`). */
+  versi?: string;
+  /** Status layanan API di kaki sidebar (GET /v1/health, tiap 60 detik saat tab terlihat). Bawaan true. */
+  statusApi?: boolean;
+  /** Bagian "Pintasan": menu yang paling sering dibuka pengguna ini (disimpan di browser), bisa disematkan. Bawaan true. */
+  pintasan?: boolean;
+  /** Kode aplikasi tema (/v1/tema) bila berbeda dari `kode`, mis. "api-portal". */
+  temaAplikasi?: string;
+  /** Lingkup tema, mis. kode fakultas untuk aplikasi fakultas. */
+  temaLingkup?: string;
   children: React.ReactNode;
   className?: string;
 }
@@ -139,12 +151,32 @@ export function KerangkaAplikasi({
   aksi,
   navBawah,
   navBawahAktif,
+  versi,
+  statusApi = true,
+  pintasan = true,
+  temaAplikasi,
+  temaLingkup,
   children,
   className,
 }: KerangkaAplikasiProps) {
-  const [rail, setRail] = React.useState(false);
-  const collapsed = collapsedProp ?? rail;
-  const setCollapsed = onCollapsedChange ?? setRail;
+  const siakad = useOptionalSiakad();
+  const temaQ = useTemaAplikasi(temaAplikasi ?? (kode === 'api' ? 'api-portal' : kode), temaLingkup, { enabled: Boolean(siakad) });
+  const t = tataKerangka(temaQ.data?.tata);
+  const kunciCiut = `unipo.sidebar.ciut.${kode}`;
+  const [rail, setRailDalam] = React.useState<boolean | null>(() => {
+    const v = baca(kunciCiut);
+    return v === null ? null : v === '1';
+  });
+  const railBawaan = t.sidebarMode === 'mini' || (t.sidebarMode === 'otomatis' && typeof window !== 'undefined' && window.innerWidth < 1280);
+  const collapsed = collapsedProp ?? rail ?? railBawaan;
+  const setCollapsed =
+    onCollapsedChange ??
+    ((v: boolean) => {
+      setRailDalam(v);
+      simpan(kunciCiut, v ? '1' : '0');
+    });
+  const pengguna = useAkunSaya({ foto: false }).data?.akun?.username ?? null;
+  const pin = usePintasanMenu(kode, pengguna, groups, activeKey, pintasan && t.sidebarPintasan);
   const [palet, setPalet] = React.useState(false);
 
   const navigasi = React.useCallback(
@@ -165,6 +197,27 @@ export function KerangkaAplikasi({
   const brand = renderLink ? renderLink({ key: '__beranda', label: nama ?? kode, href: beranda }, { ...brandProps, href: beranda }) : <a {...brandProps} href={beranda} />;
 
   const judulTampil = judul ?? cariLabel(groups, activeKey) ?? nama ?? kode;
+  const kelompokAktif = t.headerJudul === 'breadcrumb' && !subjudul ? cariKelompok(groups, activeKey) : undefined;
+  const sidebarKelas = cn(
+    t.sidebarGaya === 'gelap' && 'dark u-sb-gelap',
+    t.sidebarGaya === 'utama' && 'u-sb-utama',
+    t.sidebarGaya === 'menyatu' && 'u-sb-menyatu',
+    t.sidebarPadat !== 'normal' && `u-sb-${t.sidebarPadat}`,
+    `u-sb-aktif-${t.sidebarAktif}`,
+    t.sidebarLebar !== 'normal' && `u-sb-${t.sidebarLebar}`,
+  );
+  const groupsTampil: NavGroup[] =
+    collapsed && pin.items.length ? [{ label: 'Pintasan', items: pin.items.map((it) => ({ ...it, key: `__pin:${it.key}`, badge: '', children: undefined })) }, ...groups] : groups;
+  const cariIkonSaja = t.headerCari === 'ikon';
+  const cariEl =
+    cari !== false ? (
+      <>
+        {!cariIkonSaja && <SearchTrigger className="u-kerangka-cari" placeholder={opsiCari.placeholder ?? 'Cari fitur'} shortcut={labelPintasanCari()} onClick={bukaCari} />}
+        <Button variant="ghost" size="sm" iconOnly className="u-kerangka-cari-ikon" data-selalu={cariIkonSaja ? '' : undefined} aria-label="Cari fitur" onClick={bukaCari}>
+          <Search />
+        </Button>
+      </>
+    ) : null;
   const gelap = tema === 'gelap' || (tema === 'sistem' && typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches);
   const IkonTema = tema === 'sistem' ? Monitor : gelap ? Moon : Sun;
   const temaBerikut = tema ? URUTAN_TEMA[(URUTAN_TEMA.indexOf(tema) + 1) % URUTAN_TEMA.length]! : 'terang';
@@ -181,23 +234,42 @@ export function KerangkaAplikasi({
   return (
     <AppShell
       className={cn('u-kerangka-aplikasi', className)}
-      sidebar={<Sidebar brand={brand} groups={groups} activeKey={activeKey} header={sidebarHeader} footer={sidebarFooter} user={sidebarUser} collapsed={collapsed} onCollapsedChange={setCollapsed} renderLink={renderLink} />}
+      atribut={{ 'data-header-gaya': t.headerGaya, 'data-header-tinggi': t.headerTinggi, 'data-header-lengket': t.headerLengket ? undefined : 'tidak', 'data-cari': t.headerCari }}
+      sidebar={
+        <Sidebar
+          brand={brand}
+          groups={groupsTampil}
+          activeKey={activeKey}
+          header={
+            pin.items.length > 0 || sidebarHeader ? (
+              <>
+                {pin.items.length > 0 && <PintasanSidebar pin={pin} activeKey={activeKey} renderLink={renderLink} />}
+                {sidebarHeader}
+              </>
+            ) : undefined
+          }
+          footer={sidebarFooter}
+          user={sidebarUser}
+          collapsed={collapsed}
+          onCollapsedChange={setCollapsed}
+          renderLink={renderLink}
+          ingat={`unipo.sidebar.buka.${kode}`}
+          footerTetap={<KakiSidebar versi={versi} statusApi={statusApi} collapsed={collapsed} />}
+          className={sidebarKelas}
+        />
+      }
       topbar={
         <div className="u-kerangka-topbar">
-          <div className="u-kerangka-judul">
-            {subjudul && <small>{subjudul}</small>}
-            <span>{judulTampil}</span>
-          </div>
+          {t.headerJudul !== 'tanpa' && (
+            <div className="u-kerangka-judul">
+              {(subjudul ?? kelompokAktif) && <small>{subjudul ?? kelompokAktif}</small>}
+              <span>{judulTampil}</span>
+            </div>
+          )}
           {topbarKiri && <div className="u-kerangka-kiri">{topbarKiri}</div>}
+          {t.headerCari === 'tengah' && <div className="u-kerangka-cari-tengah">{cariEl}</div>}
           <div className="u-kerangka-aksi">
-            {cari !== false && (
-              <>
-                <SearchTrigger className="u-kerangka-cari" placeholder={opsiCari.placeholder ?? 'Cari fitur'} shortcut={labelPintasanCari()} onClick={bukaCari} />
-                <Button variant="ghost" size="sm" iconOnly className="u-kerangka-cari-ikon" aria-label="Cari fitur" onClick={bukaCari}>
-                  <Search />
-                </Button>
-              </>
-            )}
+            {t.headerCari !== 'tengah' && cariEl}
             {aksi}
             {notifikasi !== false && <TombolNotifikasi {...opsiNotif} onNavigasi={navigasi} />}
             {pesan !== false && <TombolPesan onBuka={opsiPesan.onBuka} />}
@@ -238,5 +310,275 @@ export function KerangkaAplikasi({
         />
       ) : null}
     </AppShell>
+  );
+}
+
+// ================================================================ tata kerangka dari tema aplikasi
+
+/** Pilihan tampilan sidebar dan bilah atas di `tata` tema aplikasi (PengaturanTema → Sidebar, Header). */
+export interface TataKerangka {
+  sidebarGaya: 'terang' | 'gelap' | 'utama' | 'menyatu';
+  sidebarMode: 'penuh' | 'mini' | 'otomatis';
+  sidebarPadat: 'rapat' | 'normal' | 'lega';
+  sidebarAktif: 'lembut' | 'garis' | 'pil';
+  sidebarPintasan: boolean;
+  sidebarLebar: 'sempit' | 'normal' | 'lebar';
+  headerGaya: 'polos' | 'garis' | 'bayang' | 'blur' | 'utama';
+  headerTinggi: 'ringkas' | 'normal';
+  headerCari: 'tengah' | 'kanan' | 'ikon';
+  headerLengket: boolean;
+  headerJudul: 'judul' | 'breadcrumb' | 'tanpa';
+}
+
+export const TATA_KERANGKA_BAWAAN: TataKerangka = {
+  sidebarGaya: 'terang',
+  sidebarMode: 'penuh',
+  sidebarPadat: 'normal',
+  sidebarAktif: 'lembut',
+  sidebarPintasan: true,
+  sidebarLebar: 'normal',
+  headerGaya: 'garis',
+  headerTinggi: 'normal',
+  headerCari: 'kanan',
+  headerLengket: true,
+  headerJudul: 'judul',
+};
+
+/** Kunci `tata` (snake_case, disimpan di /v1/tema) untuk tiap pilihan kerangka. */
+export const KUNCI_TATA_KERANGKA: Record<keyof TataKerangka, string> = {
+  sidebarGaya: 'sidebar_gaya',
+  sidebarMode: 'sidebar_mode',
+  sidebarPadat: 'sidebar_padat',
+  sidebarAktif: 'sidebar_aktif',
+  sidebarPintasan: 'sidebar_pintasan',
+  sidebarLebar: 'sidebar_lebar',
+  headerGaya: 'header_gaya',
+  headerTinggi: 'header_tinggi',
+  headerCari: 'header_cari',
+  headerLengket: 'header_lengket',
+  headerJudul: 'header_judul',
+};
+
+const PILIHAN_TATA: { [K in keyof TataKerangka]: ReadonlyArray<TataKerangka[K]> } = {
+  sidebarGaya: ['terang', 'gelap', 'utama', 'menyatu'],
+  sidebarMode: ['penuh', 'mini', 'otomatis'],
+  sidebarPadat: ['rapat', 'normal', 'lega'],
+  sidebarAktif: ['lembut', 'garis', 'pil'],
+  sidebarPintasan: [true, false],
+  sidebarLebar: ['sempit', 'normal', 'lebar'],
+  headerGaya: ['polos', 'garis', 'bayang', 'blur', 'utama'],
+  headerTinggi: ['ringkas', 'normal'],
+  headerCari: ['tengah', 'kanan', 'ikon'],
+  headerLengket: [true, false],
+  headerJudul: ['judul', 'breadcrumb', 'tanpa'],
+};
+
+/** Baca pilihan kerangka dari `tata` tema; nilai yang tidak dikenal memakai bawaan. */
+export function tataKerangka(tata?: Record<string, unknown> | null): TataKerangka {
+  const out = { ...TATA_KERANGKA_BAWAAN } as Record<string, unknown>;
+  for (const k of Object.keys(KUNCI_TATA_KERANGKA) as Array<keyof TataKerangka>) {
+    let v = tata?.[KUNCI_TATA_KERANGKA[k]];
+    if (v === 'ya' || v === '1' || v === 1) v = true;
+    if (v === 'tidak' || v === '0' || v === 0) v = false;
+    if ((PILIHAN_TATA[k] as ReadonlyArray<unknown>).includes(v)) out[k] = v;
+  }
+  return out as unknown as TataKerangka;
+}
+
+function cariKelompok(groups: NavGroup[], key?: string): string | undefined {
+  if (!key) return undefined;
+  for (const g of groups)
+    for (const it of g.items) {
+      const label = typeof g.label === 'string' ? g.label : undefined;
+      if (it.key === key) return label;
+      if (it.children?.some((c) => c.key === key)) return [label, it.labelTeks ?? (typeof it.label === 'string' ? it.label : '')].filter(Boolean).join(' › ');
+    }
+  return undefined;
+}
+
+function baca(kunci: string): string | null {
+  try {
+    return localStorage.getItem(kunci);
+  } catch {
+    return null;
+  }
+}
+function simpan(kunci: string, nilai: string) {
+  try {
+    localStorage.setItem(kunci, nilai);
+  } catch {
+    /* penyimpanan diblokir */
+  }
+}
+
+// ================================================================ Pintasan (menu yang sering dibuka)
+
+interface DataPintasan {
+  hitung: Record<string, number>;
+  sematan: string[];
+}
+
+export interface PintasanMenu {
+  items: Array<NavItem & { disematkan: boolean }>;
+  sematkan: (key: string) => void;
+  lepas: (key: string) => void;
+  bolehSematkan: (key?: string) => boolean;
+}
+
+function ratakanMenu(groups: NavGroup[]): NavItem[] {
+  const out: NavItem[] = [];
+  for (const g of groups)
+    for (const it of g.items) {
+      if (it.children?.length) out.push(...it.children.map((c) => ({ ...c, icon: c.icon ?? it.icon })));
+      else out.push(it);
+    }
+  return out.filter((x) => x.href && !x.disabled);
+}
+
+/**
+ * Menu yang paling sering dibuka pengguna ini di aplikasi ini (hitungan kunjungan di localStorage per aplikasi dan
+ * pengguna) ditambah yang disematkan. Maksimal 5; menu yang dibuka kurang dari 2 kali tidak ikut kecuali disematkan.
+ */
+export function usePintasanMenu(kode: string, pengguna: string | null, groups: NavGroup[], activeKey: string | undefined, aktif = true): PintasanMenu {
+  const kunci = `unipo.pintasan.${kode}.${pengguna ?? 'tamu'}`;
+  const [data, setData] = React.useState<DataPintasan>({ hitung: {}, sematan: [] });
+  React.useEffect(() => {
+    try {
+      const v = JSON.parse(baca(kunci) ?? 'null') as DataPintasan | null;
+      setData(v && typeof v === 'object' ? { hitung: v.hitung ?? {}, sematan: Array.isArray(v.sematan) ? v.sematan : [] } : { hitung: {}, sematan: [] });
+    } catch {
+      setData({ hitung: {}, sematan: [] });
+    }
+  }, [kunci]);
+  const ubah = React.useCallback(
+    (fn: (d: DataPintasan) => DataPintasan) =>
+      setData((d) => {
+        const baru = fn(d);
+        simpan(kunci, JSON.stringify(baru));
+        return baru;
+      }),
+    [kunci],
+  );
+  const semua = React.useMemo(() => ratakanMenu(groups), [groups]);
+  React.useEffect(() => {
+    if (!aktif || !activeKey || !semua.some((x) => x.key === activeKey)) return;
+    ubah((d) => ({ ...d, hitung: { ...d.hitung, [activeKey]: (d.hitung[activeKey] ?? 0) + 1 } }));
+  }, [activeKey, aktif, semua, ubah]);
+  const items = React.useMemo(() => {
+    if (!aktif) return [];
+    const byKey = new Map(semua.map((x) => [x.key, x]));
+    const sem = data.sematan.map((k) => byKey.get(k)).filter((x): x is NavItem => Boolean(x));
+    const sering = Object.entries(data.hitung)
+      .filter(([k, n]) => n >= 2 && !data.sematan.includes(k) && byKey.has(k))
+      .sort((a, b) => b[1] - a[1])
+      .map(([k]) => byKey.get(k)!);
+    return [...sem.map((x) => ({ ...x, disematkan: true })), ...sering.map((x) => ({ ...x, disematkan: false }))].slice(0, 5);
+  }, [aktif, semua, data]);
+  return {
+    items,
+    sematkan: (key) => ubah((d) => ({ ...d, sematan: [...d.sematan.filter((k) => k !== key), key].slice(-5) })),
+    lepas: (key) => ubah((d) => ({ hitung: { ...d.hitung, [key]: 0 }, sematan: d.sematan.filter((k) => k !== key) })),
+    bolehSematkan: (key) => Boolean(key) && semua.some((x) => x.key === key) && !data.sematan.includes(key!),
+  };
+}
+
+function PintasanSidebar({ pin, activeKey, renderLink }: { pin: PintasanMenu; activeKey?: string; renderLink?: SidebarProps['renderLink'] }) {
+  return (
+    <div className="u-pintasan-sb" aria-label="Pintasan">
+      <div className="u-pintasan-sb-judul">
+        <span>Pintasan</span>
+        {pin.bolehSematkan(activeKey) && (
+          <Tooltip content="Sematkan halaman ini ke pintasan">
+            <button type="button" className="u-pintasan-sb-pin" aria-label="Sematkan halaman ini" onClick={() => activeKey && pin.sematkan(activeKey)}>
+              <Pin />
+            </button>
+          </Tooltip>
+        )}
+      </div>
+      {pin.items.map((it) => {
+        const isi = (
+          <>
+            <span className="u-nav-icon">{it.icon}</span>
+            <span className="u-nav-label">{it.labelTeks ?? it.label}</span>
+          </>
+        );
+        const props = { className: 'u-nav-item', 'data-active': it.key === activeKey ? '' : undefined, 'data-depth': 0, children: isi };
+        return (
+          <div key={it.key} className="u-pintasan-sb-item">
+            {renderLink ? renderLink(it, { ...props, href: it.href }) : <a {...props} href={it.href} />}
+            <Tooltip content={it.disematkan ? 'Lepas dari pintasan' : 'Sembunyikan dari pintasan'}>
+              <button type="button" className="u-pintasan-sb-lepas" aria-label={`${it.disematkan ? 'Lepas' : 'Sembunyikan'} ${typeof it.label === 'string' ? it.label : ''} dari pintasan`} onClick={() => pin.lepas(it.key)}>
+                <PinOff />
+              </button>
+            </Tooltip>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ================================================================ Kaki sidebar: status API, versi, hak cipta
+
+type StatusApi = 'memeriksa' | 'normal' | 'lambat' | 'gangguan';
+
+/** Kesehatan API SIAKAD: GET /v1/health tiap `interval` ms saat tab terlihat. Jawaban 4xx tetap berarti server hidup. */
+export function useStatusApi(aktif = true, interval = 60_000): { status: StatusApi; ms: number | null } {
+  const siakad = useOptionalSiakad();
+  const [st, setSt] = React.useState<{ status: StatusApi; ms: number | null }>({ status: 'memeriksa', ms: null });
+  React.useEffect(() => {
+    if (!aktif || !siakad) return;
+    let batal = false;
+    const cek = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      const t0 = performance.now();
+      try {
+        await siakad.request({ method: 'GET', path: '/v1/health', public: true }, { maxRetries: 0, timeout: 15_000 });
+        const ms = Math.round(performance.now() - t0);
+        if (!batal) setSt({ status: ms > 2500 ? 'lambat' : 'normal', ms });
+      } catch (e) {
+        const ms = Math.round(performance.now() - t0);
+        const kode = Number((e as { status?: number })?.status);
+        if (!batal) setSt(kode && kode < 500 ? { status: ms > 2500 ? 'lambat' : 'normal', ms } : { status: 'gangguan', ms: null });
+      }
+    };
+    void cek();
+    const t = setInterval(() => void cek(), interval);
+    return () => {
+      batal = true;
+      clearInterval(t);
+    };
+  }, [aktif, siakad, interval]);
+  return st;
+}
+
+const LABEL_STATUS: Record<StatusApi, string> = { memeriksa: 'Memeriksa API', normal: 'API normal', lambat: 'API lambat', gangguan: 'API gangguan' };
+
+function KakiSidebar({ versi, statusApi, collapsed }: { versi?: string; statusApi: boolean; collapsed?: boolean }) {
+  const st = useStatusApi(statusApi);
+  const tahun = new Date().getFullYear();
+  const hak = `© ${tahun} Universitas Pohuwato`;
+  const label = LABEL_STATUS[st.status] + (st.ms != null ? ` · ${st.ms} ms` : '');
+  if (collapsed)
+    return (
+      <Tooltip content={[statusApi ? label : null, versi ? `Versi ${versi}` : null, hak].filter(Boolean).join(' · ')} side="right">
+        <span className="u-kaki-sb" data-ringkas="" tabIndex={0} aria-label={[statusApi ? label : null, versi ? `versi ${versi}` : null, hak].filter(Boolean).join(', ')}>
+          <span className="u-kaki-sb-titik" data-status={statusApi ? st.status : 'normal'} />
+        </span>
+      </Tooltip>
+    );
+  return (
+    <div className="u-kaki-sb">
+      <div className="u-kaki-sb-baris">
+        {statusApi && (
+          <span className="u-kaki-sb-status" title={label}>
+            <span className="u-kaki-sb-titik" data-status={st.status} />
+            {LABEL_STATUS[st.status]}
+          </span>
+        )}
+        {versi && <span className="u-kaki-sb-versi">v{versi.replace(/^v/, '')}</span>}
+      </div>
+      <small>{hak}</small>
+    </div>
   );
 }

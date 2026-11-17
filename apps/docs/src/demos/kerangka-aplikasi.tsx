@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { BarChart3, BookOpen, Building2, ClipboardList, FileBarChart, FolderOpen, House, Landmark, Mail, MessagesSquare, Package, Palette, Receipt, Settings, Store, Users, Wallet } from 'lucide-react';
+import { BarChart3, BookOpen, ClipboardList, FileBarChart, FolderOpen, House, Mail, MessagesSquare, Package, Palette, Receipt, Settings, Store, Users, Wallet } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, PencarianFitur, PintasanFitur, SearchTrigger, StatCard, fiturDariMenu, labelPintasanCari, type ItemFitur, type NavGroup, type TemaAkun } from 'unipo-ui';
 import { KerangkaAplikasi, TombolBerkas, TombolNotifikasi, TombolPesan } from 'unipo-ui/siakad';
 import { buatTema, PILIHAN_ELEVASI, type Elevasi } from 'unipo-ui/tema';
@@ -38,12 +38,17 @@ export const meta: DemoMeta = {
     ['onKeluar', '() => void', 'Aksi keluar di menu akun.'],
     ['topbarKiri / aksi', 'ReactNode', 'Pemilih prodi/periode di kiri, tombol tambahan sebelum notifikasi.'],
     ['sidebarHeader / sidebarFooter', 'ReactNode', 'Isi tambahan sidebar.'],
+    ['versi', 'string', 'Versi aplikasi di kaki sidebar, mis. dari package.json lewat define Vite (__VERSI__).'],
+    ['statusApi', 'boolean', 'Status layanan API di kaki sidebar (GET /v1/health tiap 60 detik saat tab terlihat). Bawaan true.'],
+    ['pintasan', 'boolean', 'Bagian Pintasan: menu yang paling sering dibuka pengguna ini (localStorage per aplikasi + pengguna), bisa disematkan/dilepas. Bawaan true.'],
+    ['temaAplikasi / temaLingkup', 'string', 'Kode aplikasi dan lingkup tema (/v1/tema) bila berbeda dari kode, untuk membaca variasi Sidebar dan Header.'],
     ['navBawah / navBawahAktif', 'ItemNavigasiBawah[] / string', 'Navigasi bawah di layar < 768 px.'],
   ],
   notes: [
     'Notifikasi: GET /v1/notif/ringkas tiap 60 detik selama tab terlihat (berhenti saat tab disembunyikan), GET /v1/notif/kotak saat panel dibuka, POST /v1/notif/kotak/{id}/baca saat diklik, POST /v1/notif/kotak/baca-semua untuk "Tandai semua dibaca". Galat 401/403/404 menyembunyikan ikon tanpa pesan galat.',
     'Pesan: memakai mesin obrolan yang sama dengan ChatMengambang (satu koneksi long-poll per halaman). Lencana = jumlah pesan belum dibaca di obrolan yang tidak dibisukan. Ikon tidak tampil bila token tidak punya scope obrolan.',
     'BFF aplikasi harus meneruskan /v1/notif dan /v1/obrolan ke SIAKAD, dan klien API aplikasi butuh scope notif:read, notif:write, obrolan:read, obrolan:write (daftar wajib di siakad app/Modules/Rbac/Data/scope_aplikasi.php).',
+    'Tampilan sidebar dan header (gaya, mode bawaan penuh/mini/otomatis, kepadatan, gaya menu aktif, pintasan, lebar; gaya header, tinggi, posisi cari, lengket, judul/jejak) diatur di PengaturanTema bagian Sidebar dan header, disimpan di tata (`sidebar_*`, `header_*`). Lapis kampus menjadi bawaan semua aplikasi.',
     'Efek bayangan diatur di Pengaturan tema (PengaturanTema → Efek bayangan) dan disimpan sebagai tema.elevasi lewat /v1/tema. Kekuatan bayangan tetap diatur pilihan Bayangan.',
   ],
 };
@@ -60,9 +65,16 @@ const MENU: NavGroup[] = [
   {
     label: 'Keuangan',
     items: [
-      { key: 'laporan', label: 'Laporan keuangan', icon: <FileBarChart />, href: '#laporan' },
-      { key: 'jurnal', label: 'Jurnal umum', icon: <BookOpen />, href: '#jurnal' },
-      { key: 'kas', label: 'Kas per unit', icon: <Landmark />, href: '#kas' },
+      {
+        key: 'akuntansi',
+        label: 'Akuntansi',
+        icon: <BookOpen />,
+        children: [
+          { key: 'laporan', label: 'Laporan keuangan', href: '#laporan' },
+          { key: 'jurnal', label: 'Jurnal umum', href: '#jurnal' },
+          { key: 'kas', label: 'Kas per unit', href: '#kas' },
+        ],
+      },
       { key: 'anggaran', label: 'Anggaran & realisasi', icon: <ClipboardList />, href: '#anggaran' },
     ],
   },
@@ -127,6 +139,7 @@ export function Lengkap() {
         tema={tema}
         onTema={setTema}
         onKeluar={() => alert('Keluar dari semua aplikasi')}
+        versi="1.45.0"
         navBawah={[
           { key: 'beranda', label: 'Beranda', icon: <House />, href: '#beranda' },
           { key: 'kasir', label: 'Kasir', icon: <Store />, href: '#kasir' },

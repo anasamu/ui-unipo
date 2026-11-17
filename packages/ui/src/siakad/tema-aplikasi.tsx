@@ -8,6 +8,7 @@ import { Select } from '../components/select';
 import { ConfirmDialog, useToast } from '../components/overlays';
 import { GalatApi } from './galat';
 import { invalidateSiakad, useOptionalSiakad, useSiakad, useSiakadQuery } from './provider';
+import { KUNCI_TATA_KERANGKA, tataKerangka, type TataKerangka } from './kerangka-aplikasi';
 import {
   FONT,
   NETRAL,
@@ -102,6 +103,8 @@ export interface PengaturanTemaProps<T extends Tata = Tata> {
   kunciCache?: string;
   /** Tampilkan pilihan mode terang/gelap bawaan (bawaan true). */
   denganMode?: boolean;
+  /** Bagian pengaturan Sidebar dan Header KerangkaAplikasi (disimpan di `tata`). Bawaan true. */
+  denganKerangka?: boolean;
   onTersimpan?: (data: DataTemaAplikasi<T>) => void;
   className?: string;
 }
@@ -119,7 +122,7 @@ interface Draf<T extends Tata> {
  *
  *   <PengaturanTema aplikasi="pmb" />
  */
-export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama, tataTambahan, pratinjau, kunciCache, denganMode = true, onTersimpan, className }: PengaturanTemaProps<T>) {
+export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama, tataTambahan, pratinjau, kunciCache, denganMode = true, denganKerangka = true, onTersimpan, className }: PengaturanTemaProps<T>) {
   const siakad = useSiakad();
   const toast = useToast();
   const q = useTemaAplikasi<T>(aplikasi, lingkup);
@@ -301,6 +304,7 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
                 </Field>
               )}
             </Card>
+            {denganKerangka && <PengaturanKerangka tata={tataBerlaku as Record<string, unknown>} ubah={(k, v) => ubahTata({ [k]: v } as Partial<T>)} />}
             {tataTambahan && <Card className="u-tema-kartu">{tataTambahan(tataBerlaku, ubahTata)}</Card>}
           </fieldset>
 
@@ -450,5 +454,76 @@ function RiwayatTema({ aplikasi, lingkup, kunciCache }: { aplikasi: string; ling
         </li>
       ))}
     </ol>
+  );
+}
+
+// ---------------------------------------------------------------- Sidebar & Header (KerangkaAplikasi)
+
+type OpsiPilihan<V extends string> = Array<{ value: V; label: string }>;
+
+function PratinjauKerangka({ t }: { t: TataKerangka }) {
+  return (
+    <div className="u-tema-kerangka-pratinjau" data-sb={t.sidebarGaya} data-hd={t.headerGaya} data-aktif={t.sidebarAktif} data-mini={t.sidebarMode === 'mini' ? '' : undefined} data-ringkas={t.headerTinggi === 'ringkas' ? '' : undefined} aria-hidden>
+      <span className="u-tkp-sb">
+        <i className="u-tkp-logo" />
+        {t.sidebarPintasan && <i className="u-tkp-pin" />}
+        <i data-aktif="" />
+        <i />
+        <i />
+        <i />
+        <span className="u-tkp-kaki" />
+      </span>
+      <span className="u-tkp-utama">
+        <span className="u-tkp-hd">
+          {t.headerJudul !== 'tanpa' && <i className="u-tkp-judul" />}
+          {t.headerCari !== 'ikon' && <i className="u-tkp-cari" data-tengah={t.headerCari === 'tengah' ? '' : undefined} />}
+          <i className="u-tkp-ikon" />
+          <i className="u-tkp-ikon" />
+        </span>
+        <span className="u-tkp-isi">
+          <i />
+          <i />
+        </span>
+      </span>
+    </div>
+  );
+}
+
+function PengaturanKerangka({ tata, ubah }: { tata: Record<string, unknown>; ubah: (kunci: string, nilai: unknown) => void }) {
+  const t = tataKerangka(tata);
+  const set = <K extends keyof TataKerangka>(k: K, v: TataKerangka[K]) => ubah(KUNCI_TATA_KERANGKA[k], typeof v === 'boolean' ? (v ? 'ya' : 'tidak') : v);
+  const seg = <K extends keyof TataKerangka>(k: K, label: string, opsi: OpsiPilihan<string>, keterangan?: string) => (
+    <Field label={label} description={keterangan}>
+      <SegmentedControl fullWidth value={String(typeof t[k] === 'boolean' ? (t[k] ? 'ya' : 'tidak') : t[k])} onValueChange={(v) => set(k, (v === 'ya' ? true : v === 'tidak' ? false : v) as TataKerangka[K])} options={opsi} aria-label={label} />
+    </Field>
+  );
+  return (
+    <Card className="u-tema-kartu">
+      <div className="u-tema-baris">
+        <span className="u-label">Sidebar dan header</span>
+      </div>
+      <PratinjauKerangka t={t} />
+      <div className="u-tema-kelompok">Sidebar</div>
+      {seg('sidebarGaya', 'Gaya', [{ value: 'terang', label: 'Latar halus' }, { value: 'gelap', label: 'Gelap' }, { value: 'utama', label: 'Warna utama' }, { value: 'menyatu', label: 'Menyatu' }])}
+      <div className="u-tema-dua">
+        {seg('sidebarMode', 'Mode bawaan', [{ value: 'penuh', label: 'Penuh' }, { value: 'mini', label: 'Mini' }, { value: 'otomatis', label: 'Otomatis' }], 'Otomatis = mini di layar < 1280 px')}
+        {seg('sidebarPadat', 'Kepadatan', [{ value: 'rapat', label: 'Rapat' }, { value: 'normal', label: 'Normal' }, { value: 'lega', label: 'Lega' }])}
+      </div>
+      <div className="u-tema-dua">
+        {seg('sidebarAktif', 'Menu aktif', [{ value: 'lembut', label: 'Latar lembut' }, { value: 'garis', label: 'Garis' }, { value: 'pil', label: 'Pil' }])}
+        {seg('sidebarLebar', 'Lebar', [{ value: 'sempit', label: 'Sempit' }, { value: 'normal', label: 'Normal' }, { value: 'lebar', label: 'Lebar' }])}
+      </div>
+      {seg('sidebarPintasan', 'Pintasan menu sering dibuka', [{ value: 'ya', label: 'Tampilkan' }, { value: 'tidak', label: 'Sembunyikan' }])}
+      <div className="u-tema-kelompok">Header</div>
+      {seg('headerGaya', 'Gaya', [{ value: 'polos', label: 'Polos' }, { value: 'garis', label: 'Garis' }, { value: 'bayang', label: 'Berbayang' }, { value: 'blur', label: 'Blur' }, { value: 'utama', label: 'Warna utama' }])}
+      <div className="u-tema-dua">
+        {seg('headerTinggi', 'Tinggi', [{ value: 'ringkas', label: 'Ringkas' }, { value: 'normal', label: 'Normal' }])}
+        {seg('headerLengket', 'Saat digulir', [{ value: 'ya', label: 'Tetap di atas' }, { value: 'tidak', label: 'Ikut tergulir' }])}
+      </div>
+      <div className="u-tema-dua">
+        {seg('headerCari', 'Kotak cari', [{ value: 'tengah', label: 'Tengah' }, { value: 'kanan', label: 'Kanan' }, { value: 'ikon', label: 'Ikon' }])}
+        {seg('headerJudul', 'Judul halaman', [{ value: 'judul', label: 'Judul' }, { value: 'breadcrumb', label: 'Jejak' }, { value: 'tanpa', label: 'Tanpa' }])}
+      </div>
+    </Card>
   );
 }

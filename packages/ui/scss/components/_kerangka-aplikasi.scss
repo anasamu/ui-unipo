@@ -796,3 +796,286 @@
 .u-berkas-cepat-tab {
   margin-top: 0.5rem;
 }
+
+// ================================================================ Sidebar kerangka: pintasan, kaki tetap, variasi tema
+.u-sidebar-toggle:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+.u-nav-flyout-aktif {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: var(--u-primary);
+}
+
+// Pintasan (menu yang sering dibuka)
+.u-pintasan-sb {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
+  border-bottom: 1px solid var(--u-border);
+}
+.u-pintasan-sb-judul {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 1.5rem;
+  padding: 0 0.125rem 0.25rem 0.625rem;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  font-weight: 600;
+}
+.u-pintasan-sb-pin,
+.u-pintasan-sb-lepas {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--u-muted-foreground);
+  cursor: pointer;
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  &:hover {
+    background: var(--u-hover);
+    color: var(--u-foreground);
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+.u-pintasan-sb-item {
+  position: relative;
+  .u-pintasan-sb-lepas {
+    position: absolute;
+    top: 50%;
+    right: 0.25rem;
+    opacity: 0;
+    transform: translateY(-50%);
+    transition: opacity var(--u-duration-fast);
+  }
+  &:hover .u-pintasan-sb-lepas,
+  .u-pintasan-sb-lepas:focus-visible {
+    opacity: 1;
+  }
+}
+
+// Kaki sidebar tetap: status API, versi, hak cipta. Tidak ikut gulir.
+.u-sidebar-tetap {
+  flex: none;
+  padding: 0.625rem 0.875rem 0.75rem;
+  border-top: 1px solid var(--u-border);
+  .u-sidebar[data-collapsed] & {
+    display: grid;
+    place-items: center;
+    padding-inline: 0.5rem;
+  }
+}
+.u-kaki-sb {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  small {
+    font-size: 0.6875rem;
+  }
+  &[data-ringkas] {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    cursor: default;
+    &:focus-visible {
+      @include focus-ring;
+    }
+  }
+}
+.u-kaki-sb-baris {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.u-kaki-sb-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--u-foreground);
+  font-weight: 500;
+}
+.u-kaki-sb-titik {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--u-muted-foreground);
+  &[data-status='normal'] {
+    background: var(--u-success);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--u-success) 18%, transparent);
+  }
+  &[data-status='lambat'] {
+    background: var(--u-warning);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--u-warning) 18%, transparent);
+  }
+  &[data-status='gangguan'] {
+    background: var(--u-danger);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--u-danger) 18%, transparent);
+  }
+}
+.u-kaki-sb-versi {
+  font-family: var(--u-font-mono);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+// ---- variasi sidebar (PengaturanTema → Sidebar)
+.u-sidebar.u-sb-gelap {
+  --u-sidebar-bg: var(--u-background);
+  color: var(--u-foreground);
+  border-inline-end-color: var(--u-border);
+}
+.u-sidebar.u-sb-utama {
+  --u-sidebar-bg: var(--u-primary);
+  --u-foreground: var(--u-primary-foreground);
+  --u-muted-foreground: color-mix(in oklab, var(--u-primary-foreground) 72%, transparent);
+  --u-hover: color-mix(in oklab, var(--u-primary-foreground) 12%, transparent);
+  --u-active: color-mix(in oklab, var(--u-primary-foreground) 18%, transparent);
+  --u-border: color-mix(in oklab, var(--u-primary-foreground) 16%, transparent);
+  color: var(--u-primary-foreground);
+  border-inline-end-color: transparent;
+  .u-nav-item {
+    color: color-mix(in oklab, var(--u-primary-foreground) 88%, transparent);
+    &[data-active] {
+      background: color-mix(in oklab, var(--u-primary-foreground) 18%, transparent);
+      color: var(--u-primary-foreground);
+      &::before {
+        background: var(--u-primary-foreground);
+      }
+      .u-nav-icon {
+        color: var(--u-primary-foreground);
+      }
+    }
+  }
+  .u-nav-icon {
+    color: color-mix(in oklab, var(--u-primary-foreground) 80%, transparent);
+  }
+  .u-app-logo-tagline,
+  .u-app-logo-name {
+    color: inherit;
+  }
+}
+.u-sidebar.u-sb-menyatu {
+  --u-sidebar-bg: var(--u-background);
+  border-inline-end-color: transparent;
+}
+.u-sidebar.u-sb-rapat {
+  .u-nav-item {
+    height: 2rem;
+  }
+  .u-nav-group + .u-nav-group {
+    margin-top: 0.75rem;
+  }
+}
+.u-sidebar.u-sb-lega {
+  .u-nav-item {
+    height: 2.5rem;
+  }
+  .u-nav-group + .u-nav-group {
+    margin-top: 1.5rem;
+  }
+}
+.u-sidebar.u-sb-sempit:not([data-collapsed]) {
+  --u-sidebar-w: 15rem;
+}
+.u-sidebar.u-sb-lebar:not([data-collapsed]) {
+  --u-sidebar-w: 18.5rem;
+}
+// Gaya item aktif
+.u-sidebar.u-sb-aktif-garis .u-nav-item[data-active] {
+  background: none;
+  color: var(--u-primary);
+}
+.u-sidebar.u-sb-aktif-pil .u-nav-item[data-active] {
+  background: var(--u-primary);
+  color: var(--u-primary-foreground);
+  &::before {
+    display: none;
+  }
+  .u-nav-icon {
+    color: inherit;
+  }
+}
+.u-sidebar.u-sb-utama.u-sb-aktif-pil .u-nav-item[data-active] {
+  background: var(--u-primary-foreground);
+  color: var(--u-primary);
+}
+
+// ---- variasi bilah atas (PengaturanTema → Header)
+.u-kerangka-aplikasi {
+  &[data-header-gaya='polos'] .u-topbar {
+    border-bottom-color: transparent;
+    background: var(--u-background);
+    backdrop-filter: none;
+  }
+  &[data-header-gaya='bayang'] .u-topbar {
+    border-bottom-color: transparent;
+    background: var(--u-background);
+    box-shadow: var(--u-shadow-sm);
+  }
+  &[data-header-gaya='blur'] .u-topbar {
+    border-bottom-color: color-mix(in oklab, var(--u-border) 50%, transparent);
+    background: color-mix(in oklab, var(--u-background) 72%, transparent);
+    backdrop-filter: saturate(1.6) blur(14px);
+  }
+  &[data-header-gaya='utama'] .u-topbar {
+    --u-foreground: var(--u-primary-foreground);
+    --u-muted-foreground: color-mix(in oklab, var(--u-primary-foreground) 75%, transparent);
+    --u-hover: color-mix(in oklab, var(--u-primary-foreground) 12%, transparent);
+    border-bottom-color: transparent;
+    background: var(--u-primary);
+    color: var(--u-primary-foreground);
+    backdrop-filter: none;
+    .u-search-trigger {
+      border-color: color-mix(in oklab, var(--u-primary-foreground) 25%, transparent);
+      background: color-mix(in oklab, var(--u-primary-foreground) 12%, transparent);
+      color: color-mix(in oklab, var(--u-primary-foreground) 85%, transparent);
+    }
+    .u-button[data-variant='ghost'] {
+      color: var(--u-primary-foreground);
+    }
+  }
+  &[data-header-tinggi='ringkas'] .u-topbar {
+    min-height: 3rem;
+    padding-block: 0.25rem;
+  }
+  &[data-header-lengket='tidak'] .u-topbar {
+    position: relative;
+  }
+  &[data-cari='ikon'] .u-kerangka-cari-ikon {
+    display: inline-flex !important;
+  }
+}
+.u-kerangka-cari-tengah {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+  .u-kerangka-cari {
+    width: min(100%, 28rem);
+    margin: 0;
+  }
+}
+@media (max-width: 1023px) {
+  .u-kerangka-cari-tengah {
+    flex: none;
+    margin-inline-start: auto;
+  }
+}
