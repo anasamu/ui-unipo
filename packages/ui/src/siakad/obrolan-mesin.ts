@@ -191,6 +191,16 @@ function galatTeks(e: unknown): string {
   return x.message || 'Terjadi kesalahan.';
 }
 
+/** Pesan urut naik menurut id server; pesan yang masih dikirim (id 0) di akhir. */
+function urutId(l: PesanObrolan[]): PesanObrolan[] {
+  return [...l].sort((a, b) => (a.id || Number.MAX_SAFE_INTEGER) - (b.id || Number.MAX_SAFE_INTEGER));
+}
+
+/** Id pesan terbesar yang sudah tersimpan di server (untuk tanda dibaca dan memuat pesan baru). */
+function idTerbesar(l: PesanObrolan[]): number {
+  return l.reduce((m, p) => (p.id > m ? p.id : m), 0);
+}
+
 export class MesinObrolan {
   private s: KeadaanObrolan = AWAL;
   private pendengar = new Set<() => void>();
@@ -447,7 +457,8 @@ export class MesinObrolan {
     this.setPesan(id, (x) => ({ ...x, memuat: true }));
     try {
       const r = await this.req<{ pesan: PesanServer[]; lagi: boolean }>('GET', `/ruang/${id}/pesan`, { query: { perangkat: this.kunci?.id, limit: 50 } });
-      const daftar = await Promise.all([...r.pesan].reverse().map((p) => this.buka(id, p)));
+      // Urut naik menurut id (server bisa mengirim urutan mana pun).
+      const daftar = urutId(await Promise.all(r.pesan.map((p) => this.buka(id, p))));
       this.setPesan(id, () => ({ daftar, lagi: r.lagi, dimuat: true, memuat: false }));
     } catch (e) {
       this.setPesan(id, (x) => ({ ...x, memuat: false }));
@@ -462,8 +473,8 @@ export class MesinObrolan {
     this.setPesan(id, (y) => ({ ...y, memuat: true }));
     try {
       const r = await this.req<{ pesan: PesanServer[]; lagi: boolean }>('GET', `/ruang/${id}/pesan`, { query: { perangkat: this.kunci?.id, sebelum: tertua, limit: 50 } });
-      const lama = await Promise.all([...r.pesan].reverse().map((p) => this.buka(id, p)));
-      this.setPesan(id, (y) => ({ ...y, daftar: [...lama, ...y.daftar], lagi: r.lagi, memuat: false }));
+      const lama = await Promise.all(r.pesan.map((p) => this.buka(id, p)));
+      this.setPesan(id, (y) => ({ ...y, daftar: urutId([...lama, ...y.daftar.filter((q) => !lama.some((l) => l.uuid === q.uuid))]), lagi: r.lagi, memuat: false }));
     } catch {
       this.setPesan(id, (y) => ({ ...y, memuat: false }));
     }
@@ -472,7 +483,7 @@ export class MesinObrolan {
   private async muatBaru(id: string) {
     const x = this.s.pesan[id];
     if (!x?.dimuat) return;
-    const terbaru = [...x.daftar].reverse().find((p) => p.id > 0)?.id ?? 0;
+    const terbaru = idTerbesar(x.daftar);
     const r = await this.req<{ pesan: PesanServer[]; lagi: boolean }>('GET', `/ruang/${id}/pesan`, { query: { perangkat: this.kunci?.id, setelah: terbaru, limit: 200 } });
     if (!r.pesan.length) return;
     const baru = await Promise.all(r.pesan.map((p) => this.buka(id, p)));
@@ -722,7 +733,7 @@ export class MesinObrolan {
     const r = this.s.ruang[ruangId];
     const x = this.s.pesan[ruangId];
     if (!r || !x) return;
-    const terakhir = [...x.daftar].reverse().find((p) => p.id > 0)?.id ?? 0;
+    const terakhir = idTerbesar(x.daftar);
     if (terakhir <= r.dibaca_sampai && r.belum_dibaca === 0) return;
     this.pasangRuang({ ...r, dibaca_sampai: Math.max(terakhir, r.dibaca_sampai), belum_dibaca: 0 });
     clearTimeout(this.bacaTimer.get(ruangId));
