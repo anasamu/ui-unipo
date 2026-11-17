@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { ArrowUp, ChevronLeft, ChevronRight, Clock3, Mail, MapPin, Megaphone, MessageCircle, Phone, Siren, X } from 'lucide-react';
+import { ArrowUp, ChevronLeft, ChevronRight, CircleCheck, Clock3, Info, Mail, MapPin, Megaphone, MessageCircle, Phone, Siren, Wrench, X } from 'lucide-react';
 import { cn, dataFlag } from '../lib/cn';
 import { SocialLinks } from './landing';
 import type { NavbarColumn, NavbarLink, NavbarProps } from './navbar';
@@ -235,8 +235,12 @@ export interface ItemPita {
   id: string | number;
   title: React.ReactNode;
   href?: string;
-  /** biasa | penting | darurat (warna dan ikon). */
-  priority?: 'biasa' | 'penting' | 'darurat' | string;
+  /** biasa | penting | darurat | info | pemeliharaan | sukses (warna dan ikon). */
+  priority?: 'biasa' | 'penting' | 'darurat' | 'info' | 'pemeliharaan' | 'sukses' | string;
+  /** Keterangan singkat di belakang judul (opsional). */
+  detail?: React.ReactNode;
+  /** false = butir ini tidak bisa ditutup (bawaan ikut `dapatDitutup`). */
+  dapatDitutup?: boolean;
   /** Teks tombol tautan (bawaan "Selengkapnya"). */
   cta?: React.ReactNode;
   external?: boolean;
@@ -251,6 +255,8 @@ export interface PitaPengumumanProps {
   /** Kunci localStorage: pita yang ditutup tidak muncul lagi sampai isinya berubah. */
   ingat?: string;
   onTutup?: () => void;
+  /** Bila diisi, tombol tutup hanya menutup butir yang sedang tampil (mis. disimpan per akun di server). */
+  onTutupItem?: (item: ItemPita) => void;
   renderLink?: RenderLink;
   className?: string;
 }
@@ -258,7 +264,7 @@ export interface PitaPengumumanProps {
 const prioritasTertinggi = (items: ItemPita[]) => (items.some((i) => i.priority === 'darurat') ? 'darurat' : items.some((i) => i.priority === 'penting') ? 'penting' : 'biasa');
 
 /** Pita tipis di atas navbar untuk pengumuman penting/darurat: berganti otomatis, bisa ditutup, warna sesuai prioritas. */
-export function PitaPengumuman({ items, interval = 6000, dapatDitutup = true, ingat, onTutup, renderLink, className }: PitaPengumumanProps) {
+export function PitaPengumuman({ items, interval = 6000, dapatDitutup = true, ingat, onTutup, onTutupItem, renderLink, className }: PitaPengumumanProps) {
   const sidik = items.map((i) => i.id).join(',');
   const [tutup, setTutup] = React.useState(false);
   const [idx, setIdx] = React.useState(0);
@@ -293,10 +299,11 @@ export function PitaPengumuman({ items, interval = 6000, dapatDitutup = true, in
     >
       <div className="u-pita-inner">
         <span className="u-pita-ikon" aria-hidden>
-          {a.priority === 'darurat' ? <Siren /> : <Megaphone />}
+          {a.priority === 'darurat' ? <Siren /> : a.priority === 'pemeliharaan' ? <Wrench /> : a.priority === 'sukses' ? <CircleCheck /> : a.priority === 'info' ? <Info /> : <Megaphone />}
         </span>
         <p className="u-pita-teks" key={a.id} aria-live={jeda ? 'off' : 'polite'}>
           <span>{a.title}</span>
+          {a.detail && <span className="u-pita-detail">{a.detail}</span>}
           {a.href && <Tautan link={{ label: a.cta ?? 'Selengkapnya', href: a.href, external: a.external }} renderLink={renderLink} className="u-pita-cta" />}
         </p>
         {items.length > 1 && (
@@ -312,12 +319,17 @@ export function PitaPengumuman({ items, interval = 6000, dapatDitutup = true, in
             </button>
           </span>
         )}
-        {dapatDitutup && (
+        {dapatDitutup && a.dapatDitutup !== false && (
           <button
             type="button"
             className="u-pita-tutup"
             aria-label="Tutup pengumuman"
             onClick={() => {
+              if (onTutupItem) {
+                onTutupItem(a);
+                setIdx(0);
+                return;
+              }
               setTutup(true);
               if (ingat)
                 try {

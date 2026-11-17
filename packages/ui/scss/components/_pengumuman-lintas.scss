@@ -1,0 +1,550 @@
+@use '../mixins' as *;
+
+// Pengumuman lintas aplikasi (siakad/pengumuman-lintas.tsx): banner, toast, bilah bawah, popup, formulir, pratinjau.
+// Nada → warna dari token: info, penting (warning), darurat/pemeliharaan (danger), sukses.
+
+[data-nada] {
+  --u-pgm-nada: var(--u-info);
+  &[data-nada='penting'] {
+    --u-pgm-nada: var(--u-warning);
+  }
+  &[data-nada='darurat'],
+  &[data-nada='pemeliharaan'] {
+    --u-pgm-nada: var(--u-danger);
+  }
+  &[data-nada='sukses'] {
+    --u-pgm-nada: var(--u-success);
+  }
+}
+
+.u-pgm-ikon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--u-radius-md);
+  background: color-mix(in oklab, var(--u-pgm-nada) 14%, transparent);
+  color: color-mix(in oklab, var(--u-pgm-nada) 85%, var(--u-foreground));
+  svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+.u-pgm-teks {
+  display: grid;
+  gap: 0.125rem;
+  flex: 1;
+  min-width: 0;
+  strong {
+    font-weight: 600;
+    color: var(--u-foreground);
+    line-height: 1.35;
+  }
+  p {
+    margin: 0;
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
+    line-height: 1.45;
+  }
+}
+.u-pgm-tutup {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--u-radius-sm);
+  background: none;
+  color: var(--u-muted-foreground);
+  cursor: pointer;
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  &:hover {
+    background: var(--u-hover);
+    color: var(--u-foreground);
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+.u-pgm-tautan {
+  justify-self: start;
+  margin-top: 0.125rem;
+  color: color-mix(in oklab, var(--u-pgm-nada) 80%, var(--u-foreground));
+  font-size: var(--u-text-sm);
+  font-weight: 600;
+  text-underline-offset: 2px;
+}
+
+// ---------------------------------------------------------------- banner
+.u-pgm-banner-daftar {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.u-pgm-banner {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 1rem 1rem 1rem 1.125rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--u-pgm-nada) 28%, var(--u-border));
+  border-radius: var(--u-radius-lg);
+  background: color-mix(in oklab, var(--u-pgm-nada) 6%, var(--u-card));
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: var(--u-pgm-nada);
+  }
+  .u-pgm-cta {
+    justify-self: start;
+    margin-top: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--u-radius-md);
+    background: var(--u-pgm-nada);
+    color: #fff;
+    font-size: var(--u-text-sm);
+    font-weight: 600;
+    text-decoration: none;
+    &:hover {
+      background: color-mix(in oklab, var(--u-pgm-nada) 88%, black);
+    }
+  }
+}
+.u-pgm-gambar {
+  flex: none;
+  width: 9rem;
+  height: 5.5rem;
+  object-fit: cover;
+  border-radius: var(--u-radius-md);
+  @media (max-width: 639px) {
+    display: none;
+  }
+}
+
+// ---------------------------------------------------------------- toast
+.u-pgm-toast-daftar {
+  position: fixed;
+  z-index: 60;
+  top: 4.5rem;
+  right: 1.5rem;
+  display: grid;
+  gap: 0.625rem;
+  width: min(22rem, calc(100vw - 2rem));
+  @media (max-width: 767px) {
+    top: auto;
+    right: 1rem;
+    bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+}
+.u-pgm-toast,
+.u-pgm-bawah {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-popover);
+  box-shadow: var(--u-shadow-lg);
+  animation: u-pgm-masuk 0.28s var(--u-ease-out);
+}
+.u-pgm-toast {
+  border-left: 3px solid var(--u-pgm-nada);
+}
+@keyframes u-pgm-masuk {
+  from {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+}
+
+// ---------------------------------------------------------------- bilah bawah (ponsel; di desktop tampil seperti toast)
+.u-pgm-bawah-wadah {
+  position: fixed;
+  z-index: 44;
+  right: 1.5rem;
+  bottom: 6rem;
+  width: min(22rem, calc(100vw - 2rem));
+  @media (max-width: 767px) {
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+    bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+}
+.u-pgm-bawah {
+  align-items: center;
+  border-top: 3px solid var(--u-pgm-nada);
+}
+
+// ---------------------------------------------------------------- popup
+.u-pgm-popup {
+  display: grid;
+  gap: 0.875rem;
+  p {
+    margin: 0;
+    color: var(--u-muted-foreground);
+    line-height: 1.55;
+  }
+}
+.u-pgm-popup-gambar {
+  width: 100%;
+  max-height: 16rem;
+  object-fit: cover;
+  border-radius: var(--u-radius-md);
+}
+.u-pgm-popup-ikon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--u-pgm-nada) 14%, transparent);
+  color: var(--u-pgm-nada);
+  svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+.u-pgm-popup-aksi {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+// ---------------------------------------------------------------- pratinjau (formulir)
+.u-pgm-pratinjau-layar {
+  position: relative;
+  min-height: 16rem;
+  overflow: hidden;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-background);
+  font-size: var(--u-text-sm);
+  .u-pita {
+    position: relative;
+  }
+  .u-pgm-banner {
+    margin-bottom: 0.75rem;
+  }
+}
+.u-pgm-pratinjau-kepala {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--u-border);
+  > i {
+    height: 0.5rem;
+    width: 3rem;
+    border-radius: 999px;
+    background: var(--u-muted);
+    &:first-child {
+      width: 5rem;
+    }
+  }
+}
+.u-pgm-pratinjau-isi {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.875rem;
+}
+.u-pgm-pratinjau-baris {
+  display: block;
+  height: 0.625rem;
+  border-radius: 999px;
+  background: var(--u-muted);
+  &[data-pendek] {
+    width: 60%;
+  }
+}
+.u-pgm-pratinjau-lapis {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: var(--u-overlay);
+}
+.u-pgm-pratinjau-dialog {
+  display: grid;
+  gap: 0.75rem;
+  width: min(18rem, 100%);
+  padding: 1rem;
+  border-radius: var(--u-radius-lg);
+  background: var(--u-popover);
+  box-shadow: var(--u-shadow-xl);
+}
+.u-pgm-pratinjau-tombol {
+  padding: 0.3rem 0.625rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+  font-size: var(--u-text-xs);
+  font-weight: 600;
+  &[data-utama] {
+    border-color: var(--u-primary);
+    background: var(--u-primary);
+    color: var(--u-primary-foreground);
+  }
+}
+.u-pgm-pratinjau-toast {
+  position: absolute;
+  top: 3rem;
+  right: 0.75rem;
+  width: min(16rem, calc(100% - 1.5rem));
+}
+.u-pgm-pratinjau-bawah {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  left: 0.75rem;
+}
+
+// ---------------------------------------------------------------- formulir
+.u-pgm-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+  gap: 1.5rem;
+  align-items: start;
+  @media (max-width: 899px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.u-pgm-form-kolom {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+}
+.u-pgm-bagian {
+  display: grid;
+  gap: 0.875rem;
+  h4 {
+    margin: 0;
+    font-size: var(--u-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--u-muted-foreground);
+  }
+}
+.u-pgm-dua {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  @media (max-width: 559px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.u-pgm-mode {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 0.5rem;
+}
+.u-pgm-mode-pil {
+  display: grid;
+  justify-items: start;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+  background: var(--u-card);
+  color: var(--u-foreground);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  svg {
+    width: 1.125rem;
+    height: 1.125rem;
+    color: var(--u-muted-foreground);
+  }
+  strong {
+    font-size: var(--u-text-sm);
+    font-weight: 600;
+  }
+  small {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+    line-height: 1.35;
+  }
+  &:hover {
+    border-color: var(--u-border-strong);
+  }
+  &[data-aktif] {
+    border-color: var(--u-primary);
+    background: var(--u-primary-soft);
+    svg {
+      color: var(--u-primary);
+    }
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+.u-pgm-saklar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  span {
+    display: grid;
+    gap: 0.125rem;
+  }
+  strong {
+    font-size: var(--u-text-sm);
+    font-weight: 500;
+  }
+  small {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-pgm-unit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  > :last-child {
+    flex: 1 1 14rem;
+    min-width: 0;
+  }
+}
+.u-pgm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1875rem 0.25rem 0.1875rem 0.625rem;
+  border: 1px solid var(--u-border);
+  border-radius: 999px;
+  background: var(--u-surface);
+  font-size: var(--u-text-xs);
+  font-weight: 500;
+  button {
+    display: grid;
+    place-items: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--u-muted-foreground);
+    cursor: pointer;
+    svg {
+      width: 0.75rem;
+      height: 0.75rem;
+    }
+    &:hover {
+      background: var(--u-hover);
+    }
+  }
+}
+.u-pgm-perkiraan {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--u-radius-md);
+  background: var(--u-surface);
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  font-variant-numeric: tabular-nums;
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+.u-pgm-form-pratinjau {
+  position: sticky;
+  top: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+.u-pgm-form-aksi {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+// ---------------------------------------------------------------- kelola
+.u-pgm-kelola {
+  display: grid;
+  gap: 1rem;
+}
+.u-pgm-kelola-alat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.u-pgm-daftar {
+  display: grid;
+  gap: 0.625rem;
+}
+.u-pgm-baris {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  @media (max-width: 639px) {
+    flex-wrap: wrap;
+  }
+}
+.u-pgm-baris-teks {
+  display: grid;
+  gap: 0.125rem;
+  flex: 1;
+  min-width: 0;
+  strong {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  small {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+.u-pgm-baris-waktu {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  svg {
+    width: 0.8125rem;
+    height: 0.8125rem;
+  }
+}
+.u-pgm-baris-lencana {
+  display: flex;
+  gap: 0.375rem;
+  flex: none;
+  .u-badge svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+}
+.u-pgm-baris-aksi {
+  display: flex;
+  flex: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .u-pgm-toast,
+  .u-pgm-bawah {
+    animation: none;
+  }
+}

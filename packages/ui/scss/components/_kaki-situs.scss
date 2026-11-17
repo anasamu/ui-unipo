@@ -246,8 +246,15 @@
   &[data-priority='penting'] {
     --tone: var(--u-warning);
   }
-  &[data-priority='darurat'] {
+  &[data-priority='darurat'],
+  &[data-priority='pemeliharaan'] {
     --tone: var(--u-danger);
+  }
+  &[data-priority='info'] {
+    --tone: var(--u-info);
+  }
+  &[data-priority='sukses'] {
+    --tone: var(--u-success);
   }
   position: relative;
   z-index: 41;
@@ -295,6 +302,13 @@
   margin-inline: auto;
   padding: 0.375rem 0.75rem 0.375rem 1.25rem;
   box-sizing: border-box;
+}
+.u-pita-detail {
+  margin-inline-start: 0.5rem;
+  opacity: 0.85;
+  @media (max-width: 639px) {
+    display: none;
+  }
 }
 .u-pita-ikon {
   flex: none;

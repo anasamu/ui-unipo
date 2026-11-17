@@ -16,6 +16,7 @@ import { useTemaAplikasi } from './tema-aplikasi';
 import { TombolBerkas, type TombolBerkasProps } from './berkas-cepat';
 import { TombolNotifikasi, type OpsiNotifikasi } from './notifikasi';
 import { ChatMengambang, TombolPesan } from './obrolan';
+import { PengumumanTampil } from './pengumuman-lintas';
 
 
 export interface KerangkaAplikasiProps {
@@ -101,6 +102,11 @@ export interface KerangkaAplikasiProps {
    * Fungsi menerima `activeKey`.
    */
   tataMuat?: TataMuatHalaman | ((activeKey?: string) => TataMuatHalaman);
+  /**
+   * Pengumuman lintas aplikasi (/v1/notif/pita) sesuai mode masing-masing: pita di atas, banner di atas isi, popup,
+   * toast, dan bilah bawah. Bawaan true (kode aplikasi = `kode`); false mematikan.
+   */
+  pengumuman?: boolean | { aplikasi?: string };
   /** Timpa efek memuat dari tema (`tata.muat_awal`, `tata.muat_pindah`); `false` mematikan semuanya. */
   muat?: false | { awal?: GayaMuatAwal; pindah?: GayaMuatPindah };
   children: React.ReactNode;
@@ -169,6 +175,7 @@ export function KerangkaAplikasi({
   temaLingkup,
   tataMuat,
   muat,
+  pengumuman = true,
   children,
   className,
 }: KerangkaAplikasiProps) {
@@ -294,7 +301,11 @@ export function KerangkaAplikasi({
   const tataMuatTampil: TataMuatHalaman =
     typeof tataMuat === 'function' ? tataMuat(activeKey) : (tataMuat ?? (activeKey && berandaItem && activeKey === berandaItem.key ? 'dasbor' : 'tabel'));
 
+  const kodePengumuman = pengumuman === false ? null : ((typeof pengumuman === 'object' ? pengumuman.aplikasi : undefined) ?? kode);
+
   return (
+    <>
+    {kodePengumuman && siakad && <PengumumanTampil aplikasi={kodePengumuman} bagian={['atas']} />}
     <AppShell
       className={cn('u-kerangka-aplikasi', className)}
       atribut={{ 'data-header-gaya': t.headerGaya, 'data-header-tinggi': t.headerTinggi, 'data-header-lengket': t.headerLengket ? undefined : 'tidak', 'data-cari': t.headerCari }}
@@ -350,6 +361,7 @@ export function KerangkaAplikasi({
       }
     >
       <div ref={isiRef} className="u-kerangka-isi" data-nav-bawah={navBawahTampil.length ? '' : undefined} aria-busy={muatTerlihat || undefined}>
+        {kodePengumuman && siakad && <PengumumanTampil aplikasi={kodePengumuman} bagian={['isi']} />}
         {children}
         {tutupAda && (
           <div className="u-mh-tutup" data-keluar={tutupTampil ? undefined : ''}>
@@ -358,6 +370,7 @@ export function KerangkaAplikasi({
         )}
       </div>
       {muatPindah.startsWith('progres') && <BilahProgres aktif={sesiMuat !== null && adaMuat} tunda={150} />}
+      {kodePengumuman && siakad && <PengumumanTampil aplikasi={kodePengumuman} bagian={['lapis']} />}
       {cari !== false && !opsiCari.onBuka && <PencarianFitur open={palet} onOpenChange={setPalet} items={fitur} placeholder={opsiCari.placeholder ?? 'Cari fitur atau menu'} onPilih={(it) => it.href && navigasi(it.href)} />}
       {pesan !== false && opsiPesan.mengambang !== false && <ChatMengambang judul={opsiPesan.judul} navBawah={navBawahTampil.length > 0} className="u-kerangka-ob" />}
       {navBawahTampil.length ? (
@@ -379,6 +392,7 @@ export function KerangkaAplikasi({
         />
       ) : null}
     </AppShell>
+    </>
   );
 }
 
