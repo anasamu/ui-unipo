@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import { ContextMenu as BaseKonteks } from '@base-ui/react/context-menu';
 import {
   AlertTriangle,
   Archive,
@@ -8,6 +9,7 @@ import {
   ArrowLeft,
   Ban,
   Bell,
+  Camera,
   BellOff,
   Check,
   CheckCheck,
@@ -23,6 +25,7 @@ import {
   Lock,
   LogOut,
   MessageCircle,
+  MessageCircleX,
   MessageSquarePlus,
   Paperclip,
   Pencil,
@@ -164,6 +167,7 @@ function cuplikan(p: PesanObrolan | null, r: RuangObrolanData, saya: string): st
   const i = p.isi;
   if (!i) return '';
   const siapa = p.pengirim === saya ? 'Anda: ' : r.jenis === 'grup' ? `${namaDepan(r.anggota.find((a) => a.id === p.pengirim)?.nama ?? '')}: ` : '';
+  if (i.t === 'sistem') return i.isi ?? '';
   if (i.t === 'reaksi') {
     const subjek = p.pengirim === saya ? 'Anda' : namaDepan(r.anggota.find((a) => a.id === p.pengirim)?.nama ?? '');
     return i.emoji ? `${subjek} memberi reaksi ${i.emoji}` : `${subjek} menghapus reaksi`;
@@ -189,10 +193,25 @@ const draf = new Map<string, string>();
 
 function AvatarRuang({ r, saya, size = 'md' }: { r: RuangObrolanData; saya: string; size?: 'sm' | 'md' | 'lg' | 'xl' }) {
   const l = lawanDari(r, saya);
+  const mesin = useMesin();
+  const [url, setUrl] = React.useState<string | null>(null);
+  const foto = r.jenis === 'grup' ? (r.foto ?? null) : null;
+  React.useEffect(() => {
+    setUrl(null);
+    if (!foto) return;
+    let hidup = true;
+    mesin
+      .urlFoto(r.id, foto)
+      .then((u) => hidup && setUrl(u))
+      .catch(() => {});
+    return () => {
+      hidup = false;
+    };
+  }, [mesin, r.id, foto]);
   if (l) return <Avatar name={l.nama} size={size} status={l.daring ? 'online' : undefined} />;
   return (
-    <span className="u-ob-avatar-grup" data-size={size} aria-hidden>
-      <Users />
+    <span className="u-ob-avatar-grup" data-size={size} data-foto={url ? '' : undefined} aria-hidden>
+      {url ? <img src={url} alt="" /> : <Users />}
     </span>
   );
 }
@@ -360,60 +379,120 @@ export function DaftarPengguna({ onPilih, pilihBanyak, terpilih = [], onTerpilih
 export interface DaftarObrolanProps {
   aktif?: string | null;
   onPilih: (ruang: string) => void;
+  /** Dipanggil setelah obrolan dihapus dari daftar (mis. tutup ruang yang sedang terbuka). */
+  onHapus?: (ruang: string) => void;
   className?: string;
 }
 
+/** Menu klik kanan / tekan lama (layar sentuh) dengan isi yang sama seperti `Menu`. */
+function MenuKonteks({ items, className, children }: { items: MenuEntry[]; className?: string; children: React.ReactNode }) {
+  return (
+    <BaseKonteks.Root>
+      <BaseKonteks.Trigger className={className}>{children}</BaseKonteks.Trigger>
+      <BaseKonteks.Portal>
+        <BaseKonteks.Positioner className="u-popup-positioner">
+          <BaseKonteks.Popup className="u-menu">
+            {items.map((it, i) =>
+              it.type === 'separator' ? (
+                <BaseKonteks.Separator key={i} className="u-menu-separator" />
+              ) : it.type === 'label' ? (
+                <div key={i} className="u-menu-label">
+                  {it.label}
+                </div>
+              ) : (
+                <BaseKonteks.Item key={i} className="u-menu-item" onClick={it.onSelect} disabled={it.disabled} data-variant={it.destructive ? 'destructive' : undefined}>
+                  {it.icon}
+                  <span>{it.label}</span>
+                </BaseKonteks.Item>
+              ),
+            )}
+          </BaseKonteks.Popup>
+        </BaseKonteks.Positioner>
+      </BaseKonteks.Portal>
+    </BaseKonteks.Root>
+  );
+}
+
+/** Menu per obrolan (daftar dan kepala ruang): sematkan, bisukan, arsipkan, hapus obrolan. */
+function menuObrolan(mesin: MesinObrolan, r: RuangObrolanData, onHapus: () => void, onArsip?: (arsip: boolean) => void): MenuEntry[] {
+  const ubah = (u: Parameters<MesinObrolan['ubahRuang']>[1]) => void mesin.ubahRuang(r.id, u).catch(() => {});
+  return [
+    { label: r.sematkan ? 'Lepas sematan' : 'Sematkan', icon: r.sematkan ? <PinOff /> : <Pin />, onSelect: () => ubah({ sematkan: !r.sematkan }) },
+    { label: r.bisu ? 'Bunyikan notifikasi' : 'Bisukan notifikasi', icon: r.bisu ? <Bell /> : <BellOff />, onSelect: () => ubah({ bisu: !r.bisu }) },
+    { label: r.arsip ? 'Keluarkan dari arsip' : 'Arsipkan', icon: r.arsip ? <ArchiveRestore /> : <Archive />, onSelect: () => (ubah({ arsip: !r.arsip }), onArsip?.(!r.arsip)) },
+    { type: 'separator' as const },
+    { label: 'Hapus obrolan', icon: <MessageCircleX />, destructive: true, onSelect: onHapus },
+  ];
+}
+
 /** Daftar ruang obrolan: pesan terakhir (didekripsi di perangkat), belum dibaca, sedang mengetik, sematan, bisu. */
-export function DaftarObrolan({ aktif, onPilih, className }: DaftarObrolanProps) {
+export function DaftarObrolan({ aktif, onPilih, onHapus, className }: DaftarObrolanProps) {
   const { mesin, keadaan: k } = useObrolan();
   const [q, setQ] = React.useState('');
   const [arsip, setArsip] = React.useState<RuangObrolanData[] | null>(null);
+  const [hapus, setHapus] = React.useState<RuangObrolanData | null>(null);
   const saya = k.saya?.id ?? '';
   const cocok = (r: RuangObrolanData) => !q.trim() || judulRuang(r, saya).toLowerCase().includes(q.trim().toLowerCase());
   const daftar = k.urutan.map((id) => k.ruang[id]).filter((r): r is RuangObrolanData => Boolean(r) && cocok(r));
-  const daftarArsip = arsip?.map((r) => k.ruang[r.id] ?? r).filter((r) => r.arsip && cocok(r));
+  const daftarArsip = arsip?.map((r) => k.ruang[r.id]).filter((r): r is RuangObrolanData => Boolean(r) && r.arsip && cocok(r));
 
   const baris = (r: RuangObrolanData) => {
     const ketik = Object.keys(k.ketik[r.id] ?? {}).filter((p) => p !== saya);
     const p = r.pesan_terakhir;
+    const menu = menuObrolan(
+      mesin,
+      r,
+      () => setHapus(r),
+      (a) => a && setArsip((x) => (x && !x.some((y) => y.id === r.id) ? [...x, r] : x)),
+    );
     return (
-      <button key={r.id} type="button" className="u-ob-baris" data-interaktif data-aktif={aktif === r.id ? '' : undefined} onClick={() => onPilih(r.id)}>
-        <AvatarRuang r={r} saya={saya} />
-        <span className="u-ob-baris-teks">
-          <span className="u-ob-baris-atas">
-            <span className="u-ob-baris-nama">{judulRuang(r, saya)}</span>
-            {p && (
-              <span className="u-ob-baris-waktu" data-belum={r.belum_dibaca > 0 && !r.bisu ? '' : undefined}>
-                {waktuSingkat(p.dibuat_at)}
-              </span>
-            )}
-          </span>
-          <span className="u-ob-baris-bawah">
-            {ketik.length ? (
-              <span className="u-ob-baris-sub" data-ketik>
-                {r.jenis === 'grup' ? `${namaDepan(r.anggota.find((a) => a.id === ketik[0])?.nama ?? '')} mengetik…` : 'mengetik…'}
-              </span>
-            ) : (
-              <span className="u-ob-baris-sub">
-                {p?.status === 'tak_terbaca' && <Lock aria-hidden />}
-                {p?.status === 'menunggu' && <Hourglass aria-hidden />}
-                {p?.status === 'dihapus' && <Ban aria-hidden />}
-                {cuplikan(p, r, saya)}
-              </span>
-            )}
-            <span className="u-ob-baris-ikon">
-              {r.kedaluwarsa_detik > 0 && <Timer aria-label="Pesan menghilang" />}
-              {r.bisu && <BellOff aria-label="Dibisukan" />}
-              {r.sematkan && <Pin aria-label="Disematkan" />}
-              {r.belum_dibaca > 0 && (
-                <span className="u-ob-lencana" data-bisu={r.bisu ? '' : undefined} aria-label={`${r.belum_dibaca} belum dibaca`}>
-                  {r.belum_dibaca > 99 ? '99+' : r.belum_dibaca}
+      <MenuKonteks key={r.id} items={menu} className="u-ob-baris-bungkus">
+        <button type="button" className="u-ob-baris" data-interaktif data-aktif={aktif === r.id ? '' : undefined} onClick={() => onPilih(r.id)}>
+          <AvatarRuang r={r} saya={saya} />
+          <span className="u-ob-baris-teks">
+            <span className="u-ob-baris-atas">
+              <span className="u-ob-baris-nama">{judulRuang(r, saya)}</span>
+              {p && (
+                <span className="u-ob-baris-waktu" data-belum={r.belum_dibaca > 0 && !r.bisu ? '' : undefined}>
+                  {waktuSingkat(p.dibuat_at)}
                 </span>
               )}
             </span>
+            <span className="u-ob-baris-bawah">
+              {ketik.length ? (
+                <span className="u-ob-baris-sub" data-ketik>
+                  {r.jenis === 'grup' ? `${namaDepan(r.anggota.find((a) => a.id === ketik[0])?.nama ?? '')} mengetik…` : 'mengetik…'}
+                </span>
+              ) : (
+                <span className="u-ob-baris-sub">
+                  {p?.status === 'tak_terbaca' && <Lock aria-hidden />}
+                  {p?.status === 'menunggu' && <Hourglass aria-hidden />}
+                  {p?.status === 'dihapus' && <Ban aria-hidden />}
+                  {cuplikan(p, r, saya)}
+                </span>
+              )}
+              <span className="u-ob-baris-ikon">
+                {r.kedaluwarsa_detik > 0 && <Timer aria-label="Pesan menghilang" />}
+                {r.bisu && <BellOff aria-label="Dibisukan" />}
+                {r.sematkan && <Pin aria-label="Disematkan" />}
+                {r.belum_dibaca > 0 && (
+                  <span className="u-ob-lencana" data-bisu={r.bisu ? '' : undefined} aria-label={`${r.belum_dibaca} belum dibaca`}>
+                    {r.belum_dibaca > 99 ? '99+' : r.belum_dibaca}
+                  </span>
+                )}
+              </span>
+            </span>
           </span>
-        </span>
-      </button>
+        </button>
+        <Menu
+          items={menu}
+          trigger={
+            <button type="button" className="u-ob-baris-menu" aria-label={`Menu obrolan ${judulRuang(r, saya)}`}>
+              <EllipsisVertical />
+            </button>
+          }
+        />
+      </MenuKonteks>
     );
   };
 
@@ -436,7 +515,11 @@ export function DaftarObrolan({ aktif, onPilih, className }: DaftarObrolanProps)
             </div>
           ))
         ) : daftar.length === 0 && !q ? (
-          <Empty icon={<MessageCircle />} title="Belum ada obrolan" description="Mulai obrolan dengan dosen, mahasiswa, atau staf. Pesan dan lampiran disimpan terenkripsi di server UNIPO. Hanya anggota obrolan yang bisa membukanya." />
+          <Empty
+            icon={<MessageCircle />}
+            title="Belum ada obrolan"
+            description="Mulai obrolan dengan dosen, mahasiswa, atau staf. Pesan dan lampiran disimpan terenkripsi di server UNIPO. Hanya anggota obrolan yang bisa membukanya."
+          />
         ) : daftar.length === 0 && !daftarArsip?.length ? (
           <p className="u-ob-petunjuk">Tidak ada obrolan yang cocok.</p>
         ) : (
@@ -463,6 +546,15 @@ export function DaftarObrolan({ aktif, onPilih, className }: DaftarObrolanProps)
             </>
           ))}
       </div>
+      <DialogBersihkan
+        mode="hapus"
+        ruangId={hapus?.id ?? ''}
+        nama={hapus ? judulRuang(hapus, saya) : ''}
+        grup={hapus?.jenis === 'grup'}
+        open={hapus !== null}
+        onOpenChange={(o) => !o && setHapus(null)}
+        onSelesai={(id) => onHapus?.(id)}
+      />
     </div>
   );
 }
@@ -621,7 +713,7 @@ interface GelembungProps {
   onPilih: () => void;
   onBalas: () => void;
   onUbah: () => void;
-  onHapus: () => void;
+  onHapus: (untuk: 'saya' | 'semua') => void;
   onLihat: (b: Berkas) => void;
   onLompat: (uuid: string) => void;
 }
@@ -663,7 +755,10 @@ const Gelembung = React.memo(function Gelembung({ p, r, saya, awalKelompok, akhi
         ]
       : []),
     ...(milikSaya && isi?.t === 'teks' ? [{ label: 'Ubah', icon: <Pencil />, onSelect: onUbah }] : []),
-    ...(milikSaya ? [{ type: 'separator' as const }, { label: 'Hapus untuk semua', icon: <Trash2 />, destructive: true, onSelect: onHapus }] : []),
+    { type: 'separator' as const },
+    { label: 'Hapus untuk saya', icon: <Trash2 />, destructive: true, onSelect: () => onHapus('saya') },
+    // Pengirim dalam batas waktu (bawaan 60 menit), atau admin grup.
+    ...(mesin.bolehHapusSemua(r.id, p) ? [{ label: 'Hapus untuk semua', icon: <Trash2 />, destructive: true, onSelect: () => onHapus('semua') }] : []),
   ];
 
   return (
@@ -867,131 +962,182 @@ function InfoRuang({ r, open, onOpenChange, onKeluar }: { r: RuangObrolanData; o
   const [keluar, setKeluar] = React.useState(false);
   React.useEffect(() => setJudul(r.judul ?? ''), [r.judul]);
   const jalan = (f: Promise<unknown>) => void f.then(() => setGalat(null)).catch((e) => setGalat(pesanGalat(e)));
+  const [fotoProses, setFotoProses] = React.useState(false);
+  const fotoRef = React.useRef<HTMLInputElement>(null);
+  const kembaliRef = React.useRef<HTMLButtonElement>(null);
+  const bolehFoto = r.jenis === 'grup' && admin;
+  const gantiFoto = async (f: File | undefined) => {
+    if (!f) return;
+    setFotoProses(true);
+    try {
+      await mesin.gantiFoto(r.id, f);
+      setGalat(null);
+    } catch (e) {
+      setGalat(pesanGalat(e));
+    } finally {
+      setFotoProses(false);
+      if (fotoRef.current) fotoRef.current.value = '';
+    }
+  };
+  React.useEffect(() => {
+    if (open) kembaliRef.current?.focus();
+  }, [open]);
+  const judulPanel = r.jenis === 'grup' ? 'Info grup' : 'Info obrolan';
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange} title={r.jenis === 'grup' ? 'Info grup' : 'Info obrolan'} size="md">
-        <div className="u-ob-info">
-          <div className="u-ob-info-kepala">
-            <AvatarRuang r={r} saya={saya} size="xl" />
-            {r.jenis === 'grup' && admin ? (
-              <form
-                className="u-ob-info-judul"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (judul.trim() && judul.trim() !== r.judul) jalan(mesin.ubahRuang(r.id, { judul: judul.trim() }));
-                }}
-              >
-                <Input value={judul} onChange={(e) => setJudul(e.target.value)} aria-label="Nama grup" maxLength={120} />
-                <Button type="submit" size="sm" variant="outline" disabled={!judul.trim() || judul.trim() === r.judul}>
-                  Simpan
-                </Button>
-              </form>
-            ) : (
-              <strong>{judulRuang(r, saya)}</strong>
-            )}
-            <span className="u-ob-baris-sub">
-              {lawan ? `${lawan.peran}${lawan.daring ? ' · daring' : lawan.terakhir_aktif ? ` · ${terakhirAktif(lawan.terakhir_aktif)}` : ''}` : `${r.anggota.length} anggota`}
-            </span>
-          </div>
-          {galat && <Alert variant="danger">{galat}</Alert>}
-
-          <section className="u-ob-info-bagian">
-            <h4>
-              <ShieldCheck aria-hidden /> Keamanan
-            </h4>
-            <p className="u-ob-petunjuk">Pesan dan lampiran disimpan terenkripsi di server UNIPO. Hanya anggota obrolan yang bisa membukanya.</p>
-          </section>
-
-          <section className="u-ob-info-bagian">
-            <h4>
-              <Timer aria-hidden /> Pesan menghilang
-            </h4>
-            <SegmentedControl
-              aria-label="Pesan menghilang"
-              options={MENGHILANG}
-              value={String(r.kedaluwarsa_detik)}
-              onValueChange={(v) => (r.jenis === 'langsung' || admin) && jalan(mesin.ubahRuang(r.id, { kedaluwarsa_detik: Number(v) }))}
-              fullWidth
-            />
-            <p className="u-ob-petunjuk">
-              {r.jenis === 'grup' && !admin ? 'Hanya admin grup yang bisa mengubahnya. ' : ''}Berlaku untuk pesan baru; pesan dihapus permanen dari server setelah waktunya lewat.
-            </p>
-          </section>
-
-          <section className="u-ob-info-bagian">
-            <label className="u-ob-info-saklar">
-              <span>
-                <BellOff aria-hidden /> Bisukan notifikasi
-              </span>
-              <Switch checked={r.bisu} onCheckedChange={(v) => jalan(mesin.ubahRuang(r.id, { bisu: v }))} />
-            </label>
-            <label className="u-ob-info-saklar">
-              <span>
-                <Pin aria-hidden /> Sematkan di atas
-              </span>
-              <Switch checked={r.sematkan} onCheckedChange={(v) => jalan(mesin.ubahRuang(r.id, { sematkan: v }))} />
-            </label>
-          </section>
-
-          {r.jenis === 'grup' && (
-            <section className="u-ob-info-bagian">
-              <div className="u-ob-info-baris-judul">
-                <h4>
-                  <Users aria-hidden /> {r.anggota.length} anggota
-                </h4>
-                {admin && (
-                  <Button size="sm" variant="ghost" onClick={() => (setBaru([]), setTambah(true))}>
-                    <UserPlus aria-hidden /> Tambah
-                  </Button>
-                )}
-              </div>
-              {r.anggota.map((a) => (
-                <div key={a.id} className="u-ob-baris">
-                  <Avatar name={a.nama} size="sm" status={a.daring ? 'online' : undefined} />
-                  <span className="u-ob-baris-teks">
-                    <span className="u-ob-baris-nama">
-                      {a.id === saya ? 'Anda' : a.nama}
-                      {a.peran_ruang === 'admin' && <Badge variant="primary">Admin</Badge>}
+      {open && (
+        <aside
+          className="u-ob-info-panel"
+          aria-label={judulPanel}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' && !e.defaultPrevented) (e.stopPropagation(), onOpenChange(false));
+          }}
+        >
+          <header className="u-ob-info-panel-kepala">
+            <Button ref={kembaliRef} variant="ghost" size="sm" iconOnly aria-label="Tutup info" onClick={() => onOpenChange(false)}>
+              <X />
+            </Button>
+            <h3>{judulPanel}</h3>
+          </header>
+          <div className="u-ob-info">
+            <div className="u-ob-info-kepala">
+              {bolehFoto ? (
+                <div className="u-ob-info-foto">
+                  <button type="button" className="u-ob-info-foto-tombol" onClick={() => fotoRef.current?.click()} disabled={fotoProses} aria-label={r.foto ? 'Ganti foto grup' : 'Pasang foto grup'}>
+                    <AvatarRuang r={r} saya={saya} size="xl" />
+                    <span className="u-ob-info-foto-ikon" aria-hidden>
+                      {fotoProses ? <Spinner size="sm" /> : <Camera />}
                     </span>
-                    <span className="u-ob-baris-sub">{a.peran}</span>
-                  </span>
-                  {admin && a.id !== saya && (
-                    <Menu
-                      items={[
-                        { label: 'Kirim pesan', icon: <MessageCircle />, onSelect: () => bukaObrolan(a.id) },
-                        a.peran_ruang === 'admin'
-                          ? { label: 'Cabut admin', icon: <Users />, onSelect: () => jalan(mesin.aturAdmin(r.id, a.id, false)) }
-                          : { label: 'Jadikan admin', icon: <ShieldCheck />, onSelect: () => jalan(mesin.aturAdmin(r.id, a.id, true)) },
-                        { type: 'separator' },
-                        { label: 'Keluarkan dari grup', icon: <LogOut />, destructive: true, onSelect: () => jalan(mesin.keluarkan(r.id, a.id)) },
-                      ]}
-                      trigger={
-                        <Button size="sm" variant="ghost" iconOnly aria-label={`Kelola ${a.nama}`}>
-                          <EllipsisVertical />
-                        </Button>
-                      }
-                    />
+                  </button>
+                  <input ref={fotoRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => void gantiFoto(e.target.files?.[0])} />
+                  {r.foto && (
+                    <Button size="sm" variant="ghost" disabled={fotoProses} onClick={() => jalan(mesin.hapusFoto(r.id))}>
+                      Hapus foto
+                    </Button>
                   )}
                 </div>
-              ))}
+              ) : (
+                <AvatarRuang r={r} saya={saya} size="xl" />
+              )}
+              {r.jenis === 'grup' && admin ? (
+                <form
+                  className="u-ob-info-judul"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (judul.trim() && judul.trim() !== r.judul) jalan(mesin.ubahRuang(r.id, { judul: judul.trim() }));
+                  }}
+                >
+                  <Input value={judul} onChange={(e) => setJudul(e.target.value)} aria-label="Nama grup" maxLength={120} />
+                  <Button type="submit" size="sm" variant="outline" disabled={!judul.trim() || judul.trim() === r.judul}>
+                    Simpan
+                  </Button>
+                </form>
+              ) : (
+                <strong>{judulRuang(r, saya)}</strong>
+              )}
+              <span className="u-ob-baris-sub">
+                {lawan ? `${lawan.peran}${lawan.daring ? ' · daring' : lawan.terakhir_aktif ? ` · ${terakhirAktif(lawan.terakhir_aktif)}` : ''}` : `${r.anggota.length} anggota`}
+              </span>
+            </div>
+            {galat && <Alert variant="danger">{galat}</Alert>}
+
+            <section className="u-ob-info-bagian">
+              <h4>
+                <ShieldCheck aria-hidden /> Keamanan
+              </h4>
+              <p className="u-ob-petunjuk">Pesan dan lampiran disimpan terenkripsi di server UNIPO. Hanya anggota obrolan yang bisa membukanya.</p>
             </section>
-          )}
 
-          <section className="u-ob-info-bagian u-ob-info-bahaya">
-            {lawan ? (
-              <Button variant="destructive-soft" onClick={() => setBlokir(true)}>
-                <Ban aria-hidden /> Blokir {namaDepan(lawan.nama)}
-              </Button>
-            ) : (
-              <Button variant="destructive-soft" onClick={() => setKeluar(true)}>
-                <LogOut aria-hidden /> Keluar dari grup
-              </Button>
+            <section className="u-ob-info-bagian">
+              <h4>
+                <Timer aria-hidden /> Pesan menghilang
+              </h4>
+              <SegmentedControl
+                aria-label="Pesan menghilang"
+                options={MENGHILANG}
+                value={String(r.kedaluwarsa_detik)}
+                onValueChange={(v) => (r.jenis === 'langsung' || admin) && jalan(mesin.ubahRuang(r.id, { kedaluwarsa_detik: Number(v) }))}
+                fullWidth
+              />
+              <p className="u-ob-petunjuk">
+                {r.jenis === 'grup' && !admin ? 'Hanya admin grup yang bisa mengubahnya. ' : ''}Berlaku untuk pesan baru; pesan dihapus permanen dari server setelah waktunya lewat.
+              </p>
+            </section>
+
+            <section className="u-ob-info-bagian">
+              <label className="u-ob-info-saklar">
+                <span>
+                  <BellOff aria-hidden /> Bisukan notifikasi
+                </span>
+                <Switch checked={r.bisu} onCheckedChange={(v) => jalan(mesin.ubahRuang(r.id, { bisu: v }))} />
+              </label>
+              <label className="u-ob-info-saklar">
+                <span>
+                  <Pin aria-hidden /> Sematkan di atas
+                </span>
+                <Switch checked={r.sematkan} onCheckedChange={(v) => jalan(mesin.ubahRuang(r.id, { sematkan: v }))} />
+              </label>
+            </section>
+
+            {r.jenis === 'grup' && (
+              <section className="u-ob-info-bagian">
+                <div className="u-ob-info-baris-judul">
+                  <h4>
+                    <Users aria-hidden /> {r.anggota.length} anggota
+                  </h4>
+                  {admin && (
+                    <Button size="sm" variant="ghost" onClick={() => (setBaru([]), setTambah(true))}>
+                      <UserPlus aria-hidden /> Tambah
+                    </Button>
+                  )}
+                </div>
+                {r.anggota.map((a) => (
+                  <div key={a.id} className="u-ob-baris">
+                    <Avatar name={a.nama} size="sm" status={a.daring ? 'online' : undefined} />
+                    <span className="u-ob-baris-teks">
+                      <span className="u-ob-baris-nama">
+                        {a.id === saya ? 'Anda' : a.nama}
+                        {a.peran_ruang === 'admin' && <Badge variant="primary">Admin</Badge>}
+                      </span>
+                      <span className="u-ob-baris-sub">{a.peran}</span>
+                    </span>
+                    {admin && a.id !== saya && (
+                      <Menu
+                        items={[
+                          { label: 'Kirim pesan', icon: <MessageCircle />, onSelect: () => bukaObrolan(a.id) },
+                          a.peran_ruang === 'admin'
+                            ? { label: 'Cabut admin', icon: <Users />, onSelect: () => jalan(mesin.aturAdmin(r.id, a.id, false)) }
+                            : { label: 'Jadikan admin', icon: <ShieldCheck />, onSelect: () => jalan(mesin.aturAdmin(r.id, a.id, true)) },
+                          { type: 'separator' },
+                          { label: 'Keluarkan dari grup', icon: <LogOut />, destructive: true, onSelect: () => jalan(mesin.keluarkan(r.id, a.id)) },
+                        ]}
+                        trigger={
+                          <Button size="sm" variant="ghost" iconOnly aria-label={`Kelola ${a.nama}`}>
+                            <EllipsisVertical />
+                          </Button>
+                        }
+                      />
+                    )}
+                  </div>
+                ))}
+              </section>
             )}
-          </section>
-        </div>
-      </Dialog>
 
+            <section className="u-ob-info-bagian u-ob-info-bahaya">
+              {lawan ? (
+                <Button variant="destructive-soft" onClick={() => setBlokir(true)}>
+                  <Ban aria-hidden /> Blokir {namaDepan(lawan.nama)}
+                </Button>
+              ) : (
+                <Button variant="destructive-soft" onClick={() => setKeluar(true)}>
+                  <LogOut aria-hidden /> Keluar dari grup
+                </Button>
+              )}
+            </section>
+          </div>
+        </aside>
+      )}
 
       <Dialog
         open={tambah}
@@ -1151,7 +1297,9 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
   const [galatKirim, setGalatKirim] = React.useState<string | null>(null);
   const [bersihkan, setBersihkan] = React.useState(false);
   const { simpan: simpanBerkas } = useSimpanKeBerkas();
-  const [hapus, setHapus] = React.useState<PesanObrolan | null>(null);
+  const [hapus, setHapus] = React.useState<{ p: PesanObrolan; untuk: 'saya' | 'semua' } | null>(null);
+  const [hapusRuang, setHapusRuang] = React.useState(false);
+  const toast = useToast();
   const [lihat, setLihat] = React.useState<Berkas | null>(null);
   const [info, setInfo] = React.useState(false);
   const [dipilih, setDipilih] = React.useState<string | null>(null);
@@ -1256,13 +1404,12 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
         : terakhirAktif(lawan.terakhir_aktif) || lawan.peran
       : r.anggota.map((a) => (a.id === saya ? 'Anda' : namaDepan(a.nama))).join(', ');
 
+  const menuDasar = menuObrolan(mesin, r, () => setHapusRuang(true));
   const menuRuang: MenuEntry[] = [
     { label: r.jenis === 'grup' ? 'Info grup' : 'Info obrolan', icon: <Info />, onSelect: () => setInfo(true) },
-    { label: r.bisu ? 'Bunyikan notifikasi' : 'Bisukan notifikasi', icon: r.bisu ? <Bell /> : <BellOff />, onSelect: () => void mesin.ubahRuang(id, { bisu: !r.bisu }) },
-    { label: r.sematkan ? 'Lepas sematan' : 'Sematkan', icon: r.sematkan ? <PinOff /> : <Pin />, onSelect: () => void mesin.ubahRuang(id, { sematkan: !r.sematkan }) },
-    { label: r.arsip ? 'Keluarkan dari arsip' : 'Arsipkan', icon: r.arsip ? <ArchiveRestore /> : <Archive />, onSelect: () => void mesin.ubahRuang(id, { arsip: !r.arsip }) },
-    { type: 'separator' as const },
+    ...menuDasar.slice(0, -1),
     { label: 'Bersihkan obrolan', icon: <Eraser />, destructive: true, onSelect: () => setBersihkan(true) },
+    menuDasar[menuDasar.length - 1],
   ];
 
   // Kelompokkan: pemisah tanggal + gelembung berurutan dari pengirim sama dalam 5 menit.
@@ -1278,6 +1425,14 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
         </div>,
       );
       hariLalu = kunciHari;
+    }
+    if (p.isi?.t === 'sistem' && p.status === 'terkirim') {
+      isi.push(
+        <div key={p.uuid} className="u-ob-pemisah u-ob-sistem" role="note" data-uuid={p.uuid}>
+          <span>{p.isi.isi}</span>
+        </div>,
+      );
+      return;
     }
     const sebelum = pesan[i - 1];
     const sesudah = pesan[i + 1];
@@ -1295,7 +1450,7 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
         onPilih={() => setDipilih((d) => (d === p.uuid ? null : p.uuid))}
         onBalas={() => (setUbah(null), setBalas(p), fokus())}
         onUbah={() => (setBalas(null), setBerkas([]), setUbah(p), setTeksMentah(p.isi?.isi ?? ''), fokus())}
-        onHapus={() => setHapus(p)}
+        onHapus={(untuk) => setHapus({ p, untuk })}
         onLihat={setLihat}
         onLompat={(u) => {
           const el = daftarRef.current?.querySelector<HTMLElement>(`[data-uuid="${u}"]`);
@@ -1358,7 +1513,6 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
           </Button>
         )}
       </header>
-
 
       <div className="u-ob-pesan-daftar" ref={daftarRef} onScroll={onGulir} role="log" aria-live="polite" aria-label={`Pesan dengan ${judulRuang(r, saya)}`}>
         {x?.memuat && (
@@ -1515,14 +1669,25 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
       <InfoRuang r={r} open={info} onOpenChange={setInfo} onKeluar={() => onKembali?.()} />
       <LihatGambar b={lihat} ruangId={id} onTutup={() => setLihat(null)} />
       <DialogBersihkan ruangId={id} nama={judulRuang(r, saya)} open={bersihkan} onOpenChange={setBersihkan} />
+      <DialogBersihkan mode="hapus" ruangId={id} nama={judulRuang(r, saya)} grup={r.jenis === 'grup'} open={hapusRuang} onOpenChange={setHapusRuang} onSelesai={() => onKembali?.()} />
       <ConfirmDialog
         open={Boolean(hapus)}
         onOpenChange={(o) => !o && setHapus(null)}
-        title="Hapus pesan untuk semua?"
-        description="Pesan dan lampirannya dihapus permanen dari server dan dari perangkat semua anggota."
-        confirmLabel="Hapus untuk semua"
+        title={hapus?.untuk === 'semua' ? 'Hapus pesan untuk semua?' : 'Hapus pesan untuk saya?'}
+        description={
+          hapus?.untuk === 'semua'
+            ? 'Pesan dan lampirannya hilang dari tampilan semua anggota dan diganti tulisan "Pesan ini dihapus".'
+            : 'Pesan hilang dari akun Anda di semua perangkat. Anggota lain tetap melihatnya.'
+        }
+        confirmLabel={hapus?.untuk === 'semua' ? 'Hapus untuk semua' : 'Hapus untuk saya'}
         onConfirm={async () => {
-          if (hapus) await mesin.hapusPesan(id, hapus);
+          if (!hapus) return;
+          try {
+            if (hapus.untuk === 'semua') await mesin.hapusPesan(id, hapus.p);
+            else await mesin.hapusUntukSaya(id, hapus.p);
+          } catch (e) {
+            toast.add({ type: 'error', title: 'Pesan tidak bisa dihapus', description: pesanGalat(e) });
+          }
           setHapus(null);
         }}
       />
@@ -1532,8 +1697,29 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
 
 // ================================================================ Bersihkan obrolan
 
-/** Konfirmasi "Bersihkan obrolan": riwayat hilang hanya untuk akun ini; lampiran bisa disimpan dulu ke Berkas saya. */
-function DialogBersihkan({ ruangId, nama, open, onOpenChange }: { ruangId: string; nama: string; open: boolean; onOpenChange: (o: boolean) => void }) {
+/**
+ * Konfirmasi "Bersihkan obrolan" (riwayat hilang hanya untuk akun ini) atau, dengan `mode="hapus"`, "Hapus obrolan"
+ * (riwayat hilang dan obrolan keluar dari daftar sampai ada pesan baru; grup: sekaligus keluar). Lampiran bisa disimpan
+ * dulu ke Berkas saya. Tidak ada yang dihapus permanen.
+ */
+function DialogBersihkan({
+  mode = 'bersihkan',
+  ruangId,
+  nama,
+  grup,
+  open,
+  onOpenChange,
+  onSelesai,
+}: {
+  mode?: 'bersihkan' | 'hapus';
+  ruangId: string;
+  nama: string;
+  grup?: boolean;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onSelesai?: (ruangId: string) => void;
+}) {
+  const hapus = mode === 'hapus';
   const mesin = useMesin();
   const toast = useToast();
   const [info, setInfo] = React.useState<{ pesan: number; lampiran: number; sudah_disimpan: number; tidak_bisa_disimpan: number } | null>(null);
@@ -1541,7 +1727,7 @@ function DialogBersihkan({ ruangId, nama, open, onOpenChange }: { ruangId: strin
   const [lampiran, setLampiran] = React.useState<'simpan' | 'hapus'>('simpan');
   const [proses, setProses] = React.useState(false);
   React.useEffect(() => {
-    if (!open) return;
+    if (!open || !ruangId) return;
     setInfo(null);
     setGalat(null);
     setLampiran('simpan');
@@ -1554,13 +1740,19 @@ function DialogBersihkan({ ruangId, nama, open, onOpenChange }: { ruangId: strin
   const jalan = async () => {
     setProses(true);
     try {
-      const r = await mesin.bersihkan(ruangId, info !== null && info.lampiran > 0 && lampiran === 'simpan');
+      const simpan = info !== null && info.lampiran > 0 && lampiran === 'simpan';
+      const r = hapus ? await mesin.hapusRuang(ruangId, simpan) : await mesin.bersihkan(ruangId, simpan);
       toast.add({
         type: 'success',
-        title: 'Obrolan dibersihkan',
-        description: r.disimpan ? `${r.disimpan} lampiran disimpan ke Berkas saya › Obrolan/${nama}.` : 'Riwayat hilang dari akun Anda; anggota lain tetap melihatnya.',
+        title: hapus ? 'Obrolan dihapus' : 'Obrolan dibersihkan',
+        description: r.disimpan
+          ? `${r.disimpan} lampiran disimpan ke Berkas saya › Obrolan/${nama}.`
+          : hapus
+            ? 'Obrolan hilang dari daftar Anda; anggota lain tidak terpengaruh.'
+            : 'Riwayat hilang dari akun Anda; anggota lain tetap melihatnya.',
       });
       onOpenChange(false);
+      onSelesai?.(ruangId);
     } catch (e) {
       setGalat(pesanGalat(e));
     } finally {
@@ -1571,7 +1763,7 @@ function DialogBersihkan({ ruangId, nama, open, onOpenChange }: { ruangId: strin
     <Dialog
       open={open}
       onOpenChange={(o) => !proses && onOpenChange(o)}
-      title="Bersihkan obrolan?"
+      title={hapus ? 'Hapus obrolan?' : 'Bersihkan obrolan?'}
       size="sm"
       footer={
         <div className="u-ob-bersih-aksi">
@@ -1579,15 +1771,22 @@ function DialogBersihkan({ ruangId, nama, open, onOpenChange }: { ruangId: strin
             Batal
           </Button>
           <Button variant="destructive" onClick={() => void jalan()} loading={proses} disabled={!info}>
-            Bersihkan obrolan
+            {hapus ? 'Hapus obrolan' : 'Bersihkan obrolan'}
           </Button>
         </div>
       }
     >
       <div className="u-ob-bersih">
-        <p className="u-ob-petunjuk">
-          Semua pesan di obrolan dengan <b>{nama}</b> hilang dari akun Anda di semua perangkat. Anggota lain tetap melihatnya. Pesan tidak dihapus permanen dari server.
-        </p>
+        {hapus ? (
+          <p className="u-ob-petunjuk">
+            Obrolan {grup ? 'grup' : 'dengan'} <b>{nama}</b> hilang dari daftar Anda di semua perangkat{grup ? ' dan Anda keluar dari grup' : ''}.{' '}
+            {grup ? 'Anggota lain tetap melihat riwayatnya.' : 'Bila ada pesan baru, obrolan muncul lagi hanya dengan pesan baru itu. Anggota lain tidak terpengaruh.'}
+          </p>
+        ) : (
+          <p className="u-ob-petunjuk">
+            Semua pesan di obrolan dengan <b>{nama}</b> hilang dari akun Anda di semua perangkat. Anggota lain tetap melihatnya. Pesan tidak dihapus permanen dari server.
+          </p>
+        )}
         {galat && <Alert variant="danger">{galat}</Alert>}
         {!info && !galat ? (
           <Skeleton height={64} />
@@ -1599,7 +1798,7 @@ function DialogBersihkan({ ruangId, nama, open, onOpenChange }: { ruangId: strin
             <label data-aktif={lampiran === 'simpan' ? '' : undefined}>
               <input type="radio" name="lampiran" checked={lampiran === 'simpan'} onChange={() => setLampiran('simpan')} />
               <span>
-                <strong>Simpan lampiran ke Berkas saya</strong>
+                <strong>{hapus ? 'Simpan ke Berkas saya' : 'Simpan lampiran ke Berkas saya'}</strong>
                 <small>
                   {belum ? `${belum} lampiran disalin ke Berkas saya › Obrolan/${nama}.` : 'Semua lampiran yang bisa disalin sudah ada di Berkas saya.'}
                   {info.tidak_bisa_disimpan ? ` ${info.tidak_bisa_disimpan} lampiran lama tidak bisa disalin.` : ''}
@@ -1609,7 +1808,7 @@ function DialogBersihkan({ ruangId, nama, open, onOpenChange }: { ruangId: strin
             <label data-aktif={lampiran === 'hapus' ? '' : undefined}>
               <input type="radio" name="lampiran" checked={lampiran === 'hapus'} onChange={() => setLampiran('hapus')} />
               <span>
-                <strong>Hapus lampiran juga</strong>
+                <strong>{hapus ? 'Hapus lampiran juga (hanya dari tampilan Anda)' : 'Hapus lampiran juga'}</strong>
                 <small>Lampiran ikut hilang dari tampilan Anda (tidak disalin).</small>
               </span>
             </label>
@@ -1661,7 +1860,6 @@ export function PengaturanObrolan({ open, onOpenChange, tab: tabAwal = 'privasi'
       setProses(null);
     }
   };
-
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title="Pengaturan obrolan" size="md">
@@ -1886,7 +2084,7 @@ function PanelObrolan({
             {k.galat}
           </Alert>
         )}
-        <DaftarObrolan aktif={aktif} onPilih={setAktif} />
+        <DaftarObrolan aktif={aktif} onPilih={setAktif} onHapus={(id) => id === aktif && setAktif(null)} />
         <p className="u-ob-kaki">
           <Lock aria-hidden /> Terenkripsi di server UNIPO
         </p>

@@ -81,6 +81,8 @@ export interface RuangObrolanData {
   peran_saya: 'admin' | 'anggota';
   kedaluwarsa_detik: number;
   dibuat_at: string;
+  /** Versi foto grup (null = tanpa foto); gambar diambil lewat `mesin.urlFoto`. */
+  foto?: string | null;
 }
 
 export interface PerangkatObrolan {
@@ -112,6 +114,8 @@ export interface KeadaanObrolan {
   kunciBerubah: Record<string, true>;
   terhubung: boolean;
   lampiranMb: number;
+  /** Batas "Hapus untuk semua" bagi pengirim (menit sejak dikirim); admin grup tanpa batas. */
+  hapusSemuaMenit: number;
 }
 
 interface PesanServer {
@@ -155,6 +159,7 @@ const AWAL: KeadaanObrolan = {
   kunciBerubah: {},
   terhubung: false,
   lampiranMb: 25,
+  hapusSemuaMenit: 60,
 };
 
 const P = '/v1/obrolan';
@@ -283,6 +288,7 @@ export class MesinObrolan {
         cadangan_ada: boolean;
         tunggu_maks: number;
         lampiran_mb: number;
+        hapus_semua_menit?: number;
       }>('GET', '/saya');
       // Obrolan dienkripsi di server: tidak ada kunci perangkat baru. Kunci perangkat lama (bila browser ini masih
       // menyimpannya) hanya dipakai untuk membuka pesan end-to-end lama lalu memindahkannya ke enkripsi server.
@@ -297,6 +303,7 @@ export class MesinObrolan {
         sarankanPulihkan: false,
         setelan: { ...AWAL.setelan, ...saya.setelan },
         lampiranMb: saya.lampiran_mb,
+        hapusSemuaMenit: saya.hapus_semua_menit ?? 60,
       });
       await this.muatRuang();
       this.set({ status: 'siap' });
@@ -359,7 +366,9 @@ export class MesinObrolan {
     if (p.enkripsi === 'server') return p.isi ? { ...dasar, isi: p.isi, terverifikasi: true } : { ...dasar, status: 'tak_terbaca' };
     // Pesan end-to-end lama: hanya bisa dibuka browser yang masih memegang kunci perangkat lamanya.
     if (!this.kunci || !p.kunci) return { ...dasar, status: 'tak_terbaca' };
-    const kunciTukarPengirim = kunciSusulan(p.kunci) ? ((await this.kunciDari([p.pengirim]).catch(() => ({}) as Record<string, KunciPublikPerangkat[]>))[p.pengirim] ?? []).map((d) => d.kunci_tukar) : [];
+    const kunciTukarPengirim = kunciSusulan(p.kunci)
+      ? ((await this.kunciDari([p.pengirim]).catch(() => ({}) as Record<string, KunciPublikPerangkat[]>))[p.pengirim] ?? []).map((d) => d.kunci_tukar)
+      : [];
     const h = await dekripsiPesan(p, { ruang, saya: this.kunci!, kunciTandaPengirim: await this.kunciTanda(p.pengirim, p.perangkat).catch(() => null), kunciTukarPengirim });
     if (!h.ok) return { ...dasar, status: h.alasan === 'dihapus' ? 'dihapus' : 'tak_terbaca' };
     this.pindahkanKeServer(ruang, p, kunciTukarPengirim);
@@ -425,7 +434,11 @@ export class MesinObrolan {
     try {
       const r = await this.req<RuangServer>('GET', `/ruang/${id}`, { query: { perangkat: this.kunci?.id } });
       const lama = this.s.ruang[id];
-      const terakhir = r.pesan_terakhir ? (lama?.pesan_terakhir?.id === r.pesan_terakhir.id && lama.pesan_terakhir.status !== 'menunggu' ? lama.pesan_terakhir : await this.buka(id, r.pesan_terakhir)) : null;
+      const terakhir = r.pesan_terakhir
+        ? lama?.pesan_terakhir?.id === r.pesan_terakhir.id && lama.pesan_terakhir.status !== 'menunggu'
+          ? lama.pesan_terakhir
+          : await this.buka(id, r.pesan_terakhir)
+        : null;
       this.pasangRuang({ ...r, pesan_terakhir: terakhir });
     } catch (e) {
       if ((e as { status?: number }).status === 404) this.buangRuang(id);
@@ -447,7 +460,10 @@ export class MesinObrolan {
     this.set((s) => {
       const ruang = { ...s.ruang };
       delete ruang[id];
-      return { ruang, urutan: s.urutan.filter((x) => x !== id) };
+      // Pesan tersimpan ikut dibuang: bila obrolan muncul lagi (pesan baru), riwayat dimuat ulang dari server.
+      const pesan = { ...s.pesan };
+      delete pesan[id];
+      return { ruang, pesan, urutan: s.urutan.filter((x) => x !== id) };
     });
   }
 
@@ -495,6 +511,51 @@ export class MesinObrolan {
   }
 
   /** Muat ulang pesan terbaru ruang (mis. setelah kunci susulan tiba) tanpa membuang pesan yang sedang dikirim. */
+  /** Foto grup sebagai URL blob (dibuka SIAKAD dari simpanan terenkripsi), disimpan per versi. */
+  urlFoto(ruangId: string, versi: string): Promise<string> {
+    const kunci = `${ruangId}:${versi}`;
+    let u = this.fotoGrup.get(kunci);
+    if (!u) {
+      u = (async () => {
+        const r = await this.siakad.request<ArrayBuffer | Blob | { bytes: Uint8Array }>({ method: 'GET', path: `${P}/ruang/${ruangId}/foto`, query: { v: versi } });
+        const d = r.data as unknown;
+        const blob = d instanceof Blob ? d : new Blob([(d instanceof ArrayBuffer ? d : (d as { bytes: Uint8Array }).bytes) as BlobPart]);
+        return URL.createObjectURL(blob);
+      })();
+      u.catch(() => this.fotoGrup.delete(kunci));
+      this.fotoGrup.set(kunci, u);
+    }
+    return u;
+  }
+
+  private fotoGrup = new Map<string, Promise<string>>();
+
+  /** Ganti foto grup (admin): gambar dipotong persegi di tengah dan diperkecil ke 256 px di browser. */
+  async gantiFoto(ruangId: string, file: File) {
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error('Pilih gambar JPG, PNG, atau WebP.');
+    const bmp = await createImageBitmap(file);
+    const sisi = Math.min(bmp.width, bmp.height);
+    const ukuran = Math.min(256, sisi);
+    const kanvas = document.createElement('canvas');
+    kanvas.width = kanvas.height = ukuran;
+    kanvas.getContext('2d')!.drawImage(bmp, (bmp.width - sisi) / 2, (bmp.height - sisi) / 2, sisi, sisi, 0, 0, ukuran, ukuran);
+    bmp.close();
+    const webp = await new Promise<Blob | null>((ok) => kanvas.toBlob(ok, 'image/webp', 0.9));
+    const hasil = webp?.type === 'image/webp' ? webp : await new Promise<Blob | null>((ok) => kanvas.toBlob(ok, 'image/jpeg', 0.9));
+    if (!hasil) throw new Error('Gambar tidak bisa diproses.');
+    await this.req('POST', `/ruang/${ruangId}/foto`, {
+      body: { berkas: { data: hasil, filename: hasil.type === 'image/webp' ? 'foto.webp' : 'foto.jpg', contentType: hasil.type } },
+      multipart: true,
+      timeout: 120_000,
+    });
+    await this.segarkanRuang(ruangId);
+  }
+
+  async hapusFoto(ruangId: string) {
+    await this.req('POST', `/ruang/${ruangId}/foto/hapus`);
+    await this.segarkanRuang(ruangId);
+  }
+
   /** Ringkasan sebelum "Bersihkan obrolan": pesan dan lampiran yang masih terlihat untuk akun ini. */
   infoBersihkan(ruangId: string) {
     return this.req<{ pesan: number; lampiran: number; sudah_disimpan: number; tidak_bisa_disimpan: number }>('GET', `/ruang/${ruangId}/bersihkan`);
@@ -509,6 +570,39 @@ export class MesinObrolan {
     this.kosongkanLokal(ruangId);
     if (r.disimpan) invalidateSiakad('berkas');
     return r;
+  }
+
+  /**
+   * Hapus obrolan untuk akun ini: riwayat disembunyikan seperti bersihkan (lampiran bisa disalin dulu ke Berkas saya),
+   * lalu obrolan hilang dari daftar sampai ada pesan baru. Grup: sekaligus keluar dari grup. Anggota lain tidak
+   * terpengaruh; tidak ada yang dihapus permanen.
+   */
+  async hapusRuang(ruangId: string, simpan: boolean) {
+    const r = await this.req<{ disimpan: number; dilewati: number; keluar: boolean }>('POST', `/ruang/${ruangId}/hapus`, { body: { simpan }, timeout: 300_000 });
+    this.buangRuang(ruangId);
+    if (r.disimpan) invalidateSiakad('berkas');
+    return r;
+  }
+
+  /** "Hapus untuk semua" masih tersedia untuk pesan ini (pengirim dalam batas waktu, atau admin grup). */
+  bolehHapusSemua(ruangId: string, p: PesanObrolan): boolean {
+    const r = this.s.ruang[ruangId];
+    if (!r || p.status !== 'terkirim' || !p.id) return false;
+    if (r.jenis === 'grup' && r.peran_saya === 'admin') return true;
+    if (p.pengirim !== this.s.saya?.id) return false;
+    return Date.now() - Date.parse(p.dibuat_at.replace(' ', 'T')) < this.s.hapusSemuaMenit * 60_000;
+  }
+
+  /** Hapus untuk saya: pesan hilang dari akun ini di semua perangkat; anggota lain tetap melihatnya. */
+  async hapusUntukSaya(ruangId: string, p: PesanObrolan) {
+    await this.req('POST', `/ruang/${ruangId}/pesan/${p.uuid}/hapus-saya`);
+    this.buangPesan(ruangId, p.id);
+  }
+
+  private buangPesan(ruangId: string, id: number) {
+    this.setPesan(ruangId, (x) => ({ ...x, daftar: x.daftar.filter((q) => q.id !== id) }));
+    const r = this.s.ruang[ruangId];
+    if (r?.pesan_terakhir?.id === id) void this.segarkanRuang(ruangId);
   }
 
   private kosongkanLokal(ruangId: string) {
@@ -984,7 +1078,14 @@ export class MesinObrolan {
         case 'ketik':
           if (ruang) this.setKetik(ruang, e.data.pemilik as string);
           break;
+        case 'sembunyi':
+          if (ruang && typeof e.data.id === 'number') this.buangPesan(ruang, e.data.id);
+          break;
         case 'ruang':
+          if (ruang && e.data.aksi === 'hapus') {
+            this.buangRuang(ruang);
+            break;
+          }
           if (ruang && e.data.bersih) this.kosongkanLokal(ruang);
           if (ruang) segarkan.add(ruang);
           else if (e.data.aksi === 'blokir') void this.muatRuang();
