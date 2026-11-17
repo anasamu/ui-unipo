@@ -10,6 +10,7 @@
 - **Aturan warna di pengaturan tema**: bagian "Aturan warna lanjutan" di `PengaturanTema` untuk warna sukses, peringatan, bahaya, informasi, latar halaman terang/gelap, warna utama mode gelap (dengan pilihan Otomatis), dan opsi tema baru `warnaBayangan` (warna bayangan; kosong = abu netral).
 - **Kelola berkas dari ikon** (`unipo-ui/siakad`): `TombolBerkas` di bilah atas `KerangkaAplikasi` (prop `berkas`): unggah cepat lewat tombol atau tarik-lepas dengan progres, berkas terbaru dengan tombol unduh, dan "Kelola berkas" yang membuka `DriveBerkas` dalam dialog (atau halaman berkas aplikasi lewat `onKelola`).
 - `TombolNotifikasi` prop `belumLuar` untuk aplikasi dengan sumber notifikasi sendiri (LMS, LP2M, SPMI): ikon dan lencana sama, klik membuka halaman notifikasi aplikasi. `NavItem.labelTeks` untuk label menu berikon agar terbaca di pencarian fitur dan judul. Aturan cetak kerangka (hanya isi halaman).
+- **Panel bilah atas modern**: panel notifikasi, pesan, dan berkas memakai kartu melayang bersudut lebih besar, kepala dan kaki tetap, tab "Semua | Belum dibaca" dengan penghitung, notifikasi dikelompokkan per hari (Hari ini, Kemarin, Minggu ini, Lebih lama) dengan kotak ikon per modul dan titik belum dibaca, tombol tandai dibaca per baris saat hover, dan lebar penuh di ponsel.
 - **`PintasanFitur`**: grid pintasan untuk beranda dari menu yang sama dengan sidebar.
 - Dokumentasi: halaman **Mulai › Kerangka aplikasi** dengan contoh lengkap, notifikasi, pesan, pencarian, pintasan, dan perbandingan efek bayangan.
 

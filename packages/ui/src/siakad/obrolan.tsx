@@ -51,6 +51,7 @@ import { formatBytes } from '../lib/format';
 import { mesinObrolan, type KeadaanObrolan, type MesinObrolan, type OrangObrolan, type PesanObrolan, type RuangObrolanData } from './obrolan-mesin';
 import type { IsiPesan } from './obrolan-kripto';
 import { pesanGalat, useSiakad } from './provider';
+import { TabKabar } from './notifikasi';
 
 export type { KeadaanObrolan, MesinObrolan, OrangObrolan, PesanObrolan, RuangObrolanData } from './obrolan-mesin';
 export { mesinObrolan } from './obrolan-mesin';
@@ -2072,10 +2073,12 @@ export interface TombolPesanProps {
 export function TombolPesan({ jumlah = 6, onBuka = bukaRuangObrolan, className }: TombolPesanProps) {
   const { keadaan: k } = useObrolan();
   const [buka, setBuka] = React.useState(false);
+  const [tab, setTab] = React.useState<'semua' | 'belum'>('semua');
   if (k.status === 'galat' || k.status === 'tidak_didukung' || k.status === 'mati') return null;
   const saya = k.saya?.id ?? '';
-  const ruang = k.urutan.map((id) => k.ruang[id]).filter((r): r is RuangObrolanData => Boolean(r) && !r.arsip);
-  const total = ruang.reduce((n, r) => n + (r.bisu ? 0 : r.belum_dibaca), 0);
+  const semua = k.urutan.map((id) => k.ruang[id]).filter((r): r is RuangObrolanData => Boolean(r) && !r.arsip);
+  const total = semua.reduce((n, r) => n + (r.bisu ? 0 : r.belum_dibaca), 0);
+  const ruang = tab === 'belum' ? semua.filter((r) => r.belum_dibaca > 0 && !r.bisu) : semua;
   const pilih = (id: string | null) => {
     setBuka(false);
     onBuka(id);
@@ -2085,7 +2088,7 @@ export function TombolPesan({ jumlah = 6, onBuka = bukaRuangObrolan, className }
       open={buka}
       onOpenChange={setBuka}
       align="end"
-      width={360}
+      width={384}
       className={cn('u-kabar-panel', className)}
       trigger={
         <Button variant="ghost" size="sm" iconOnly className="u-kabar-tombol" aria-label={total ? `Pesan, ${total} belum dibaca` : 'Pesan'}>
@@ -2096,8 +2099,11 @@ export function TombolPesan({ jumlah = 6, onBuka = bukaRuangObrolan, className }
     >
       <div className="u-kabar-kepala">
         <span className="u-kabar-judul">Pesan</span>
-        {total > 0 && <span className="u-kabar-hitung">{total} belum dibaca</span>}
+        <Button variant="ghost" size="xs" onClick={() => pilih(null)}>
+          <MessageSquarePlus /> Obrolan baru
+        </Button>
       </div>
+      <TabKabar nilai={tab} onUbah={setTab} belum={total} />
       {k.status === 'memuat' && !ruang.length ? (
         <div className="u-kabar-daftar" aria-busy>
           {[0, 1, 2].map((i) => (
@@ -2125,11 +2131,15 @@ export function TombolPesan({ jumlah = 6, onBuka = bukaRuangObrolan, className }
           })}
         </div>
       ) : (
-        <Empty icon={<MessageCircle />} title="Belum ada obrolan" description="Pesan dari mahasiswa, dosen, dan tendik tampil di sini." />
+        <Empty
+          icon={<MessageCircle />}
+          title={tab === 'belum' ? 'Semua pesan sudah dibaca' : 'Belum ada obrolan'}
+          description={tab === 'belum' ? 'Pesan baru akan tampil di sini.' : 'Pesan dari mahasiswa, dosen, dan tendik tampil di sini.'}
+        />
       )}
       <div className="u-kabar-kaki">
         <Button variant="ghost" size="sm" onClick={() => pilih(null)}>
-          Semua obrolan
+          Buka semua obrolan
         </Button>
       </div>
     </Popover>

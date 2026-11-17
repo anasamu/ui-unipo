@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { Bell, BellOff, CheckCheck } from 'lucide-react';
+import { Bell, BellOff, BookOpen, Check, CheckCheck, FolderOpen, GraduationCap, Mail, ShieldCheck, UserPlus, Users, Wallet } from 'lucide-react';
 import { Button, Skeleton } from '../components/actions';
 import { Empty } from '../components/display';
 import { Popover } from '../components/overlays';
@@ -172,6 +172,43 @@ export function bukaTautan(tautan: string, navigasi?: (href: string) => void) {
   }
 }
 
+
+/** Ikon per modul pengirim notifikasi. */
+const IKON_MODUL: Array<[RegExp, React.ReactNode]> = [
+  [/^(krs|akademik|nilai|kurikulum|kelulusan|wisuda|ta)/, <GraduationCap key="a" />],
+  [/^(keu|keuangan|biaya|gaji|kasir)/, <Wallet key="k" />],
+  [/^(surat|arsip|dokumen|persuratan)/, <Mail key="s" />],
+  [/^(lms|kelas|cbt)/, <BookOpen key="l" />],
+  [/^(spmi|mutu|aturan)/, <ShieldCheck key="m" />],
+  [/^(sdm|presensi|pegawai)/, <Users key="p" />],
+  [/^(pmb|admisi)/, <UserPlus key="b" />],
+  [/^(berkas)/, <FolderOpen key="f" />],
+];
+export function ikonModulNotifikasi(modul?: string | null): React.ReactNode {
+  const m = (modul ?? '').toLowerCase();
+  return IKON_MODUL.find(([re]) => re.test(m))?.[1] ?? <Bell />;
+}
+
+/** Kelompokkan notifikasi per hari: Hari ini, Kemarin, Minggu ini, Lebih lama. */
+export function kelompokHari<T extends { created_at: string }>(daftar: T[], kini = new Date()): Array<{ label: string; items: T[] }> {
+  const awal = new Date(kini.getFullYear(), kini.getMonth(), kini.getDate()).getTime();
+  const label = (s: string) => {
+    const t = new Date(s.includes('T') ? s : s.replace(' ', 'T')).getTime();
+    if (t >= awal) return 'Hari ini';
+    if (t >= awal - 86_400_000) return 'Kemarin';
+    if (t >= awal - 6 * 86_400_000) return 'Minggu ini';
+    return 'Lebih lama';
+  };
+  const out: Array<{ label: string; items: T[] }> = [];
+  for (const x of daftar) {
+    const l = label(x.created_at);
+    const g = out.at(-1);
+    if (g?.label === l) g.items.push(x);
+    else out.push({ label: l, items: [x] });
+  }
+  return out;
+}
+
 export interface TombolNotifikasiProps extends OpsiNotifikasi {
   /**
    * Jumlah belum dibaca dari sumber notifikasi milik aplikasi (mis. notifikasi LMS atau LPPM). Bila diisi, ikon
@@ -194,6 +231,7 @@ export function TombolNotifikasi({ onNavigasi, semuaHref, belumLuar, className, 
   const luar = belumLuar !== undefined;
   const n = useNotifikasi({ ...opsi, enabled: !luar && opsi.enabled !== false });
   const [buka, setBuka] = React.useState(false);
+  const [tab, setTab] = React.useState<'semua' | 'belum'>('semua');
   if (luar)
     return (
       <Button variant="ghost" size="sm" iconOnly className={cn('u-kabar-tombol', className)} aria-label={belumLuar ? `Notifikasi, ${belumLuar} belum dibaca` : 'Notifikasi'} onClick={() => semuaHref && bukaTautan(semuaHref, onNavigasi)}>
@@ -211,13 +249,13 @@ export function TombolNotifikasi({ onNavigasi, semuaHref, belumLuar, className, 
     setBuka(false);
     if (x.tautan) bukaTautan(x.tautan, onNavigasi);
   };
-  const ada = n.daftar ?? [];
+  const ada = (n.daftar ?? []).filter((x) => tab === 'semua' || !x.dibaca_pada);
   return (
     <Popover
       open={buka}
       onOpenChange={ubahBuka}
       align="end"
-      width={360}
+      width={384}
       className={cn('u-kabar-panel', className)}
       trigger={
         <Button variant="ghost" size="sm" iconOnly className="u-kabar-tombol" aria-label={n.belum ? `Notifikasi, ${n.belum} belum dibaca` : 'Notifikasi'}>
@@ -234,30 +272,49 @@ export function TombolNotifikasi({ onNavigasi, semuaHref, belumLuar, className, 
           </Button>
         )}
       </div>
-      {n.daftar === null || (n.memuat && !ada.length) ? (
+      <TabKabar nilai={tab} onUbah={setTab} belum={n.belum} />
+      {n.daftar === null || (n.memuat && !n.daftar.length) ? (
         <div className="u-kabar-daftar" aria-busy>
           {[0, 1, 2].map((i) => (
-            <Skeleton key={i} height={44} />
+            <Skeleton key={i} height={52} />
           ))}
         </div>
       ) : ada.length ? (
-        <div className="u-kabar-daftar" role="list">
-          {ada.map((x) => (
-            <button key={x.id} type="button" role="listitem" className="u-kabar-item" data-belum={x.dibaca_pada ? undefined : ''} onClick={() => pilih(x)}>
-              <span className="u-kabar-titik" aria-hidden />
-              <span className="u-kabar-item-teks">
-                <span className="u-kabar-item-atas">
-                  <b>{x.judul}</b>
-                  <time dateTime={x.created_at}>{waktuRelatif(x.created_at)}</time>
-                </span>
-                {x.isi && <span className="u-kabar-item-isi">{x.isi}</span>}
-                {x.modul && <span className="u-kabar-item-modul">{x.modul}</span>}
-              </span>
-            </button>
+        <div className="u-kabar-daftar">
+          {kelompokHari(ada).map((g) => (
+            <div key={g.label} role="group" aria-label={g.label} className="u-kabar-grup">
+              <div className="u-kabar-sub">{g.label}</div>
+              {g.items.map((x) => (
+                <div key={x.id} className="u-kabar-item" data-belum={x.dibaca_pada ? undefined : ''}>
+                  <button type="button" className="u-kabar-item-utama" onClick={() => pilih(x)}>
+                    <span className="u-kabar-ikon" aria-hidden>
+                      {ikonModulNotifikasi(x.modul)}
+                    </span>
+                    <span className="u-kabar-item-teks">
+                      <span className="u-kabar-item-atas">
+                        <b>{x.judul}</b>
+                        <time dateTime={x.created_at}>{waktuRelatif(x.created_at)}</time>
+                      </span>
+                      {x.isi && <span className="u-kabar-item-isi">{x.isi}</span>}
+                      {x.modul && <span className="u-kabar-item-modul">{x.modul}</span>}
+                    </span>
+                  </button>
+                  {!x.dibaca_pada && (
+                    <Button variant="ghost" size="xs" iconOnly className="u-kabar-item-aksi" aria-label={`Tandai dibaca: ${x.judul}`} onClick={() => void n.baca(x)}>
+                      <Check />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
           ))}
         </div>
       ) : (
-        <Empty icon={<BellOff />} title="Tidak ada notifikasi" description="Pemberitahuan dari semua aplikasi UNIPO tampil di sini." />
+        <Empty
+          icon={<BellOff />}
+          title={tab === 'belum' ? 'Semua sudah dibaca' : 'Tidak ada notifikasi'}
+          description={tab === 'belum' ? 'Notifikasi baru akan tampil di sini.' : 'Pemberitahuan dari semua aplikasi UNIPO tampil di sini.'}
+        />
       )}
       {semuaHref && (
         <div className="u-kabar-kaki">
@@ -269,10 +326,24 @@ export function TombolNotifikasi({ onNavigasi, semuaHref, belumLuar, className, 
               bukaTautan(semuaHref, onNavigasi);
             }}
           >
-            Lihat semua
+            Lihat semua notifikasi
           </Button>
         </div>
       )}
     </Popover>
+  );
+}
+
+/** Tab kecil "Semua | Belum dibaca" di panel bilah atas (notifikasi, pesan). */
+export function TabKabar({ nilai, onUbah, belum }: { nilai: 'semua' | 'belum'; onUbah: (v: 'semua' | 'belum') => void; belum?: number }) {
+  return (
+    <div className="u-kabar-tab" role="tablist">
+      {(['semua', 'belum'] as const).map((v) => (
+        <button key={v} type="button" role="tab" aria-selected={nilai === v} onClick={() => onUbah(v)}>
+          {v === 'semua' ? 'Semua' : 'Belum dibaca'}
+          {v === 'belum' && belum ? <span>{belum > 99 ? '99+' : belum}</span> : null}
+        </button>
+      ))}
+    </div>
   );
 }
