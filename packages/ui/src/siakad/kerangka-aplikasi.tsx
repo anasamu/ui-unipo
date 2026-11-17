@@ -176,7 +176,7 @@ export function KerangkaAplikasi({
       simpan(kunciCiut, v ? '1' : '0');
     });
   const pengguna = useAkunSaya({ foto: false }).data?.akun?.username ?? null;
-  const pin = usePintasanMenu(kode, pengguna, groups, activeKey, pintasan && t.sidebarPintasan);
+  const pin = usePintasanMenu(kode, pengguna, groups, activeKey, pintasan && t.sidebarPintasan, beranda);
   const [palet, setPalet] = React.useState(false);
 
   const navigasi = React.useCallback(
@@ -439,7 +439,7 @@ function ratakanMenu(groups: NavGroup[]): NavItem[] {
  * Menu yang paling sering dibuka pengguna ini di aplikasi ini (hitungan kunjungan di localStorage per aplikasi dan
  * pengguna) ditambah yang disematkan. Maksimal 5; menu yang dibuka kurang dari 2 kali tidak ikut kecuali disematkan.
  */
-export function usePintasanMenu(kode: string, pengguna: string | null, groups: NavGroup[], activeKey: string | undefined, aktif = true): PintasanMenu {
+export function usePintasanMenu(kode: string, pengguna: string | null, groups: NavGroup[], activeKey: string | undefined, aktif = true, beranda?: string): PintasanMenu {
   const kunci = `unipo.pintasan.${kode}.${pengguna ?? 'tamu'}`;
   const [data, setData] = React.useState<DataPintasan>({ hitung: {}, sematan: [] });
   React.useEffect(() => {
@@ -459,7 +459,8 @@ export function usePintasanMenu(kode: string, pengguna: string | null, groups: N
       }),
     [kunci],
   );
-  const semua = React.useMemo(() => ratakanMenu(groups), [groups]);
+  // Beranda selalu ada di atas menu, jadi tidak ikut pintasan.
+  const semua = React.useMemo(() => ratakanMenu(groups).filter((x) => !beranda || x.href !== beranda), [groups, beranda]);
   React.useEffect(() => {
     if (!aktif || !activeKey || !semua.some((x) => x.key === activeKey)) return;
     ubah((d) => ({ ...d, hitung: { ...d.hitung, [activeKey]: (d.hitung[activeKey] ?? 0) + 1 } }));
