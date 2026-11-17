@@ -227,6 +227,7 @@ export const ADEGAN: Record<string, Adegan> = {
   'cuti-akademik': { nada: 'kuning', ikon: CalendarX, ikon2: Hourglass, tokoh: { pose: 'duduk', gaya: 'peci', aksesori: ['buku'], kulit: 'sawo' } },
   pengumuman: { nada: 'mawar', ikon: Megaphone, ikon2: Bell, tokoh: { pose: 'tunjuk', ekspresi: 'kaget', aksesori: ['ponsel'] } },
   obrolan: { nada: 'indigo', ikon: MessagesSquare, ikon2: LockKeyhole, tokoh: { pose: 'duduk', ekspresi: 'senang', gaya: 'hijab', aksesori: ['ponsel'] } },
+  peringatan: { nada: 'oranye', ikon: TriangleAlert, ikon2: Bell, tokoh: { pose: 'tunjuk', ekspresi: 'kaget', gaya: 'hijab', aksesori: ['dokumen'], kulit: 'sawo' } },
   // Keadaan
   kosong: { nada: 'langit', ikon: FileSearch, tokoh: { pose: 'tunjuk', ekspresi: 'bingung' } },
   cari: { nada: 'langit', ikon: Search, tokoh: { pose: 'tunjuk', aksesori: ['kaca'] } },
@@ -270,6 +271,7 @@ export const ILUSTRASI_FITUR = [
   'cuti-akademik',
   'pengumuman',
   'obrolan',
+  'peringatan',
 ] as const;
 
 /** Nama adegan yang tersedia. */

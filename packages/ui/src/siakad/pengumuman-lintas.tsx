@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { Archive, ArchiveRestore, BellRing, Building2, CalendarClock, CircleCheck, CircleDot, Copy, EllipsisVertical, ExternalLink, Eye, Globe, Info, LayoutPanelTop, Link2, Megaphone, MessageSquareText, PanelBottom, PanelTop, Pencil, Plus, Search, Siren, SquareStack, Trash2, Type, Users, Wrench, X } from 'lucide-react';
+import { Archive, ArchiveRestore, Ban, Bell, BellRing, BookOpen, Building2, CalendarClock, CalendarDays, CircleCheck, CircleDot, Clock, Copy, EllipsisVertical, ExternalLink, Eye, FileText, Globe, GraduationCap, Headset, Image, Info, LayoutPanelTop, Link2, Megaphone, MessageSquareText, PanelBottom, PanelTop, PartyPopper, Pencil, Plus, Search, Shapes, Siren, Sparkles, SquareStack, Star, Trash2, TriangleAlert, Type, UserPlus, Users, Wallet, Wifi, Wrench, X } from 'lucide-react';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Empty, Tabs } from '../components/display';
 import { Field, Input, InputGroup, SegmentedControl, Switch, Textarea } from '../components/forms';
@@ -8,6 +8,7 @@ import { BagianForm, PanelForm, PilihanBanyak } from '../components/formulir';
 import { PitaPengumuman, type ItemPita } from '../components/kaki-situs';
 import { ConfirmDialog, Dialog, Menu, Tooltip, useToast, type MenuEntry } from '../components/overlays';
 import { Combobox, Select } from '../components/select';
+import { ADEGAN, Ilustrasi } from '../ikon/ilustrasi';
 import { cn } from '../lib/cn';
 import { GalatApi } from './galat';
 import { PilihEntitas } from './pilih';
@@ -23,6 +24,19 @@ import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakad, useSiakadQu
 export type NadaPengumuman = 'info' | 'penting' | 'darurat' | 'pemeliharaan' | 'sukses';
 export type ModePengumuman = 'pita' | 'banner' | 'popup' | 'toast' | 'bawah';
 export type JenisSasaran = 'mahasiswa' | 'alumni' | 'dosen' | 'tendik' | 'pendaftar' | 'publik';
+/** Visual pengumuman: ikon dalam lingkaran, ilustrasi bawaan unipo-ui, gambar (`gambar`), atau tanpa visual. */
+export type VisualPengumuman = 'ikon' | 'ilustrasi' | 'gambar' | 'tanpa';
+
+export interface OpsiPengumuman {
+  ulang?: 'sekali' | 'sesi';
+  hilang_detik?: number;
+  /** Kosong = perilaku lama: ikon sesuai nada, gambar bila diisi (banner/popup). */
+  visual?: VisualPengumuman;
+  /** Kunci {@link IKON_PENGUMUMAN}; kosong = ikon sesuai nada. */
+  ikon?: string;
+  /** Kunci {@link ILUSTRASI_PENGUMUMAN}. */
+  ilustrasi?: string;
+}
 
 export interface PengumumanTayang {
   id: string;
@@ -33,7 +47,7 @@ export interface PengumumanTayang {
   nada: NadaPengumuman;
   mode: ModePengumuman;
   gambar?: string | null;
-  opsi?: { ulang?: 'sekali' | 'sesi'; hilang_detik?: number };
+  opsi?: OpsiPengumuman;
   prioritas?: number;
   dapat_ditutup: boolean;
   mulai?: string | null;
@@ -125,6 +139,87 @@ const IKON_NADA: Record<NadaPengumuman, React.ReactNode> = {
   sukses: <CircleCheck />,
 };
 
+/** Ikon pilihan untuk visual "Ikon" (daftar putih sama dengan server: Pita::IKON). Warna mengikuti nada. */
+export const IKON_PENGUMUMAN: Array<{ value: string; label: string; ikon: React.ReactNode }> = [
+  { value: 'toa', label: 'Toa', ikon: <Megaphone /> },
+  { value: 'info', label: 'Info', ikon: <Info /> },
+  { value: 'peringatan', label: 'Peringatan', ikon: <TriangleAlert /> },
+  { value: 'darurat', label: 'Darurat', ikon: <Siren /> },
+  { value: 'sukses', label: 'Berhasil', ikon: <CircleCheck /> },
+  { value: 'kalender', label: 'Kalender', ikon: <CalendarDays /> },
+  { value: 'jam', label: 'Batas waktu', ikon: <Clock /> },
+  { value: 'dompet', label: 'Keuangan', ikon: <Wallet /> },
+  { value: 'toga', label: 'Akademik', ikon: <GraduationCap /> },
+  { value: 'buku', label: 'Buku', ikon: <BookOpen /> },
+  { value: 'dokumen', label: 'Dokumen', ikon: <FileText /> },
+  { value: 'alat', label: 'Pemeliharaan', ikon: <Wrench /> },
+  { value: 'bintang', label: 'Bintang', ikon: <Star /> },
+  { value: 'perayaan', label: 'Perayaan', ikon: <PartyPopper /> },
+  { value: 'lonceng', label: 'Lonceng', ikon: <Bell /> },
+  { value: 'pendaftaran', label: 'Pendaftaran', ikon: <UserPlus /> },
+  { value: 'layanan', label: 'Layanan', ikon: <Headset /> },
+  { value: 'jaringan', label: 'Jaringan', ikon: <Wifi /> },
+];
+
+/** Ilustrasi pilihan untuk visual "Ilustrasi" (adegan {@link Ilustrasi}; daftar putih server: Pita::ILUSTRASI). */
+export const ILUSTRASI_PENGUMUMAN: Array<{ value: string; label: string }> = [
+  { value: 'pengumuman', label: 'Pengumuman' },
+  { value: 'jadwal', label: 'Akademik & kalender' },
+  { value: 'krs', label: 'KRS & perkuliahan' },
+  { value: 'pembayaran', label: 'Keuangan' },
+  { value: 'peringatan', label: 'Peringatan' },
+  { value: 'wisuda', label: 'Perayaan & wisuda' },
+  { value: 'pemeliharaan', label: 'Pemeliharaan sistem' },
+  { value: 'pendaftaran', label: 'PMB & pendaftaran' },
+  { value: 'surat-layanan', label: 'Layanan' },
+];
+
+export const PILIHAN_VISUAL: Array<{ value: VisualPengumuman; label: string; ikon: React.ReactNode }> = [
+  { value: 'ikon', label: 'Ikon', ikon: <Shapes /> },
+  { value: 'ilustrasi', label: 'Ilustrasi', ikon: <Sparkles /> },
+  { value: 'gambar', label: 'Gambar', ikon: <Image /> },
+  { value: 'tanpa', label: 'Tanpa', ikon: <Ban /> },
+];
+
+/** Visual yang berlaku untuk mode pengumuman ini (gambar hanya untuk banner dan popup). */
+export function visualPengumuman(p: Pick<PengumumanTayang, 'opsi' | 'gambar' | 'mode'>): VisualPengumuman {
+  const bergambar = p.mode === 'banner' || p.mode === 'popup';
+  const v = p.opsi?.visual ?? (p.gambar && bergambar ? 'gambar' : 'ikon');
+  if (v === 'gambar' && (!bergambar || !p.gambar)) return 'ikon';
+  if (v === 'ilustrasi' && !(p.opsi?.ilustrasi && ADEGAN[p.opsi.ilustrasi])) return 'ikon';
+  return v;
+}
+
+/** Ikon kecil pengumuman: ikon pilihan, ikon utama ilustrasi, atau ikon nada. */
+function ikonPengumuman(p: Pick<PengumumanTayang, 'opsi' | 'nada'>): React.ReactNode {
+  const pilih = p.opsi?.ikon ? IKON_PENGUMUMAN.find((x) => x.value === p.opsi!.ikon)?.ikon : undefined;
+  if (pilih && p.opsi?.visual !== 'ilustrasi') return pilih;
+  const adegan = p.opsi?.visual === 'ilustrasi' && p.opsi.ilustrasi ? ADEGAN[p.opsi.ilustrasi] : undefined;
+  if (adegan) {
+    const Ik = adegan.ikon;
+    return <Ik />;
+  }
+  return IKON_NADA[p.nada];
+}
+
+/**
+ * Visual pengumuman menurut ukuran: `besar` (popup: lingkaran ikon, ilustrasi penuh, atau gambar), `sedang` (banner),
+ * `kecil` (toast). Null bila tanpa visual.
+ */
+function VisualTampil({ p, ukuran }: { p: PengumumanTayang; ukuran: 'besar' | 'sedang' | 'kecil' }) {
+  const v = visualPengumuman(p);
+  if (v === 'tanpa') return null;
+  if (v === 'gambar') return <img className={ukuran === 'besar' ? 'u-pgm-popup-gambar' : 'u-pgm-gambar'} src={p.gambar!} alt="" loading="lazy" />;
+  if (v === 'ilustrasi') {
+    return <Ilustrasi nama={p.opsi!.ilustrasi!} lebar={ukuran === 'besar' ? 200 : ukuran === 'sedang' ? 120 : 64} tokoh={ukuran === 'kecil' ? false : undefined} className={cn('u-pgm-ilus', `u-pgm-ilus-${ukuran}`)} />;
+  }
+  return (
+    <span className={ukuran === 'besar' ? 'u-pgm-popup-ikon' : 'u-pgm-ikon'} aria-hidden>
+      {ikonPengumuman(p)}
+    </span>
+  );
+}
+
 // ---------------------------------------------------------------- data tayang + tutup
 
 const KUNCI_TUTUP = 'unipo.pengumuman.tutup';
@@ -214,19 +309,16 @@ function Tautan({ p, className, children }: { p: PengumumanTayang; className?: s
   );
 }
 
-/** Kartu banner di atas isi halaman: ikon nada, judul, keterangan, tombol tautan, gambar opsional. */
+/** Kartu banner di atas isi halaman: visual (ikon, ilustrasi sedang, gambar, atau tanpa), judul, keterangan, tombol tautan. */
 export function BannerPengumuman({ p, onTutup, className }: { p: PengumumanTayang; onTutup?: () => void; className?: string }) {
   return (
-    <div className={cn('u-pgm-banner', className)} data-nada={p.nada} role="region" aria-label="Pengumuman">
-      <span className="u-pgm-ikon" aria-hidden>
-        {IKON_NADA[p.nada]}
-      </span>
+    <div className={cn('u-pgm-banner', className)} data-nada={p.nada} data-visual={visualPengumuman(p)} role="region" aria-label="Pengumuman">
+      <VisualTampil p={p} ukuran="sedang" />
       <div className="u-pgm-teks">
         <strong>{p.judul}</strong>
         {p.isi && <p>{p.isi}</p>}
         {p.tautan && <Tautan p={p} className="u-button u-pgm-cta" />}
       </div>
-      {p.gambar && <img className="u-pgm-gambar" src={p.gambar} alt="" loading="lazy" />}
       {onTutup && p.dapat_ditutup && (
         <button type="button" className="u-pgm-tutup" aria-label="Tutup pengumuman" onClick={onTutup}>
           <X />
@@ -236,13 +328,19 @@ export function BannerPengumuman({ p, onTutup, className }: { p: PengumumanTayan
   );
 }
 
-/** Kartu toast (juga isi bilah bawah). */
+/** Kartu toast (ikon atau ilustrasi kecil) dan isi bilah bawah (ikon kecil). */
 export function ToastPengumuman({ p, onTutup, bawah, className }: { p: PengumumanTayang; onTutup?: () => void; bawah?: boolean; className?: string }) {
   return (
-    <div className={cn(bawah ? 'u-pgm-bawah' : 'u-pgm-toast', className)} data-nada={p.nada} role="status">
-      <span className="u-pgm-ikon" aria-hidden>
-        {IKON_NADA[p.nada]}
-      </span>
+    <div className={cn(bawah ? 'u-pgm-bawah' : 'u-pgm-toast', className)} data-nada={p.nada} data-visual={bawah ? undefined : visualPengumuman(p)} role="status">
+      {bawah ? (
+        visualPengumuman(p) !== 'tanpa' && (
+          <span className="u-pgm-ikon" aria-hidden>
+            {ikonPengumuman(p)}
+          </span>
+        )
+      ) : (
+        <VisualTampil p={p} ukuran="kecil" />
+      )}
       <div className="u-pgm-teks">
         <strong>{p.judul}</strong>
         {p.isi && !bawah && <p>{p.isi}</p>}
@@ -257,17 +355,15 @@ export function ToastPengumuman({ p, onTutup, bawah, className }: { p: Pengumuma
   );
 }
 
-/** Isi popup (dipakai di dalam Dialog dan di pratinjau). */
-export function IsiPopupPengumuman({ p }: { p: PengumumanTayang }) {
+/**
+ * Isi popup rata tengah untuk pratinjau: visual di atas, judul, keterangan. Popup sungguhan ({@link PengumumanTampil})
+ * menaruh visual dan judul di judul Dialog yang sama tata letaknya.
+ */
+export function IsiPopupPengumuman({ p, judul = true }: { p: PengumumanTayang; judul?: boolean }) {
   return (
-    <div className="u-pgm-popup" data-nada={p.nada}>
-      {p.gambar ? (
-        <img className="u-pgm-popup-gambar" src={p.gambar} alt="" />
-      ) : (
-        <span className="u-pgm-popup-ikon" aria-hidden>
-          {IKON_NADA[p.nada]}
-        </span>
-      )}
+    <div className="u-pgm-popup" data-nada={p.nada} data-visual={visualPengumuman(p)}>
+      <VisualTampil p={p} ukuran="besar" />
+      {judul && <strong className="u-pgm-popup-judul">{p.judul || 'Judul pengumuman'}</strong>}
       {p.isi && <p>{p.isi}</p>}
     </div>
   );
@@ -320,7 +416,7 @@ export function PengumumanTampil({ aplikasi, situs, bagian = ['atas', 'isi', 'la
         <PitaPengumuman
           className={cn('u-pgm-pita', className)}
           interval={7000}
-          items={pita.map((p) => ({ id: p.id, title: p.judul, detail: p.isi ?? undefined, href: p.tautan ?? undefined, cta: p.teks_tautan ?? undefined, external: /^https?:/.test(p.tautan ?? ''), priority: nadaKePita(p.nada), dapatDitutup: p.dapat_ditutup }))}
+          items={pita.map((p) => ({ id: p.id, title: p.judul, detail: p.isi ?? undefined, href: p.tautan ?? undefined, cta: p.teks_tautan ?? undefined, external: /^https?:/.test(p.tautan ?? ''), priority: nadaKePita(p.nada), dapatDitutup: p.dapat_ditutup, icon: ikonPengumuman(p) }))}
           onTutupItem={(it) => {
             const p = pita.find((x) => x.id === it.id);
             if (p) tutup(p);
@@ -337,20 +433,36 @@ export function PengumumanTampil({ aplikasi, situs, bagian = ['atas', 'isi', 'la
       {bagian.includes('lapis') && (
         <>
           {popup && (
-            <Dialog open onOpenChange={(o) => !o && tutupPopup()} title={popup.judul} size={popup.gambar ? 'md' : 'sm'} footer={
-              <div className="u-pgm-popup-aksi">
-                <Button variant="outline" onClick={tutupPopup}>
-                  Tutup
-                </Button>
-                {popup.tautan && (
-                  <Button render={<a href={popup.tautan} target={/^https?:/.test(popup.tautan) ? '_blank' : undefined} rel="noreferrer" />} onClick={tutupPopup}>
-                    {popup.teks_tautan || 'Selengkapnya'}
+            <Dialog
+              open
+              onOpenChange={(o) => !o && tutupPopup()}
+              className={cn('u-pgm-dialog', `u-pgm-dialog-${visualPengumuman(popup)}`)}
+              size={visualPengumuman(popup) === 'gambar' ? 'md' : 'sm'}
+              title={
+                // Visual di atas judul, rata tengah; nama yang dibaca pembaca layar tetap judul (visual dekoratif).
+                <>
+                  {visualPengumuman(popup) !== 'tanpa' && (
+                    <span className="u-pgm-dialog-visual" data-nada={popup.nada}>
+                      <VisualTampil p={popup} ukuran="besar" />
+                    </span>
+                  )}
+                  <span className="u-pgm-dialog-judul">{popup.judul}</span>
+                </>
+              }
+              description={popup.isi || undefined}
+              footer={
+                <>
+                  <Button variant="outline" onClick={tutupPopup}>
+                    Tutup
                   </Button>
-                )}
-              </div>
-            }>
-              <IsiPopupPengumuman p={popup} />
-            </Dialog>
+                  {popup.tautan && (
+                    <Button render={<a href={popup.tautan} target={/^https?:/.test(popup.tautan) ? '_blank' : undefined} rel="noreferrer" />} onClick={tutupPopup}>
+                      {popup.teks_tautan || 'Selengkapnya'}
+                    </Button>
+                  )}
+                </>
+              }
+            />
           )}
           {kanan.length > 0 && (
             <div className="u-pgm-toast-daftar" aria-live="polite">
@@ -376,7 +488,7 @@ export function PratinjauPengumuman({ p }: { p: PengumumanTayang }) {
     <div className="u-pgm-pratinjau" data-mode={p.mode} aria-label={`Pratinjau ${p.mode}`}>
       <div className="u-pgm-pratinjau-layar">
         {p.mode === 'pita' && (
-          <PitaPengumuman interval={0} items={[{ id: 'x', title: p.judul || 'Judul pengumuman', detail: p.isi ?? undefined, href: p.tautan || undefined, cta: p.teks_tautan ?? undefined, priority: nadaKePita(p.nada), dapatDitutup: p.dapat_ditutup }]} onTutupItem={() => {}} />
+          <PitaPengumuman interval={0} items={[{ id: 'x', title: p.judul || 'Judul pengumuman', detail: p.isi ?? undefined, href: p.tautan || undefined, cta: p.teks_tautan ?? undefined, priority: nadaKePita(p.nada), dapatDitutup: p.dapat_ditutup, icon: ikonPengumuman(p) }]} onTutupItem={() => {}} />
         )}
         <div className="u-pgm-pratinjau-kepala">
           <i />
@@ -392,7 +504,6 @@ export function PratinjauPengumuman({ p }: { p: PengumumanTayang }) {
         {p.mode === 'popup' && (
           <div className="u-pgm-pratinjau-lapis">
             <div className="u-pgm-pratinjau-dialog">
-              <strong>{p.judul || 'Judul pengumuman'}</strong>
               <IsiPopupPengumuman p={p} />
               <div className="u-pgm-popup-aksi">
                 <span className="u-pgm-pratinjau-tombol">Tutup</span>
@@ -454,7 +565,7 @@ const DRAF_KOSONG: Draf = {
   nada: 'info',
   mode: 'pita',
   gambar: '',
-  opsi: {},
+  opsi: { visual: 'ikon' },
   prioritas: 0,
   dapat_ditutup: true,
   mulai: null,
@@ -466,6 +577,18 @@ const DRAF_KOSONG: Draf = {
   unit: null,
   peran: null,
 };
+
+/** Opsi yang dikirim: hanya kunci yang relevan untuk mode dan visual terpilih. */
+function opsiBersih(o: OpsiPengumuman | undefined, mode: ModePengumuman): OpsiPengumuman {
+  const v = o?.visual ?? 'ikon';
+  return {
+    ulang: mode === 'popup' ? o?.ulang : undefined,
+    hilang_detik: mode === 'toast' ? o?.hilang_detik : undefined,
+    visual: v,
+    ikon: v === 'ikon' ? o?.ikon : undefined,
+    ilustrasi: v === 'ilustrasi' ? (o?.ilustrasi ?? ILUSTRASI_PENGUMUMAN[0]!.value) : undefined,
+  };
+}
 
 const keInputWaktu = (v?: string | null) => (v ? v.replace(' ', 'T').slice(0, 16) : '');
 const dariInputWaktu = (v: string) => (v ? `${v.replace('T', ' ')}:00` : null);
@@ -482,6 +605,8 @@ function drafAwal(awal: PengumumanKelola | null | undefined, salin: boolean, apl
     tautan_ref: awal.tautan_ref ?? null,
     gambar: awal.gambar ?? '',
     publik: awal.publik ?? (awal.jenis ?? []).includes('publik'),
+    // Rekaman lama tanpa opsi.visual: gambar bila diisi, selain itu ikon nada.
+    opsi: { ...awal.opsi, visual: awal.opsi?.visual ?? (awal.gambar ? 'gambar' : 'ikon') },
   };
   if (salin) {
     delete d.id;
@@ -530,8 +655,8 @@ function useFormPengumuman({ awal, salin, aplikasiBawaan, onSelesai }: { awal?: 
         teks_tautan: d.teks_tautan || null,
         nada: d.nada,
         mode: d.mode,
-        gambar: d.mode === 'banner' || d.mode === 'popup' ? d.gambar || null : null,
-        opsi: d.opsi,
+        gambar: (d.mode === 'banner' || d.mode === 'popup') && d.opsi?.visual === 'gambar' ? d.gambar || null : null,
+        opsi: opsiBersih(d.opsi, d.mode),
         prioritas: d.prioritas,
         dapat_ditutup: d.dapat_ditutup,
         mulai: d.mulai,
@@ -657,6 +782,72 @@ function PilihTautan({ f }: { f: StateForm }) {
   );
 }
 
+/** Pilihan visual (bagian Tampilan): ikon dalam lingkaran, ilustrasi, gambar (banner/popup), atau tanpa. */
+function PilihVisual({ f }: { f: StateForm }) {
+  const { d, setD, galat } = f;
+  const bergambar = d.mode === 'banner' || d.mode === 'popup';
+  const visual = d.opsi?.visual ?? 'ikon';
+  const efektif = visual === 'gambar' && !bergambar ? 'ikon' : visual;
+  const ubahOpsi = (o: Partial<OpsiPengumuman>) => setD((x) => ({ ...x, opsi: { ...x.opsi, ...o } }));
+  const keterangan: Record<ModePengumuman, string> = {
+    popup: 'Tampil di tengah atas popup.',
+    banner: 'Tampil di kiri banner (ilustrasi ukuran sedang).',
+    toast: 'Toast memakai ikon atau ilustrasi kecil.',
+    pita: 'Pita hanya menampilkan ikon kecil.',
+    bawah: 'Bilah bawah hanya menampilkan ikon kecil.',
+  };
+  return (
+    <>
+      <Field label="Visual" description={keterangan[d.mode]} className="u-form-lebar">
+        <SegmentedControl
+          fullWidth
+          value={efektif}
+          onValueChange={(v) => ubahOpsi({ visual: v as VisualPengumuman, ...(v === 'ilustrasi' && !d.opsi?.ilustrasi ? { ilustrasi: ILUSTRASI_PENGUMUMAN[0]!.value } : {}) })}
+          options={PILIHAN_VISUAL.filter((v) => v.value !== 'gambar' || bergambar).map((v) => ({ value: v.value, label: v.label }))}
+          aria-label="Visual"
+        />
+      </Field>
+      {efektif === 'ikon' && (
+        <Field label="Ikon" description="Warna mengikuti nada." error={galat['opsi.ikon']} className="u-form-lebar">
+          <div className="u-pgm-ikon-pilih" role="radiogroup" aria-label="Ikon" data-nada={d.nada}>
+            <button type="button" role="radio" aria-checked={!d.opsi?.ikon} aria-label="Sesuai nada" title="Sesuai nada" data-aktif={!d.opsi?.ikon ? '' : undefined} onClick={() => ubahOpsi({ ikon: undefined })}>
+              {IKON_NADA[d.nada]}
+              <small>Nada</small>
+            </button>
+            {IKON_PENGUMUMAN.map((k) => (
+              <button key={k.value} type="button" role="radio" aria-checked={d.opsi?.ikon === k.value} aria-label={k.label} title={k.label} data-aktif={d.opsi?.ikon === k.value ? '' : undefined} onClick={() => ubahOpsi({ ikon: k.value })}>
+                {k.ikon}
+              </button>
+            ))}
+          </div>
+        </Field>
+      )}
+      {efektif === 'ilustrasi' && (
+        <Field label="Ilustrasi" description="Warna mengikuti tema aplikasi." error={galat['opsi.ilustrasi']} className="u-form-lebar">
+          <div className="u-pgm-ilus-pilih" role="radiogroup" aria-label="Ilustrasi">
+            {ILUSTRASI_PENGUMUMAN.map((k) => {
+              const aktif = (d.opsi?.ilustrasi ?? ILUSTRASI_PENGUMUMAN[0]!.value) === k.value;
+              return (
+                <button key={k.value} type="button" role="radio" aria-checked={aktif} data-aktif={aktif ? '' : undefined} onClick={() => ubahOpsi({ ilustrasi: k.value })}>
+                  <Ilustrasi nama={k.value} lebar="100%" bergerak={false} />
+                  <small>{k.label}</small>
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+      )}
+      {efektif === 'gambar' && (
+        <Field label="URL gambar" description="Gambar publik http(s) atau jalur diawali /, mis. dari media portal. Rasio lebar (mis. 16:9) paling pas." error={galat.gambar} className="u-form-lebar">
+          <InputGroup start={<Image />}>
+            <Input value={d.gambar ?? ''} onChange={(e) => setD((x) => ({ ...x, gambar: e.target.value }))} placeholder="https://…" aria-label="URL gambar" />
+          </InputGroup>
+        </Field>
+      )}
+    </>
+  );
+}
+
 /** Isian formulir pengumuman (bagian Isi, Tampilan + pratinjau, Sasaran, Jadwal) untuk panel atau halaman. */
 function IsiFormPengumuman({ f }: { f: StateForm }) {
   const { hak, d, ubah, setD, galat, perkiraan } = f;
@@ -725,11 +916,7 @@ function IsiFormPengumuman({ f }: { f: StateForm }) {
         <Field label="Nada" className="u-form-lebar">
           <Select value={d.nada} onValueChange={(v) => v && ubah('nada', v as NadaPengumuman)} options={PILIHAN_NADA.map((n) => ({ ...n, icon: <span className="u-pgm-nada-ikon" data-nada={n.value}>{IKON_NADA[n.value]}</span> }))} aria-label="Nada" />
         </Field>
-        {(d.mode === 'banner' || d.mode === 'popup') && (
-          <Field label="Gambar" description="URL gambar (opsional), mis. dari Kelola berkas atau media portal." error={galat.gambar} className="u-form-lebar">
-            <Input value={d.gambar ?? ''} onChange={(e) => ubah('gambar', e.target.value)} placeholder="https://…" />
-          </Field>
-        )}
+        <PilihVisual f={f} />
         {d.mode === 'popup' && (
           <Field label="Tampilkan popup" className="u-form-lebar">
             <SegmentedControl
@@ -1118,7 +1305,7 @@ export function KelolaPengumuman({ aplikasi, className }: KelolaPengumumanProps)
             return (
               <li key={p.id} className="u-pgm-item" data-nada={p.nada} data-tayang={p.tayang}>
                 <span className="u-pgm-ikon" aria-hidden>
-                  {IKON_NADA[p.nada]}
+                  {ikonPengumuman(p)}
                 </span>
                 <div className="u-pgm-item-isi">
                   <div className="u-pgm-item-judul">
