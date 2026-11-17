@@ -9,6 +9,7 @@ import { ConfirmDialog, useToast } from '../components/overlays';
 import { GalatApi } from './galat';
 import { invalidateSiakad, useOptionalSiakad, useSiakad, useSiakadQuery } from './provider';
 import { KUNCI_TATA_KERANGKA, tataKerangka, type TataKerangka } from './kerangka-aplikasi';
+import { animasikanMasuk, BilahProgres, MuatHalaman, PILIHAN_MUAT_AWAL, PILIHAN_MUAT_PINDAH } from '../components/muat-halaman';
 import {
   FONT,
   NETRAL,
@@ -489,6 +490,48 @@ function PratinjauKerangka({ t }: { t: TataKerangka }) {
   );
 }
 
+/** Pratinjau efek memuat: tombol "Coba" memutar efek halaman pertama lalu efek pindah menu. */
+function PratinjauMuat({ t }: { t: TataKerangka }) {
+  const [tahap, setTahap] = React.useState<'awal' | 'pindah' | null>(null);
+  const isiRef = React.useRef<HTMLDivElement>(null);
+  const efek = t.muatPindah.endsWith('blur') ? 'blur' : t.muatPindah.endsWith('pudar') ? 'pudar' : null;
+  React.useEffect(() => {
+    if (!tahap) return;
+    const x = setTimeout(
+      () => {
+        if (efek) animasikanMasuk(isiRef.current, efek);
+        setTahap(tahap === 'awal' ? 'pindah' : null);
+      },
+      tahap === 'awal' ? 1400 : 900,
+    );
+    return () => clearTimeout(x);
+  }, [tahap, efek]);
+  return (
+    <div className="u-tema-muat">
+      <div className="u-tema-muat-pratinjau" aria-hidden>
+        {t.muatPindah.startsWith('progres') && <BilahProgres aktif={tahap !== null} tunda={0} posisi="wadah" />}
+        <div ref={isiRef} className="u-tema-muat-isi">
+          {tahap === 'awal' && t.muatAwal !== 'tidak' ? (
+            <MuatHalaman gaya={t.muatAwal} tata="dasbor" label={null} />
+          ) : (
+            <>
+              <i className="u-tema-muat-judul" />
+              <span className="u-tema-muat-kartu">
+                <i />
+                <i />
+                <i />
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+      <Button size="sm" variant="outline" onClick={() => setTahap('awal')} disabled={tahap !== null}>
+        <RotateCcw /> Coba efek
+      </Button>
+    </div>
+  );
+}
+
 function PengaturanKerangka({ tata, ubah }: { tata: Record<string, unknown>; ubah: (kunci: string, nilai: unknown) => void }) {
   const t = tataKerangka(tata);
   const set = <K extends keyof TataKerangka>(k: K, v: TataKerangka[K]) => ubah(KUNCI_TATA_KERANGKA[k], typeof v === 'boolean' ? (v ? 'ya' : 'tidak') : v);
@@ -523,6 +566,16 @@ function PengaturanKerangka({ tata, ubah }: { tata: Record<string, unknown>; uba
       <div className="u-tema-dua">
         {seg('headerCari', 'Kotak cari', [{ value: 'tengah', label: 'Tengah' }, { value: 'kanan', label: 'Kanan' }, { value: 'ikon', label: 'Ikon' }])}
         {seg('headerJudul', 'Judul halaman', [{ value: 'judul', label: 'Judul' }, { value: 'breadcrumb', label: 'Jejak' }, { value: 'tanpa', label: 'Tanpa' }])}
+      </div>
+      <div className="u-tema-kelompok">Efek memuat</div>
+      <PratinjauMuat t={t} />
+      <div className="u-tema-dua">
+        <Field label="Saat halaman pertama dibuka" description={PILIHAN_MUAT_AWAL.find((o) => o.value === t.muatAwal)?.keterangan}>
+          <Select size="sm" value={t.muatAwal} onValueChange={(v) => v && set('muatAwal', v)} options={PILIHAN_MUAT_AWAL.map(({ value, label }) => ({ value, label }))} aria-label="Efek halaman pertama" />
+        </Field>
+        <Field label="Saat pindah menu" description={PILIHAN_MUAT_PINDAH.find((o) => o.value === t.muatPindah)?.keterangan}>
+          <Select size="sm" value={t.muatPindah} onValueChange={(v) => v && set('muatPindah', v)} options={PILIHAN_MUAT_PINDAH.map(({ value, label }) => ({ value, label }))} aria-label="Efek pindah menu" />
+        </Field>
       </div>
     </Card>
   );

@@ -42,6 +42,7 @@ export * from './components/struktur-organisasi';
 export * from './components/kode-qr';
 export * from './components/laporan';
 export * from './components/progres';
+export * from './components/muat-halaman';
 export * from './components/navigasi-modul';
 export * from './components/dua-langkah';
 export * from './components/peta';

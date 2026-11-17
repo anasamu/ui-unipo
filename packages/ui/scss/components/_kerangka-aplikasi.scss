@@ -63,6 +63,7 @@
   display: none !important;
 }
 .u-kerangka-isi {
+  position: relative;
   width: 100%;
   min-width: 0;
 }
@@ -1149,4 +1150,19 @@
     background: none;
     box-shadow: none;
   }
+}
+
+// ---- kerangka menempel ke tepi viewport
+// Browser memberi <body> margin 8px bawaan; unipo-ui tidak me-reset body secara global, jadi kerangka
+// melakukannya sendiri agar sidebar dan bilah atas rata dengan tepi atas dan kiri di semua aplikasi.
+body:has(.u-kerangka-aplikasi) {
+  margin: 0;
+}
+
+// ---- pintasan pencarian (⌘K / /) di bilah atas: ikut warna bilah (polos, utama, blur, ...)
+.u-kerangka-aplikasi .u-search-trigger .u-kbd {
+  border-color: color-mix(in oklab, currentColor 24%, transparent);
+  background: color-mix(in oklab, currentColor 10%, transparent);
+  color: inherit;
+  opacity: 0.9;
 }

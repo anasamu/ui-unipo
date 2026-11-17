@@ -2038,8 +2038,13 @@ export function KotakObrolan({ tinggi = 640, ruang, onRuangChange, judul, classN
 
 export interface ChatMengambangProps {
   posisi?: 'kanan' | 'kiri';
-  /** Jarak dari tepi bawah (px), mis. bila ada navigasi bawah di ponsel. */
+  /**
+   * Jarak dari tepi bawah (px). Kosongkan agar memakai posisi standar UNIPO: tombol 56px, 24px dari pojok kanan bawah,
+   * dan di atas navigasi bawah ponsel bila `navBawah`.
+   */
   bawah?: number;
+  /** Ada navigasi bawah di ponsel (`KerangkaAplikasi` mengisinya): tombol dinaikkan di atasnya pada layar < 768px. */
+  navBawah?: boolean;
   judul?: React.ReactNode;
   className?: string;
 }
@@ -2048,7 +2053,7 @@ export interface ChatMengambangProps {
  * Tombol obrolan mengambang di pojok layar dengan lencana pesan belum dibaca. Panel berisi daftar obrolan, cari
  * pengguna, dan ruang obrolan; layar penuh di ponsel. Pasang sekali di layout aplikasi.
  */
-export function ChatMengambang({ posisi = 'kanan', bawah = 20, judul, className }: ChatMengambangProps) {
+export function ChatMengambang({ posisi = 'kanan', bawah, navBawah, judul, className }: ChatMengambangProps) {
   const { mesin, keadaan: k } = useObrolan();
   const [buka, setBuka] = React.useState(false);
   const [aktif, setAktif] = React.useState<string | null>(null);
@@ -2083,7 +2088,13 @@ export function ChatMengambang({ posisi = 'kanan', bawah = 20, judul, className 
   }, [buka]);
 
   return (
-    <div className={cn('u-ob-apung', className)} data-posisi={posisi} data-buka={buka ? '' : undefined} style={{ '--ob-bawah': `${bawah}px` } as React.CSSProperties}>
+    <div
+      className={cn('u-ob-apung', className)}
+      data-posisi={posisi}
+      data-buka={buka ? '' : undefined}
+      data-nav-bawah={navBawah ? '' : undefined}
+      style={bawah != null ? ({ '--ob-bawah': `${bawah}px` } as React.CSSProperties) : undefined}
+    >
       {buka && (
         <div className="u-ob-apung-panel" role="dialog" aria-label="Obrolan">
           <PanelObrolan mode="tunggal" aktif={aktif} setAktif={setAktif} onTutup={tutup} judul={judul} />

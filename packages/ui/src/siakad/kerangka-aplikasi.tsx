@@ -4,6 +4,7 @@ import { Monitor, Moon, Pin, PinOff, Search, Sun } from 'lucide-react';
 import { Button } from '../components/actions';
 import type { AkunPengguna, MenuAkunProps, TemaAkun } from '../components/akun';
 import { LogoAplikasi } from '../components/identity';
+import { animasikanMasuk, BilahProgres, MuatHalaman, useMuatTertunda, usePantauMuat, type GayaMuatAwal, type GayaMuatPindah, type TataMuatHalaman } from '../components/muat-halaman';
 import { AppShell, SearchTrigger, Sidebar, type NavGroup, type NavItem, type SidebarProps, type SidebarUser } from '../components/layout';
 import { Tooltip } from '../components/overlays';
 import { fiturDariMenu, labelPintasanCari, PencarianFitur, usePintasanCari, type ItemFitur } from '../components/pencarian-fitur';
@@ -95,6 +96,13 @@ export interface KerangkaAplikasiProps {
   temaAplikasi?: string;
   /** Lingkup tema, mis. kode fakultas untuk aplikasi fakultas. */
   temaLingkup?: string;
+  /**
+   * Bentuk kerangka (skeleton) saat halaman pertama dimuat. Bawaan: "dasbor" di beranda, "tabel" di halaman lain.
+   * Fungsi menerima `activeKey`.
+   */
+  tataMuat?: TataMuatHalaman | ((activeKey?: string) => TataMuatHalaman);
+  /** Timpa efek memuat dari tema (`tata.muat_awal`, `tata.muat_pindah`); `false` mematikan semuanya. */
+  muat?: false | { awal?: GayaMuatAwal; pindah?: GayaMuatPindah };
   children: React.ReactNode;
   className?: string;
 }
@@ -159,6 +167,8 @@ export function KerangkaAplikasi({
   pintasan = true,
   temaAplikasi,
   temaLingkup,
+  tataMuat,
+  muat,
   children,
   className,
 }: KerangkaAplikasiProps) {
@@ -245,6 +255,45 @@ export function KerangkaAplikasi({
       <MenuAkunSiakad varian="avatar" align="end" {...((akun as object) ?? {})} tema={tema} onTema={onTema} onKeluar={onKeluar} />
     );
 
+  // ---- efek memuat: halaman pertama dan pindah menu (lihat components/muat-halaman)
+  const muatAwal: GayaMuatAwal = muat === false ? 'tidak' : (muat?.awal ?? t.muatAwal);
+  const muatPindah: GayaMuatPindah = muat === false ? 'tidak' : (muat?.pindah ?? t.muatPindah);
+  const isiRef = React.useRef<HTMLDivElement>(null);
+  const jalur = `${typeof window !== 'undefined' ? window.location.pathname : ''}|${activeKey ?? ''}`;
+  const [sesiMuat, setSesiMuat] = React.useState<'awal' | 'pindah' | null>('awal');
+  const jalurLalu = React.useRef(jalur);
+  const efekMasuk = muatPindah.endsWith('blur') ? 'blur' : muatPindah.endsWith('pudar') ? 'pudar' : null;
+  React.useLayoutEffect(() => {
+    if (jalurLalu.current === jalur) return;
+    jalurLalu.current = jalur;
+    setSesiMuat('pindah');
+    if (efekMasuk) animasikanMasuk(isiRef.current, efekMasuk);
+  }, [jalur, efekMasuk]);
+  const adaMuat = usePantauMuat(isiRef, sesiMuat !== null);
+  const sesiSebelum = React.useRef(sesiMuat);
+  React.useEffect(() => {
+    if (!sesiMuat) return;
+    // Selesai bila isi tidak lagi punya pemuat (setelah jeda singkat), paling lama 10 detik.
+    const t = setTimeout(() => setSesiMuat(null), adaMuat ? 10_000 : 140);
+    return () => clearTimeout(t);
+  }, [sesiMuat, adaMuat]);
+  const muatTerlihat = useMuatTertunda(sesiMuat !== null && adaMuat, { tunda: 150, minimal: 300 });
+  React.useEffect(() => {
+    // Isi baru muncul halus setelah pemuat yang sempat terlihat hilang.
+    if (!muatTerlihat && sesiSebelum.current && efekMasuk) animasikanMasuk(isiRef.current, efekMasuk);
+    sesiSebelum.current = muatTerlihat ? sesiMuat : null;
+  }, [muatTerlihat]); // eslint-disable-line react-hooks/exhaustive-deps
+  const tutupAktif = sesiMuat === 'awal' && adaMuat && muatAwal !== 'tidak';
+  const tutupTampil = useMuatTertunda(tutupAktif, { tunda: 150, minimal: 350 });
+  const [tutupAda, setTutupAda] = React.useState(false);
+  React.useEffect(() => {
+    if (tutupTampil) return setTutupAda(true);
+    const x = setTimeout(() => setTutupAda(false), 220);
+    return () => clearTimeout(x);
+  }, [tutupTampil]);
+  const tataMuatTampil: TataMuatHalaman =
+    typeof tataMuat === 'function' ? tataMuat(activeKey) : (tataMuat ?? (activeKey && berandaItem && activeKey === berandaItem.key ? 'dasbor' : 'tabel'));
+
   return (
     <AppShell
       className={cn('u-kerangka-aplikasi', className)}
@@ -300,11 +349,17 @@ export function KerangkaAplikasi({
         </div>
       }
     >
-      <div className="u-kerangka-isi" data-nav-bawah={navBawahTampil.length ? '' : undefined}>
+      <div ref={isiRef} className="u-kerangka-isi" data-nav-bawah={navBawahTampil.length ? '' : undefined} aria-busy={muatTerlihat || undefined}>
         {children}
+        {tutupAda && (
+          <div className="u-mh-tutup" data-keluar={tutupTampil ? undefined : ''}>
+            <MuatHalaman gaya={muatAwal} tata={tataMuatTampil} logo={brandIsi} />
+          </div>
+        )}
       </div>
+      {muatPindah.startsWith('progres') && <BilahProgres aktif={sesiMuat !== null && adaMuat} tunda={150} />}
       {cari !== false && !opsiCari.onBuka && <PencarianFitur open={palet} onOpenChange={setPalet} items={fitur} placeholder={opsiCari.placeholder ?? 'Cari fitur atau menu'} onPilih={(it) => it.href && navigasi(it.href)} />}
-      {pesan !== false && opsiPesan.mengambang !== false && <ChatMengambang judul={opsiPesan.judul} bawah={navBawahTampil.length ? 84 : 20} className="u-kerangka-ob" />}
+      {pesan !== false && opsiPesan.mengambang !== false && <ChatMengambang judul={opsiPesan.judul} navBawah={navBawahTampil.length > 0} className="u-kerangka-ob" />}
       {navBawahTampil.length ? (
         <NavigasiBawah
           items={navBawahTampil}
@@ -342,6 +397,10 @@ export interface TataKerangka {
   headerCari: 'tengah' | 'kanan' | 'ikon';
   headerLengket: boolean;
   headerJudul: 'judul' | 'breadcrumb' | 'tanpa';
+  /** Efek saat aplikasi pertama dibuka. */
+  muatAwal: GayaMuatAwal;
+  /** Efek saat pindah menu. */
+  muatPindah: GayaMuatPindah;
 }
 
 export const TATA_KERANGKA_BAWAAN: TataKerangka = {
@@ -356,6 +415,8 @@ export const TATA_KERANGKA_BAWAAN: TataKerangka = {
   headerCari: 'kanan',
   headerLengket: true,
   headerJudul: 'judul',
+  muatAwal: 'kerangka',
+  muatPindah: 'progres-pudar',
 };
 
 /** Kunci `tata` (snake_case, disimpan di /v1/tema) untuk tiap pilihan kerangka. */
@@ -371,6 +432,8 @@ export const KUNCI_TATA_KERANGKA: Record<keyof TataKerangka, string> = {
   headerCari: 'header_cari',
   headerLengket: 'header_lengket',
   headerJudul: 'header_judul',
+  muatAwal: 'muat_awal',
+  muatPindah: 'muat_pindah',
 };
 
 const PILIHAN_TATA: { [K in keyof TataKerangka]: ReadonlyArray<TataKerangka[K]> } = {
@@ -385,6 +448,8 @@ const PILIHAN_TATA: { [K in keyof TataKerangka]: ReadonlyArray<TataKerangka[K]> 
   headerCari: ['tengah', 'kanan', 'ikon'],
   headerLengket: [true, false],
   headerJudul: ['judul', 'breadcrumb', 'tanpa'],
+  muatAwal: ['kerangka', 'logo', 'putar', 'titik', 'tidak'],
+  muatPindah: ['progres-pudar', 'progres', 'progres-blur', 'pudar', 'blur', 'tidak'],
 };
 
 /** Baca pilihan kerangka dari `tata` tema; nilai yang tidak dikenal memakai bawaan. */

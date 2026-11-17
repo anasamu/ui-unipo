@@ -43,6 +43,7 @@ export const meta: DemoMeta = {
     ['pintasan', 'boolean', 'Bagian Pintasan: menu yang paling sering dibuka pengguna ini (localStorage per aplikasi + pengguna), bisa disematkan/dilepas. Bawaan true.'],
     ['temaAplikasi / temaLingkup', 'string', 'Kode aplikasi dan lingkup tema (/v1/tema) bila berbeda dari kode, untuk membaca variasi Sidebar dan Header.'],
     ['navBawah / navBawahAktif', 'ItemNavigasiBawah[] / string', 'Navigasi bawah di layar < 768 px.'],
+    ['tataMuat / muat', "TataMuatHalaman | (activeKey) => TataMuatHalaman / false | { awal?, pindah? }", 'Efek memuat halaman pertama dan pindah menu (lihat Efek memuat halaman). Bawaan dari tema: bilah progres + kerangka isi, lalu bilah progres + pudar.'],
   ],
   notes: [
     'Notifikasi: GET /v1/notif/ringkas tiap 60 detik selama tab terlihat (berhenti saat tab disembunyikan), GET /v1/notif/kotak saat panel dibuka, POST /v1/notif/kotak/{id}/baca saat diklik, POST /v1/notif/kotak/baca-semua untuk "Tandai semua dibaca". Galat 401/403/404 menyembunyikan ikon tanpa pesan galat.',

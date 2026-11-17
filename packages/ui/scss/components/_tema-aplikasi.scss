@@ -462,3 +462,49 @@
     border-radius: 4px;
   }
 }
+
+// Pratinjau efek memuat (PengaturanTema → Sidebar dan header → Efek memuat)
+.u-tema-muat {
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+}
+.u-tema-muat-pratinjau {
+  position: relative;
+  width: 100%;
+  height: 10rem;
+  overflow: hidden;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-background);
+}
+.u-tema-muat-isi {
+  height: 100%;
+  padding: 0.75rem;
+  .u-mh-kerangka {
+    gap: 0.5rem;
+    zoom: 0.55;
+  }
+  .u-mh-tengah {
+    min-height: 100%;
+    height: 100%;
+  }
+}
+.u-tema-muat-judul {
+  display: block;
+  width: 40%;
+  height: 0.75rem;
+  margin-bottom: 0.75rem;
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--u-foreground) 18%, transparent);
+}
+.u-tema-muat-kartu {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  > i {
+    height: 4.5rem;
+    border-radius: var(--u-radius);
+    background: var(--u-primary-soft);
+  }
+}
