@@ -1,5 +1,23 @@
 // Salinan katalog titik penerapan dan indikator dari SIAKAD (app/Modules/Aturan/Data/titik.php, indikator.php).
-export const TITIK_ATURAN: Record<string, { judul: string; keterangan: string; kategori: string[]; subjek: string; jenis: string[]; konteks: string[]; lama: string | null; penerapan: string[] }> = {
+type Contoh = { judul: string; keterangan?: string; jenis: string; mode?: string; kondisi?: unknown; parameter?: unknown };
+export const TITIK_ATURAN: Record<
+  string,
+  {
+    judul: string;
+    keterangan: string;
+    kategori: string[];
+    subjek: string;
+    jenis: string[];
+    konteks: string[];
+    lama: string | null;
+    penerapan: string[];
+    unit?: string;
+    kelompok?: string;
+    contoh?: Contoh[];
+    aktif?: boolean;
+    kustom?: boolean;
+  }
+> = {
   'krs.ambil': {
     judul: 'Ambil/ubah KRS oleh mahasiswa (kontrak KRS)',
     keterangan: 'Mahasiswa memilih mata kuliah. Contoh aturan: masa kontrak KRS, batas SKS menurut IPS, minimal bayar sebelum KRS, status aktif.',
@@ -151,8 +169,62 @@ export const TITIK_ATURAN: Record<string, { judul: string; keterangan: string; k
     lama: null,
     penerapan: ['GET /v1/kelulusan/mahasiswa/{nim}/syarat (boleh_wisuda)', 'GET /v1/kelulusan/wisuda/saya', 'POST /v1/kelulusan/wisuda/daftar'],
   },
+  'sdm.cuti.ajukan': {
+    judul: 'Pengajuan cuti/izin pegawai',
+    keterangan: 'Dosen/tendik mengajukan cuti. Contoh aturan: masa kerja minimal 1 tahun untuk cuti tahunan, cuti besar hanya untuk pegawai tetap.',
+    kategori: ['kepegawaian'],
+    subjek: 'pegawai',
+    jenis: ['syarat', 'batas_waktu', 'batas_nilai'],
+    konteks: ['lama_cuti_hari', 'jenis_cuti'],
+    lama: null,
+    penerapan: ['POST /v1/sdm/cuti'],
+  },
+  'sdm.usulan.ajukan': {
+    judul: 'Pengajuan usulan kenaikan jabatan, pangkat, studi lanjut',
+    keterangan: 'Contoh aturan kampus: studi lanjut minimal masa kerja 2 tahun dan BKD terakhir memenuhi.',
+    kategori: ['kepegawaian'],
+    subjek: 'pegawai',
+    jenis: ['syarat', 'batas_waktu'],
+    konteks: [],
+    lama: null,
+    penerapan: ['POST /v1/sdm/usulan/{id}/ajukan'],
+  },
+  'pmb.daftar_ulang': {
+    judul: 'Daftar ulang calon mahasiswa baru',
+    keterangan: 'Pendaftar yang lulus seleksi melakukan daftar ulang. Contoh aturan: biaya daftar ulang lunas, berkas lengkap.',
+    kategori: ['umum', 'keuangan'],
+    subjek: 'pendaftar',
+    jenis: ['syarat', 'batas_waktu'],
+    konteks: [],
+    lama: null,
+    penerapan: ['POST /v1/pmb/pendaftaran/{id}/daftar-ulang'],
+  },
+  'akun.buat': {
+    judul: 'Pembuatan akun pengguna',
+    keterangan: 'Akun SSO baru dibuat oleh admin atau otomatis. Contoh aturan: akun mahasiswa hanya untuk status aktif.',
+    kategori: ['umum'],
+    subjek: 'akun',
+    jenis: ['syarat'],
+    konteks: ['peran_akun'],
+    lama: null,
+    penerapan: ['POST /v1/akun'],
+  },
+  'perpus.pinjam': {
+    judul: 'Peminjaman buku perpustakaan',
+    keterangan: 'Anggota meminjam buku di perpustakaan.',
+    kategori: ['umum'],
+    subjek: 'mahasiswa',
+    jenis: ['syarat', 'batas_nilai'],
+    konteks: [],
+    lama: null,
+    penerapan: [],
+    aktif: false,
+  },
 };
-export const INDIKATOR_ATURAN: Record<string, { judul: string; tipe: string; subjek: string; sumber: string; keterangan: string }> = {
+export const INDIKATOR_ATURAN: Record<
+  string,
+  { judul: string; tipe: string; subjek: string; sumber: string; keterangan: string; kelompok?: string; satuan?: string; opsi?: Array<{ nilai: string; label: string }> }
+> = {
   ipk: { judul: 'IPK', tipe: 'angka', subjek: 'mahasiswa', sumber: 'siakad', keterangan: 'IPK kumulatif sampai periode (perhitungan IPK SIAKAD, nilai_ipk)' },
   sks_lulus: { judul: 'SKS lulus', tipe: 'angka', subjek: 'mahasiswa', sumber: 'siakad', keterangan: 'Jumlah SKS kumulatif yang dihitung di IPK' },
   ips_lalu: { judul: 'IPS semester lalu', tipe: 'angka', subjek: 'mahasiswa', sumber: 'siakad', keterangan: 'IPS periode sebelum periode aturan' },
@@ -218,4 +290,177 @@ export const INDIKATOR_ATURAN: Record<string, { judul: string; tipe: string; sub
   jumlah_mk: { judul: 'Jumlah mata kuliah diambil', tipe: 'angka', subjek: 'mahasiswa', sumber: 'konteks', keterangan: 'Dikirim titik krs.*. Bila tidak dikirim, dihitung dari KRS periode itu' },
   presensi_persen: { judul: 'Persentase kehadiran', tipe: 'angka', subjek: 'mahasiswa', sumber: 'konteks', keterangan: 'Kehadiran mata kuliah yang diujikan; dikirim titik ujian.*' },
   hari: { judul: 'Hari (1 = Senin ... 7 = Minggu)', tipe: 'angka', subjek: 'umum', sumber: 'siakad', keterangan: 'Hari saat pemeriksaan' },
+  jenis_pegawai: {
+    judul: 'Jenis pegawai',
+    tipe: 'pilihan',
+    subjek: 'pegawai',
+    sumber: 'siakad',
+    keterangan: 'Dosen atau tenaga kependidikan',
+    opsi: [
+      { nilai: 'dosen', label: 'Dosen' },
+      { nilai: 'tendik', label: 'Tendik' },
+    ],
+  },
+  status_kepegawaian: {
+    judul: 'Status kepegawaian',
+    tipe: 'pilihan',
+    subjek: 'pegawai',
+    sumber: 'siakad',
+    keterangan: 'Status ikatan kerja pegawai',
+    opsi: [
+      { nilai: 'pns', label: 'PNS' },
+      { nilai: 'pppk', label: 'PPPK' },
+      { nilai: 'tetap_yayasan', label: 'Tetap yayasan' },
+      { nilai: 'kontrak', label: 'Kontrak' },
+      { nilai: 'honorer', label: 'Honorer' },
+    ],
+  },
+  masa_kerja_tahun: { judul: 'Masa kerja', tipe: 'angka', satuan: 'tahun', subjek: 'pegawai', sumber: 'siakad', keterangan: 'Dari TMT masuk sampai hari pemeriksaan (pecahan, mis. 1,5)' },
+  tmt_masuk: { judul: 'Tanggal mulai bekerja', tipe: 'tanggal', subjek: 'pegawai', sumber: 'siakad', keterangan: 'TMT masuk di data kepegawaian' },
+  serdos: { judul: 'Punya sertifikat pendidik', tipe: 'benar_salah', subjek: 'pegawai', sumber: 'siakad', keterangan: 'Sertifikasi dosen (serdos) tercatat' },
+  bkd_terakhir_memenuhi: { judul: 'BKD terakhir memenuhi', tipe: 'benar_salah', subjek: 'pegawai', sumber: 'siakad', keterangan: 'Laporan BKD terakhir berkesimpulan memenuhi' },
+  sedang_disiplin: { judul: 'Sedang menjalani hukuman disiplin', tipe: 'benar_salah', subjek: 'pegawai', sumber: 'siakad', keterangan: 'Ada hukuman disiplin yang masih berlaku hari ini' },
+  hari_cuti_tahun_ini: { judul: 'Hari cuti tahun ini', tipe: 'angka', satuan: 'hari', subjek: 'pegawai', sumber: 'siakad', keterangan: 'Jumlah hari cuti yang diajukan/disetujui tahun berjalan' },
+  lama_cuti_hari: { judul: 'Lama cuti diajukan', tipe: 'angka', satuan: 'hari', subjek: 'pegawai', sumber: 'konteks', keterangan: 'Dikirim saat pegawai mengajukan cuti' },
+  jenis_cuti: {
+    judul: 'Jenis cuti',
+    tipe: 'pilihan',
+    subjek: 'pegawai',
+    sumber: 'konteks',
+    keterangan: 'Jenis cuti yang diajukan',
+    opsi: [
+      { nilai: 'TAHUNAN', label: 'Cuti tahunan' },
+      { nilai: 'SAKIT', label: 'Cuti sakit' },
+      { nilai: 'BESAR', label: 'Cuti besar' },
+      { nilai: 'MELAHIRKAN', label: 'Cuti melahirkan' },
+    ],
+  },
+  gelombang_pmb: {
+    judul: 'Gelombang pendaftaran',
+    tipe: 'pilihan',
+    subjek: 'pendaftar',
+    sumber: 'siakad',
+    keterangan: 'Gelombang PMB tempat pendaftar diterima',
+    opsi: [
+      { nilai: '1', label: 'Gelombang 1' },
+      { nilai: '2', label: 'Gelombang 2' },
+      { nilai: '3', label: 'Gelombang 3' },
+    ],
+  },
+  daftar_ulang_lunas: { judul: 'Biaya daftar ulang lunas', tipe: 'benar_salah', subjek: 'pendaftar', sumber: 'siakad', keterangan: 'Tagihan daftar ulang sudah dibayar penuh' },
+  berkas_pmb_lengkap: { judul: 'Berkas pendaftaran lengkap', tipe: 'benar_salah', subjek: 'pendaftar', sumber: 'siakad', keterangan: 'Semua berkas wajib PMB sudah diverifikasi' },
+  nilai_tes: { judul: 'Nilai tes masuk', tipe: 'angka', subjek: 'pendaftar', sumber: 'siakad', keterangan: 'Nilai tes seleksi (0–100)' },
+  peran_akun: {
+    judul: 'Jenis akun',
+    tipe: 'pilihan',
+    subjek: 'akun',
+    sumber: 'konteks',
+    keterangan: 'Jenis akun yang dibuat',
+    opsi: [
+      { nilai: 'mahasiswa', label: 'Mahasiswa' },
+      { nilai: 'dosen', label: 'Dosen' },
+      { nilai: 'tendik', label: 'Tendik' },
+      { nilai: 'alumni', label: 'Alumni' },
+    ],
+  },
 };
+
+// Kelompok, unit, satuan, dan contoh (kontrak katalog SIAKAD terbaru).
+const UNIT: Record<string, [string, string]> = {
+  krs: ['baak', 'Akademik'],
+  nilai: ['baak', 'Akademik'],
+  ujian: ['baak', 'Akademik'],
+  ta: ['fakultas', 'Akademik'],
+  kkn: ['lppm', 'Kemahasiswaan'],
+  cuti: ['baak', 'Akademik'],
+  yudisium: ['baak', 'Kelulusan'],
+  wisuda: ['baak', 'Kelulusan'],
+  sdm: ['sdm', 'Kepegawaian'],
+  pmb: ['pmb', 'PMB'],
+  akun: ['pustikom', 'Akun'],
+  perpus: ['perpustakaan', 'Umum'],
+};
+for (const [kode, t] of Object.entries(TITIK_ATURAN)) {
+  const [unit, kelompok] = UNIT[kode.split('.')[0]!] ?? ['baak', 'Akademik'];
+  t.unit ??= unit;
+  t.kelompok ??= kelompok;
+}
+const KELOMPOK_IND: Record<string, string> = {
+  tunggakan: 'Keuangan',
+  bayar_syarat_krs: 'Keuangan',
+  bayar_syarat_ujian: 'Keuangan',
+  persen_bayar_periode: 'Keuangan',
+  tagihan_periode_lunas: 'Keuangan',
+  dispensasi_keuangan: 'Keuangan',
+};
+const SATUAN: Record<string, string> = { sks_lulus: 'SKS', sks_diambil: 'SKS', tunggakan: 'Rp', persen_bayar_periode: '%', presensi_persen: '%', poin_kegiatan: 'poin', jumlah_cuti: 'semester' };
+for (const [kode, i] of Object.entries(INDIKATOR_ATURAN)) {
+  i.kelompok ??=
+    i.sumber === 'konteks' ? 'Data dari langkah ini' : (KELOMPOK_IND[kode] ?? { mahasiswa: 'Akademik', pegawai: 'Kepegawaian', pendaftar: 'PMB', akun: 'Akun', umum: 'Umum' }[i.subjek] ?? 'Umum');
+  if (SATUAN[kode]) i.satuan ??= SATUAN[kode];
+}
+INDIKATOR_ATURAN.status_aktif!.tipe = 'pilihan';
+INDIKATOR_ATURAN.status_aktif!.opsi = [
+  { nilai: 'A', label: 'Aktif' },
+  { nilai: 'C', label: 'Cuti' },
+  { nilai: 'N', label: 'Non-aktif' },
+  { nilai: 'L', label: 'Lulus' },
+];
+TITIK_ATURAN['kkn.daftar']!.contoh = [
+  {
+    judul: 'SKS lulus minimal 100 untuk KKN',
+    keterangan: 'Mahasiswa sudah menempuh sebagian besar mata kuliah.',
+    jenis: 'syarat',
+    mode: 'blokir',
+    kondisi: {
+      semua: [
+        { indikator: 'sks_lulus', op: '>=', nilai: 100 },
+        { indikator: 'status_aktif', op: '=', nilai: 'A' },
+      ],
+    },
+  },
+  { judul: 'Pendaftaran KKN dua minggu', jenis: 'batas_waktu', mode: 'blokir', parameter: { mulai: '2026-12-01', selesai: '2026-12-14' } },
+];
+TITIK_ATURAN['krs.ambil']!.contoh = [
+  {
+    judul: 'Batas SKS menurut IPS',
+    keterangan: '24 SKS bila IPS ≥ 3,00; 21 bila ≥ 2,50; selain itu 18.',
+    jenis: 'batas_nilai',
+    mode: 'blokir',
+    parameter: {
+      target: 'sks_diambil',
+      op: '<=',
+      tabel: [
+        { jika: { semua: [{ indikator: 'ips_lalu', op: '>=', nilai: 3 }] }, nilai: 24 },
+        { jika: { semua: [{ indikator: 'ips_lalu', op: '>=', nilai: 2.5 }] }, nilai: 21 },
+      ],
+      nilai: 18,
+    },
+  },
+  {
+    judul: 'Wajib bayar sebelum KRS',
+    jenis: 'syarat',
+    mode: 'blokir',
+    kondisi: {
+      salah_satu: [
+        { indikator: 'bayar_syarat_krs', op: 'benar' },
+        { indikator: 'dispensasi_keuangan', op: 'benar' },
+      ],
+    },
+  },
+  { judul: 'Masa kontrak KRS', jenis: 'batas_waktu', mode: 'blokir', parameter: { mulai: '2027-02-01', selesai: '2027-02-14 23:59' } },
+];
+TITIK_ATURAN['sdm.cuti.ajukan']!.contoh = [
+  {
+    judul: 'Cuti tahunan minimal masa kerja 1 tahun',
+    jenis: 'syarat',
+    mode: 'blokir',
+    kondisi: {
+      semua: [
+        { indikator: 'jenis_pegawai', op: '=', nilai: 'dosen' },
+        { indikator: 'masa_kerja_tahun', op: '>=', nilai: 1 },
+      ],
+    },
+  },
+  { judul: 'Cuti paling lama 12 hari', jenis: 'batas_nilai', mode: 'peringatan', parameter: { target: 'lama_cuti_hari', op: '<=', nilai: 12 } },
+];

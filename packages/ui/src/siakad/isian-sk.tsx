@@ -168,7 +168,12 @@ export function IsianSK({ value, onValueChange, tanggal = true, berkas = true, l
   };
   return (
     <div className={cn('u-isian-sk', className)}>
-      <Field label={label} required={required} error={error} description="Cari SK yang sudah tercatat, atau ketik nomor baru.">
+      <Field
+        label={label}
+        required={required}
+        error={error}
+        description={pilih.bolehBaru === false ? 'Cari SK yang sudah tercatat di arsip surat keluar.' : 'Cari SK yang sudah tercatat, atau ketik nomor baru.'}
+      >
         <PilihNomorSK
           {...pilih}
           value={v?.nomor || null}

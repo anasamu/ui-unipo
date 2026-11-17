@@ -101,7 +101,8 @@ export function Pilihan({ options, value, onValueChange, tampilan, required, pla
         onValueChange={(o) => onValueChange?.(o?.value ?? null)}
         itemKey={(o) => o.value}
         itemToString={teksLabel}
-        renderItem={(o) => <OptionContent media={o.icon} title={o.label} meta={o.description ?? o.group} />}
+        itemGroup={options.some((o) => o.group) ? (o) => o.group : undefined}
+        renderItem={(o) => <OptionContent media={o.icon} title={o.label} meta={o.description ?? (options.some((x) => x.group) ? undefined : o.group)} />}
         placeholder={placeholder ?? 'Ketik untuk mencari…'}
         icon={<CircleDot />}
       />

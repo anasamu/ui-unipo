@@ -126,6 +126,8 @@ export function ConfirmDialog({ open, onOpenChange, trigger, title, description,
                   try {
                     await onConfirm();
                     setOpen(false);
+                  } catch {
+                    // Galat dari onConfirm menahan dialog tetap terbuka; pemanggil yang menampilkan pesannya.
                   } finally {
                     setBusy(false);
                   }
