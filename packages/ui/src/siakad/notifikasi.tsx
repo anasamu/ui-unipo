@@ -173,6 +173,11 @@ export function bukaTautan(tautan: string, navigasi?: (href: string) => void) {
 }
 
 export interface TombolNotifikasiProps extends OpsiNotifikasi {
+  /**
+   * Jumlah belum dibaca dari sumber notifikasi milik aplikasi (mis. notifikasi LMS atau LPPM). Bila diisi, ikon
+   * yang sama tampil dengan lencana ini dan langsung membuka `semuaHref` (tanpa membaca /v1/notif).
+   */
+  belumLuar?: number;
   /** Navigasi jalur internal (mis. `useNavigate()` React Router). Bawaan `location.assign`. */
   onNavigasi?: (href: string) => void;
   /** Halaman semua notifikasi di aplikasi ini (tombol "Lihat semua"). */
@@ -185,9 +190,17 @@ export interface TombolNotifikasiProps extends OpsiNotifikasi {
  * terlihat) dan panel kotak masuk. Klik notifikasi = tandai dibaca lalu buka tautannya. Tidak tampil bila akun atau
  * token tidak punya akses notifikasi.
  */
-export function TombolNotifikasi({ onNavigasi, semuaHref, className, ...opsi }: TombolNotifikasiProps) {
-  const n = useNotifikasi(opsi);
+export function TombolNotifikasi({ onNavigasi, semuaHref, belumLuar, className, ...opsi }: TombolNotifikasiProps) {
+  const luar = belumLuar !== undefined;
+  const n = useNotifikasi({ ...opsi, enabled: !luar && opsi.enabled !== false });
   const [buka, setBuka] = React.useState(false);
+  if (luar)
+    return (
+      <Button variant="ghost" size="sm" iconOnly className={cn('u-kabar-tombol', className)} aria-label={belumLuar ? `Notifikasi, ${belumLuar} belum dibaca` : 'Notifikasi'} onClick={() => semuaHref && bukaTautan(semuaHref, onNavigasi)}>
+        <Bell />
+        {belumLuar > 0 && <span className="u-kabar-lencana">{belumLuar > 99 ? '99+' : belumLuar}</span>}
+      </Button>
+    );
   if (!n.tersedia) return null;
   const ubahBuka = (o: boolean) => {
     setBuka(o);

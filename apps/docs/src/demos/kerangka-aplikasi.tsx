@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { BarChart3, BookOpen, Building2, ClipboardList, FileBarChart, FolderOpen, House, Landmark, Mail, MessagesSquare, Package, Palette, Receipt, Settings, Store, Users, Wallet } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, PencarianFitur, PintasanFitur, SearchTrigger, StatCard, fiturDariMenu, labelPintasanCari, type ItemFitur, type NavGroup, type TemaAkun } from 'unipo-ui';
-import { KerangkaAplikasi, TombolNotifikasi, TombolPesan } from 'unipo-ui/siakad';
+import { KerangkaAplikasi, TombolBerkas, TombolNotifikasi, TombolPesan } from 'unipo-ui/siakad';
 import { buatTema, PILIHAN_ELEVASI, type Elevasi } from 'unipo-ui/tema';
 import type { DemoMeta } from '../registry';
 
@@ -12,12 +12,13 @@ export const meta: DemoMeta = {
   order: 3,
   badge: 'baru',
   description:
-    'Kerangka bawaan semua aplikasi dasbor UNIPO dalam satu komponen: sidebar dengan logo yang menuju beranda, judul halaman, pencarian fitur (Ctrl/⌘K), notifikasi masuk, pesan masuk, tombol tema, menu akun SIAKAD, navigasi bawah di ponsel, dan obrolan mengambang. Pakai ini agar header dan sidebar sama di Pustikom, PMB, LMS, BAAK, BAUK, SDM, dan aplikasi lain.',
+    'Kerangka bawaan semua aplikasi dasbor UNIPO dalam satu komponen: sidebar dengan logo yang menuju beranda, judul halaman, pencarian fitur (Ctrl/⌘K), notifikasi masuk, pesan masuk, kelola berkas, tombol tema, menu akun SIAKAD, navigasi bawah di ponsel, dan obrolan mengambang. Pakai ini agar header dan sidebar sama di Pustikom, PMB, LMS, BAAK, BAUK, SDM, dan aplikasi lain.',
   importLine: "import { KerangkaAplikasi, TombolNotifikasi, TombolPesan, useNotifikasi } from 'unipo-ui/siakad';\nimport { PencarianFitur, PintasanFitur, fiturDariMenu } from 'unipo-ui';",
   demos: {
     Lengkap: 'KerangkaAplikasi: klik logo, coba Ctrl/⌘K atau "/", buka lonceng dan ikon pesan. Di bawah 1024 px sidebar pindah ke laci.',
     Notifikasi: 'TombolNotifikasi: lencana belum dibaca, klik = tandai dibaca lalu buka tautan',
     Pesan: 'TombolPesan: obrolan terbaru dengan cuplikan yang didekripsi di browser',
+    Berkas: 'TombolBerkas: unggah cepat (tombol atau tarik-lepas), berkas terbaru dengan tombol unduh, dan Kelola berkas',
     Pencarian: 'PencarianFitur: palet pencarian menu + fitur tambahan',
     Pintasan: 'PintasanFitur: grid pintasan untuk beranda dari menu yang sama',
     EfekBayangan: 'Efek bayangan tema (elevasi): datar, normal, terangkat, melayang',
@@ -31,6 +32,7 @@ export const meta: DemoMeta = {
     ['cari', 'boolean | { placeholder?, tambahan?: ItemFitur[], onBuka? }', 'Pencarian fitur. tambahan = fitur yang tidak ada di sidebar; onBuka = palet milik aplikasi (mis. Pustikom).'],
     ['notifikasi', 'boolean | { interval?, semuaHref?, username? }', 'Ikon notifikasi dari /v1/notif (scope notif:read, notif:write). Tersembunyi bila token tidak punya akses.'],
     ['pesan', 'boolean | { onBuka?, mengambang?, judul? }', 'Ikon pesan masuk dari /v1/obrolan dan ChatMengambang. onBuka bila aplikasi punya halaman obrolan.'],
+    ['berkas', 'boolean | { modul?, unit?, kategori?, onKelola?, unitTampil? }', 'Ikon kelola berkas dari /v1/berkas (scope berkas:read, berkas:write). onKelola = halaman berkas aplikasi; bawaan membuka DriveBerkas dalam dialog.'],
     ['tema / onTema', "'terang' | 'gelap' | 'sistem'", 'Tombol tema di bilah atas (di ponsel pindah ke menu akun).'],
     ['akun', 'false | ReactNode | props MenuAkunSiakad', 'Menu akun. Objek = props MenuAkunSiakad (cadangan, menu); ReactNode = menu sendiri.'],
     ['onKeluar', '() => void', 'Aksi keluar di menu akun.'],
@@ -162,6 +164,14 @@ export function Pesan() {
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
       <TombolPesan onBuka={(ruang) => alert(ruang ? `Buka ruang ${ruang}` : 'Buka semua obrolan')} />
+    </div>
+  );
+}
+
+export function Berkas() {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
+      <TombolBerkas />
     </div>
   );
 }

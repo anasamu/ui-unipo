@@ -12,6 +12,8 @@ export interface NavItem {
   /** Kunci unik; dicocokkan dengan `activeKey`. */
   key: string;
   label: React.ReactNode;
+  /** Teks label untuk pencarian fitur dan judul halaman bila `label` bukan teks biasa (mis. berikon). */
+  labelTeks?: string;
   icon?: React.ReactNode;
   href?: string;
   onClick?: () => void;

@@ -20,7 +20,7 @@ Sistem desain dan pustaka komponen untuk aplikasi Universitas Pohuwato (SIAKAD, 
 
 Semua aplikasi dasbor UNIPO memakai satu kerangka yang sama: `KerangkaAplikasi`. Isinya sidebar dengan logo + nama
 aplikasi yang menuju beranda, judul halaman, pencarian fitur (Ctrl/⌘K atau "/"), ikon notifikasi (`/v1/notif`), ikon
-pesan masuk (obrolan `/v1/obrolan`), tombol tema, menu akun SIAKAD, navigasi bawah di ponsel, dan obrolan mengambang.
+pesan masuk (obrolan `/v1/obrolan`), kelola berkas (`/v1/berkas`: unggah, unduh, DriveBerkas), tombol tema, menu akun SIAKAD, navigasi bawah di ponsel, dan obrolan mengambang.
 
 ```tsx
 import { KerangkaAplikasi } from 'unipo-ui/siakad';
@@ -38,8 +38,8 @@ import { KerangkaAplikasi } from 'unipo-ui/siakad';
 </KerangkaAplikasi>
 ```
 
-Klien API aplikasi butuh scope `notif:read`, `notif:write`, `obrolan:read`, `obrolan:write`, dan BFF-nya harus
-meneruskan `/v1/notif` dan `/v1/obrolan`. Bagian yang bisa dipakai terpisah: `PencarianFitur` + `fiturDariMenu`,
+Klien API aplikasi butuh scope `notif:read`, `notif:write`, `obrolan:read`, `obrolan:write`, `berkas:read`,
+`berkas:write`, dan BFF-nya harus meneruskan `/v1/notif`, `/v1/obrolan`, dan `/v1/berkas`. Bagian yang bisa dipakai terpisah: `PencarianFitur` + `fiturDariMenu`,
 `PintasanFitur` (unipo-ui), `TombolNotifikasi`/`useNotifikasi`, `TombolPesan` (unipo-ui/siakad). Efek bayangan
 (`elevasi`: datar, normal, terangkat, melayang) diatur di `PengaturanTema`.
 

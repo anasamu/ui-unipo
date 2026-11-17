@@ -33,11 +33,11 @@ export function fiturDariMenu(groups: NavGroup[]): ItemFitur[] {
     if (!it.href && !it.onClick) return;
     out.push({
       key: it.key,
-      label: teks(it.label) || it.key,
+      label: it.labelTeks || teks(it.label) || it.key,
       href: it.href,
       onSelect: it.onClick,
       icon: it.icon ?? induk?.icon,
-      kelompok: [kelompok, induk ? teks(induk.label) : ''].filter(Boolean).join(' › ') || undefined,
+      kelompok: [kelompok, induk ? induk.labelTeks || teks(induk.label) : ''].filter(Boolean).join(' › ') || undefined,
     });
   };
   groups.forEach((g) => g.items.forEach((it) => masuk(it, teks(g.label))));

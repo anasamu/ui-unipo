@@ -40,6 +40,7 @@ export * from './drive-berkas';
 export * from './profil-kampus';
 export * from './obrolan';
 export * from './notifikasi';
+export * from './berkas-cepat';
 export * from './kerangka-aplikasi';
 export * from './pmb-maba';
 export * from './lms-belajar';

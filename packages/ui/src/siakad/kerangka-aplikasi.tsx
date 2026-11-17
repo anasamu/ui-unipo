@@ -4,12 +4,13 @@ import { Monitor, Moon, Search, Sun } from 'lucide-react';
 import { Button } from '../components/actions';
 import type { AkunPengguna, MenuAkunProps, TemaAkun } from '../components/akun';
 import { LogoAplikasi } from '../components/identity';
-import { AppShell, SearchTrigger, Sidebar, type NavGroup, type SidebarProps } from '../components/layout';
+import { AppShell, SearchTrigger, Sidebar, type NavGroup, type SidebarProps, type SidebarUser } from '../components/layout';
 import { Tooltip } from '../components/overlays';
 import { fiturDariMenu, labelPintasanCari, PencarianFitur, usePintasanCari, type ItemFitur } from '../components/pencarian-fitur';
 import { NavigasiBawah, type ItemNavigasiBawah } from '../components/platform';
 import { cn } from '../lib/cn';
 import { MenuAkunSiakad } from './akun';
+import { TombolBerkas, type TombolBerkasProps } from './berkas-cepat';
 import { TombolNotifikasi, type OpsiNotifikasi } from './notifikasi';
 import { ChatMengambang, TombolPesan } from './obrolan';
 
@@ -40,6 +41,8 @@ export interface KerangkaAplikasiProps {
   sidebarHeader?: React.ReactNode;
   /** Konten di bagian bawah sidebar. */
   sidebarFooter?: React.ReactNode;
+  /** Blok pengguna di kaki sidebar (nama + peran + menu), sama dengan Sidebar `user`. */
+  sidebarUser?: SidebarUser;
   /** Sidebar ikon saja; dikendalikan dari luar bila diisi bersama onCollapsedChange. */
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
@@ -49,7 +52,12 @@ export interface KerangkaAplikasiProps {
    */
   cari?: boolean | { placeholder?: string; tambahan?: ItemFitur[]; onBuka?: () => void };
   /** Ikon notifikasi (GET /v1/notif). `semuaHref` = halaman semua notifikasi di aplikasi. false = tanpa ikon. */
-  notifikasi?: boolean | (OpsiNotifikasi & { semuaHref?: string });
+  notifikasi?: boolean | (OpsiNotifikasi & { semuaHref?: string; belumLuar?: number });
+  /**
+   * Ikon kelola berkas (/v1/berkas): unggah cepat, berkas terbaru + unduh, dan "Kelola berkas". `onKelola` bila
+   * aplikasi punya halaman berkas sendiri (bawaan membuka DriveBerkas dalam dialog). false = tanpa ikon.
+   */
+  berkas?: boolean | TombolBerkasProps;
   /**
    * Ikon pesan masuk (obrolan /v1/obrolan) dan ChatMengambang. `onBuka` bila aplikasi punya halaman obrolan
    * sendiri; `mengambang: false` = tanpa tombol obrolan mengambang. false = tanpa keduanya.
@@ -80,9 +88,9 @@ function cariLabel(groups: NavGroup[], key?: string): string | undefined {
   if (!key) return undefined;
   for (const g of groups)
     for (const it of g.items) {
-      if (it.key === key && typeof it.label === 'string') return it.label;
+      if (it.key === key) return it.labelTeks ?? (typeof it.label === 'string' ? it.label : undefined);
       const c = it.children?.find((x) => x.key === key);
-      if (c && typeof c.label === 'string') return c.label;
+      if (c) return c.labelTeks ?? (typeof c.label === 'string' ? c.label : undefined);
     }
   return undefined;
 }
@@ -116,11 +124,13 @@ export function KerangkaAplikasi({
   subjudul,
   sidebarHeader,
   sidebarFooter,
+  sidebarUser,
   collapsed: collapsedProp,
   onCollapsedChange,
   cari = true,
   notifikasi = true,
   pesan = true,
+  berkas = true,
   tema,
   onTema,
   akun,
@@ -171,7 +181,7 @@ export function KerangkaAplikasi({
   return (
     <AppShell
       className={cn('u-kerangka-aplikasi', className)}
-      sidebar={<Sidebar brand={brand} groups={groups} activeKey={activeKey} header={sidebarHeader} footer={sidebarFooter} collapsed={collapsed} onCollapsedChange={setCollapsed} renderLink={renderLink} />}
+      sidebar={<Sidebar brand={brand} groups={groups} activeKey={activeKey} header={sidebarHeader} footer={sidebarFooter} user={sidebarUser} collapsed={collapsed} onCollapsedChange={setCollapsed} renderLink={renderLink} />}
       topbar={
         <div className="u-kerangka-topbar">
           <div className="u-kerangka-judul">
@@ -191,6 +201,7 @@ export function KerangkaAplikasi({
             {aksi}
             {notifikasi !== false && <TombolNotifikasi {...opsiNotif} onNavigasi={navigasi} />}
             {pesan !== false && <TombolPesan onBuka={opsiPesan.onBuka} />}
+            {berkas !== false && <TombolBerkas {...(typeof berkas === 'object' ? berkas : {})} />}
             {tema && onTema && (
               <Tooltip content={`${LABEL_TEMA[tema]} (ganti ke ${LABEL_TEMA[temaBerikut].toLowerCase()})`}>
                 <Button variant="ghost" size="sm" iconOnly className="u-kerangka-tema" aria-label={`Ganti ke ${LABEL_TEMA[temaBerikut].toLowerCase()}`} onClick={() => onTema(temaBerikut)}>
