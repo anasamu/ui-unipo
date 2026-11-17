@@ -61,6 +61,8 @@ import { LabelProdi } from './prodi';
 // ================================================================ Bantuan bersama
 type Angka = number | string | null | undefined;
 const n = (v: Angka) => (v == null || v === '' ? 0 : Number(v) || 0);
+/** Seperti n(), tetapi kosong tetap null (grafik menggambarnya sebagai celah "belum ada", bukan 0). */
+const nAtauNull = (v: Angka) => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
 /** Peta {kunci: jumlah} dari API (PHP mengirim [] untuk peta kosong). */
 const peta = (m: unknown): Array<[string, number]> => (m && typeof m === 'object' && !Array.isArray(m) ? Object.entries(m as Record<string, Angka>).map(([k, v]) => [k, n(v)]) : []);
 const judulKunci = (k: string) => (k === 'belum_diisi' || k === '' ? 'Belum diisi' : k.length <= 3 ? k.toUpperCase() : (k.charAt(0).toUpperCase() + k.slice(1)).replace(/_/g, ' '));
@@ -228,7 +230,14 @@ export function useRingkasAkademik({ tahunId, kodeProdi }: KueriAkademik) {
 /** GET /v1/dasbor/tren, diurutkan dari semester terlama. */
 export function useTrenAkademik({ semester = 8, kodeProdi }: KueriAkademik) {
   const r = useSiakadQuery<TrenAkademik[]>(['dasbor-tren', semester, kodeProdi], (s, signal) => s.dasbor.getTren({ semester, kode_prodi: kodeProdi }, { signal }) as never, { staleTime: 300_000 });
-  const data = React.useMemo(() => (r.data ? [...r.data].sort((a, b) => String(a.tahun_id).localeCompare(String(b.tahun_id))) : undefined), [r.data]);
+  const data = React.useMemo(() => {
+    if (!r.data) return undefined;
+    const urut = [...r.data].sort((a, b) => String(a.tahun_id).localeCompare(String(b.tahun_id)));
+    // Semester mendatang (belum ada KRS, maba, lulusan, maupun IPS) tidak dijadikan entri sumbu.
+    const kosong = (t: TrenAkademik) => !n(t.mengisi_krs) && !n(t.mahasiswa_baru) && !n(t.lulusan) && nAtauNull(t.rata_ips) == null;
+    while (urut.length > 1 && kosong(urut[urut.length - 1]!)) urut.pop();
+    return urut;
+  }, [r.data]);
   return { ...r, data };
 }
 
@@ -305,8 +314,10 @@ export const IpsPerSemester = buatWidget('IpsPerSemester', useTrenAkademik, { ti
   <BarChart
     loading={muat}
     height={150}
+    max={4}
     format={(v) => formatNumber(v, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-    data={(seri ?? []).map((r) => ({ label: labelSemester(r.tahun_id, true), title: labelSemester(r.tahun_id), value: n(r.rata_ips) }))}
+    emptyLabel="Belum ada IPS"
+    data={(seri ?? []).map((r) => ({ label: labelSemester(r.tahun_id, true), title: labelSemester(r.tahun_id), value: nAtauNull(r.rata_ips) }))}
   />
 ));
 
