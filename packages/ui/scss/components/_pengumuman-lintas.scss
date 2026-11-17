@@ -131,18 +131,18 @@
 }
 
 // ---------------------------------------------------------------- toast
+// Toast di kanan bawah, di atas tombol obrolan mengambang (tidak menutupi bilah atas atau pita).
 .u-pgm-toast-daftar {
   position: fixed;
   z-index: 60;
-  top: 4.5rem;
+  bottom: 6.5rem;
   right: 1.5rem;
   display: grid;
   gap: 0.625rem;
   width: min(22rem, calc(100vw - 2rem));
   @media (max-width: 767px) {
-    top: auto;
     right: 1rem;
-    bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    bottom: calc(9.5rem + env(safe-area-inset-bottom));
   }
 }
 .u-pgm-toast,
@@ -163,7 +163,7 @@
 @keyframes u-pgm-masuk {
   from {
     opacity: 0;
-    transform: translateX(1rem);
+    transform: translateY(0.75rem);
   }
 }
 

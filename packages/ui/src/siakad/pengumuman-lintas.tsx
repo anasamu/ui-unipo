@@ -472,6 +472,7 @@ export function FormPengumuman({ awal, aplikasiBawaan, onSelesai, onBatal }: For
       const body = { ...d, status, isi: d.isi || null, tautan: d.tautan || null, teks_tautan: d.teks_tautan || null, gambar: d.gambar || null };
       const r = await siakad.request<PengumumanKelola>({ method: 'POST', path: awal ? `/v1/notif/pita/kelola/${awal.id}` : '/v1/notif/pita/kelola', body });
       invalidateSiakad('notif-pita');
+      invalidateSiakad('notif-pita-kelola');
       toast.add({ type: 'success', title: status === 'terbit' ? 'Pengumuman diterbitkan' : 'Draf disimpan' });
       onSelesai?.(r.data);
     } catch (e) {
@@ -691,6 +692,7 @@ export function KelolaPengumuman({ aplikasi, className }: KelolaPengumumanProps)
     try {
       await siakad.request({ method: 'POST', path: `/v1/notif/pita/kelola/${p.id}`, body: { status: p.status === 'arsip' ? 'terbit' : 'arsip' } });
       invalidateSiakad('notif-pita');
+      invalidateSiakad('notif-pita-kelola');
     } catch (e) {
       toast.add({ type: 'error', title: 'Gagal', description: pesanGalat(e) });
     }
@@ -777,7 +779,7 @@ export function KelolaPengumuman({ aplikasi, className }: KelolaPengumumanProps)
             awal={edit === 'baru' ? null : edit}
             aplikasiBawaan={aplikasi ? [aplikasi] : null}
             onBatal={() => setEdit(null)}
-            onSelesai={() => (setEdit(null), invalidateSiakad('notif-pita'))}
+            onSelesai={() => (setEdit(null), invalidateSiakad('notif-pita'), invalidateSiakad('notif-pita-kelola'))}
           />
         )}
       </Dialog>
@@ -793,6 +795,7 @@ export function KelolaPengumuman({ aplikasi, className }: KelolaPengumumanProps)
           try {
             await siakad.request({ method: 'POST', path: `/v1/notif/pita/kelola/${hapus.id}/hapus`, body: {} });
             invalidateSiakad('notif-pita');
+      invalidateSiakad('notif-pita-kelola');
           } catch (e) {
             toast.add({ type: 'error', title: 'Gagal menghapus', description: pesanGalat(e) });
           }
