@@ -2071,10 +2071,10 @@ export interface TombolPesanProps {
  * (token tanpa scope obrolan, browser tanpa WebCrypto).
  */
 export function TombolPesan({ jumlah = 6, onBuka = bukaRuangObrolan, className }: TombolPesanProps) {
-  const { keadaan: k } = useObrolan();
+  const { mesin, keadaan: k } = useObrolan();
   const [buka, setBuka] = React.useState(false);
   const [tab, setTab] = React.useState<'semua' | 'belum'>('semua');
-  if (k.status === 'galat' || k.status === 'tidak_didukung' || k.status === 'mati') return null;
+  const gagal = k.status === 'galat' || k.status === 'tidak_didukung';
   const saya = k.saya?.id ?? '';
   const semua = k.urutan.map((id) => k.ruang[id]).filter((r): r is RuangObrolanData => Boolean(r) && !r.arsip);
   const total = semua.reduce((n, r) => n + (r.bisu ? 0 : r.belum_dibaca), 0);
@@ -2086,7 +2086,10 @@ export function TombolPesan({ jumlah = 6, onBuka = bukaRuangObrolan, className }
   return (
     <Popover
       open={buka}
-      onOpenChange={setBuka}
+      onOpenChange={(o) => {
+        setBuka(o);
+        if (o && gagal) void mesin.mulai().catch(() => {});
+      }}
       align="end"
       width={384}
       className={cn('u-kabar-panel', className)}
@@ -2104,7 +2107,13 @@ export function TombolPesan({ jumlah = 6, onBuka = bukaRuangObrolan, className }
         </Button>
       </div>
       <TabKabar nilai={tab} onUbah={setTab} belum={total} />
-      {k.status === 'memuat' && !ruang.length ? (
+      {gagal ? (
+        <div className="u-kabar-daftar">
+          <Alert variant="warning" title={k.status === 'tidak_didukung' ? 'Browser tidak mendukung obrolan' : 'Obrolan belum bisa dibuka'}>
+            {k.galat ?? 'Coba lagi sebentar lagi.'}
+          </Alert>
+        </div>
+      ) : (k.status === 'memuat' || k.status === 'mati') && !ruang.length ? (
         <div className="u-kabar-daftar" aria-busy>
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} height={44} />

@@ -723,3 +723,73 @@
     display: none !important;
   }
 }
+
+// Palet pencarian: tombol tutup bawaan dialog diganti tombol "Esc" di isian (tidak bertumpuk).
+.u-cari-fitur .u-dialog-close {
+  display: none;
+}
+.u-cari-fitur-tutup {
+  display: inline-flex;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  &:focus-visible {
+    @include focus-ring;
+    border-radius: 6px;
+  }
+}
+
+// Dialog Kelola berkas: selebar layar dengan margin, isi tidak meluber, tab unit digulir.
+.u-dialog-viewport:has(> .u-berkas-dialog) {
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center stretch;
+}
+.u-dialog.u-berkas-dialog {
+  justify-self: center;
+  width: 100%;
+  min-width: 0;
+  max-width: 76rem;
+  height: min(calc(100dvh - 2rem), 52rem);
+  .u-dialog-header {
+    padding-inline-end: 3.5rem;
+  }
+  .u-dialog-title {
+    user-select: none;
+    outline: none;
+  }
+  .u-dialog-body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .u-dialog-close {
+    z-index: 2;
+  }
+  .u-db {
+    flex: 1;
+    min-height: 0;
+    max-width: 100%;
+  }
+  .u-db-ruang {
+    max-width: 100%;
+  }
+  .u-mb {
+    flex: 1;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+@media (max-width: 639px) {
+  .u-dialog-viewport:has(> .u-berkas-dialog) {
+    padding: 0.5rem;
+  }
+  .u-dialog.u-berkas-dialog {
+    height: calc(100dvh - 1rem);
+    .u-dialog-body {
+      padding: 0.75rem;
+    }
+  }
+}

@@ -232,8 +232,8 @@ export function TombolBerkas({ jumlah = 6, onKelola, unitTampil, modul, unit, ka
         </div>
       </Popover>
       {!onKelola && (
-        <Dialog open={drive} onOpenChange={setDrive} title="Kelola berkas" size="xl">
-          {drive && <DriveBerkas modul={modul} unitTampil={unitTampil} tinggi="min(40rem, 70dvh)" />}
+        <Dialog open={drive} onOpenChange={setDrive} title="Kelola berkas" size="full" className="u-berkas-dialog">
+          {drive && <DriveBerkas modul={modul} unitTampil={unitTampil} tinggi="100%" />}
         </Dialog>
       )}
     </>

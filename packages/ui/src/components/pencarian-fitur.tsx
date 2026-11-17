@@ -184,7 +184,9 @@ export function PencarianFitur({ open, onOpenChange, items, onPilih, placeholder
           autoComplete="off"
           spellCheck={false}
         />
-        <Kbd>Esc</Kbd>
+        <button type="button" className="u-cari-fitur-tutup" onClick={() => onOpenChange(false)} aria-label="Tutup pencarian">
+          <Kbd>Esc</Kbd>
+        </button>
       </div>
       <div ref={daftarRef} id={`${id}-daftar`} className="u-cari-fitur-daftar" role="listbox" aria-label="Hasil pencarian">
         {hasil.length ? (
