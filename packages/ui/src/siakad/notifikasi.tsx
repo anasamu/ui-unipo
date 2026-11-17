@@ -53,6 +53,9 @@ export interface KeadaanNotifikasi {
 const P = '/v1/notif';
 const diam = (e: unknown) => [401, 403, 404].includes(Number((e as { status?: number })?.status));
 
+/** Pesan obrolan punya ikon dan lencana sendiri (TombolPesan), jadi tidak ditampilkan di kotak notifikasi. */
+const bukanObrolan = (n: { modul?: string | null }) => n.modul !== 'obrolan';
+
 /**
  * Keadaan notifikasi untuk komponen kustom. Gagal karena izin (401/403/404) tidak dilaporkan sebagai galat:
  * `tersedia` menjadi false dan polling berhenti.
@@ -82,7 +85,7 @@ export function useNotifikasi({ interval = 60_000, username, jumlah = 8, enabled
       const query: Record<string, string> = { per_page: String(jumlah) };
       if (username) query.username = username;
       const r = await siakad.request<Notifikasi[]>({ method: 'GET', path: `${P}/kotak`, query });
-      setDaftar(Array.isArray(r.data) ? r.data : []);
+      setDaftar(Array.isArray(r.data) ? r.data.filter(bukanObrolan) : []);
     } catch (e) {
       if (diam(e)) setTersedia(false);
       setDaftar((d) => d ?? []);
@@ -387,7 +390,7 @@ export function KotakNotifikasi({ onNavigasi, modul, perHalaman = 20, ringkas, c
     siakad
       .request<Notifikasi[]>({ method: 'GET', path: `${P}/kotak`, query }, { signal: ctrl.signal })
       .then((r) => {
-        const data = Array.isArray(r.data) ? r.data : [];
+        const data = Array.isArray(r.data) ? r.data.filter(bukanObrolan) : [];
         setDaftar((d) => (halaman === 1 ? data : [...(d ?? []), ...data.filter((x) => !(d ?? []).some((y) => y.id === x.id))]));
         const meta = r.meta as { page?: number; total_pages?: number } | undefined;
         setAdaLagi(meta?.total_pages !== undefined ? (meta.page ?? halaman) < meta.total_pages : data.length === perHalaman);
