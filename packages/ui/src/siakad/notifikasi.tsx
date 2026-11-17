@@ -357,6 +357,8 @@ export interface KotakNotifikasiProps {
   modul?: string;
   /** Jumlah per halaman. Bawaan 20. */
   perHalaman?: number;
+  /** Tampilan ringkas untuk panel beranda: tanpa tab, tanpa tombol muat lebih banyak. */
+  ringkas?: boolean;
   className?: string;
 }
 
@@ -364,7 +366,7 @@ export interface KotakNotifikasiProps {
  * Halaman kotak masuk notifikasi pusat (/v1/notif/kotak) untuk rute /notifikasi tiap aplikasi: tab Semua | Belum dibaca,
  * dikelompokkan per hari, tandai dibaca per baris atau semua, muat lebih banyak.
  */
-export function KotakNotifikasi({ onNavigasi, modul, perHalaman = 20, className }: KotakNotifikasiProps) {
+export function KotakNotifikasi({ onNavigasi, modul, perHalaman = 20, ringkas, className }: KotakNotifikasiProps) {
   const siakad = useOptionalSiakad();
   const [tab, setTab] = React.useState<'semua' | 'belum'>('semua');
   const [daftar, setDaftar] = React.useState<Notifikasi[] | null>(null);
@@ -410,7 +412,8 @@ export function KotakNotifikasi({ onNavigasi, modul, perHalaman = 20, className 
   };
   const ada = (daftar ?? []).filter((x) => tab === 'semua' || !x.dibaca_pada);
   return (
-    <div className={cn('u-kotak-notif', className)}>
+    <div className={cn('u-kotak-notif', className)} data-ringkas={ringkas ? '' : undefined}>
+      {!ringkas && (
       <div className="u-kotak-notif-kepala">
         <TabKabar nilai={tab} onUbah={gantiTab} belum={n.belum} />
         {n.belum > 0 && (
@@ -419,6 +422,7 @@ export function KotakNotifikasi({ onNavigasi, modul, perHalaman = 20, className 
           </Button>
         )}
       </div>
+      )}
       {galat ? (
         <Empty icon={<BellOff />} title="Notifikasi tidak dapat dimuat" description={galat} />
       ) : daftar === null ? (
@@ -463,7 +467,7 @@ export function KotakNotifikasi({ onNavigasi, modul, perHalaman = 20, className 
               ))}
             </div>
           ))}
-          {adaLagi && (
+          {adaLagi && !ringkas && (
             <Button variant="ghost" size="sm" className="u-kotak-notif-lagi" loading={memuat} onClick={() => setHalaman((h) => h + 1)}>
               Muat lebih banyak
             </Button>

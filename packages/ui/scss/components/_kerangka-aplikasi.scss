@@ -1141,3 +1141,12 @@
   justify-self: center;
   margin: 0.5rem auto 0.25rem;
 }
+.u-kotak-notif[data-ringkas] {
+  max-width: none;
+  .u-kabar-daftar {
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+}
