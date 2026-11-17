@@ -9,7 +9,7 @@
   border-radius: calc(var(--u-radius) + 4px);
   background: var(--u-card);
   color: var(--u-foreground);
-  box-shadow: var(--u-shadow-xs);
+  box-shadow: var(--u-elevation-card);
   &[data-variant='flat'] {
     box-shadow: none;
   }
@@ -29,7 +29,7 @@
       transform var(--u-duration-base) var(--u-ease-out);
     &:hover {
       border-color: var(--u-border-strong);
-      box-shadow: var(--u-shadow-md);
+      box-shadow: var(--u-elevation-card-hover);
     }
     &:focus-visible {
       @include focus-ring;
@@ -85,6 +85,7 @@
 }
 .u-card-footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.25rem;

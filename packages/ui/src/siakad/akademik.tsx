@@ -295,8 +295,8 @@ export function RiwayatStudi({ nim, className }: { nim: string; className?: stri
           labels={periode.map((p) => labelTahunAkademik(p.tahun_id, true))}
           titles={periode.map((p) => labelTahunAkademik(p.tahun_id))}
           series={[
-            { label: 'IPS', values: periode.map((p) => n(p.ips?.nilai)) },
-            { label: 'IPK', values: periode.map((p) => n(p.ipk?.nilai)) },
+            { label: 'IPS', values: periode.map((p) => (p.ips?.nilai == null ? null : n(p.ips.nilai))) },
+            { label: 'IPK', values: periode.map((p) => (p.ipk?.nilai == null ? null : n(p.ipk.nilai))) },
           ]}
           format={(v) => v.toFixed(2)}
           area={false}

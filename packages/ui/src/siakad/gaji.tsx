@@ -688,6 +688,8 @@ export function SlipGaji({ id, data, saya, tautanVerifikasi = tautanBawaan, deng
 // ================================================================ Slip saya
 export interface DaftarSlipSayaProps {
   tautanVerifikasi?: (kode: string) => string;
+  /** Buka slip lewat rute aplikasi (mis. navigate(`/gaji/${id}`)). Tanpa ini, slip tampil di tempat dengan tombol kembali. */
+  onPilih?: (id: number) => void;
   logo?: React.ReactNode;
   className?: string;
 }
@@ -696,9 +698,11 @@ export interface DaftarSlipSayaProps {
  * Halaman "Gaji saya" untuk pegawai: daftar slip per tahun, rincian slip (cetak), dan ringkasan PPh 21 setahun
  * (dasar bukti potong 1721-A1). Hanya periode yang sudah disetujui.
  */
-export function DaftarSlipSaya({ tautanVerifikasi, logo, className }: DaftarSlipSayaProps) {
+export function DaftarSlipSaya({ tautanVerifikasi, onPilih, logo, className }: DaftarSlipSayaProps) {
   const [tahun, setTahun] = React.useState(new Date().getFullYear());
-  const [pilih, setPilih] = React.useState<number | null>(null);
+  const [pilihSendiri, setPilihSendiri] = React.useState<number | null>(null);
+  const pilih = onPilih ? null : pilihSendiri;
+  const setPilih = (id: number | null) => (onPilih && id != null ? onPilih(id) : setPilihSendiri(id));
   const [lihat, setLihat] = React.useState<'slip' | 'pajak'>('slip');
   const q = useGajiSaya(tahun);
   if (pilih != null) return <SlipGaji id={pilih} saya tautanVerifikasi={tautanVerifikasi} logo={logo} onKembali={() => setPilih(null)} className={className} />;

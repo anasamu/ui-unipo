@@ -8,9 +8,12 @@ import { Select } from '../components/select';
 import { ConfirmDialog, useToast } from '../components/overlays';
 import { GalatApi } from './galat';
 import { invalidateSiakad, useOptionalSiakad, useSiakad, useSiakadQuery } from './provider';
+import { KUNCI_TATA_KERANGKA, tataKerangka, type TataKerangka } from './kerangka-aplikasi';
+import { animasikanMasuk, BilahProgres, MuatHalaman, PILIHAN_MUAT_AWAL, PILIHAN_MUAT_PINDAH } from '../components/muat-halaman';
 import {
   FONT,
   NETRAL,
+  PILIHAN_ELEVASI,
   PRESET_TEMA,
   TEMA_BAWAAN,
   buatTema,
@@ -101,6 +104,8 @@ export interface PengaturanTemaProps<T extends Tata = Tata> {
   kunciCache?: string;
   /** Tampilkan pilihan mode terang/gelap bawaan (bawaan true). */
   denganMode?: boolean;
+  /** Bagian pengaturan Sidebar dan Header KerangkaAplikasi (disimpan di `tata`). Bawaan true. */
+  denganKerangka?: boolean;
   onTersimpan?: (data: DataTemaAplikasi<T>) => void;
   className?: string;
 }
@@ -118,7 +123,7 @@ interface Draf<T extends Tata> {
  *
  *   <PengaturanTema aplikasi="pmb" />
  */
-export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama, tataTambahan, pratinjau, kunciCache, denganMode = true, onTersimpan, className }: PengaturanTemaProps<T>) {
+export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama, tataTambahan, pratinjau, kunciCache, denganMode = true, denganKerangka = true, onTersimpan, className }: PengaturanTemaProps<T>) {
   const siakad = useSiakad();
   const toast = useToast();
   const q = useTemaAplikasi<T>(aplikasi, lingkup);
@@ -232,6 +237,20 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
               </div>
               <PilihWarna label="Warna utama" nilai={lengkap.primary} daftar={PRIMER} warisan={dariWarisan('primary')} onChange={(v) => ubahTema('primary', v)} />
               <PilihWarna label="Warna aksen" nilai={lengkap.secondary} daftar={SEKUNDER} warisan={dariWarisan('secondary')} onChange={(v) => ubahTema('secondary', v)} />
+              <details className="u-tema-lanjut">
+                <summary>Aturan warna lanjutan</summary>
+                <p className="u-field-description">Warna status, latar halaman, warna utama mode gelap, dan warna bayangan. Pilih Otomatis untuk memakai warna turunan bawaan.</p>
+                <div className="u-tema-dua">
+                  <PilihWarna label="Sukses" nilai={lengkap.success} daftar={['#15803d', '#16a34a', '#0f766e', '#059669']} warisan={dariWarisan('success')} onChange={(v) => ubahTema('success', v)} />
+                  <PilihWarna label="Peringatan" nilai={lengkap.warning} daftar={['#d97706', '#ca8a04', '#ea580c', '#b45309']} warisan={dariWarisan('warning')} onChange={(v) => ubahTema('warning', v)} />
+                  <PilihWarna label="Bahaya" nilai={lengkap.danger} daftar={['#dc2626', '#b91c1c', '#e11d48', '#be123c']} warisan={dariWarisan('danger')} onChange={(v) => ubahTema('danger', v)} />
+                  <PilihWarna label="Informasi" nilai={lengkap.info} daftar={['#0284c7', '#2563eb', '#0891b2', '#4f46e5']} warisan={dariWarisan('info')} onChange={(v) => ubahTema('info', v)} />
+                  <PilihWarna label="Latar halaman terang" nilai={lengkap.latar} daftar={['#ffffff', '#fbfbf9', '#f8fafc', '#fdfcf8']} warisan={dariWarisan('latar')} otomatis onChange={(v) => ubahTema('latar', v)} />
+                  <PilihWarna label="Latar halaman gelap" nilai={lengkap.latarGelap} daftar={['#0d0f14', '#0f172a', '#111111', '#14161c']} warisan={dariWarisan('latarGelap')} otomatis onChange={(v) => ubahTema('latarGelap', v)} />
+                  <PilihWarna label="Warna utama mode gelap" nilai={lengkap.primaryGelap} daftar={[]} warisan={dariWarisan('primaryGelap')} otomatis onChange={(v) => ubahTema('primaryGelap', v)} />
+                  <PilihWarna label="Warna bayangan" nilai={lengkap.warnaBayangan} daftar={['#101828', '#0f172a', '#1c1917']} warisan={dariWarisan('warnaBayangan')} otomatis onChange={(v) => ubahTema('warnaBayangan', v)} />
+                </div>
+              </details>
               <div className="u-tema-dua">
                 <Field label="Nuansa abu-abu">
                   <Select size="sm" value={lengkap.netral} onValueChange={(v) => v && ubahTema('netral', v)} options={Object.entries(NETRAL).map(([value, n]) => ({ value: value as OpsiTema['netral'], label: n.label }))} aria-label="Nuansa abu-abu" />
@@ -265,6 +284,11 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
                 <Field label="Bayangan">
                   <SegmentedControl fullWidth value={lengkap.bayangan} onValueChange={(v) => ubahTema('bayangan', v as OpsiTema['bayangan'])} options={[{ value: 'tanpa', label: 'Tanpa' }, { value: 'halus', label: 'Halus' }, { value: 'normal', label: 'Normal' }, { value: 'tegas', label: 'Tegas' }]} aria-label="Bayangan" />
                 </Field>
+              </div>
+              <Field label="Efek bayangan" description={PILIHAN_ELEVASI.find((x) => x.value === lengkap.elevasi)?.keterangan}>
+                <SegmentedControl fullWidth value={lengkap.elevasi} onValueChange={(v) => ubahTema('elevasi', v as OpsiTema['elevasi'])} options={PILIHAN_ELEVASI.map(({ value, label }) => ({ value, label }))} aria-label="Efek bayangan" />
+              </Field>
+              <div className="u-tema-dua">
                 <Field label="Gerak animasi">
                   <SegmentedControl fullWidth value={lengkap.gerak} onValueChange={(v) => ubahTema('gerak', v as OpsiTema['gerak'])} options={[{ value: 'cepat', label: 'Cepat' }, { value: 'normal', label: 'Normal' }, { value: 'lambat', label: 'Lambat' }, { value: 'tanpa', label: 'Tanpa' }]} aria-label="Gerak animasi" />
                 </Field>
@@ -281,6 +305,7 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
                 </Field>
               )}
             </Card>
+            {denganKerangka && <PengaturanKerangka tata={tataBerlaku as Record<string, unknown>} ubah={(k, v) => ubahTata({ [k]: v } as Partial<T>)} />}
             {tataTambahan && <Card className="u-tema-kartu">{tataTambahan(tataBerlaku, ubahTata)}</Card>}
           </fieldset>
 
@@ -325,17 +350,22 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
   );
 }
 
-function PilihWarna({ label, nilai, daftar, warisan, onChange }: { label: string; nilai: string; daftar: string[]; warisan?: boolean | undefined; onChange: (v: string) => void }) {
+function PilihWarna({ label, nilai, daftar, warisan, otomatis, onChange }: { label: string; nilai: string; daftar: string[]; warisan?: boolean | undefined; otomatis?: boolean; onChange: (v: string) => void }) {
   const [teks, setTeks] = React.useState(nilai);
   React.useEffect(() => setTeks(nilai), [nilai]);
   return (
     <Field label={<>{label}{warisan && <Badge variant="neutral" className="u-tema-warisan">diwarisi</Badge>}</>}>
       <div className="u-tema-warna">
+        {otomatis && (
+          <button type="button" className="u-tema-warna-otomatis" aria-pressed={!nilai} onClick={() => onChange('')}>
+            Otomatis
+          </button>
+        )}
         {daftar.map((c) => (
           <button key={c} type="button" title={c} aria-label={`${label} ${c}`} aria-pressed={nilai === c} style={{ background: c }} onClick={() => onChange(c)} />
         ))}
         <label className="u-tema-warna-bebas" title="Pilih warna bebas">
-          <input type="color" value={nilai} onChange={(e) => onChange(e.target.value)} aria-label={`${label} bebas`} />
+          <input type="color" value={nilai || '#808080'} onChange={(e) => onChange(e.target.value)} aria-label={`${label} bebas`} />
         </label>
         <Input
           size="sm"
@@ -346,6 +376,7 @@ function PilihWarna({ label, nilai, daftar, warisan, onChange }: { label: string
           onBlur={() => {
             const h = hexValid(teks);
             if (h) onChange(h);
+            else if (otomatis && !teks.trim()) onChange('');
             else setTeks(nilai);
           }}
         />
@@ -424,5 +455,128 @@ function RiwayatTema({ aplikasi, lingkup, kunciCache }: { aplikasi: string; ling
         </li>
       ))}
     </ol>
+  );
+}
+
+// ---------------------------------------------------------------- Sidebar & Header (KerangkaAplikasi)
+
+type OpsiPilihan<V extends string> = Array<{ value: V; label: string }>;
+
+function PratinjauKerangka({ t }: { t: TataKerangka }) {
+  return (
+    <div className="u-tema-kerangka-pratinjau" data-sb={t.sidebarGaya} data-hd={t.headerGaya} data-aktif={t.sidebarAktif} data-mini={t.sidebarMode === 'mini' ? '' : undefined} data-ringkas={t.headerTinggi === 'ringkas' ? '' : undefined} aria-hidden>
+      <span className="u-tkp-sb">
+        <i className="u-tkp-logo" />
+        {t.sidebarPintasan && <i className="u-tkp-pin" />}
+        <i data-aktif="" />
+        <i />
+        <i />
+        <i />
+        <span className="u-tkp-kaki" />
+      </span>
+      <span className="u-tkp-utama">
+        <span className="u-tkp-hd">
+          {t.headerJudul !== 'tanpa' && <i className="u-tkp-judul" />}
+          {t.headerCari !== 'ikon' && <i className="u-tkp-cari" data-tengah={t.headerCari === 'tengah' ? '' : undefined} />}
+          <i className="u-tkp-ikon" />
+          <i className="u-tkp-ikon" />
+        </span>
+        <span className="u-tkp-isi">
+          <i />
+          <i />
+        </span>
+      </span>
+    </div>
+  );
+}
+
+/** Pratinjau efek memuat: tombol "Coba" memutar efek halaman pertama lalu efek pindah menu. */
+function PratinjauMuat({ t }: { t: TataKerangka }) {
+  const [tahap, setTahap] = React.useState<'awal' | 'pindah' | null>(null);
+  const isiRef = React.useRef<HTMLDivElement>(null);
+  const efek = t.muatPindah.endsWith('blur') ? 'blur' : t.muatPindah.endsWith('pudar') ? 'pudar' : null;
+  React.useEffect(() => {
+    if (!tahap) return;
+    const x = setTimeout(
+      () => {
+        if (efek) animasikanMasuk(isiRef.current, efek);
+        setTahap(tahap === 'awal' ? 'pindah' : null);
+      },
+      tahap === 'awal' ? 1400 : 900,
+    );
+    return () => clearTimeout(x);
+  }, [tahap, efek]);
+  return (
+    <div className="u-tema-muat">
+      <div className="u-tema-muat-pratinjau" aria-hidden>
+        {t.muatPindah.startsWith('progres') && <BilahProgres aktif={tahap !== null} tunda={0} posisi="wadah" />}
+        <div ref={isiRef} className="u-tema-muat-isi">
+          {tahap === 'awal' && t.muatAwal !== 'tidak' ? (
+            <MuatHalaman gaya={t.muatAwal} tata="dasbor" label={null} />
+          ) : (
+            <>
+              <i className="u-tema-muat-judul" />
+              <span className="u-tema-muat-kartu">
+                <i />
+                <i />
+                <i />
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+      <Button size="sm" variant="outline" onClick={() => setTahap('awal')} disabled={tahap !== null}>
+        <RotateCcw /> Coba efek
+      </Button>
+    </div>
+  );
+}
+
+function PengaturanKerangka({ tata, ubah }: { tata: Record<string, unknown>; ubah: (kunci: string, nilai: unknown) => void }) {
+  const t = tataKerangka(tata);
+  const set = <K extends keyof TataKerangka>(k: K, v: TataKerangka[K]) => ubah(KUNCI_TATA_KERANGKA[k], typeof v === 'boolean' ? (v ? 'ya' : 'tidak') : v);
+  const seg = <K extends keyof TataKerangka>(k: K, label: string, opsi: OpsiPilihan<string>, keterangan?: string) => (
+    <Field label={label} description={keterangan}>
+      <SegmentedControl fullWidth value={String(typeof t[k] === 'boolean' ? (t[k] ? 'ya' : 'tidak') : t[k])} onValueChange={(v) => set(k, (v === 'ya' ? true : v === 'tidak' ? false : v) as TataKerangka[K])} options={opsi} aria-label={label} />
+    </Field>
+  );
+  return (
+    <Card className="u-tema-kartu">
+      <div className="u-tema-baris">
+        <span className="u-label">Sidebar dan header</span>
+      </div>
+      <PratinjauKerangka t={t} />
+      <div className="u-tema-kelompok">Sidebar</div>
+      {seg('sidebarGaya', 'Gaya', [{ value: 'terang', label: 'Latar halus' }, { value: 'gelap', label: 'Gelap' }, { value: 'utama', label: 'Warna utama' }, { value: 'menyatu', label: 'Menyatu' }])}
+      <div className="u-tema-dua">
+        {seg('sidebarMode', 'Mode bawaan', [{ value: 'penuh', label: 'Penuh' }, { value: 'mini', label: 'Mini' }, { value: 'otomatis', label: 'Otomatis' }], 'Otomatis = mini di layar < 1280 px')}
+        {seg('sidebarPadat', 'Kepadatan', [{ value: 'rapat', label: 'Rapat' }, { value: 'normal', label: 'Normal' }, { value: 'lega', label: 'Lega' }])}
+      </div>
+      <div className="u-tema-dua">
+        {seg('sidebarAktif', 'Menu aktif', [{ value: 'lembut', label: 'Latar lembut' }, { value: 'garis', label: 'Garis' }, { value: 'pil', label: 'Pil' }])}
+        {seg('sidebarLebar', 'Lebar', [{ value: 'sempit', label: 'Sempit' }, { value: 'normal', label: 'Normal' }, { value: 'lebar', label: 'Lebar' }])}
+      </div>
+      {seg('sidebarPintasan', 'Pintasan menu sering dibuka', [{ value: 'ya', label: 'Tampilkan' }, { value: 'tidak', label: 'Sembunyikan' }])}
+      <div className="u-tema-kelompok">Header</div>
+      {seg('headerGaya', 'Gaya', [{ value: 'polos', label: 'Polos' }, { value: 'garis', label: 'Garis' }, { value: 'bayang', label: 'Berbayang' }, { value: 'blur', label: 'Blur' }, { value: 'utama', label: 'Warna utama' }])}
+      <div className="u-tema-dua">
+        {seg('headerTinggi', 'Tinggi', [{ value: 'ringkas', label: 'Ringkas' }, { value: 'normal', label: 'Normal' }])}
+        {seg('headerLengket', 'Saat digulir', [{ value: 'ya', label: 'Tetap di atas' }, { value: 'tidak', label: 'Ikut tergulir' }])}
+      </div>
+      <div className="u-tema-dua">
+        {seg('headerCari', 'Kotak cari', [{ value: 'tengah', label: 'Tengah' }, { value: 'kanan', label: 'Kanan' }, { value: 'ikon', label: 'Ikon' }])}
+        {seg('headerJudul', 'Judul halaman', [{ value: 'judul', label: 'Judul' }, { value: 'breadcrumb', label: 'Jejak' }, { value: 'tanpa', label: 'Tanpa' }])}
+      </div>
+      <div className="u-tema-kelompok">Efek memuat</div>
+      <PratinjauMuat t={t} />
+      <div className="u-tema-dua">
+        <Field label="Saat halaman pertama dibuka" description={PILIHAN_MUAT_AWAL.find((o) => o.value === t.muatAwal)?.keterangan}>
+          <Select size="sm" value={t.muatAwal} onValueChange={(v) => v && set('muatAwal', v)} options={PILIHAN_MUAT_AWAL.map(({ value, label }) => ({ value, label }))} aria-label="Efek halaman pertama" />
+        </Field>
+        <Field label="Saat pindah menu" description={PILIHAN_MUAT_PINDAH.find((o) => o.value === t.muatPindah)?.keterangan}>
+          <Select size="sm" value={t.muatPindah} onValueChange={(v) => v && set('muatPindah', v)} options={PILIHAN_MUAT_PINDAH.map(({ value, label }) => ({ value, label }))} aria-label="Efek pindah menu" />
+        </Field>
+      </div>
+    </Card>
   );
 }

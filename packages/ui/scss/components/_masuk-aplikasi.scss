@@ -1,0 +1,111 @@
+// HalamanMasukAplikasi: halaman masuk SSO baku aplikasi UNIPO (panel kiri + panel sisi berwarna utama).
+body:has(.u-masuk-aplikasi) {
+  margin: 0;
+}
+.u-masuk-aplikasi {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  background: var(--u-background);
+  color: var(--u-foreground);
+}
+.u-masuk-aplikasi-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--u-space-5);
+  padding: var(--u-space-12) clamp(1.5rem, 6vw, 5rem);
+  max-width: 34rem;
+  width: 100%;
+  margin-left: auto;
+}
+.u-masuk-aplikasi-teks {
+  h1 {
+    margin: 0 0 var(--u-space-3);
+    font-family: var(--u-font-heading, inherit);
+    font-size: clamp(1.625rem, 3vw, 2.125rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+  p {
+    margin: 0;
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
+    line-height: 1.6;
+  }
+}
+.u-masuk-aplikasi-catatan {
+  margin: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  a {
+    color: var(--u-primary);
+  }
+}
+.u-masuk-aplikasi-sisi {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--u-space-4);
+  padding: var(--u-space-12) clamp(1.5rem, 5vw, 4rem);
+  background: radial-gradient(120% 80% at 100% 0%, color-mix(in oklab, var(--u-secondary) 55%, transparent), transparent 60%), var(--u-primary);
+  color: var(--u-primary-foreground);
+  h2 {
+    margin: 0;
+    max-width: 26rem;
+    font-size: var(--u-text-xl);
+    line-height: 1.3;
+  }
+  p {
+    margin: 0;
+    max-width: 26rem;
+    opacity: 0.88;
+    line-height: 1.6;
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--u-space-6);
+    max-width: 26rem;
+  }
+  li {
+    display: flex;
+    gap: var(--u-space-3);
+    strong {
+      display: block;
+      font-size: var(--u-text-sm);
+    }
+    div > span {
+      display: block;
+      opacity: 0.88;
+      line-height: 1.5;
+    }
+  }
+}
+.u-masuk-aplikasi-ikon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--u-radius-lg);
+  background: rgb(255 255 255 / 0.16);
+  svg {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+}
+@media (max-width: 52rem) {
+  .u-masuk-aplikasi {
+    grid-template-columns: 1fr;
+  }
+  .u-masuk-aplikasi-panel {
+    margin: 0 auto;
+    padding: var(--u-space-10) var(--u-space-4) var(--u-space-8);
+  }
+  .u-masuk-aplikasi-sisi {
+    padding: var(--u-space-8) var(--u-space-4) var(--u-space-10);
+  }
+}

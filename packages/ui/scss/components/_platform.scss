@@ -166,7 +166,7 @@
 // ---------------------------------------------------------------- Bilah aplikasi
 .u-bilah-aplikasi {
   position: sticky;
-  top: 0;
+  top: var(--u-offset-atas, 0px);
   z-index: 30;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);

@@ -138,7 +138,8 @@ export interface IsiPesan {
   ke?: string;
   /** Cuplikan pesan yang dibalas, agar balasan tetap terbaca walau pesan aslinya belum dimuat. */
   kutip?: { pengirim: string; isi: string };
-  berkas?: Array<{ id: string; nama: string; mime: string; ukuran: number; kunci: string; iv: string; lebar?: number; tinggi?: number }>;
+  /** `kunci`/`iv` hanya ada di lampiran lama yang dienkripsi browser; lampiran baru dienkripsi server. */
+  berkas?: Array<{ id: string; nama: string; mime: string; ukuran: number; kunci?: string; iv?: string; lebar?: number; tinggi?: number }>;
   /** Emoji reaksi; kosong = hapus reaksi. */
   emoji?: string;
 }
@@ -232,6 +233,34 @@ async function bukaKunciPesan(
     }
   }
   throw new Error('Kunci susulan tidak cocok dengan perangkat pengirim mana pun.');
+}
+
+/**
+ * Kunci pesan (AES-256 mentah, base64) dari pesan end-to-end lama, untuk dipindahkan ke enkripsi server
+ * (POST /v1/obrolan/ruang/{id}/pesan/{uuid}/pindah-server). Server membuka sandi aslinya sendiri dengan kunci ini.
+ */
+export async function kunciPesanMentah(p: { uuid: string; efemeral: string; kunci: string }, saya: KunciPerangkat, kunciTukarPengirim: string[] = []): Promise<string> {
+  const s = subtle();
+  let cek: CryptoKey;
+  if (!p.kunci.startsWith(SUSULAN)) {
+    const rahasia = await s.deriveBits({ name: 'ECDH', public: await imporPublik(p.efemeral, ECDH) }, saya.tukar.privateKey, 256);
+    cek = await s.unwrapKey('raw', dariB64(p.kunci), await kunciBungkus(rahasia, p.uuid, saya.id), 'AES-KW', 'AES-GCM', true, ['decrypt']);
+  } else {
+    const bungkus = dariB64(p.kunci.slice(SUSULAN.length));
+    let ketemu: CryptoKey | null = null;
+    for (const pub of kunciTukarPengirim) {
+      try {
+        const rahasia = await s.deriveBits({ name: 'ECDH', public: await imporPublik(pub, ECDH) }, saya.tukar.privateKey, 256);
+        ketemu = await s.unwrapKey('raw', bungkus, await kunciBungkus(rahasia, p.uuid, saya.id, 'susulan'), 'AES-KW', 'AES-GCM', true, ['decrypt']);
+        break;
+      } catch {
+        /* coba perangkat berikutnya */
+      }
+    }
+    if (!ketemu) throw new Error('Kunci pesan tidak cocok.');
+    cek = ketemu;
+  }
+  return keB64(await s.exportKey('raw', cek));
 }
 
 /** Kunci pesan ini kunci susulan (perlu kunci tukar perangkat pengirim untuk membukanya). */

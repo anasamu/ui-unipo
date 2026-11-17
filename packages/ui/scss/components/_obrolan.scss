@@ -200,6 +200,68 @@
     flex: none;
   }
 }
+// Baris daftar obrolan dengan menu: tombol ⋮ muncul saat hover/fokus (menggantikan waktu), selalu tampil di layar
+// sentuh. Klik kanan dan tekan lama membuka menu yang sama (ContextMenu).
+.u-ob-baris-bungkus {
+  position: relative;
+  border-radius: var(--u-radius-md);
+  -webkit-touch-callout: none;
+  &[data-popup-open] > .u-ob-baris {
+    background: var(--u-hover);
+  }
+}
+.u-ob-baris-menu {
+  position: absolute;
+  top: 0.375rem;
+  right: 0.375rem;
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--u-muted-foreground);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--u-duration-fast) var(--u-ease-out);
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  &:hover,
+  &[data-popup-open] {
+    background: var(--u-hover);
+    color: var(--u-foreground);
+  }
+  &:focus-visible {
+    @include focus-ring(-2px);
+  }
+  .u-ob-baris-bungkus:hover > &,
+  .u-ob-baris-bungkus:focus-within > &,
+  &[data-popup-open] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  @media (hover: none) {
+    top: 50%;
+    translate: 0 -50%;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+@media (hover: hover) {
+  .u-ob-baris-bungkus:is(:hover, :focus-within) .u-ob-baris-waktu,
+  .u-ob-baris-bungkus[data-popup-open] .u-ob-baris-waktu {
+    visibility: hidden;
+  }
+}
+@media (hover: none) {
+  .u-ob-baris-bungkus > .u-ob-baris {
+    padding-right: 2.5rem;
+  }
+}
 .u-ob-baris-teks {
   display: flex;
   flex-direction: column;
@@ -304,6 +366,15 @@
   }
   &[data-size='xl'] {
     --s: 4rem;
+  }
+  &[data-foto] {
+    overflow: hidden;
+    background: none;
+  }
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
   &[data-nada='primer'] {
     background: var(--u-primary-soft);
@@ -607,6 +678,15 @@
   }
 }
 
+// Pesan sistem ("X mengganti foto grup"): catatan di tengah, tidak lengket seperti pemisah tanggal.
+.u-ob-sistem {
+  position: static;
+  span {
+    max-width: 85%;
+    text-align: center;
+  }
+}
+
 // ---------------------------------------------------------------- gelembung
 .u-ob-pesan {
   position: relative;
@@ -832,27 +912,54 @@
   margin: 0 auto;
   border-radius: var(--u-radius-md);
 }
+// Lampiran dokumen: ikon, nama (terpotong), lalu tombol Unduh dan Simpan ke Berkas saya di dalam kartu.
 .u-ob-berkas {
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  width: min(17rem, 68cqi);
+  box-sizing: border-box;
+  width: min(19rem, 76cqi);
+  min-width: min(15rem, 100%);
+  max-width: 100%;
+  min-width: 0;
   padding: 0.5rem;
-  border: 0;
   border-radius: 0.75rem;
   background: color-mix(in oklab, currentColor 9%, transparent);
   color: inherit;
-  font: inherit;
   text-align: left;
+}
+.u-ob-berkas-aksi {
+  display: flex;
+  flex: none;
+  gap: 0.25rem;
+}
+.u-ob-berkas-tombol {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.875rem;
+  height: 1.875rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.5rem;
+  background: color-mix(in oklab, currentColor 10%, transparent);
+  color: inherit;
   cursor: pointer;
-  > svg {
-    flex: none;
-    width: 1.1rem;
-    height: 1.1rem;
-    opacity: 0.8;
+  svg {
+    width: 1rem;
+    height: 1rem;
+    opacity: 0.85;
   }
-  &:hover {
-    background: color-mix(in oklab, currentColor 14%, transparent);
+  .u-spinner {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  &:hover:not(:disabled) {
+    background: color-mix(in oklab, currentColor 18%, transparent);
+  }
+  &:disabled {
+    cursor: progress;
+    opacity: 0.7;
   }
   &:focus-visible {
     @include focus-ring;
@@ -882,6 +989,9 @@
   @include truncate;
 }
 .u-ob-berkas-sub {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 0.6875rem;
   opacity: 0.75;
 }
@@ -1212,6 +1322,92 @@
 }
 
 // ---------------------------------------------------------------- info, nomor keamanan, pengaturan
+// Info obrolan/grup: tampilan di dalam panel ruang (bukan modal di atas panel). Di kotak obrolan lebar menjadi panel
+// samping kanan; di chat mengambang dan layar sempit menutupi area ruang.
+.u-ob-ruang {
+  container: ob-ruang / inline-size;
+}
+.u-ob-info-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  background: var(--u-card);
+  animation: u-ob-info-masuk var(--u-duration-base) var(--u-ease-out);
+  > .u-ob-info {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1rem;
+  }
+  @container ob-ruang (min-width: 46rem) {
+    left: auto;
+    width: 22rem;
+    border-left: 1px solid var(--u-border);
+    box-shadow: var(--u-shadow-lg);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+@keyframes u-ob-info-masuk {
+  from {
+    opacity: 0;
+    translate: 1rem 0;
+  }
+}
+.u-ob-info-panel-kepala {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 3.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--u-border);
+  flex: none;
+  h3 {
+    margin: 0;
+    font-size: var(--u-text-base);
+    font-weight: var(--u-weight-semibold);
+  }
+}
+.u-ob-info-foto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+.u-ob-info-foto-tombol {
+  position: relative;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  &:focus-visible {
+    @include focus-ring;
+  }
+  &:disabled {
+    cursor: progress;
+  }
+}
+.u-ob-info-foto-ikon {
+  position: absolute;
+  right: -0.125rem;
+  bottom: -0.125rem;
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 2px solid var(--u-card);
+  border-radius: 50%;
+  background: var(--u-primary);
+  color: var(--u-primary-foreground);
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+}
 .u-ob-info {
   display: flex;
   flex-direction: column;
@@ -1274,7 +1470,8 @@
   gap: 1rem;
   padding: 0.25rem 0;
   cursor: pointer;
-  > span {
+  // Bukan .u-switch: sakelar juga <span>; display:block di sini membuatnya kehilangan tata letak flex dan kenopnya.
+  > span:not(.u-switch) {
     display: block;
     min-width: 0;
     strong,
@@ -1351,10 +1548,11 @@
   background: var(--u-card);
   box-shadow: var(--u-shadow-sm);
 }
+// Posisi standar semua aplikasi: tombol 56px, 24px dari pojok kanan bawah; di ponsel naik di atas navigasi bawah.
 .u-ob-apung {
   position: fixed;
-  right: 1.25rem;
-  bottom: var(--ob-bawah, 20px);
+  right: 1.5rem;
+  bottom: var(--ob-bawah, 1.5rem);
   z-index: 45;
   display: flex;
   flex-direction: column;
@@ -1362,8 +1560,18 @@
   gap: 0.75rem;
   &[data-posisi='kiri'] {
     right: auto;
-    left: 1.25rem;
+    left: 1.5rem;
     align-items: flex-start;
+  }
+  @media (max-width: 767px) {
+    right: 1rem;
+    bottom: var(--ob-bawah, 1rem);
+    &[data-posisi='kiri'] {
+      left: 1rem;
+    }
+    &[data-nav-bawah] {
+      bottom: var(--ob-bawah, calc(4.75rem + env(safe-area-inset-bottom)));
+    }
   }
 }
 .u-ob-apung-tombol {
@@ -1404,8 +1612,8 @@
   }
 }
 .u-ob-apung-panel {
-  width: min(24rem, calc(100vw - 2.5rem));
-  height: min(38rem, calc(100dvh - 7rem));
+  width: min(24rem, calc(100vw - 3rem));
+  height: min(40rem, calc(100dvh - 8rem - var(--u-offset-atas, 0px)));
   overflow: hidden;
   border: 1px solid var(--u-border);
   border-radius: var(--u-radius-xl);
@@ -1446,4 +1654,56 @@
   .u-ob-ketik span {
     animation-duration: 2.4s;
   }
+}
+
+// Bersihkan obrolan: pilihan lampiran.
+.u-ob-bersih {
+  display: grid;
+  gap: 0.875rem;
+}
+.u-ob-bersih-pilih {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  legend {
+    margin-bottom: 0.5rem;
+    font-size: var(--u-text-sm);
+    font-weight: 600;
+  }
+  label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.75rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-md);
+    cursor: pointer;
+    &[data-aktif] {
+      border-color: var(--u-primary);
+      background: var(--u-primary-soft);
+    }
+    input {
+      margin-top: 0.2rem;
+      accent-color: var(--u-primary);
+    }
+    span {
+      display: grid;
+      gap: 0.125rem;
+    }
+    strong {
+      font-size: var(--u-text-sm);
+      font-weight: 600;
+    }
+    small {
+      font-size: var(--u-text-xs);
+      color: var(--u-muted-foreground);
+    }
+  }
+}
+.u-ob-bersih-aksi {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }

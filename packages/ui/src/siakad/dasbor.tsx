@@ -29,7 +29,7 @@ import {
 import { cn } from '../lib/cn';
 import { formatDate, formatNumber, formatPersen, formatRelative, formatRupiahRingkas } from '../lib/format';
 import { Button } from '../components/actions';
-import { Alert, Progress } from '../components/display';
+import { Alert, Empty, Progress } from '../components/display';
 import {
   ActionList,
   ActivityFeed,
@@ -61,6 +61,8 @@ import { LabelProdi } from './prodi';
 // ================================================================ Bantuan bersama
 type Angka = number | string | null | undefined;
 const n = (v: Angka) => (v == null || v === '' ? 0 : Number(v) || 0);
+/** Seperti n(), tetapi kosong tetap null (grafik menggambarnya sebagai celah "belum ada", bukan 0). */
+const nAtauNull = (v: Angka) => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
 /** Peta {kunci: jumlah} dari API (PHP mengirim [] untuk peta kosong). */
 const peta = (m: unknown): Array<[string, number]> => (m && typeof m === 'object' && !Array.isArray(m) ? Object.entries(m as Record<string, Angka>).map(([k, v]) => [k, n(v)]) : []);
 const judulKunci = (k: string) => (k === 'belum_diisi' || k === '' ? 'Belum diisi' : k.length <= 3 ? k.toUpperCase() : (k.charAt(0).toUpperCase() + k.slice(1)).replace(/_/g, ' '));
@@ -92,7 +94,16 @@ export interface DasborBaseProps {
 }
 
 /** Kerangka dasbor: kepala (judul, keterangan, aksi), galat dengan tombol muat ulang, lalu isi. */
-export function KerangkaDasbor({ title, description, actions, error, onRetry, children, className }: DasborBaseProps & { error?: Error | null; onRetry?: () => void; children: React.ReactNode }) {
+export function KerangkaDasbor({
+  title,
+  description,
+  actions,
+  error,
+  onRetry,
+  atas,
+  children,
+  className,
+}: DasborBaseProps & { error?: Error | null; onRetry?: () => void; /** Isi di bawah kepala yang tetap tampil walau data dasbor gagal dimuat. */ atas?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className={cn('u-dasbor', className)}>
       {(title || actions) && (
@@ -104,6 +115,7 @@ export function KerangkaDasbor({ title, description, actions, error, onRetry, ch
           {actions && <div className="u-dasbor-actions">{actions}</div>}
         </header>
       )}
+      {atas}
       {error ? (
         <Alert
           variant="danger"
@@ -228,7 +240,14 @@ export function useRingkasAkademik({ tahunId, kodeProdi }: KueriAkademik) {
 /** GET /v1/dasbor/tren, diurutkan dari semester terlama. */
 export function useTrenAkademik({ semester = 8, kodeProdi }: KueriAkademik) {
   const r = useSiakadQuery<TrenAkademik[]>(['dasbor-tren', semester, kodeProdi], (s, signal) => s.dasbor.getTren({ semester, kode_prodi: kodeProdi }, { signal }) as never, { staleTime: 300_000 });
-  const data = React.useMemo(() => (r.data ? [...r.data].sort((a, b) => String(a.tahun_id).localeCompare(String(b.tahun_id))) : undefined), [r.data]);
+  const data = React.useMemo(() => {
+    if (!r.data) return undefined;
+    const urut = [...r.data].sort((a, b) => String(a.tahun_id).localeCompare(String(b.tahun_id)));
+    // Semester mendatang (belum ada KRS, maba, lulusan, maupun IPS) tidak dijadikan entri sumbu.
+    const kosong = (t: TrenAkademik) => !n(t.mengisi_krs) && !n(t.mahasiswa_baru) && !n(t.lulusan) && nAtauNull(t.rata_ips) == null;
+    while (urut.length > 1 && kosong(urut[urut.length - 1]!)) urut.pop();
+    return urut;
+  }, [r.data]);
   return { ...r, data };
 }
 
@@ -305,8 +324,10 @@ export const IpsPerSemester = buatWidget('IpsPerSemester', useTrenAkademik, { ti
   <BarChart
     loading={muat}
     height={150}
+    max={4}
     format={(v) => formatNumber(v, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-    data={(seri ?? []).map((r) => ({ label: labelSemester(r.tahun_id, true), title: labelSemester(r.tahun_id), value: n(r.rata_ips) }))}
+    emptyLabel="Belum ada IPS"
+    data={(seri ?? []).map((r) => ({ label: labelSemester(r.tahun_id, true), title: labelSemester(r.tahun_id), value: nAtauNull(r.rata_ips) }))}
   />
 ));
 
@@ -666,10 +687,25 @@ export function useDasborSpmi({ periodeId, unitId }: KueriSpmi) {
   return useSiakadQuery<DasborSpmiData>(['spmi-dasbor', q], (s, signal) => s.spmi.getDasbor(q, { signal }) as never, { staleTime: 120_000 });
 }
 
-/** Kartu angka SPMI: indikator terpenuhi, capaian terisi, temuan terbuka, akreditasi. */
+/** API SPMI menjawab 404 ("Data tidak ditemukan") bila belum ada periode SPMI: keadaan kosong, bukan galat. */
+const belumAdaPeriode = (e: unknown) => Number((e as { status?: number } | null)?.status) === 404;
+function SpmiBelumAdaPeriode({ className }: { className?: string }) {
+  return (
+    <Empty
+      icon={<ClipboardCheck />}
+      title="Belum ada periode SPMI"
+      description="Angka mutu tampil setelah unit penjaminan mutu membuka periode SPMI dan menetapkan standar."
+      bordered
+      className={className}
+    />
+  );
+}
+
+/** Kartu angka SPMI: indikator terpenuhi, capaian terisi, temuan terbuka, akreditasi. Belum ada periode: keadaan kosong. */
 export function RingkasanSpmi({ className, ...k }: KueriSpmi & { className?: string }) {
   const r = useDasborSpmi(k);
   const d = r.data;
+  if (belumAdaPeriode(r.error)) return <SpmiBelumAdaPeriode className={className} />;
   const muat = muatDari(r);
   const c = d?.capaian;
   const tm = d?.temuan ?? {};
@@ -807,6 +843,12 @@ export function DasborSpmi({ periodeId, unitId, title = 'Penjaminan mutu interna
   const k = { periodeId, unitId };
   const r = useDasborSpmi(k);
   const p = r.data?.periode;
+  if (belumAdaPeriode(r.error))
+    return (
+      <KerangkaDasbor title={title} description={description} actions={actions} className={className}>
+        <SpmiBelumAdaPeriode />
+      </KerangkaDasbor>
+    );
   return (
     <KerangkaDasbor title={title} description={description ?? (p ? `Periode ${p.nama ?? p.tahun}` : undefined)} actions={actions} error={r.error} onRetry={r.refetch} className={className}>
       <RingkasanSpmi {...k} />
@@ -1350,19 +1392,36 @@ export const ReferalPmb = buatWidget('ReferalPmb', useStatistikPmb, { title: 'Re
   />
 ));
 
+export type WidgetDasborPmb = 'harian' | 'corong' | 'peminat' | 'sumber' | 'referal';
+export interface DasborPmbProps extends DasborBaseProps, KueriPmb {
+  /** Isi di atas kartu ringkasan, mis. kartu antrean kerja panitia. */
+  atas?: React.ReactNode;
+  /** Widget tambahan di ujung DashboardGrid (beri `span` lewat Panel). */
+  children?: React.ReactNode;
+  /**
+   * Lebar tiap widget di grid. Bawaan menyusun baris penuh tanpa celah (3 kolom): harian 2 + corong 1,
+   * peminat 2 + sumber 1, referal penuh.
+   */
+  lebar?: Partial<Record<WidgetDasborPmb, WidgetProps['span']>>;
+  /** Sembunyikan widget tertentu, mis. { referal: false }. Referal juga disembunyikan otomatis bila kosong. */
+  widget?: Partial<Record<WidgetDasborPmb, boolean>>;
+}
+
 /** Dasbor panitia PMB lengkap. */
-export function DasborPmb({ gelombangId, title = 'Penerimaan mahasiswa baru', description, actions, className }: DasborBaseProps & KueriPmb) {
+export function DasborPmb({ gelombangId, title = 'Penerimaan mahasiswa baru', description, actions, atas, children, lebar = {}, widget = {}, className }: DasborPmbProps) {
   const k = { gelombangId };
   const r = useStatistikPmb(k);
+  const w = (x: WidgetDasborPmb) => widget[x] !== false;
   return (
-    <KerangkaDasbor title={title} description={description} actions={actions} error={r.error} onRetry={r.refetch} className={className}>
+    <KerangkaDasbor title={title} description={description} actions={actions} error={r.error} onRetry={r.refetch} atas={atas} className={className}>
       <RingkasanPmb {...k} />
       <DashboardGrid>
-        <CorongPmb {...k} />
-        <SumberInformasiPmb {...k} />
-        <PendaftarHarianPmb {...k} span="full" />
-        <PeminatPerProdi {...k} />
-        {!!r.data?.per_referal?.length && <ReferalPmb {...k} span={1} />}
+        {w('harian') && <PendaftarHarianPmb {...k} span={lebar.harian ?? 2} />}
+        {w('corong') && <CorongPmb {...k} span={lebar.corong ?? 1} />}
+        {w('peminat') && <PeminatPerProdi {...k} span={lebar.peminat ?? 2} />}
+        {w('sumber') && <SumberInformasiPmb {...k} span={lebar.sumber ?? 1} />}
+        {w('referal') && !!r.data?.per_referal?.length && <ReferalPmb {...k} span={lebar.referal ?? 'full'} />}
+        {children}
       </DashboardGrid>
     </KerangkaDasbor>
   );

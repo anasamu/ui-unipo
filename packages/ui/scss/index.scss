@@ -9,6 +9,7 @@
 @use 'components/overlays';
 @use 'components/modal-fitur';
 @use 'components/modul-profil';
+@use 'components/masuk-aplikasi';
 @use 'components/display';
 @use 'components/code';
 @use 'components/layout';
@@ -60,6 +61,7 @@
 @use 'components/presensi-kerja';
 @use 'components/laporan';
 @use 'components/progres';
+@use 'components/muat-halaman';
 @use 'components/navigasi-modul';
 @use 'components/kasir';
 @use 'components/widget-unit';
@@ -76,3 +78,6 @@
 @use 'components/isian-sk';
 @use 'components/jadwal-bentrok';
 @use 'components/pengajuan';
+@use 'components/kerangka-aplikasi';
+@use 'components/pengumuman-lintas';
+@use 'components/bilah-menyamar';

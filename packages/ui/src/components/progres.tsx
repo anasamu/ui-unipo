@@ -203,7 +203,7 @@ export function ProgressTarget({ nilai, target, max, label, satuan = '', format,
         <span className="u-pt-isi" style={{ width: `${batas(nilai / m) * 100}%` }} />
         <span className="u-pt-tanda" style={{ left: `${batas(target / m) * 100}%` }} title={`Target ${f(target)}`} />
       </div>
-      <small className="u-pt-ket">{capai ? `Target tercapai (${persen(nilai, target)}%)` : `Kurang ${f(target - nilai)} lagi`}</small>
+      <small className="u-pt-ket">{capai ? `Target tercapai (${Math.round(target ? (nilai / target) * 100 : 100)}%)` : `Kurang ${f(target - nilai)} lagi`}</small>
     </div>
   );
 }
@@ -223,7 +223,30 @@ export interface ProgressGaugeProps {
   ukuran?: number;
   className?: string;
 }
-/** Setengah lingkaran: IPK, kepuasan EDOM, serapan anggaran, beban kerja dosen (SKS), kapasitas ruang. */
+/**
+ * Ukuran huruf angka di rongga gauge sebagai pecahan lebar gauge. Teks dicoba dari 0,2 lalu dikecilkan sampai lebarnya
+ * muat di tali busur setinggi teks itu (rongga makin sempit ke atas), minimum 0,1. Teks non-string memakai 0,16.
+ */
+function ukuranTeksGauge(teks: React.ReactNode, tebalRasio: number): number {
+  if (typeof teks !== 'string' && typeof teks !== 'number') return 0.16;
+  const s = String(teks);
+  // Perkiraan lebar karakter huruf tebal (angka tabular ≈ 0,6 em, spasi/koma/titik lebih sempit).
+  const em = [...s].reduce((a, c) => a + (/[\s.,:]/.test(c) ? 0.3 : /[%MWmw]/.test(c) ? 0.85 : 0.6), 0);
+  const ri = 0.5 - tebalRasio; // jari-jari dalam (pecahan lebar)
+  for (let f = 0.2; f > 0.1; f -= 0.005) {
+    const h = f * 1.05; // tinggi teks di atas garis dasar
+    if (h >= ri) continue;
+    const tali = 2 * Math.sqrt(ri * ri - h * h) * 0.86;
+    if (em * f <= tali) return f;
+  }
+  return 0.1;
+}
+
+/**
+ * Setengah lingkaran: IPK, kepuasan EDOM, serapan anggaran, beban kerja dosen (SKS), kapasitas ruang. Angka utama selalu
+ * berada di dalam rongga busur (ukurannya menyesuaikan panjang teks dan lebar gauge), `label` tampil kecil di bawah busur.
+ * Lebar mengikuti `ukuran` tetapi menyusut bila wadahnya lebih sempit.
+ */
 export function ProgressGauge({ nilai, max = 100, min = 0, label, teks, ambang, terbalik = true, tone, ukuran, className }: ProgressGaugeProps) {
   const p = usePlatform();
   const u = ukuran ?? (p.mobile ? 140 : 180);
@@ -232,24 +255,29 @@ export function ProgressGauge({ nilai, max = 100, min = 0, label, teks, ambang, 
   const tebal = Math.max(8, u * 0.08);
   const jari = (u - tebal) / 2;
   const keliling = Math.PI * jari;
+  const isi = teks ?? `${Math.round(r * 100)}%`;
+  const fs = ukuranTeksGauge(isi, tebal / u);
+  const sisi = `${((tebal * 1.5) / u) * 100}%`;
   return (
-    <div className={cn('u-pg', className)} style={{ width: u }} role="meter" aria-valuenow={nilai} aria-valuemin={min} aria-valuemax={max}>
-      <svg width={u} height={u / 2 + tebal / 2} viewBox={`0 0 ${u} ${u / 2 + tebal / 2}`} aria-hidden>
-        <path className="u-pg-trek" d={`M ${tebal / 2} ${u / 2} A ${jari} ${jari} 0 0 1 ${u - tebal / 2} ${u / 2}`} strokeWidth={tebal} fill="none" />
-        <path
-          className="u-pg-isi"
-          data-tone={nada}
-          d={`M ${tebal / 2} ${u / 2} A ${jari} ${jari} 0 0 1 ${u - tebal / 2} ${u / 2}`}
-          strokeWidth={tebal}
-          fill="none"
-          strokeDasharray={keliling}
-          strokeDashoffset={keliling * (1 - r)}
-        />
-      </svg>
-      <div className="u-pg-teks">
-        <b style={{ fontSize: u * 0.16 }}>{teks ?? `${Math.round(r * 100)}%`}</b>
-        {label && <small>{label}</small>}
+    <div className={cn('u-pg', className)} style={{ width: u }} role="meter" aria-valuenow={nilai} aria-valuemin={min} aria-valuemax={max} aria-label={typeof label === 'string' ? label : undefined}>
+      <div className="u-pg-busur">
+        <svg viewBox={`0 0 ${u} ${u / 2 + tebal / 2}`} aria-hidden>
+          <path className="u-pg-trek" d={`M ${tebal / 2} ${u / 2} A ${jari} ${jari} 0 0 1 ${u - tebal / 2} ${u / 2}`} strokeWidth={tebal} fill="none" />
+          <path
+            className="u-pg-isi"
+            data-tone={nada}
+            d={`M ${tebal / 2} ${u / 2} A ${jari} ${jari} 0 0 1 ${u - tebal / 2} ${u / 2}`}
+            strokeWidth={tebal}
+            fill="none"
+            strokeDasharray={keliling}
+            strokeDashoffset={keliling * (1 - r)}
+          />
+        </svg>
+        <div className="u-pg-teks" style={{ left: sisi, right: sisi }}>
+          <b style={{ fontSize: `${fs * 100}cqi` }}>{isi}</b>
+        </div>
       </div>
+      {label && <small className="u-pg-label">{label}</small>}
     </div>
   );
 }
@@ -526,11 +554,43 @@ export function ProgressDaftar({
 /** Bilah tebal dengan angka di dalamnya; untuk kartu sorotan (mis. "UKT 75% lunas"). */
 export function ProgressTebal({ value, max = 100, label, tone, gradien, className }: { value: number; max?: number; label?: React.ReactNode; tone?: Tone; gradien?: boolean; className?: string }) {
   const r = batas(value / max);
+  const ref = React.useRef<HTMLDivElement>(null);
+  // Label tidak boleh terpotong: di dalam isian bila muat, di kanan isian bila isian pendek, atau dua lapis (putih di atas
+  // isian, gelap di atas trek) rata kiri bila tidak muat di keduanya.
+  const [letak, setLetak] = React.useState<'dalam' | 'luar' | 'lapis'>('dalam');
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const cek = () => {
+      // Salinan terakhir selalu berlebar alami (salinan di dalam isian dilebarkan saat mode lapis).
+      const semua = el.querySelectorAll<HTMLElement>('.u-ptb-teks');
+      const t = semua[semua.length - 1];
+      if (!t || !el.clientWidth) return;
+      const lebarTeks = t.scrollWidth;
+      const lebarIsi = Math.max(el.clientWidth * r, 44);
+      setLetak(lebarTeks <= lebarIsi ? 'dalam' : el.clientWidth - el.clientWidth * r >= lebarTeks ? 'luar' : 'lapis');
+    };
+    cek();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(cek);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [r, label]);
+  const isiTeks = label ?? `${Math.round(r * 100)}%`;
   return (
-    <div className={cn('u-ptb', className)} role="progressbar" aria-valuenow={value} aria-valuemax={max} aria-valuemin={0}>
+    <div ref={ref} className={cn('u-ptb', className)} data-letak={letak === 'dalam' ? undefined : letak} data-luar={letak === 'luar' || undefined} role="progressbar" aria-valuenow={value} aria-valuemax={max} aria-valuemin={0}>
       <span className="u-ptb-isi" data-tone={tone} data-gradien={gradien || undefined} style={{ width: `${r * 100}%` }}>
-        <span className="u-ptb-teks">{label ?? `${Math.round(r * 100)}%`}</span>
+        {letak !== 'luar' && (
+          <span className="u-ptb-teks" style={letak === 'lapis' && r > 0 ? { width: `${100 / r}%` } : undefined}>
+            {isiTeks}
+          </span>
+        )}
       </span>
+      {letak !== 'dalam' && (
+        <span className="u-ptb-teks" aria-hidden={letak === 'lapis' || undefined}>
+          {isiTeks}
+        </span>
+      )}
     </div>
   );
 }

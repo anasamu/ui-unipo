@@ -20,6 +20,7 @@ import './mock/surat';
 import './mock/alur';
 import './mock/ai';
 import './mock/obrolan';
+import './mock/notif';
 import './mock/modal-fitur';
 import './mock/profil';
 import './mock/kerangka-portal';

@@ -15,6 +15,7 @@
 .u-dialog-viewport {
   position: fixed;
   inset: 0;
+  top: var(--u-offset-atas, 0px);
   z-index: 51;
   display: grid;
   place-items: center;
@@ -27,7 +28,7 @@
   display: flex;
   flex-direction: column;
   width: min(100%, var(--u-dialog-w, 32rem));
-  max-height: calc(100dvh - 2rem);
+  max-height: calc(100dvh - 2rem - var(--u-offset-atas, 0px));
   border-radius: calc(var(--u-radius) + 6px);
   box-shadow: var(--u-shadow-xl);
   outline: 0;
@@ -50,7 +51,7 @@
   }
   &[data-size='full'] {
     --u-dialog-w: calc(100vw - 2rem);
-    height: calc(100dvh - 2rem);
+    height: calc(100dvh - 2rem - var(--u-offset-atas, 0px));
   }
 }
 .u-dialog-header {
@@ -155,7 +156,7 @@
   transition: transform var(--u-duration-slow) var(--u-ease-out);
   &[data-side='right'],
   &:not([data-side]) {
-    top: 0;
+    top: var(--u-offset-atas, 0px);
     right: 0;
     bottom: 0;
     // Lebar ikut `size`: sm 24rem, md (bawaan) 36rem, lg 44rem, xl 56rem, full layar penuh. Atur bebas lewat --u-sheet-w.
@@ -179,7 +180,7 @@
     }
   }
   &[data-side='left'] {
-    top: 0;
+    top: var(--u-offset-atas, 0px);
     left: 0;
     bottom: 0;
     width: min(100vw, var(--u-sheet-w, 20rem));

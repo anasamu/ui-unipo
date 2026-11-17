@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { ArrowRight, BookOpenCheck, FileText, GraduationCap, IdCard, PartyPopper, Wallet } from 'lucide-react';
 import { cn } from '../lib/cn';
+import { Tautan, type RenderLink } from '../lib/tautan';
 import { formatDate, formatRupiah } from '../lib/format';
 import { Button, Skeleton } from '../components/actions';
 import { Card, CardContent, CardHeader } from '../components/display';
@@ -29,25 +30,28 @@ function salam(d = new Date()): string {
 
 export interface SapaanBerandaProps {
   nama?: React.ReactNode;
-  /** Baris kedua, mis. prodi atau unit. */
+  /** Baris kedua, mis. prodi atau unit. Boleh berisi blok (dirender di dalam `div`). */
   keterangan?: React.ReactNode;
   ilustrasi?: NamaIlustrasi;
-  /** Tombol di kanan (mis. "Lihat profil"). */
+  /** Lencana di bawah keterangan, terpisah dari tombol (mis. peran, unit, status sesi). */
+  lencana?: React.ReactNode;
+  /** Tombol atau kontrol (mis. "Lihat profil", pilihan gelombang). */
   aksi?: React.ReactNode;
   className?: string;
 }
 
-/** Kepala beranda: salam sesuai jam, nama, tanggal hari ini, dan ilustrasi peran. */
-export function SapaanBeranda({ nama, keterangan, ilustrasi, aksi, className }: SapaanBerandaProps) {
+/** Kepala beranda: salam sesuai jam, nama, tanggal hari ini, lencana, aksi, dan ilustrasi peran. */
+export function SapaanBeranda({ nama, keterangan, ilustrasi, lencana, aksi, className }: SapaanBerandaProps) {
   return (
     <section className={cn('u-beranda-sapaan', className)}>
-      <div>
+      <div className="u-beranda-sapaan-isi">
         <p className="u-beranda-tanggal">{formatDate(new Date(), 'full')}</p>
         <h2>
           {salam()}
           {nama ? <>, {nama}</> : null}
         </h2>
-        {keterangan && <p className="u-beranda-ket">{keterangan}</p>}
+        {keterangan && <div className="u-beranda-ket">{keterangan}</div>}
+        {lencana && <div className="u-beranda-sapaan-lencana">{lencana}</div>}
         {aksi && <div className="u-beranda-sapaan-aksi">{aksi}</div>}
       </div>
       {ilustrasi && <Ilustrasi nama={ilustrasi} ekspresi="senang" lebar={190} className="u-beranda-ilus" />}
@@ -66,12 +70,66 @@ export interface AksiCepatItem {
   href?: string;
   /** Bungkus pemicu, mis. (t) => <ModalAmbilKrs trigger={t} />. */
   modal?: (trigger: React.ReactElement) => React.ReactNode;
+  /** Warna petak ikon. Bawaan: primary. */
+  warna?: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+  /** Lencana di pojok kanan, mis. jumlah antrean atau "Baru". */
+  badge?: React.ReactNode;
+  /** Baris kecil di bawah keterangan, mis. "3 menunggu" atau tenggat. */
+  meta?: React.ReactNode;
 }
 
+export interface AksiCepatProps {
+  items: AksiCepatItem[];
+  /**
+   * Jumlah kolom paling banyak (bawaan 4). Kolom dihitung dari lebar wadah lalu diseimbangkan menurut jumlah item
+   * (5 → 3+2, 7 → 4+3), jadi tidak ada baris berisi satu petak bila bisa dihindari. Di layar sempit turun mengikuti `min`.
+   */
+  kolom?: number;
+  /** Lebar minimum petak sebelum turun baris (CSS length). Bawaan 13.5rem. */
+  min?: string;
+  /** Render tautan lewat router (SPA). Bawaan: `<a href>` atau PenyediaTautan. */
+  renderLink?: RenderLink;
+  className?: string;
+}
+
+/** Kolom seimbang: n petak dibagi rata ke baris (5 → 3+2, 7 → 4+3), paling banyak `muat` kolom. */
+const kolomSeimbang = (n: number, muat: number) => {
+  const m = Math.max(1, muat);
+  return n <= m ? Math.max(1, n) : Math.ceil(n / Math.ceil(n / m));
+};
+/** Panjang CSS sederhana (px/rem/em) ke piksel. */
+const kePiksel = (v: string, el: HTMLElement) => {
+  const x = parseFloat(v);
+  if (!Number.isFinite(x)) return 216;
+  if (v.trim().endsWith('px')) return x;
+  const akar = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  return v.trim().endsWith('em') && !v.trim().endsWith('rem') ? x * (parseFloat(getComputedStyle(el).fontSize) || akar) : x * akar;
+};
+
 /** Deret petak aksi cepat; tiap petak bisa membuka modal fitur, tautan, atau fungsi. */
-export function AksiCepat({ items, className }: { items: AksiCepatItem[]; className?: string }) {
+export function AksiCepat({ items, kolom, min, renderLink, className }: AksiCepatProps) {
+  const ref = React.useRef<HTMLUListElement>(null);
+  const n = items.length;
+  // Jumlah kolom dihitung dari lebar wadah lalu diseimbangkan (tanpa baris berisi satu petak bila bisa dihindari).
+  const [muat, setMuat] = React.useState<number | null>(null);
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const hitung = () => {
+      const cs = getComputedStyle(el);
+      const jarak = parseFloat(cs.columnGap) || 12;
+      const lebarMin = kePiksel(cs.getPropertyValue('--aksi-min') || '13.5rem', el);
+      setMuat(Math.max(1, Math.floor((el.clientWidth + jarak) / (lebarMin + jarak))));
+    };
+    hitung();
+    const ro = new ResizeObserver(hitung);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [min]);
+  const k = kolomSeimbang(n, Math.min(kolom ?? 4, muat ?? kolom ?? 4));
+  const gaya = { '--aksi-kolom': k, ...(min ? { '--aksi-min': min } : {}) } as React.CSSProperties;
   return (
-    <ul className={cn('u-aksi-cepat', className)}>
+    <ul ref={ref} className={cn('u-aksi-cepat', className)} style={gaya}>
       {items.map((a) => {
         const isi = (
           <>
@@ -81,18 +139,26 @@ export function AksiCepat({ items, className }: { items: AksiCepatItem[]; classN
             <span className="u-aksi-cepat-teks">
               <b>{a.label}</b>
               {a.description && <small>{a.description}</small>}
+              {a.meta && <span className="u-aksi-cepat-meta">{a.meta}</span>}
             </span>
+            {a.badge != null && a.badge !== false && <span className="u-aksi-cepat-badge">{a.badge}</span>}
           </>
         );
-        const tombol = a.href ? (
-          <a className="u-aksi-cepat-item" href={a.href}>
-            {isi}
-          </a>
-        ) : (
-          <button type="button" className="u-aksi-cepat-item" onClick={a.onClick}>
-            {isi}
-          </button>
-        );
+        const tombol =
+          a.href && a.modal ? (
+            // Pemicu modal tetap <a> biasa supaya ref/props pemicu diteruskan apa adanya.
+            <a className="u-aksi-cepat-item" href={a.href} data-warna={a.warna}>
+              {isi}
+            </a>
+          ) : a.href ? (
+            <Tautan className="u-aksi-cepat-item" href={a.href} data-warna={a.warna} renderLink={renderLink}>
+              {isi}
+            </Tautan>
+          ) : (
+            <button type="button" className="u-aksi-cepat-item" data-warna={a.warna} onClick={a.onClick}>
+              {isi}
+            </button>
+          );
         return <li key={a.key}>{a.modal ? a.modal(tombol) : tombol}</li>;
       })}
     </ul>
@@ -168,8 +234,22 @@ export interface BerandaSayaProps {
   onBukaKeuangan?: () => void;
   /** Tautan "Semua pengumuman". */
   hrefPengumuman?: string;
+  /**
+   * Nyalakan/matikan widget bawaan (bawaan semua menyala sesuai peran). Aplikasi yang hanya boleh memanggil sebagian
+   * API (mis. Profil: /v1/profil, /v1/kelengkapan) mematikan widget yang datanya tidak bisa diambil:
+   * `layanan` (aksi cepat KRS, cek lulus, wisuda, ajukan layanan), `akademik` (profil + KRS mahasiswa), `tagihan`,
+   * `mengajar` (profil dosen, jadwal, mahasiswa PA), `kepegawaian` (tendik), `pengumuman`, `kalender`,
+   * `kelengkapan` (pengingat data PDDikti).
+   */
+  widget?: Partial<Record<WidgetBeranda, boolean>>;
+  /** Isi tambahan kolom utama (di bawah widget bawaan), mis. ringkasan khusus aplikasi. */
+  utama?: React.ReactNode;
+  /** Isi tambahan kolom samping (di atas pengumuman). */
+  samping?: React.ReactNode;
   className?: string;
 }
+
+export type WidgetBeranda = 'layanan' | 'akademik' | 'tagihan' | 'mengajar' | 'kepegawaian' | 'pengumuman' | 'kalender' | 'kelengkapan';
 
 const ILUS: Record<PeranProfil, NamaIlustrasi> = { mahasiswa: 'mahasiswa', alumni: 'wisuda', dosen: 'dosen', tendik: 'tendik', pengguna: 'mahasiswa' };
 
@@ -178,8 +258,9 @@ const ILUS: Record<PeranProfil, NamaIlustrasi> = { mahasiswa: 'mahasiswa', alumn
  * cek kelulusan / daftar wisuda. Dosen: jadwal mengajar, mahasiswa PA. Tendik: kepegawaian. Semua: pengumuman sesuai
  * akun dan kalender akademik.
  */
-export function BerandaSaya({ aksiTambahan = [], onBukaProfil, onBukaKeuangan, hrefPengumuman, className }: BerandaSayaProps) {
+export function BerandaSaya({ aksiTambahan = [], onBukaProfil, onBukaKeuangan, hrefPengumuman, widget = {}, utama, samping: sampingTambahan, className }: BerandaSayaProps) {
   const p = useProfilSaya();
+  const w = (k: WidgetBeranda) => widget[k] !== false;
   const [wisuda, setWisuda] = React.useState(false);
   if (p.error) return <GalatApi error={p.error} onRetry={p.refetch} className={className} />;
   if (!p.data)
@@ -198,7 +279,7 @@ export function BerandaSaya({ aksiTambahan = [], onBukaProfil, onBukaKeuangan, h
   const dosen = peran === 'dosen';
 
   const aksi: AksiCepatItem[] = [
-    ...(mhs
+    ...(mhs && w('layanan')
       ? [
           { key: 'krs', label: 'Ambil KRS', description: 'Pilih kelas semester ini', icon: <BookOpenCheck />, modal: (t: React.ReactElement) => <ModalAmbilKrs trigger={t} /> },
           {
@@ -211,34 +292,41 @@ export function BerandaSaya({ aksiTambahan = [], onBukaProfil, onBukaKeuangan, h
           { key: 'wisuda', label: 'Daftar wisuda', description: 'Bila syarat terpenuhi', icon: <PartyPopper />, onClick: () => setWisuda(true) },
         ]
       : []),
-    {
-      key: 'layanan',
-      label: 'Ajukan layanan',
-      description: mhs ? 'Surat aktif kuliah, cuti, transkrip' : 'Surat tugas, keterangan, lainnya',
-      icon: <FileText />,
-      modal: (t: React.ReactElement) => <ModalAjukanLayanan trigger={t} />,
-    },
+    ...(w('layanan')
+      ? [
+          {
+            key: 'layanan',
+            label: 'Ajukan layanan',
+            description: mhs ? 'Surat aktif kuliah, cuti, transkrip' : 'Surat tugas, keterangan, lainnya',
+            icon: <FileText />,
+            modal: (t: React.ReactElement) => <ModalAjukanLayanan trigger={t} />,
+          },
+        ]
+      : []),
     ...(onBukaProfil ? [{ key: 'profil', label: 'Profil saya', description: 'Data pribadi dan riwayat', icon: <IdCard />, onClick: onBukaProfil }] : []),
-    ...(mhs && onBukaKeuangan ? [{ key: 'keu', label: 'Keuangan', description: 'UKT dan riwayat bayar', icon: <Wallet />, onClick: onBukaKeuangan }] : []),
+    ...(mhs && onBukaKeuangan && w('tagihan') ? [{ key: 'keu', label: 'Keuangan', description: 'UKT dan riwayat bayar', icon: <Wallet />, onClick: onBukaKeuangan }] : []),
     ...aksiTambahan,
   ];
 
   const samping = (
     <>
-      {mhs && <TagihanSaya nim={kunci} onLihat={onBukaKeuangan} />}
-      <Panel
-        title="Pengumuman untuk Anda"
-        action={
-          hrefPengumuman && (
-            <Button size="sm" variant="ghost" render={<a href={hrefPengumuman} />}>
-              Semua <ArrowRight />
-            </Button>
-          )
-        }
-      >
-        <PengumumanSaya jumlah={5} />
-      </Panel>
-      <KalenderSidebar limit={4} />
+      {mhs && w('tagihan') && <TagihanSaya nim={kunci} onLihat={onBukaKeuangan} />}
+      {sampingTambahan}
+      {w('pengumuman') && (
+        <Panel
+          title="Pengumuman untuk Anda"
+          action={
+            hrefPengumuman && (
+              <Button size="sm" variant="ghost" render={<a href={hrefPengumuman} />}>
+                Semua <ArrowRight />
+              </Button>
+            )
+          }
+        >
+          <PengumumanSaya jumlah={5} />
+        </Panel>
+      )}
+      {w('kalender') && <KalenderSidebar limit={4} />}
     </>
   );
 
@@ -256,11 +344,11 @@ export function BerandaSaya({ aksiTambahan = [], onBukaProfil, onBukaKeuangan, h
           )
         }
       />
-      {(mhs || dosen) && <PengingatKelengkapan onBuka={onBukaProfil} />}
-      <AksiCepat items={aksi} />
+      {(mhs || dosen) && w('kelengkapan') && <PengingatKelengkapan onBuka={onBukaProfil} />}
+      {aksi.length > 0 && <AksiCepat items={aksi} />}
       <div className="u-beranda-grid">
         <div className="u-beranda-utama">
-          {mhs && (
+          {mhs && w('akademik') && (
             <>
               <KartuProfilMahasiswa nim={kunci} />
               <Panel title="KRS semester ini">
@@ -268,7 +356,7 @@ export function BerandaSaya({ aksiTambahan = [], onBukaProfil, onBukaKeuangan, h
               </Panel>
             </>
           )}
-          {dosen && (
+          {dosen && w('mengajar') && (
             <>
               <KartuProfilDosen nidn={kunci} />
               <Panel title="Jadwal mengajar">
@@ -279,11 +367,12 @@ export function BerandaSaya({ aksiTambahan = [], onBukaProfil, onBukaKeuangan, h
               </Panel>
             </>
           )}
-          {!mhs && !dosen && <KepegawaianSaya />}
+          {peran === 'tendik' && w('kepegawaian') && <KepegawaianSaya />}
+          {utama}
         </div>
         <aside className="u-beranda-samping">{samping}</aside>
       </div>
-      {mhs && <ModalDaftarWisuda open={wisuda} onOpenChange={setWisuda} />}
+      {mhs && w('layanan') && <ModalDaftarWisuda open={wisuda} onOpenChange={setWisuda} />}
     </div>
   );
 }

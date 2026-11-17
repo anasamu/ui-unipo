@@ -40,7 +40,21 @@
   color: var(--u-muted-foreground);
   font-size: var(--u-text-sm);
 }
+.u-beranda-sapaan-isi {
+  min-width: 0;
+}
+.u-beranda-sapaan-lencana {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+}
 .u-beranda-sapaan-aksi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
   margin-top: 1rem;
 }
 .u-beranda-ilus {
@@ -49,10 +63,15 @@
   margin-block: -0.75rem;
 }
 // Aksi cepat
+// Kolom seimbang: --aksi-kolom (diisi komponen) = jumlah kolom paling banyak; petak tidak lebih sempit dari --aksi-min,
+// jadi di layar sempit tetap turun baris. auto-fit merentang petak mengisi lebar (tanpa kolom kosong di ujung).
 .u-aksi-cepat {
+  --aksi-min: 13.5rem;
+  --aksi-kolom: 4;
+  --aksi-jarak: 0.75rem;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13.5rem), 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, max(var(--aksi-min), (100% - (var(--aksi-kolom) - 1) * var(--aksi-jarak)) / var(--aksi-kolom))), 1fr));
+  gap: var(--aksi-jarak);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -61,7 +80,10 @@
   }
 }
 .u-aksi-cepat-item {
+  --tone: var(--u-primary);
+  position: relative;
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -78,12 +100,27 @@
     border-color var(--u-duration-fast) var(--u-ease-out),
     box-shadow var(--u-duration-fast) var(--u-ease-out),
     transform var(--u-duration-fast) var(--u-ease-out);
+  &[data-warna='success'] {
+    --tone: var(--u-success);
+  }
+  &[data-warna='warning'] {
+    --tone: var(--u-warning);
+  }
+  &[data-warna='danger'] {
+    --tone: var(--u-danger);
+  }
+  &[data-warna='info'] {
+    --tone: var(--u-info);
+  }
+  &[data-warna='neutral'] {
+    --tone: var(--u-muted-foreground);
+  }
   &:hover {
-    border-color: color-mix(in oklab, var(--u-primary) 45%, var(--u-border));
+    border-color: color-mix(in oklab, var(--tone) 45%, var(--u-border));
     box-shadow: var(--u-shadow-sm);
     .u-aksi-cepat-ikon {
-      background: var(--u-primary);
-      color: var(--u-primary-foreground, #fff);
+      background: var(--tone);
+      color: var(--u-card);
     }
   }
   &:active {
@@ -100,8 +137,8 @@
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 12px;
-  background: color-mix(in oklab, var(--u-primary) 11%, var(--u-card));
-  color: var(--u-primary);
+  background: color-mix(in oklab, var(--tone, var(--u-primary)) 11%, var(--u-card));
+  color: var(--tone, var(--u-primary));
   transition:
     background-color var(--u-duration-fast) var(--u-ease-out),
     color var(--u-duration-fast) var(--u-ease-out);
@@ -111,6 +148,7 @@
   }
 }
 .u-aksi-cepat-teks {
+  flex: 1;
   display: grid;
   gap: 0.125rem;
   min-width: 0;
@@ -122,6 +160,31 @@
     color: var(--u-muted-foreground);
     line-height: 1.4;
   }
+}
+.u-aksi-cepat-meta {
+  margin-top: 0.125rem;
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-medium);
+  color: var(--tone, var(--u-primary));
+  line-height: 1.4;
+}
+.u-aksi-cepat-badge {
+  flex: none;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  padding-inline: 0.4375rem;
+  justify-content: center;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--tone, var(--u-primary)) 14%, var(--u-card));
+  color: var(--tone, var(--u-primary));
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
 }
 // Kolom
 .u-beranda-grid {

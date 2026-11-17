@@ -14,6 +14,12 @@ export type KunciFont = 'jakarta' | 'inter' | 'poppins' | 'dmsans' | 'sistem' | 
 export type KunciFontMono = 'jetbrains' | 'sistem';
 export type Bayangan = 'tanpa' | 'halus' | 'normal' | 'tegas';
 export type Gerak = 'normal' | 'cepat' | 'lambat' | 'tanpa';
+/**
+ * Efek bayangan: permukaan mana yang memakai bayangan. `datar` hanya garis tepi, `normal` kartu dengan bayangan tipis,
+ * `terangkat` kartu + sidebar + bilah atas, `melayang` kartu lebih tinggi dan bayangan hover lebih dalam.
+ * Kekuatan bayangannya sendiri diatur `bayangan`.
+ */
+export type Elevasi = 'datar' | 'normal' | 'terangkat' | 'melayang';
 
 export interface OpsiTema {
   /** Warna utama: tombol, tautan, fokus, elemen aktif. */
@@ -41,6 +47,10 @@ export interface OpsiTema {
   /** Ukuran teks isi dalam px; seluruh skala teks ikut diskalakan. */
   teks: number;
   bayangan: Bayangan;
+  /** Warna bayangan (hex). Kosong = abu netral (bawaan). */
+  warnaBayangan: string;
+  /** Permukaan yang memakai bayangan (kartu, panel, sidebar, bilah atas). */
+  elevasi: Elevasi;
   gerak: Gerak;
   /** Tambahkan @import Google Fonts untuk huruf yang dipilih. */
   muatFont: boolean;
@@ -63,6 +73,8 @@ export const TEMA_BAWAAN: OpsiTema = {
   fontMono: 'jetbrains',
   teks: 14,
   bayangan: 'normal',
+  warnaBayangan: '',
+  elevasi: 'normal',
   gerak: 'normal',
   muatFont: false,
 };
@@ -123,6 +135,19 @@ const BAYANGAN_GELAP: Array<[string, Lapis]> = [
   ['xl', [[0, 8, 16, -4, 0.4], [0, 28, 56, -12, 0.6]]],
 ];
 const KALI_BAYANGAN: Record<Bayangan, number> = { tanpa: 0, halus: 0.6, normal: 1, tegas: 1.6 };
+/** Efek bayangan → [kartu, kartu saat hover, sidebar & bilah atas]. */
+const ELEVASI: Record<Elevasi, [string, string, string]> = {
+  datar: ['none', 'none', 'none'],
+  normal: ['var(--u-shadow-xs)', 'var(--u-shadow-md)', 'none'],
+  terangkat: ['var(--u-shadow-sm)', 'var(--u-shadow-lg)', 'var(--u-shadow-sm)'],
+  melayang: ['var(--u-shadow-md)', 'var(--u-shadow-xl)', 'var(--u-shadow-md)'],
+};
+export const PILIHAN_ELEVASI: Array<{ value: Elevasi; label: string; keterangan: string }> = [
+  { value: 'datar', label: 'Datar', keterangan: 'Hanya garis tepi, tanpa bayangan' },
+  { value: 'normal', label: 'Normal', keterangan: 'Kartu dengan bayangan tipis' },
+  { value: 'terangkat', label: 'Terangkat', keterangan: 'Kartu, sidebar, dan bilah atas berbayang' },
+  { value: 'melayang', label: 'Melayang', keterangan: 'Bayangan lebih tinggi, hover lebih dalam' },
+];
 const GERAK: Record<Gerak, [number, number, number]> = { normal: [120, 180, 260], cepat: [80, 120, 170], lambat: [180, 260, 380], tanpa: [0, 0, 0] };
 
 /** Tema siap pakai sebagai titik awal. */
@@ -132,13 +157,19 @@ export const PRESET_TEMA: Array<{ nama: string; opsi: Partial<OpsiTema> }> = [
   { nama: 'Marun', opsi: { primary: '#9f1d35', secondary: '#d4a017', netral: 'hangat', radius: 6, fontJudul: 'serif' } },
   { nama: 'Hutan', opsi: { primary: '#15803d', secondary: '#ca8a04', netral: 'zaitun', radius: 12, font: 'dmsans' } },
   { nama: 'Ungu', opsi: { primary: '#6d28d9', secondary: '#ec4899', netral: 'slate', radius: 14, font: 'poppins', bayangan: 'halus' } },
-  { nama: 'Grafit', opsi: { primary: '#334155', secondary: '#0ea5e9', netral: 'abu', radius: 4, font: 'sistem', bayangan: 'halus', gerak: 'cepat' } },
-  { nama: 'Samudra', opsi: { primary: '#0369a1', secondary: '#14b8a6', netral: 'slate', radius: 10, font: 'inter', bayangan: 'tegas' } },
+  { nama: 'Grafit', opsi: { primary: '#334155', secondary: '#0ea5e9', netral: 'abu', radius: 4, font: 'sistem', bayangan: 'halus', elevasi: 'datar', gerak: 'cepat' } },
+  { nama: 'Samudra', opsi: { primary: '#0369a1', secondary: '#14b8a6', netral: 'slate', radius: 10, font: 'inter', bayangan: 'tegas', elevasi: 'terangkat' } },
 ];
 
 const HEX = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 /** Hex dinormalisasi ke #rrggbb huruf kecil; '' bila tidak valid. */
+/** '#0f766e' -> '15 118 110' (untuk rgb(r g b / a)). */
+function rgbTriplet(hex: string): string {
+  const h = hex.slice(1);
+  return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)).join(' ');
+}
+
 export function hexValid(v: unknown): string {
   if (typeof v !== 'string') return '';
   const m = HEX.exec(v.trim());
@@ -201,6 +232,8 @@ export function normalisasiTema(o: Partial<OpsiTema> = {}): OpsiTema {
     fontMono: pilih(o.fontMono, Object.keys(FONT_MONO) as KunciFontMono[], b.fontMono),
     teks: angka(o.teks, 12, 18, b.teks),
     bayangan: pilih(o.bayangan, ['tanpa', 'halus', 'normal', 'tegas'] as const, b.bayangan),
+    warnaBayangan: hexValid(o.warnaBayangan),
+    elevasi: pilih(o.elevasi, ['datar', 'normal', 'terangkat', 'melayang'] as const, b.elevasi),
     gerak: pilih(o.gerak, ['normal', 'cepat', 'lambat', 'tanpa'] as const, b.gerak),
     muatFont: o.muatFont === true || (o.muatFont as unknown) === '1' || (o.muatFont as unknown) === 'true',
   };
@@ -221,6 +254,8 @@ export function buatTema(opsi: Partial<OpsiTema> = {}): string {
   const nv = (langkah: string) => n[LANGKAH_NETRAL.indexOf(langkah)]!;
   const fTeks = t.teks / 14;
   const kali = KALI_BAYANGAN[t.bayangan];
+  const [elKartu, elHover, elBilah] = ELEVASI[t.elevasi];
+  const rgbBayangan = t.warnaBayangan ? rgbTriplet(t.warnaBayangan) : '';
   const [cepat, dasar, lambat] = GERAK[t.gerak];
   const fontIsi = FONT[t.font].css;
   const fontJudul = t.fontJudul === 'sama' ? fontIsi : FONT[t.fontJudul].css;
@@ -261,7 +296,11 @@ export function buatTema(opsi: Partial<OpsiTema> = {}): string {
     '/* Ukuran teks */',
     ...TEKS.map(([k, px]) => [`text-${k}`, rem(Math.round(px * fTeks * 2) / 2)] as [string, string]),
     '/* Bayangan */',
-    ...BAYANGAN_TERANG.map(([k, l]) => [`shadow-${k}`, bayangan(l, kali, '16 24 40')] as [string, string]),
+    ...BAYANGAN_TERANG.map(([k, l]) => [`shadow-${k}`, bayangan(l, kali, rgbBayangan || '16 24 40')] as [string, string]),
+    '/* Efek bayangan (elevasi) */',
+    ['elevation-card', elKartu],
+    ['elevation-card-hover', elHover],
+    ['elevation-bar', elBilah],
     '/* Gerak */',
     ['duration-fast', `${cepat}ms`],
     ['duration-base', `${dasar}ms`],
@@ -284,7 +323,7 @@ export function buatTema(opsi: Partial<OpsiTema> = {}): string {
     ['border', nv('800')],
     ['input', nv('700')],
     ['chart-1', pGelap],
-    ...BAYANGAN_GELAP.map(([k, l]) => [`shadow-${k}`, bayangan(l, kali, '0 0 0')] as [string, string]),
+    ...BAYANGAN_GELAP.map(([k, l]) => [`shadow-${k}`, bayangan(l, kali, rgbBayangan || '0 0 0')] as [string, string]),
   ];
   const blok = (sel: string, isi: Array<string | [string, string]>) =>
     `${sel} {\n${isi.map((x) => (typeof x === 'string' ? `  ${x}` : `  --u-${x[0]}: ${x[1]};`)).join('\n')}\n}`;

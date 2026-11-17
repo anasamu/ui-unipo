@@ -10,12 +10,13 @@ export const meta: DemoMeta = {
   order: 1,
   description: 'Tabel inti untuk semua daftar: urut, halaman, pilih baris dengan aksi massal, menu aksi per baris, pilih kolom, kerapatan, unduh CSV, kerangka saat memuat, keadaan kosong dan galat. Di layar di bawah 640 px baris berubah menjadi kartu bertumpuk.',
   importLine: "import { DataTable, type DataColumn } from 'unipo-ui';",
-  demos: { Dasar: 'Data lokal: urut, halaman, kolom', Pilih: 'Pilih baris dan aksi massal', Memuat: 'Memuat, kosong, galat' },
+  demos: { Dasar: 'Data lokal: urut, halaman, kolom', Pilih: 'Pilih baris dan aksi massal', Memuat: 'Memuat, kosong, galat', TanpaHalaman: 'Tabel kecil tanpa kaki halaman (pagination={false})' },
   props: [
     ['columns', 'DataColumn<T>[]', 'key, header, cell, value, sortable, align, shrink, hideable, defaultHidden, mobile.'],
     ['rows, rowKey', 'T[], (row) => string', 'Data dan kunci unik baris.'],
     ['sort / onSortChange', 'SortState', 'Tanpa onSortChange diurutkan di browser.'],
     ['page, perPage, total, onPageChange', 'number', 'Tanpa onPageChange dipotong di browser.'],
+    ['pagination', 'boolean', 'false: semua baris tampil tanpa kaki halaman, untuk tabel kecil di panel. Bawaan true.'],
     ['selectable, bulkActions', 'boolean, (keys, clear) => ReactNode', 'Kotak centang dan bilah aksi massal.'],
     ['rowActions', '(row) => MenuEntry[]', 'Menu ⋯ di ujung baris.'],
     ['toolbar, actions', 'ReactNode', 'Isi bilah atas (mis. FilterBar) dan tombol tambahan.'],
@@ -103,4 +104,8 @@ export function Memuat() {
       />
     </div>
   );
+}
+
+export function TanpaHalaman() {
+  return <DataTable columns={COLS.slice(0, 4)} rows={PRODI.slice(0, 4)} rowKey={(r) => r.kode} pagination={false} columnToggle={false} densityToggle={false} />;
 }

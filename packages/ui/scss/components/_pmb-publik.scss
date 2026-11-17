@@ -483,7 +483,8 @@
       cursor: pointer;
     }
     > span:first-child,
-    label > span {
+    // Bukan kotak centang/sakelar (juga <span>): tata letaknya milik komponen forms.
+    label > span:not(.u-checkbox, .u-switch, .u-radio) {
       display: flex;
       flex-direction: column;
       min-width: 0;

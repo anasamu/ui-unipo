@@ -11,6 +11,7 @@
   min-height: 0;
   background: var(--u-sidebar-bg);
   border-inline-end: 1px solid var(--u-border);
+  box-shadow: var(--u-elevation-bar);
   transition: width var(--u-duration-slow) var(--u-ease-out);
   &[data-collapsed] {
     --u-sidebar-w: 4.25rem;
@@ -102,10 +103,8 @@
 .u-nav-group-label {
   padding: 0 0.625rem 0.375rem;
   color: var(--u-muted-foreground);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: var(--u-text-xs);
+  font-weight: 600;
 }
 .u-nav-item {
   position: relative;
@@ -131,13 +130,20 @@
   &:focus-visible {
     @include focus-ring(-2px);
   }
+  // Aktif: latar lembut warna utama + garis penanda di kiri (gaya lain lewat kelas u-sb-aktif-* pada sidebar).
   &[data-active] {
-    background: var(--u-background);
+    background: color-mix(in oklab, var(--u-primary) 10%, transparent);
     color: var(--u-foreground);
     font-weight: 600;
-    box-shadow:
-      var(--u-shadow-xs),
-      0 0 0 1px var(--u-border);
+    &::before {
+      content: '';
+      position: absolute;
+      inset-block: 0.5rem;
+      inset-inline-start: 0;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: var(--u-primary);
+    }
     .u-nav-icon {
       color: var(--u-primary);
     }
@@ -273,13 +279,16 @@
 .u-app-shell {
   display: grid;
   grid-template-columns: auto 1fr;
-  min-height: 100dvh;
+  // --u-offset-atas: tinggi bilah tetap di tepi atas (mis. BilahMenyamar), 0 bila tidak ada.
+  min-height: calc(100dvh - var(--u-offset-atas, 0px));
   background: var(--u-background);
 }
 .u-app-shell-sidebar {
   position: sticky;
-  top: 0;
-  height: 100dvh;
+  top: var(--u-offset-atas, 0px);
+  // Di atas bilah atas (z 20) supaya bayangan sidebar (efek bayangan terangkat/melayang) tidak tertutup.
+  z-index: 21;
+  height: calc(100dvh - var(--u-offset-atas, 0px));
 }
 .u-app-shell-main {
   display: flex;
@@ -288,7 +297,7 @@
 }
 .u-topbar {
   position: sticky;
-  top: 0;
+  top: var(--u-offset-atas, 0px);
   z-index: 20;
   display: flex;
   align-items: center;
@@ -298,6 +307,7 @@
   border-bottom: 1px solid var(--u-border);
   background: color-mix(in oklab, var(--u-background) 92%, transparent);
   backdrop-filter: saturate(1.4) blur(8px);
+  box-shadow: var(--u-elevation-bar);
 }
 .u-topbar-menu {
   display: none !important;
@@ -465,7 +475,7 @@
   min-width: 0;
   &[data-sticky] {
     position: sticky;
-    top: 5rem;
+    top: calc(5rem + var(--u-offset-atas, 0px));
   }
 }
 .u-side-widget {

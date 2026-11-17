@@ -129,9 +129,15 @@ export function KartuWidget({ data, varian = 'kartu', loading, error, onRetry, h
               })}
             />
           ) : (
-            <ProgressGauge nilai={(data.rasio ?? 0) * 100} teks={data.rasioLabel ?? data.nilai} label={data.keterangan} ukuran={p.mobile ? 140 : 160} />
+            <ProgressGauge nilai={(data.rasio ?? 0) * 100} teks={data.nilai} label={data.satuan} tone="primary" ukuran={p.mobile ? 140 : 168} />
           )}
         </div>
+        {(data.rasioLabel || data.keterangan) && (
+          <div className="u-wu-cincin-ket">
+            {data.rasioLabel && <span className="u-wu-cincin-rasio">{data.rasioLabel}</span>}
+            {data.keterangan && <p className="u-wu-ket">{data.keterangan}</p>}
+          </div>
+        )}
         {kaki}
       </div>
     );

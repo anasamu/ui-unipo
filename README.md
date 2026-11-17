@@ -16,6 +16,33 @@ Sistem desain dan pustaka komponen untuk aplikasi Universitas Pohuwato (SIAKAD, 
 | `packages/ui` (`unipo-ui`) | CSS kelas `u-*` + komponen React di atas [Base UI](https://base-ui.com) |
 | `apps/docs` | Situs dokumentasi dan galeri komponen |
 
+## Kerangka aplikasi (`unipo-ui/siakad`)
+
+Semua aplikasi dasbor UNIPO memakai satu kerangka yang sama: `KerangkaAplikasi`. Isinya sidebar dengan logo + nama
+aplikasi yang menuju beranda, judul halaman, pencarian fitur (Ctrl/⌘K atau "/"), ikon notifikasi (`/v1/notif`), ikon
+pesan masuk (obrolan `/v1/obrolan`), kelola berkas (`/v1/berkas`: unggah, unduh, DriveBerkas), tombol tema, menu akun SIAKAD, navigasi bawah di ponsel, dan obrolan mengambang.
+
+```tsx
+import { KerangkaAplikasi } from 'unipo-ui/siakad';
+
+<KerangkaAplikasi
+  kode="bauk" nama="BAUK UNIPO" tagline="Keuangan, payroll, dan sarpras"
+  groups={menuSesuaiIzin} activeKey={aktif}
+  renderLink={(item, props) => <Link to={item.href!} {...props} />} onNavigasi={navigate}
+  cari={{ tambahan: [{ key: 'va', label: 'Buat virtual account', href: '/kasir', kataKunci: ['bayar'] }] }}
+  notifikasi={{ semuaHref: '/notifikasi' }}
+  tema={tema} onTema={setTema} onKeluar={keluar}
+  navBawah={[{ key: 'beranda', label: 'Beranda', icon: <House />, href: '/' }]}
+>
+  <Routes>…</Routes>
+</KerangkaAplikasi>
+```
+
+Klien API aplikasi butuh scope `notif:read`, `notif:write`, `obrolan:read`, `obrolan:write`, `berkas:read`,
+`berkas:write`, dan BFF-nya harus meneruskan `/v1/notif`, `/v1/obrolan`, dan `/v1/berkas`. Bagian yang bisa dipakai terpisah: `PencarianFitur` + `fiturDariMenu`,
+`PintasanFitur` (unipo-ui), `TombolNotifikasi`/`useNotifikasi`, `TombolPesan` (unipo-ui/siakad). Efek bayangan
+(`elevasi`: datar, normal, terangkat, melayang) diatur di `PengaturanTema`.
+
 ## Widget fitur (`unipo-ui/siakad`)
 
 Widget kecil per fitur yang mengambil data sendiri lewat `unipo-siakad-sdk` (bungkus aplikasi dengan `SiakadProvider`). Tiap modul juga punya komponen dasbor yang menyusun widget-widgetnya.

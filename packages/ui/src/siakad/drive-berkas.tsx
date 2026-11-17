@@ -55,7 +55,12 @@ export function DriveBerkas({ ruangAwal, unitTampil, tampilPribadi = true, tampi
             {u.akses === 'kelola' && <small>pengelola</small>}
           </button>
         ))}
-        {unitQ.loading && !unitQ.data && <span className="u-skeleton u-db-ruang-muat" aria-label="Memuat unit" />}
+        {unitQ.loading && !unitQ.data && (
+          <span className="u-db-ruang-muat" role="status" aria-label="Memuat unit">
+            <i className="u-skeleton" />
+            <i className="u-skeleton" />
+          </span>
+        )}
         {tampilDibagikan && (
           <button type="button" aria-current={pilih.jenis === 'dibagikan' || pilih.jenis === 'bagi' ? 'page' : undefined} onClick={() => setPilih({ jenis: 'dibagikan' })}>
             <Users aria-hidden />

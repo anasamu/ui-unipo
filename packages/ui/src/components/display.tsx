@@ -12,6 +12,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronLeft, Chevr
 import { cn, dataFlag } from '../lib/cn';
 import { hueFromString, initials } from '../lib/format';
 import { Select } from './select';
+import { Tautan, type RenderLink } from '../lib/tautan';
 
 // ---------------------------------------------------------------- Card
 export interface CardProps extends useRender.ComponentProps<'div'> {
@@ -412,7 +413,16 @@ export function Pagination({ page, totalPages, onPageChange, total, perPage, cla
 }
 
 // ---------------------------------------------------------------- Breadcrumb
-export function Breadcrumb({ items, className }: { items: Array<{ label: React.ReactNode; href?: string; onClick?: () => void }>; className?: string }) {
+export function Breadcrumb({
+  items,
+  renderLink,
+  className,
+}: {
+  items: Array<{ label: React.ReactNode; href?: string; onClick?: () => void }>;
+  /** Render tautan lewat router (SPA). Bawaan: `<a href>` atau PenyediaTautan. */
+  renderLink?: RenderLink;
+  className?: string;
+}) {
   return (
     <nav aria-label="Breadcrumb">
       <ol className={cn('u-breadcrumb', className)}>
@@ -424,9 +434,9 @@ export function Breadcrumb({ items, className }: { items: Array<{ label: React.R
                 {last ? (
                   <span aria-current="page">{it.label}</span>
                 ) : it.href ? (
-                  <a href={it.href} onClick={it.onClick}>
+                  <Tautan href={it.href} onClick={it.onClick} renderLink={renderLink}>
                     {it.label}
-                  </a>
+                  </Tautan>
                 ) : (
                   <span>{it.label}</span>
                 )}

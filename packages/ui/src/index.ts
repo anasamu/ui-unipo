@@ -2,6 +2,7 @@
 // widget per fitur di 'unipo-ui/widgets'.
 export * from './lib/cn';
 export * from './lib/format';
+export * from './lib/tautan';
 export * from './components/actions';
 export * from './components/forms';
 export * from './components/select';
@@ -42,6 +43,8 @@ export * from './components/struktur-organisasi';
 export * from './components/kode-qr';
 export * from './components/laporan';
 export * from './components/progres';
+export * from './components/muat-halaman';
 export * from './components/navigasi-modul';
 export * from './components/dua-langkah';
 export * from './components/peta';
+export * from './components/pencarian-fitur';

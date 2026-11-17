@@ -74,6 +74,8 @@ interface Anggota {
   bisu: boolean;
   arsip: boolean;
   sematkan: boolean;
+  /** "Hapus obrolan": tersembunyi dari daftar sampai ada pesan baru. */
+  disembunyikan?: boolean;
 }
 interface Ruang {
   id: string;
@@ -84,6 +86,8 @@ interface Ruang {
   dibuat_at: string;
   pesan_terakhir_at: string | null;
   anggota: Anggota[];
+  /** Foto grup (demo: disimpan di memori). */
+  foto?: { versi: string; data: Uint8Array; mime: string } | null;
 }
 interface Pesan {
   id: number;
@@ -189,9 +193,12 @@ function bentukPesan(p: Pesan, dev: string) {
   };
 }
 
+/** "Hapus untuk saya" (uuid pesan) milik akun demo. */
+const SEMBUNYI = new Set<string>();
+
 function bentukRuang(r: Ruang, dev: string) {
   const a = r.anggota.find((x) => x.pemilik === SAYA_ID)!;
-  const daftar = PESAN.filter((p) => p.ruang === r.id && p.id > a.mulai && !kedaluwarsa(p));
+  const daftar = PESAN.filter((p) => p.ruang === r.id && p.id > a.mulai && !kedaluwarsa(p) && !SEMBUNYI.has(p.uuid));
   const terakhir = daftar[daftar.length - 1];
   return {
     id: r.id,
@@ -199,6 +206,7 @@ function bentukRuang(r: Ruang, dev: string) {
     judul: r.judul,
     dibuat_oleh: r.dibuat_oleh,
     kedaluwarsa_detik: r.kedaluwarsa_detik,
+    foto: r.foto?.versi ?? null,
     dibuat_at: r.dibuat_at,
     pesan_terakhir_at: r.pesan_terakhir_at,
     peran_saya: a.peran,
@@ -242,6 +250,7 @@ async function kirimSebagai(dev: Dev, r: Ruang, isi: K.IsiPesan, waktu = sekaran
     dibuat_at: waktu,
   };
   PESAN.push(p);
+  RUANG.find((y) => y.id === p.ruang)?.anggota.forEach((a) => delete a.disembunyikan);
   if (isi.t !== 'reaksi' && isi.t !== 'ubah') r.pesan_terakhir_at = waktu;
   const ag = r.anggota.find((a) => a.pemilik === dev.pemilik);
   if (ag) ag.dibaca_sampai = ag.diterima_sampai = p.id;
@@ -562,6 +571,7 @@ tambahRute(/^\/v1\/obrolan\//, async (u, init) => {
         cadangan_ada: cadangan !== null,
         tunggu_maks: 20,
         lampiran_mb: 25,
+        hapus_semua_menit: 60,
       },
     };
   }
@@ -620,7 +630,7 @@ tambahRute(/^\/v1\/obrolan\//, async (u, init) => {
       return {
         data: RUANG.filter((r) => {
           const a = r.anggota.find((y) => y.pemilik === SAYA_ID);
-          return a && a.arsip === arsip;
+          return a && a.arsip === arsip && !a.disembunyikan;
         })
           .map((r) => bentukRuang(r, dev.id))
           .sort((a, c) => Number(c.sematkan) - Number(a.sematkan) || (c.pesan_terakhir_at ?? c.dibuat_at).localeCompare(a.pesan_terakhir_at ?? a.dibuat_at)),
@@ -665,7 +675,35 @@ tambahRute(/^\/v1\/obrolan\//, async (u, init) => {
     if (sub === '' && m === 'GET') {
       const dev = devSaya(q('perangkat'));
       if (!dev) return galat(404, 'not_found', 'Perangkat tidak terdaftar atau sudah dicabut.');
+      if (saya.disembunyikan) return galat(404, 'not_found', 'Obrolan tidak ditemukan.');
       return { data: bentukRuang(r, dev.id) };
+    }
+    if (sub === '/foto' && m === 'GET') return r.foto ? { __mentah: r.foto.data } : galat(404, 'not_found', 'Grup ini tidak punya foto.');
+    if (sub === '/foto' || sub === '/foto/hapus') {
+      if (r.jenis !== 'grup' || !admin) return galat(403, 'forbidden', 'Hanya admin grup yang bisa mengganti foto grup.');
+      const f = b.berkas as Blob | undefined;
+      if (sub === '/foto' && !(f instanceof Blob)) return galat(422, 'validation_failed', 'Data yang dikirim tidak valid.', { berkas: 'wajib' });
+      r.foto = sub === '/foto' ? { versi: K.uuidAcak().slice(0, 8), data: new Uint8Array(await f!.arrayBuffer()), mime: f!.type } : null;
+      umpan(anggotaAktif(r), 'ruang', { ruang: r.id, aksi: 'foto' });
+      return ok;
+    }
+    if (sub === '/bersihkan' || sub === '/hapus') {
+      const terlihat = PESAN.filter((p) => p.ruang === r.id && p.id > saya.mulai && !p.dihapus && !SEMBUNYI.has(p.uuid));
+      if (m === 'GET') return { data: { pesan: terlihat.length, lampiran: terlihat.reduce((n, p) => n + p.lampiran.length, 0), sudah_disimpan: 0, tidak_bisa_disimpan: 0 } };
+      const maks = Math.max(saya.mulai, ...PESAN.filter((p) => p.ruang === r.id).map((p) => p.id));
+      saya.mulai = saya.dibaca_sampai = saya.diterima_sampai = maks;
+      const keluar = sub === '/hapus' && r.jenis === 'grup';
+      if (sub === '/hapus') {
+        Object.assign(saya, { disembunyikan: true, sematkan: false, arsip: false });
+        if (keluar) {
+          const sebelum = anggotaAktif(r);
+          r.anggota = r.anggota.filter((a) => a.pemilik !== SAYA_ID);
+          if (!r.anggota.some((a) => a.peran === 'admin') && r.anggota[0]) r.anggota[0].peran = 'admin';
+          umpan(sebelum, 'ruang', { ruang: r.id, aksi: 'anggota', keluar: [SAYA_ID] });
+        }
+      }
+      umpan([SAYA_ID], 'ruang', sub === '/hapus' ? { ruang: r.id, aksi: 'hapus' } : { ruang: r.id, bersih: true });
+      return { data: { disimpan: 0, dilewati: 0, ...(sub === '/hapus' ? { keluar } : {}) } };
     }
     if (sub === '/ubah') {
       if ('judul' in b) {
@@ -711,7 +749,9 @@ tambahRute(/^\/v1\/obrolan\//, async (u, init) => {
       const sebelum = q('sebelum') ? Number(q('sebelum')) : null;
       const setelah = q('setelah') ? Number(q('setelah')) : null;
       const limit = Number(q('limit') ?? 50);
-      let daftar = PESAN.filter((p) => p.ruang === r.id && p.id > saya.mulai && !kedaluwarsa(p) && (sebelum === null || p.id < sebelum) && (setelah === null || p.id > setelah));
+      let daftar = PESAN.filter(
+        (p) => p.ruang === r.id && p.id > saya.mulai && !kedaluwarsa(p) && !SEMBUNYI.has(p.uuid) && (sebelum === null || p.id < sebelum) && (setelah === null || p.id > setelah),
+      );
       daftar = setelah !== null ? daftar : [...daftar].reverse();
       return { data: { pesan: daftar.slice(0, limit).map((p) => bentukPesan(p, dev.id)), lagi: daftar.length > limit } };
     }
@@ -749,6 +789,7 @@ tambahRute(/^\/v1\/obrolan\//, async (u, init) => {
         dibuat_at: waktu,
       };
       PESAN.push(p);
+      r.anggota.forEach((a) => delete a.disembunyikan);
       r.pesan_terakhir_at = waktu;
       saya.dibaca_sampai = saya.diterima_sampai = p.id;
       saya.arsip = false;
@@ -756,10 +797,20 @@ tambahRute(/^\/v1\/obrolan\//, async (u, init) => {
       void botMenanggapi(r, p);
       return { __status: 201, data: { ...bentukPesan(p, dev.id), menunggu_penerima: tanpa } };
     }
+    if ((x = sub.match(/^\/pesan\/([\w-]+)\/hapus-saya$/))) {
+      const p = PESAN.find((y) => y.ruang === r.id && y.uuid === x![1]);
+      if (!p) return galat(404, 'not_found', 'Pesan tidak ditemukan.');
+      SEMBUNYI.add(p.uuid);
+      umpan([SAYA_ID], 'sembunyi', { ruang: r.id, id: p.id });
+      return ok;
+    }
     if ((x = sub.match(/^\/pesan\/([\w-]+)\/hapus$/))) {
       const p = PESAN.find((y) => y.ruang === r.id && y.uuid === x![1]);
       if (!p) return galat(404, 'not_found', 'Pesan tidak ditemukan.');
       if (p.pengirim !== SAYA_ID && !(r.jenis === 'grup' && admin)) return galat(403, 'forbidden', 'Hanya pengirim atau admin grup yang bisa menghapus pesan ini.');
+      if (!(r.jenis === 'grup' && admin) && Date.now() - Date.parse(p.dibuat_at) > 60 * 60_000)
+        return galat(403, 'lewat_batas_waktu', 'Pesan hanya bisa dihapus untuk semua dalam 60 menit setelah dikirim. Gunakan Hapus untuk saya.');
+      // Hapus lunak seperti SIAKAD: isi tidak lagi diberikan ke anggota (lampiran tidak bisa diunduh).
       Object.assign(p, { dihapus: true, sandi: null, iv: null, efemeral: null, tanda: null, kunci: {} });
       p.lampiran.forEach((l) => LAMPIRAN.delete(l));
       umpan(anggotaAktif(r), 'hapus', { ruang: r.id, id: p.id });

@@ -150,7 +150,7 @@
   border: 1px solid var(--u-border);
   border-radius: calc(var(--u-radius) + 2px);
   background: var(--u-card);
-  box-shadow: var(--u-shadow-xs);
+  box-shadow: var(--u-elevation-card);
   &[data-selected] {
     border-color: color-mix(in oklab, var(--u-primary) 45%, var(--u-border));
     background: color-mix(in oklab, var(--u-primary) 4%, var(--u-card));

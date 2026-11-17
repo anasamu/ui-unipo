@@ -11,6 +11,7 @@ import type { NavbarColumn, NavbarLink } from '../components/navbar';
 import { KontenHtml } from '../components/tata-letak';
 import { KodeLaporan } from '../components/galat';
 import { formatDate } from '../lib/format';
+import { PengumumanTampil, usePengumumanTayang } from './pengumuman-lintas';
 import { hrefMenuPortal, LogoSitus, NavbarPortal, type MenuPortal, type NavbarPortalProps } from './navigasi';
 import { hrefKontenBawaan, kePengumuman, type HrefKonten, type KontenPortal } from './portal';
 import { pesanGalat, useSiakadQuery } from './provider';
@@ -161,7 +162,30 @@ export function PitaPengumumanPortal({ situs, turunan, prioritas = ['darurat', '
       priority: 'biasa',
     })),
   ];
-  return <PitaPengumuman className={className} items={items} interval={interval} ingat={ingat ? `unipo-pita-${situs}` : undefined} />;
+  // Pengumuman lintas aplikasi yang menyasar pengunjung publik (/v1/notif/pita?aplikasi=publik), mode pita.
+  const lintas = usePengumumanTayang('publik', true, situs);
+  const dariLintas: ItemPita[] = lintas.items
+    .filter((x) => x.mode === 'pita')
+    .map((x) => ({ id: `n:${x.id}`, title: x.judul, detail: x.isi ?? undefined, href: x.tautan ?? undefined, cta: x.teks_tautan ?? undefined, external: /^https?:/.test(x.tautan ?? ''), priority: x.nada, dapatDitutup: x.dapat_ditutup }));
+  const [tutupLokal, setTutupLokal] = React.useState(false);
+  const semua = [...dariLintas, ...(tutupLokal ? [] : items)];
+  return (
+    <PitaPengumuman
+      className={className}
+      items={semua}
+      interval={interval}
+      ingat={dariLintas.length ? undefined : ingat ? `unipo-pita-${situs}` : undefined}
+      onTutupItem={
+        dariLintas.length
+          ? (it) => {
+              const x = lintas.items.find((y) => `n:${y.id}` === it.id);
+              if (x) lintas.tutup(x);
+              else setTutupLokal(true);
+            }
+          : undefined
+      }
+    />
+  );
 }
 
 // ================================================================ Popup
@@ -407,6 +431,7 @@ export function KerangkaPortal({ situs, app, children, pita = true, popup = true
   return (
     <div className={['u-kerangka-portal', className].filter(Boolean).join(' ')}>
       {pita && <PitaPengumumanPortal situs={situs} {...(typeof pita === 'object' ? pita : {})} />}
+      {pita && <PengumumanTampil aplikasi="publik" situs={situs} bagian={['lapis']} />}
       <NavbarPortal
         situs={situs}
         app={app}

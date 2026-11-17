@@ -56,6 +56,8 @@ export interface DataTableProps<T> {
   onPageChange?: (page: number) => void;
   onPerPageChange?: (perPage: number) => void;
   perPageOptions?: number[];
+  /** `false`: tampilkan semua baris tanpa kaki halaman (tabel kecil, mis. 3–15 baris di panel). Bawaan `true`. */
+  pagination?: boolean;
   /** Pilih baris (kotak centang). */
   selectable?: boolean;
   selected?: string[];
@@ -186,6 +188,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     onPageChange,
     onPerPageChange,
     perPageOptions = [10, 20, 50, 100],
+    pagination = true,
     selectable,
     selected: selectedProp,
     onSelectedChange,
@@ -253,7 +256,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const ordered = tree ? pohon.visible.map((n) => n.row) : sorted;
   const total = tree && !serverPage ? ordered.length : (totalProp ?? sorted.length);
   const totalPages = Math.max(1, Math.ceil(total / perPage));
-  const shown = serverPage ? ordered : ordered.slice((page - 1) * perPage, page * perPage);
+  const shown = serverPage || !pagination ? ordered : ordered.slice((page - 1) * perPage, page * perPage);
   /** Isi sel kolom pertama, dibungkus SelPohon bila tabel bertingkat. */
   const treeCell = (row: T, content: React.ReactNode) => {
     const n = tree ? nodeOf.get(rowKey(row)) : undefined;
@@ -614,7 +617,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     </div>
   );
 
-  const showFooter = !firstLoad && !hasError && total > 0;
+  const showFooter = pagination && !firstLoad && !hasError && total > 0;
   return (
     <div className={cn('u-data-table', className)} data-loading={dataFlag(loading)} data-cards={dataFlag(cards)}>
       {(toolbar || columnToggle || exportCsv || actions || densityToggle) && (

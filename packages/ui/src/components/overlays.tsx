@@ -36,15 +36,17 @@ export interface DialogProps {
   className?: string;
   /** Tampilkan sebagai panel geser dari sisi layar. */
   side?: 'right' | 'left' | 'bottom';
+  /** Elemen yang difokus saat dialog terbuka (bawaan: elemen pertama yang bisa difokus). false = popup itu sendiri. */
+  initialFocus?: boolean | React.RefObject<HTMLElement | null> | (() => HTMLElement | null | boolean | void);
 }
 
 /** Dialog modal. Dengan `side`, menjadi Sheet (panel samping/bawah) untuk filter, detail, atau formulir panjang. */
-export function Dialog({ open, defaultOpen, onOpenChange, trigger, title, description, footer, size = 'md', side: sideProp, children, className }: DialogProps) {
+export function Dialog({ open, defaultOpen, onOpenChange, trigger, title, description, footer, size = 'md', side: sideProp, children, className, initialFocus }: DialogProps) {
   // Di platform mobile dialog dan panel kanan menjadi lembar bawah (bottom sheet), kecuali ukuran penuh.
   const plat = usePlatform();
   const side = plat.mobile && size !== 'full' && sideProp !== 'left' ? 'bottom' : sideProp;
   const popup = (
-    <BaseDialog.Popup className={cn(side ? 'u-sheet' : 'u-dialog', className)} data-size={size} data-side={side}>
+    <BaseDialog.Popup className={cn(side ? 'u-sheet' : 'u-dialog', className)} data-size={size} data-side={side} initialFocus={initialFocus}>
       {side === 'bottom' && <span className="u-sheet-grabber" aria-hidden />}
       <div className="u-dialog-header">
         <BaseDialog.Title className="u-dialog-title">{title}</BaseDialog.Title>
@@ -214,12 +216,14 @@ export interface MenuProps {
   items: MenuEntry[];
   align?: 'start' | 'center' | 'end';
   side?: 'top' | 'bottom' | 'left' | 'right';
+  /** Buka saat kursor di atas pemicu (mis. sub menu sidebar mini). */
+  openOnHover?: boolean;
 }
 /** Menu tarik-turun untuk aksi baris tabel, profil pengguna, dsb. */
-export function Menu({ trigger, items, align = 'end', side = 'bottom' }: MenuProps) {
+export function Menu({ trigger, items, align = 'end', side = 'bottom', openOnHover }: MenuProps) {
   return (
     <BaseMenu.Root>
-      <BaseMenu.Trigger render={trigger} />
+      <BaseMenu.Trigger render={trigger} openOnHover={openOnHover} delay={openOnHover ? 80 : undefined} />
       <BaseMenu.Portal>
         <BaseMenu.Positioner className="u-popup-positioner" align={align} side={side} sideOffset={6}>
           <BaseMenu.Popup className="u-menu">

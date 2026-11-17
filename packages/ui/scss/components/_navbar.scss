@@ -16,7 +16,7 @@
     color var(--u-duration-base) var(--u-ease-out);
   &[data-sticky] {
     position: sticky;
-    top: 0;
+    top: var(--u-offset-atas, 0px);
   }
   &[data-sticky][data-scrolled] {
     background: color-mix(in oklab, var(--u-background) 88%, transparent);

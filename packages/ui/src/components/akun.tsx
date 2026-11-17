@@ -1,7 +1,7 @@
 'use client';
 import * as React from 'react';
 import { Menu as BaseMenu } from '@base-ui/react/menu';
-import { ChevronDown, ChevronsUpDown, Camera, Check, IdCard, KeyRound, LogOut, Monitor, Moon, PenLine, ShieldCheck, Sun, UserRound, Users } from 'lucide-react';
+import { Banknote, ChevronDown, ChevronsUpDown, Camera, Check, IdCard, KeyRound, LogOut, Monitor, Moon, PenLine, ShieldCheck, Sun, UserRound, Users } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Avatar, type AvatarSize } from './display';
 import type { MenuEntry } from './overlays';
@@ -32,13 +32,22 @@ export interface TautanAkun {
   foto: string;
   password: string;
   keamanan: string;
+  /** Riwayat gaji dan slip (dosen/tendik) di aplikasi Profil. */
+  gaji: string;
   keluar: string;
 }
 export const PROFIL_URL = 'https://profile.unipo.ac.id';
 export const SSO_URL = 'https://sso.unipo.ac.id';
 
-/** Tautan bawaan: profil, ubah data, foto, dan password di aplikasi Profil; keamanan dan keluar di SSO. */
-export function tautanAkun(profilUrl: string = PROFIL_URL, ssoUrl: string = SSO_URL, ganti: Partial<TautanAkun> = {}): TautanAkun {
+/** Alamat aplikasi saudara di domain yang sama (mis. di stack lokal baak.unipo.dev -> profile.unipo.dev); null bila bukan domain UNIPO. */
+function saudara(sub: string): string | null {
+  if (typeof window === 'undefined') return null;
+  const m = /^[^.]+\.(unipo\.(?:ac\.id|dev))$/.exec(window.location.hostname);
+  return m ? `${window.location.protocol}//${sub}.${m[1]}` : null;
+}
+
+/** Tautan bawaan: profil, ubah data, foto, dan password di aplikasi Profil; keamanan dan keluar di SSO. Tanpa alamat eksplisit: aplikasi saudara di domain yang sama, lalu alamat produksi. */
+export function tautanAkun(profilUrl: string = saudara('profile') ?? PROFIL_URL, ssoUrl: string = saudara('sso') ?? SSO_URL, ganti: Partial<TautanAkun> = {}): TautanAkun {
   const p = profilUrl.replace(/\/+$/, '');
   const s = ssoUrl.replace(/\/+$/, '');
   return {
@@ -48,6 +57,7 @@ export function tautanAkun(profilUrl: string = PROFIL_URL, ssoUrl: string = SSO_
     foto: `${p}/profil`,
     password: `${p}/akun`,
     keamanan: `${s}/akun`,
+    gaji: `${p}/gaji`,
     keluar: `${s}/logout`,
     ...ganti,
   };
@@ -63,7 +73,7 @@ export type TemaAkun = 'terang' | 'gelap' | 'sistem';
 // ================================================================ Menu akun
 
 export type VarianMenuAkun = 'pil' | 'nama' | 'avatar' | 'sidebar' | 'ikon';
-export type ItemMenuAkun = 'profil' | 'ubah' | 'data' | 'foto' | 'password' | 'keamanan';
+export type ItemMenuAkun = 'profil' | 'ubah' | 'data' | 'foto' | 'password' | 'gaji' | 'keamanan';
 
 export interface MenuAkunProps {
   pengguna: AkunPengguna;
@@ -107,6 +117,7 @@ const LABEL_ITEM: Record<ItemMenuAkun, { label: string; ikon: React.ReactNode; k
   data: { label: 'Data pribadi', ikon: <IdCard />, kunci: 'dataPribadi' },
   foto: { label: 'Ganti foto', ikon: <Camera />, kunci: 'foto' },
   password: { label: 'Ganti password', ikon: <KeyRound />, kunci: 'password' },
+  gaji: { label: 'Riwayat gaji', ikon: <Banknote />, kunci: 'gaji' },
   keamanan: { label: 'Keamanan akun', ikon: <ShieldCheck />, kunci: 'keamanan' },
 };
 

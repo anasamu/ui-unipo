@@ -182,7 +182,10 @@
 }
 .u-pl-segmen-bungkus {
   display: grid;
+  // Label nowrap tidak boleh melebarkan kolom (dulu meluber keluar kartu sempit).
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.375rem;
+  min-width: 0;
 }
 .u-pl-segmen-label {
   display: flex;
@@ -325,12 +328,23 @@
 }
 
 // ---------------------------------------------------------------- Gauge
+// Angka utama di dalam rongga busur (ukuran dalam cqi dari lebar busur), label kecil di bawah busur, tidak menumpuk.
 .u-pg {
-  position: relative;
   display: inline-grid;
   justify-items: center;
+  gap: var(--u-space-1, 0.25rem);
+  max-width: 100%;
+  text-align: center;
+}
+.u-pg-busur {
+  container-type: inline-size;
+  position: relative;
+  width: 100%;
   svg {
     display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
   }
 }
 .u-pg-trek {
@@ -341,6 +355,9 @@
   stroke: var(--u-primary);
   stroke-linecap: round;
   transition: stroke-dashoffset var(--u-duration-slow) var(--u-ease-out);
+  &[data-tone='secondary'] {
+    stroke: var(--u-secondary);
+  }
   &[data-tone='success'] {
     stroke: var(--u-success);
   }
@@ -354,16 +371,24 @@
 .u-pg-teks {
   position: absolute;
   bottom: 0;
-  display: grid;
-  justify-items: center;
-  line-height: 1.1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  min-width: 0;
   b {
+    font-family: var(--u-font-heading);
+    font-weight: var(--u-weight-bold, 700);
     font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    white-space: nowrap;
   }
-  small {
-    color: var(--u-muted-foreground);
-    font-size: var(--u-text-xs);
-  }
+}
+.u-pg-label {
+  max-width: 100%;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  line-height: 1.4;
 }
 
 // ---------------------------------------------------------------- Unggah
@@ -755,13 +780,42 @@
 // ---------------------------------------------------------------- Tebal
 .u-ptb {
   @extend %u-trek;
+  display: flex;
+  align-items: center;
   height: 1.375rem;
+  // Isian terlalu pendek untuk labelnya: label di kanan isian (luar) atau dua lapis rata kiri (lapis), warna teks biasa.
+  &[data-letak] {
+    .u-ptb-isi {
+      min-width: 0;
+    }
+    > .u-ptb-teks {
+      color: var(--u-foreground);
+    }
+  }
+  &[data-letak='lapis'] {
+    .u-ptb-isi {
+      position: relative;
+      z-index: 1;
+      overflow: hidden;
+      justify-content: flex-start;
+      > .u-ptb-teks {
+        flex: none;
+      }
+    }
+    > .u-ptb-teks {
+      position: absolute;
+      inset: 0 auto 0 0;
+      display: flex;
+      align-items: center;
+    }
+  }
 }
 .u-ptb-isi {
   @include nada-isi;
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  flex: none;
   min-width: 2.75rem;
   height: 100%;
   border-radius: inherit;
@@ -772,6 +826,7 @@
 }
 .u-ptb-teks {
   padding: 0 0.5rem;
+  font-variant-numeric: tabular-nums;
   color: #fff;
   font-size: var(--u-text-xs);
   font-weight: 600;

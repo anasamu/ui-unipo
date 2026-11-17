@@ -405,6 +405,9 @@
   }
 }
 .u-switch-thumb {
+  // Kenop selalu kotak blok: tetap terlihat walau aturan induk mengubah display .u-switch (mis. `label > span`).
+  display: block;
+  flex: none;
   width: calc(var(--u-switch-h) - 4px);
   height: calc(var(--u-switch-h) - 4px);
   border-radius: 50%;

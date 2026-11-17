@@ -30,6 +30,7 @@ export const meta: DemoMeta = {
   demos: {
     Kartu: 'StatCard dan StatGrid',
     Batang: 'BarChart dan GroupedBarChart',
+    BatangSemester: 'BarChart 10 semester dengan semester berjalan belum bernilai (null = celah "belum ada")',
     Garis: 'LineChart (garis bantu silang + tooltip)',
     Komposisi: 'DonutChart, SegmentBar, BarList',
     Alur: 'Funnel, BudgetMeter, CycleSteps',
@@ -74,6 +75,32 @@ export function Batang() {
             { label: 'Keluar', values: [41, 48, 66, 52, 38] },
           ]}
         />
+      </Panel>
+    </DashboardGrid>
+  );
+}
+
+const IPS: Array<[string, string, number | null]> = [
+  ['21/22 Gn', '2021/2022 Genap', 3.08],
+  ['22/23 Gj', '2022/2023 Ganjil', 3.12],
+  ['22/23 Gn', '2022/2023 Genap', 3.18],
+  ['23/24 Gj', '2023/2024 Ganjil', 3.21],
+  ['23/24 Gn', '2023/2024 Genap', 3.27],
+  ['24/25 Gj', '2024/2025 Ganjil', 3.24],
+  ['24/25 Gn', '2024/2025 Genap', 3.31],
+  ['25/26 Gj', '2025/2026 Ganjil', 3.29],
+  ['25/26 Gn', '2025/2026 Genap', 3.36],
+  ['26/27 Gj', '2026/2027 Ganjil', null],
+];
+const ip = (v: number) => v.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export function BatangSemester() {
+  return (
+    <DashboardGrid>
+      <Panel title="Rata-rata IPS" description="Per semester">
+        <BarChart height={150} max={4} format={ip} emptyLabel="Belum ada IPS" data={IPS.map(([label, title, value]) => ({ label, title, value }))} />
+      </Panel>
+      <Panel title="Pengisi KRS per semester" description="Semester terakhir" span={2}>
+        <BarChart highlightLast data={IPS.map(([label, title], i) => ({ label, title, value: 2400 + i * 85 - (i % 2 ? 0 : 140) }))} />
       </Panel>
     </DashboardGrid>
   );
