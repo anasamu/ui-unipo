@@ -86,10 +86,25 @@
   padding: 0.25rem 0.375rem 0.5rem;
 }
 .u-mb-pohon-muat {
-  display: block;
-  height: 8rem;
-  margin: 0.25rem;
-  border-radius: var(--u-radius-md);
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  > span {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    height: 1.75rem;
+  }
+  i:first-child {
+    flex: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 4px;
+  }
+  i:last-child {
+    height: 0.75rem;
+    border-radius: 999px;
+  }
 }
 .u-mb-pohon,
 .u-mb-pohon ul {
@@ -1453,10 +1468,14 @@
   }
 }
 .u-db-ruang-muat {
-  display: inline-block;
-  width: 6rem;
-  height: 2.25rem;
-  border-radius: 999px;
+  display: inline-flex;
+  gap: 0.375rem;
+  i {
+    display: block;
+    width: 7.5rem;
+    height: 2.25rem;
+    border-radius: 999px;
+  }
 }
 .u-db-kembali {
   display: flex;
@@ -1532,5 +1551,125 @@
   }
   .u-db-bagi-daftar li {
     flex-wrap: wrap;
+  }
+}
+
+// Siapa yang bisa melihat (ruang unit)
+.u-mb-lihat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-inline-start: 0.375rem;
+  padding: 0 0.375rem;
+  border: 1px solid var(--u-border);
+  border-radius: 999px;
+  color: var(--u-muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.125rem;
+  vertical-align: middle;
+  white-space: nowrap;
+  svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+  &[data-lihat='pengelola'] {
+    color: var(--u-warning-text);
+    border-color: color-mix(in oklab, var(--u-warning) 35%, var(--u-border));
+  }
+}
+.u-mb-lihat-opsi {
+  display: grid;
+  gap: 0.5rem;
+  > label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius);
+    cursor: pointer;
+    &:has(input:checked) {
+      border-color: var(--u-primary);
+      background: var(--u-primary-soft);
+    }
+    &[data-kunci] {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    input {
+      margin-top: 0.2rem;
+    }
+    span {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    b {
+      font-size: var(--u-text-sm);
+      font-weight: 600;
+    }
+    small {
+      color: var(--u-muted-foreground);
+      font-size: var(--u-text-xs);
+    }
+  }
+}
+.u-mb-lihat-peran {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding: 0.25rem 0.75rem;
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: var(--u-text-sm);
+  }
+}
+
+// Kerangka memuat yang meniru kartu dan baris berkas asli.
+.u-mb-muat {
+  pointer-events: none;
+  i {
+    display: block;
+  }
+  .u-mb-muat-teks {
+    height: 0.75rem;
+    width: 80%;
+    border-radius: 999px;
+    &[data-pendek] {
+      width: 50%;
+    }
+  }
+}
+.u-mb-kartu.u-mb-muat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  .u-mb-muat-mini {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    border-radius: calc(var(--u-radius) - 2px);
+  }
+}
+.u-mb-baris.u-mb-muat {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  padding-inline: 0.75rem;
+  .u-mb-muat-ikon {
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 6px;
+  }
+  .u-mb-muat-teks {
+    width: 30%;
+    &[data-pendek] {
+      width: 12%;
+      margin-inline-start: auto;
+    }
   }
 }

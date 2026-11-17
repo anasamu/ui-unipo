@@ -86,11 +86,11 @@ export function paramRuang(r: RuangBerkasOpsi): Record<string, string | undefine
 // ================================================================ Hook data
 
 /** Unit yang ruang berkasnya bisa saya buka; `semua` = juga daftar semua unit (untuk tujuan berbagi). */
-export function useUnitBerkas(semua = false) {
+export function useUnitBerkas(semua = false, enabled = true) {
   return useSiakadQuery<{ unit: UnitBerkas[]; semua?: Array<Pick<UnitBerkas, 'kode' | 'nama' | 'singkatan' | 'jenis'>> }>(
     ['berkas-unit', semua],
     (s, signal) => s.request({ method: 'GET', path: '/v1/berkas/unit', query: { semua: semua ? 1 : undefined } }, { signal }),
-    { staleTime: 300_000 },
+    { staleTime: 300_000, enabled },
   );
 }
 
@@ -290,7 +290,8 @@ function labelPenerima(x: BagiBerkas) {
 
 export function DialogBagikanBerkas({ sasaran, tutup }: { sasaran: SasaranBagi | null; tutup: () => void }) {
   const siakad = useSiakad();
-  const unitQ = useUnitBerkas(true);
+  // Daftar semua unit hanya diambil saat dialog bagikan dibuka.
+  const unitQ = useUnitBerkas(true, Boolean(sasaran));
   const [jenis, setJenis] = React.useState<'pengguna' | 'unit' | 'tautan'>('pengguna');
   const [ke, setKe] = React.useState('');
   const [izin, setIzin] = React.useState<'lihat' | 'ubah'>('lihat');

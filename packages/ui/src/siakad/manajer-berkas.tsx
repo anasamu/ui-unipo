@@ -33,6 +33,7 @@ import {
   LayoutGrid,
   List,
   Lock,
+  Users,
   LockOpen,
   Pencil,
   Plus,
@@ -98,6 +99,8 @@ export interface FolderBerkas {
   total_ukuran: number;
   jumlah_subfolder: number;
   warna?: WarnaFolder | null;
+  /** Ruang unit: siapa yang bisa melihat (pengelola, staf, semua, mahasiswa,dosen,tendik); null = ikut folder induk. */
+  lihat?: string | null;
   dibuat_at?: string | null;
   terakhir_isi_at?: string | null;
 }
@@ -123,6 +126,8 @@ export interface BerkasManajer extends BerkasTerunggah {
   periode?: string | null;
   /** Isi disimpan terenkripsi AES-256-GCM di penyimpanan. */
   terenkripsi?: boolean;
+  /** Ruang unit: siapa yang bisa melihat; null = ikut folder induk. */
+  lihat?: string | null;
   diubah_at?: string | null;
 }
 
@@ -885,6 +890,7 @@ type DialogManajer =
   | { jenis: 'bagikan'; sasaran: SasaranBagi }
   | { jenis: 'baru'; tipe: JenisBerkasBaru }
   | { jenis: 'periode'; berkas: BerkasManajer[] }
+  | { jenis: 'lihat'; b?: BerkasManajer; f?: FolderBerkas }
   | { jenis: 'kebijakan' };
 const TIPE_SERET = 'application/x-unipo-berkas';
 /** Peristiwa React dari portal (menu, dialog) ikut naik ke induk; abaikan yang bukan dari elemen ini. */
@@ -975,11 +981,15 @@ export function ManajerBerkas({
   const judul = judulProp ?? (unit ? (unitIni ? `Berkas ${unitIni.singkatan || unitIni.nama}` : `Berkas ${unit.toUpperCase()}`) : bagi ? 'Dibagikan ke saya' : 'Berkas saya');
   const akses = pohonQ.data?.ruang?.akses ?? (bagi ? 'bagi' : unit ? (unitIni?.akses ?? 'anggota') : 'pemilik');
   // Folder bersama hanya bisa dilihat, diunduh, dan disalin; anggota unit tidak bisa menghapus folder unit.
-  const bolehUnggah = bolehUnggahProp && !bagi;
-  const bolehKelola = bolehKelolaProp && !bagi;
-  const bolehHapus = bolehHapusProp && !bagi;
+  // Pembaca unit (mahasiswa/dosen/tendik yang terdaftar di unit) hanya bisa melihat dan mengunduh.
+  const pembaca = akses === 'pembaca';
+  const bolehUnggah = bolehUnggahProp && !bagi && !pembaca;
+  const bolehKelola = bolehKelolaProp && !bagi && !pembaca;
+  const bolehHapus = bolehHapusProp && !bagi && !pembaca;
   const bolehKelolaRuang = bolehKelola && akses !== 'anggota';
-  const bolehBagikan = bolehBagikanProp && !bagi;
+  const bolehBagikan = bolehBagikanProp && !bagi && !pembaca;
+  // Atur siapa yang bisa melihat: pengelola unit (semua pilihan) dan staf unit (pengelola/staf saja).
+  const bolehAturLihat = Boolean(unit) && !bagi && (akses === 'kelola' || akses === 'anggota');
   const enkripsiEfektif = kebijakanQ.data?.efektif ?? null;
   const [enkripsiUnggah, setEnkripsiUnggah] = React.useState(false);
   const papan = usePapanBerkas();
@@ -1372,6 +1382,7 @@ export function ManajerBerkas({
           ? ([
               sep,
               { label: 'Ganti nama atau warna', icon: <Pencil aria-hidden />, shortcut: 'F2', onSelect: () => setDialog({ jenis: 'folder-nama', f }) },
+              ...(bolehAturLihat && bolehKelolaRuang ? [{ label: 'Siapa yang bisa melihat…', icon: <Eye aria-hidden />, onSelect: () => setDialog({ jenis: 'lihat', f }) }] : []),
               { label: 'Pindahkan…', icon: <FolderInput aria-hidden />, onSelect: () => setDialog({ jenis: 'pindah', berkas: [], f }) },
               { label: 'Salin ke…', icon: <CopyPlus aria-hidden />, onSelect: () => setDialog({ jenis: 'pindah', berkas: [], f, salin: true }) },
             ] as MenuEntry[])
@@ -1391,6 +1402,7 @@ export function ManajerBerkas({
               { label: pilih === 'satu' ? labelPilih || 'Pakai berkas ini' : 'Pratinjau', icon: <Eye aria-hidden />, onSelect: () => bukaBerkas(b) },
               { label: 'Unduh', icon: <Download aria-hidden />, onSelect: () => void unduh(b) },
               ...(bolehBagikan ? [{ label: 'Bagikan…', icon: <Share2 aria-hidden />, onSelect: () => setDialog({ jenis: 'bagikan', sasaran: { jenis: 'berkas', b } }) }] : []),
+              ...(bolehAturLihat ? [{ label: 'Siapa yang bisa melihat…', icon: <Users aria-hidden />, onSelect: () => setDialog({ jenis: 'lihat', b }) }] : []),
             ] as MenuEntry[])
           : [{ type: 'label', label: `${banyak.length} berkas dipilih` } as MenuEntry]),
         sep,
@@ -1532,7 +1544,10 @@ export function ManajerBerkas({
           <span role="gridcell" className="u-mb-baris-nama">
             <IkonFolderWarna warna={f.warna} />
             <span>
-              <b>{f.nama}</b>
+              <b>
+                {f.nama}
+                {unit && <LencanaLihat lihat={f.lihat} />}
+              </b>
               {mencari && f.induk && <small>{f.induk}</small>}
             </span>
           </span>
@@ -1552,7 +1567,10 @@ export function ManajerBerkas({
       <div key={`f:${f.path}`} role="gridcell" className="u-mb-kartu" data-folder="" aria-label={`Folder ${f.nama}, ${isiLabel}`} {...umum}>
         <IkonFolderWarna warna={f.warna} />
         <span className="u-mb-kartu-teks">
-          <b title={f.nama}>{f.nama}</b>
+          <b title={f.nama}>
+            {f.nama}
+            {unit && <LencanaLihat lihat={f.lihat} />}
+          </b>
           <small>{mencari && f.induk ? f.induk : isiLabel}</small>
         </span>
         {tombolAksi}
@@ -1630,6 +1648,7 @@ export function ManajerBerkas({
               <b title={b.nama}>
                 {b.nama}
                 {gembok}
+                {unit && <LencanaLihat lihat={b.lihat} />}
               </b>
               {mencari ? <small>{b.folder || judul}</small> : (status ?? (b.periode && !periode ? <small>{namaPeriode(b.periode)}</small> : null))}
             </span>
@@ -1653,6 +1672,7 @@ export function ManajerBerkas({
           <b title={b.nama}>
             {b.nama}
             {gembok}
+            {unit && <LencanaLihat lihat={b.lihat} />}
           </b>
           <small>{mencari ? b.folder || judul : [formatBytes(b.ukuran), b.dibuat_at ? formatDate(b.dibuat_at, 'short') : null].filter(Boolean).join(' · ')}</small>
           {status}
@@ -1742,7 +1762,20 @@ export function ManajerBerkas({
             </Tooltip>
           )}
         </div>
-        <div className="u-mb-samping-isi">{pohonQ.loading && !pohonQ.data ? <span className="u-skeleton u-mb-pohon-muat" aria-label="Memuat folder" /> : pohonEl}</div>
+        <div className="u-mb-samping-isi">
+          {pohonQ.loading && !pohonQ.data ? (
+            <div className="u-mb-pohon-muat" role="status" aria-label="Memuat folder">
+              {[0.7, 0.55, 0.8, 0.5, 0.65].map((w, i) => (
+                <span key={i}>
+                  <i className="u-skeleton" />
+                  <i className="u-skeleton" style={{ width: `${w * 100}%` }} />
+                </span>
+              ))}
+            </div>
+          ) : (
+            pohonEl
+          )}
+        </div>
         {ringkas && (
           <div className="u-mb-penyimpanan">
             <HardDrive aria-hidden />
@@ -2108,7 +2141,7 @@ export function ManajerBerkas({
                     <div className="u-mb-kisi" data-jenis="berkas" role="grid" aria-label="Berkas" aria-multiselectable={pilih !== 'satu'}>
                       <div role="row" className="u-mb-kisi-baris">
                         {isi.map(kartuBerkas)}
-                        {memuat && Array.from({ length: isi.length ? 4 : 8 }, (_, i) => <span key={`m${i}`} className="u-mb-kartu u-skeleton" aria-hidden />)}
+                        {memuat && Array.from({ length: isi.length ? 4 : 8 }, (_, i) => <KartuMuat key={`m${i}`} />)}
                       </div>
                     </div>
                   </>
@@ -2148,7 +2181,7 @@ export function ManajerBerkas({
                 </div>
                 {subfolder.map(kartuFolder)}
                 {isi.map(kartuBerkas)}
-                {memuat && Array.from({ length: isi.length ? 2 : 6 }, (_, i) => <span key={`m${i}`} className="u-mb-baris u-skeleton" aria-hidden />)}
+                {memuat && Array.from({ length: isi.length ? 2 : 6 }, (_, i) => <BarisMuat key={`m${i}`} />)}
               </div>
             )}
             {adaLagi && !memuat && (
@@ -2182,10 +2215,11 @@ export function ManajerBerkas({
         </BaseContextMenu.Root>
 
         <div className="u-mb-kaki">
-          <span>
+          <span aria-live="polite">
+            {memuat && !isi.length ? 'Memuat…' : <>
             {subfolder.length > 0 && `${subfolder.length} folder · `}
-            {total} berkas
-            {folderIni ? ` · ${formatBytes(folderIni.ukuran)}` : ringkas && !folder ? ` · ${formatBytes(ringkas.ukuran)}` : ''}
+            {total} berkas</>}
+            {memuat && !isi.length ? '' : folderIni ? ` · ${formatBytes(folderIni.ukuran)}` : ringkas && !folder ? ` · ${formatBytes(ringkas.ukuran)}` : ''}
           </span>
           {bolehUnggah && info && <span className="u-mb-sembunyi-kecil">Maks {formatBytes(info.maks_byte)} per file</span>}
         </div>
@@ -2389,6 +2423,20 @@ export function ManajerBerkas({
         }}
       />
       <DialogBagikanBerkas sasaran={dialog?.jenis === 'bagikan' ? dialog.sasaran : null} tutup={() => setDialog(null)} />
+      {dialog?.jenis === 'lihat' && unit && (
+        <DialogLihat
+          unit={unit}
+          b={dialog.b}
+          f={dialog.f}
+          pengelola={akses === 'kelola'}
+          tutup={() => setDialog(null)}
+          selesai={(teks) => {
+            setDialog(null);
+            aksi.segarkan();
+            setPesan({ nada: 'sukses', teks });
+          }}
+        />
+      )}
       <DialogBerkasBaru jenis={dialog?.jenis === 'baru' ? dialog.tipe : null} tutup={() => setDialog(null)} buat={buatBerkas} />
       <DialogPeriodeBerkas
         berkas={dialog?.jenis === 'periode' ? dialog.berkas : null}
@@ -2427,5 +2475,128 @@ export function ManajerBerkas({
         }
       />
     </div>
+  );
+}
+
+// ================================================================ Siapa yang bisa melihat (ruang unit)
+
+const LABEL_LIHAT: Record<string, string> = { pengelola: 'Pengelola', staf: 'Staf unit', semua: 'Semua anggota', mahasiswa: 'Mahasiswa', dosen: 'Dosen', tendik: 'Tendik' };
+
+/** Teks pendek pengaturan `lihat`, mis. "Mahasiswa, Dosen". */
+export function labelLihatBerkas(lihat?: string | null): string | null {
+  if (!lihat) return null;
+  return lihat
+    .split(',')
+    .map((x) => LABEL_LIHAT[x] ?? x)
+    .join(', ');
+}
+
+/** Lencana kecil siapa yang bisa melihat berkas/folder unit; tidak tampil bila mengikuti folder induk. */
+export function LencanaLihat({ lihat }: { lihat?: string | null }) {
+  const label = labelLihatBerkas(lihat);
+  if (!label) return null;
+  return (
+    <span className="u-mb-lihat" data-lihat={lihat ?? undefined} title={`Bisa dilihat: ${label}`}>
+      {lihat === 'pengelola' ? <Lock aria-hidden /> : <Users aria-hidden />}
+      {label}
+    </span>
+  );
+}
+
+function DialogLihat({ unit, b, f, pengelola, tutup, selesai }: { unit: string; b?: BerkasManajer; f?: FolderBerkas; pengelola: boolean; tutup: () => void; selesai: (teks: string) => void }) {
+  const siakad = useSiakad();
+  const awal = (b?.lihat ?? f?.lihat ?? '') as string;
+  const [mode, setMode] = React.useState<'ikut' | 'pengelola' | 'staf' | 'pilih'>(!awal ? 'ikut' : awal === 'pengelola' || awal === 'staf' ? awal : 'pilih');
+  const [peran, setPeran] = React.useState<string[]>(awal && !['pengelola', 'staf'].includes(awal) ? awal.split(',') : ['semua']);
+  const [simpan, setSimpan] = React.useState(false);
+  const [galat, setGalat] = React.useState<string | null>(null);
+  const nama = b?.nama ?? f?.nama ?? '';
+  const nilai = mode === 'ikut' ? '' : mode === 'pilih' ? (peran.includes('semua') ? 'semua' : peran.join(',')) : mode;
+  const kirim = async () => {
+    if (mode === 'pilih' && !peran.length) return setGalat('Pilih minimal satu kelompok.');
+    setSimpan(true);
+    setGalat(null);
+    try {
+      if (b) await siakad.request({ method: 'POST', path: `/v1/berkas/${encodeURIComponent(b.id)}/ubah`, body: { lihat: nilai } });
+      else if (f) await siakad.request({ method: 'POST', path: '/v1/berkas/folder/ubah', body: { unit, path: f.path, lihat: nilai } });
+      selesai(`Pengaturan akses ${nama} disimpan.`);
+    } catch (e) {
+      setGalat(pesanGalat(e));
+    } finally {
+      setSimpan(false);
+    }
+  };
+  const ubahPeran = (k: string, aktif: boolean) =>
+    setPeran((p) => (k === 'semua' ? (aktif ? ['semua'] : []) : [...p.filter((x) => x !== 'semua' && x !== k), ...(aktif ? [k] : [])]));
+  const opsi: Array<{ v: typeof mode; label: string; ket: string; kunci?: boolean }> = [
+    { v: 'ikut', label: f ? 'Ikuti folder induk' : 'Ikuti folder', ket: 'Sama dengan pengaturan folder tempatnya (akar ruang: staf unit).' },
+    { v: 'pengelola', label: 'Pengelola unit saja', ket: 'Hanya pengelola unit dan pengunggahnya.' },
+    { v: 'staf', label: 'Staf unit', ket: 'Staf unit yang punya akses berkas; mahasiswa, dosen, dan tendik lain tidak melihat.' },
+    { v: 'pilih', label: 'Anggota unit tertentu', ket: 'Buka untuk semua anggota atau peran tertentu yang terdaftar di unit (prodi/fakultas).', kunci: !pengelola },
+  ];
+  return (
+    <Dialog
+      open
+      onOpenChange={(o) => !o && tutup()}
+      size="sm"
+      title="Siapa yang bisa melihat"
+      description={nama}
+      footer={
+        <>
+          <Button variant="outline" onClick={tutup}>
+            Batal
+          </Button>
+          <Button onClick={() => void kirim()} loading={simpan}>
+            Simpan
+          </Button>
+        </>
+      }
+    >
+      <div className="u-mb-lihat-opsi" role="radiogroup" aria-label="Siapa yang bisa melihat">
+        {opsi.map((o) => (
+          <label key={o.v} data-kunci={o.kunci ? '' : undefined}>
+            <input type="radio" name="lihat" checked={mode === o.v} disabled={o.kunci} onChange={() => setMode(o.v)} />
+            <span>
+              <b>{o.label}</b>
+              <small>{o.kunci ? 'Hanya pengelola unit yang bisa membuka berkas untuk mahasiswa, dosen, atau tendik.' : o.ket}</small>
+            </span>
+          </label>
+        ))}
+        {mode === 'pilih' && (
+          <div className="u-mb-lihat-peran">
+            {(['semua', 'mahasiswa', 'dosen', 'tendik'] as const).map((k) => (
+              <label key={k}>
+                <input type="checkbox" checked={peran.includes(k)} onChange={(e) => ubahPeran(k, e.target.checked)} />
+                {LABEL_LIHAT[k]}
+              </label>
+            ))}
+          </div>
+        )}
+        <p className="u-field-description">Pengelola unit selalu melihat semuanya. Berkas yang dibagikan langsung ke seseorang tetap terbuka untuknya.</p>
+        {galat && <p className="u-field-error">{galat}</p>}
+      </div>
+    </Dialog>
+  );
+}
+
+/** Kerangka kartu berkas saat memuat: gambar mini + dua baris teks, ukuran sama dengan kartu asli. */
+function KartuMuat() {
+  return (
+    <span className="u-mb-kartu u-mb-muat" data-berkas="" aria-hidden>
+      <i className="u-skeleton u-mb-muat-mini" />
+      <i className="u-skeleton u-mb-muat-teks" />
+      <i className="u-skeleton u-mb-muat-teks" data-pendek="" />
+    </span>
+  );
+}
+
+/** Kerangka baris berkas (tampilan daftar) saat memuat. */
+function BarisMuat() {
+  return (
+    <span className="u-mb-baris u-mb-muat" aria-hidden>
+      <i className="u-skeleton u-mb-muat-ikon" />
+      <i className="u-skeleton u-mb-muat-teks" />
+      <i className="u-skeleton u-mb-muat-teks" data-pendek="" />
+    </span>
   );
 }

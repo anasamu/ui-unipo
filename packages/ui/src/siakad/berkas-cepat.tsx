@@ -261,7 +261,7 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
           </Button>
         </div>
       </Popover>
-      <Dialog open={drive !== false} onOpenChange={(o) => !o && setDrive(false)} title="Kelola berkas" size="full" className="u-berkas-dialog">
+      <Dialog open={drive !== false} onOpenChange={(o) => !o && setDrive(false)} title="Kelola berkas" size="full" className="u-berkas-dialog" initialFocus={false}>
         {drive && <DriveBerkas modul={modul} unitTampil={unitTampil} ruangAwal={drive} tinggi="100%" />}
       </Dialog>
     </>
