@@ -36,6 +36,10 @@
   gap: 0.125rem;
   flex: 1;
   min-width: 0;
+  // Baris judul pertama sejajar tengah dengan kotak ikon (2.25rem) di sebelahnya.
+  :is(.u-pgm-banner, .u-pgm-toast, .u-pgm-bawah):has(> .u-pgm-ikon) > & {
+    padding-top: calc((2.25rem - 1.35em) / 2);
+  }
   strong {
     font-weight: 600;
     color: var(--u-foreground);
@@ -54,6 +58,8 @@
   flex: none;
   width: 1.75rem;
   height: 1.75rem;
+  // Tengah tombol sejajar tengah kotak ikon / baris judul pertama.
+  margin-top: 0.25rem;
   padding: 0;
   border: 0;
   border-radius: var(--u-radius-sm);
@@ -70,6 +76,10 @@
   }
   &:focus-visible {
     @include focus-ring;
+  }
+  // Tanpa kotak ikon: sejajar baris judul pertama.
+  :is(.u-pgm-banner, .u-pgm-toast, .u-pgm-bawah):not(:has(> .u-pgm-ikon)) > & {
+    margin-top: calc((1.35rem - 1.75rem) / 2);
   }
 }
 .u-pgm-tautan {
@@ -126,8 +136,36 @@
   object-fit: cover;
   border-radius: var(--u-radius-md);
   @media (max-width: 639px) {
-    display: none;
+    width: 4.5rem;
+    height: 4.5rem;
   }
+}
+// Ilustrasi di banner (sedang) dan toast (kecil): tanpa kotak, tinggi ikut rasio 4:3.
+.u-pgm-ilus {
+  flex: none;
+  height: auto;
+}
+.u-pgm-banner[data-visual='ilustrasi'],
+.u-pgm-banner[data-visual='gambar'] {
+  align-items: center;
+  > .u-pgm-tutup {
+    align-self: flex-start;
+    margin-top: 0;
+  }
+}
+.u-pgm-ilus-sedang {
+  width: 7.5rem;
+  margin-block: -0.5rem;
+  @media (max-width: 639px) {
+    width: 5rem;
+  }
+}
+.u-pgm-ilus-kecil {
+  width: 3.5rem;
+  margin-block: -0.25rem;
+}
+.u-pgm-toast[data-visual='ilustrasi'] > .u-pgm-tutup {
+  margin-top: 0;
 }
 
 // ---------------------------------------------------------------- toast
@@ -182,42 +220,128 @@
   }
 }
 .u-pgm-bawah {
-  align-items: center;
   border-top: 3px solid var(--u-pgm-nada);
 }
 
 // ---------------------------------------------------------------- popup
+// Popup rata tengah: visual (lingkaran ikon / ilustrasi / gambar) di atas, judul, keterangan, lalu tombol di tengah
+// (mengisi lebar di ponsel). Visual dan judul ada di judul Dialog sehingga nama dialog tetap judulnya.
+.u-pgm-dialog {
+  text-align: center;
+  .u-dialog-header {
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.75rem 1.5rem 0;
+    border-bottom: 0;
+  }
+  .u-dialog-title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    max-width: 100%;
+  }
+  .u-dialog-description {
+    max-width: 30rem;
+    font-size: var(--u-text-base);
+    line-height: 1.55;
+    white-space: pre-line;
+  }
+  .u-dialog-footer {
+    justify-content: center;
+    margin-top: 1.25rem;
+    padding: 0 1.5rem 1.5rem;
+    border-top: 0;
+    background: none;
+    > * {
+      min-width: 7rem;
+    }
+  }
+  // Popup dengan gambar: gambar selebar popup di atas; tombol tutup di atasnya diberi alas agar tetap terbaca.
+  &.u-pgm-dialog-gambar {
+    .u-dialog-header {
+      padding-top: 0;
+    }
+    .u-dialog-close {
+      background: color-mix(in oklab, var(--u-popover) 88%, transparent);
+      box-shadow: var(--u-shadow-sm);
+      backdrop-filter: blur(6px);
+    }
+  }
+}
+.u-pgm-dialog-visual {
+  display: grid;
+  place-items: center;
+  .u-pgm-dialog-gambar & {
+    align-self: stretch;
+    margin-inline: -1.5rem;
+  }
+}
+.u-pgm-dialog-judul {
+  text-wrap: balance;
+}
+.u-pgm-dialog .u-pgm-popup-gambar {
+  max-height: 15rem;
+  border-radius: calc(var(--u-radius) + 6px) calc(var(--u-radius) + 6px) 0 0;
+}
+.u-pgm-dialog .u-pgm-ilus-besar {
+  width: min(12.5rem, 70%);
+  margin-block: -0.5rem -0.25rem;
+}
+// Isi popup di pratinjau formulir (struktur sama, ukuran lebih kecil).
 .u-pgm-popup {
   display: grid;
-  gap: 0.875rem;
+  justify-items: center;
+  gap: 0.5rem;
+  text-align: center;
   p {
     margin: 0;
     color: var(--u-muted-foreground);
-    line-height: 1.55;
+    line-height: 1.5;
+  }
+  .u-pgm-popup-ikon {
+    margin-bottom: 0.25rem;
+  }
+  .u-pgm-ilus-besar {
+    width: min(9rem, 70%);
+    margin-block: -0.25rem;
+  }
+  .u-pgm-popup-gambar {
+    max-height: 8rem;
+    border-radius: var(--u-radius-md);
   }
 }
+.u-pgm-popup-judul {
+  font-weight: 600;
+  line-height: 1.35;
+  text-wrap: balance;
+}
 .u-pgm-popup-gambar {
+  display: block;
   width: 100%;
   max-height: 16rem;
   object-fit: cover;
   border-radius: var(--u-radius-md);
 }
+// Lingkaran ikon: ikon tepat di tengah (grid; pusat optik ikon nada terukur < 0,6px).
 .u-pgm-popup-ikon {
   display: grid;
   place-items: center;
-  width: 3rem;
-  height: 3rem;
+  width: 3.5rem;
+  height: 3.5rem;
   border-radius: 50%;
   background: color-mix(in oklab, var(--u-pgm-nada) 14%, transparent);
-  color: var(--u-pgm-nada);
+  box-shadow: 0 0 0 6px color-mix(in oklab, var(--u-pgm-nada) 6%, transparent);
+  color: color-mix(in oklab, var(--u-pgm-nada) 88%, var(--u-foreground));
   svg {
-    width: 1.5rem;
-    height: 1.5rem;
+    display: block;
+    width: 1.625rem;
+    height: 1.625rem;
   }
 }
 .u-pgm-popup-aksi {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 0.5rem;
 }
 
@@ -236,6 +360,10 @@
   .u-pgm-banner {
     margin-bottom: 0.75rem;
   }
+}
+// Popup bervisual besar (ilustrasi/gambar) butuh layar pratinjau lebih tinggi.
+.u-pgm-pratinjau[data-mode='popup'] .u-pgm-pratinjau-layar {
+  min-height: 26rem;
 }
 .u-pgm-pratinjau-kepala {
   display: flex;
@@ -276,9 +404,9 @@
 }
 .u-pgm-pratinjau-dialog {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.875rem;
   width: min(18rem, 100%);
-  padding: 1rem;
+  padding: 1.25rem 1rem 1rem;
   border-radius: var(--u-radius-lg);
   background: var(--u-popover);
   box-shadow: var(--u-shadow-xl);
@@ -598,6 +726,89 @@
 .u-pgm-perkiraan small {
   display: block;
   font-size: var(--u-text-xs);
+}
+
+// Pilihan ikon (visual Ikon) dan ilustrasi (visual Ilustrasi).
+.u-pgm-ikon-pilih {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.75rem, 1fr));
+  gap: 0.375rem;
+  button {
+    position: relative;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    padding: 0;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-md);
+    background: var(--u-card);
+    color: var(--u-muted-foreground);
+    cursor: pointer;
+    svg {
+      width: 1.125rem;
+      height: 1.125rem;
+    }
+    small {
+      position: absolute;
+      inset: auto 0 0.125rem;
+      font-size: 0.5625rem;
+      line-height: 1;
+    }
+    &:has(small) svg {
+      margin-top: -0.375rem;
+    }
+    &:hover {
+      border-color: var(--u-border-strong);
+      color: var(--u-foreground);
+    }
+    &[data-aktif] {
+      border-color: color-mix(in oklab, var(--u-pgm-nada) 70%, var(--u-border));
+      background: color-mix(in oklab, var(--u-pgm-nada) 12%, var(--u-card));
+      color: color-mix(in oklab, var(--u-pgm-nada) 85%, var(--u-foreground));
+      box-shadow: 0 0 0 1px color-mix(in oklab, var(--u-pgm-nada) 70%, transparent);
+    }
+    &:focus-visible {
+      @include focus-ring;
+    }
+  }
+}
+.u-pgm-ilus-pilih {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+  gap: 0.5rem;
+  button {
+    display: grid;
+    justify-items: center;
+    gap: 0.125rem;
+    padding: 0.375rem 0.375rem 0.5rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-md);
+    background: var(--u-card);
+    color: var(--u-foreground);
+    font: inherit;
+    cursor: pointer;
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    small {
+      font-size: var(--u-text-xs);
+      line-height: 1.3;
+      text-align: center;
+    }
+    &:hover {
+      border-color: var(--u-border-strong);
+    }
+    &[data-aktif] {
+      border-color: var(--u-primary);
+      background: var(--u-primary-soft);
+      box-shadow: 0 0 0 1px var(--u-primary);
+    }
+    &:focus-visible {
+      @include focus-ring;
+    }
+  }
 }
 
 // ---------------------------------------------------------------- kelola

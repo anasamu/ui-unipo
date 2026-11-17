@@ -244,6 +244,8 @@ export interface ItemPita {
   /** Teks tombol tautan (bawaan "Selengkapnya"). */
   cta?: React.ReactNode;
   external?: boolean;
+  /** Ganti ikon bawaan menurut prioritas; null = tanpa ikon. */
+  icon?: React.ReactNode;
 }
 
 export interface PitaPengumumanProps {
@@ -298,9 +300,11 @@ export function PitaPengumuman({ items, interval = 6000, dapatDitutup = true, in
       onBlur={() => setJeda(false)}
     >
       <div className="u-pita-inner">
-        <span className="u-pita-ikon" aria-hidden>
-          {a.priority === 'darurat' ? <Siren /> : a.priority === 'pemeliharaan' ? <Wrench /> : a.priority === 'sukses' ? <CircleCheck /> : a.priority === 'info' ? <Info /> : <Megaphone />}
-        </span>
+        {a.icon !== null && (
+          <span className="u-pita-ikon" aria-hidden>
+            {a.icon ?? (a.priority === 'darurat' ? <Siren /> : a.priority === 'pemeliharaan' ? <Wrench /> : a.priority === 'sukses' ? <CircleCheck /> : a.priority === 'info' ? <Info /> : <Megaphone />)}
+          </span>
+        )}
         <p className="u-pita-teks" key={a.id} aria-live={jeda ? 'off' : 'polite'}>
           <span>{a.title}</span>
           {a.detail && <span className="u-pita-detail">{a.detail}</span>}
