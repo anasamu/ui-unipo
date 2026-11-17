@@ -191,8 +191,8 @@ export function validasiNamaFolder(nama: string, induk?: string | null): string 
   return null;
 }
 
-/** Nama segmen folder dari nama folder di komputer (unggah folder): karakter yang ditolak server diganti "-". */
-function rapikanSegmen(s: string): string {
+/** Nama segmen folder dari nama bebas (folder komputer, nama obrolan): karakter yang ditolak server diganti "-". */
+export function rapikanSegmen(s: string): string {
   const r = s
     .replace(/[^\p{L}\p{N} ._()&,+-]+/gu, '-')
     .replace(/\s+/g, ' ')

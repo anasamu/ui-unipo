@@ -20,6 +20,9 @@ import {
   type KunciPerangkat,
   type KunciPublikPerangkat,
 } from './obrolan-kripto';
+import { unggahKeBerkas, type InfoBerkas } from './berkas';
+import { rapikanSegmen } from './manajer-berkas';
+import { invalidateSiakad } from './provider';
 
 /**
  * Mesin obrolan: satu per instans Siakad, dipakai bersama semua komponen obrolan di halaman (chat mengambang, kotak
@@ -101,7 +104,8 @@ export interface KeadaanObrolan {
   cadanganAda: boolean;
   /** Perangkat ini baru dibuat padahal akun sudah punya cadangan: pesan lama hanya terbaca setelah dipulihkan. */
   sarankanPulihkan: boolean;
-  setelan: { tampil_daring: boolean; tanda_baca: boolean };
+  /** simpan_kirim: salin otomatis berkas yang dikirim ke Berkas saya › Obrolan (bawaan aktif). */
+  setelan: { tampil_daring: boolean; tanda_baca: boolean; simpan_kirim: boolean };
   ruang: Record<string, RuangObrolanData>;
   urutan: string[];
   pesan: Record<string, { daftar: PesanObrolan[]; lagi: boolean; dimuat: boolean; memuat: boolean }>;
@@ -142,7 +146,7 @@ const AWAL: KeadaanObrolan = {
   perangkatSaya: [],
   cadanganAda: false,
   sarankanPulihkan: false,
-  setelan: { tampil_daring: true, tanda_baca: true },
+  setelan: { tampil_daring: true, tanda_baca: true, simpan_kirim: true },
   ruang: {},
   urutan: [],
   pesan: {},
@@ -153,6 +157,27 @@ const AWAL: KeadaanObrolan = {
 };
 
 const P = '/v1/obrolan';
+
+/** Nama panggilan: kata pertama setelah gelar (Dr., Prof., Ir., H., ...). */
+export const namaDepan = (n: string) => n.split(/\s+/).find((k) => k && !k.endsWith('.') && !k.endsWith(',')) ?? n.split(/\s+/)[0] ?? n;
+
+export function lawanDari(r: RuangObrolanData, saya: string): OrangObrolan | null {
+  if (r.jenis !== 'langsung') return null;
+  return r.anggota.find((a) => a.id !== saya) ?? r.anggota[0] ?? null;
+}
+
+/** Nama obrolan: nama lawan bicara (langsung), judul grup, atau nama depan anggota. */
+export function judulRuang(r: RuangObrolanData, saya: string): string {
+  if (r.jenis === 'langsung') return lawanDari(r, saya)?.nama ?? 'Obrolan';
+  return (
+    r.judul ||
+    r.anggota
+      .filter((a) => a.id !== saya)
+      .map((a) => namaDepan(a.nama))
+      .join(', ') ||
+    'Grup'
+  );
+}
 
 function galatTeks(e: unknown): string {
   const x = e as { status?: number; message?: string; details?: Record<string, unknown> } | null;
@@ -289,7 +314,7 @@ export class MesinObrolan {
         perangkatSaya: daftar,
         cadanganAda: saya.cadangan_ada,
         sarankanPulihkan: sarankan,
-        setelan: saya.setelan,
+        setelan: { ...AWAL.setelan, ...saya.setelan },
         lampiranMb: saya.lampiran_mb,
       });
       await this.muatRuang();
@@ -649,6 +674,39 @@ export class MesinObrolan {
     this.setPesan(ruangId, (x) => ({ ...x, daftar: x.daftar.map((q) => (q.uuid === p.uuid ? { ...q, status: 'dihapus', isi: undefined } : q)) }));
   }
 
+  private infoBerkas: Promise<InfoBerkas> | null = null;
+
+  /** Folder tujuan salinan lampiran di Berkas saya: "Obrolan/<nama obrolan atau orang>". */
+  folderBerkas(ruangId: string): string {
+    const r = this.s.ruang[ruangId];
+    return `Obrolan/${rapikanSegmen(r ? judulRuang(r, this.s.saya?.id ?? '') : 'Obrolan')}`;
+  }
+
+  /**
+   * Salin berkas ke Berkas saya › Obrolan/<nama obrolan>. Lampiran didekripsi di browser lalu diunggah biasa ke
+   * /v1/berkas, jadi salinannya TIDAK lagi terenkripsi end-to-end (ikut aturan ruang pribadi manajer berkas).
+   */
+  async simpanKeBerkas(ruangId: string, berkas: Array<File | NonNullable<IsiPesan['berkas']>[number]>): Promise<{ folder: string; jumlah: number }> {
+    const folder = this.folderBerkas(ruangId);
+    if (!this.infoBerkas) {
+      this.infoBerkas = this.siakad.request<InfoBerkas>({ method: 'GET', path: '/v1/berkas/info' }).then((x) => x.data);
+      this.infoBerkas.catch(() => (this.infoBerkas = null));
+    }
+    const info = await this.infoBerkas;
+    let jumlah = 0;
+    try {
+      for (const b of berkas) {
+        const f = b instanceof File ? b : new File([await (await fetch(await this.unduhBerkas(b))).blob()], b.nama, { type: b.mime });
+        if (f.size > info.maks_byte) throw new Error(`${f.name} lebih dari batas Berkas saya (${Math.floor(info.maks_byte / 1048576)} MB).`);
+        await unggahKeBerkas(this.siakad, info, f, { folder });
+        jumlah++;
+      }
+    } finally {
+      if (jumlah) invalidateSiakad('berkas');
+    }
+    return { folder, jumlah };
+  }
+
   /** URL objek (blob:) berkas lampiran yang sudah didekripsi. */
   unduhBerkas(b: NonNullable<IsiPesan['berkas']>[number]): Promise<string> {
     let u = this.urlBerkas.get(b.id);
@@ -764,7 +822,7 @@ export class MesinObrolan {
 
   async simpanSetelan(ubah: Partial<KeadaanObrolan['setelan']>) {
     const s = await this.req<KeadaanObrolan['setelan']>('POST', '/setelan', { body: ubah });
-    this.set({ setelan: s });
+    this.set({ setelan: { ...AWAL.setelan, ...s } });
   }
 
   async muatPerangkat() {

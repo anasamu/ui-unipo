@@ -858,6 +858,44 @@
     @include focus-ring;
   }
 }
+// Lampiran dokumen + tombol "Simpan ke Berkas saya" di sebelahnya.
+.u-ob-berkas-kotak {
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+  width: min(17rem, 68cqi);
+  > .u-ob-berkas {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+}
+.u-ob-berkas-simpan {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.75rem;
+  background: color-mix(in oklab, currentColor 9%, transparent);
+  color: inherit;
+  cursor: pointer;
+  svg {
+    width: 1rem;
+    height: 1rem;
+    opacity: 0.8;
+  }
+  &:hover:not(:disabled) {
+    background: color-mix(in oklab, currentColor 14%, transparent);
+  }
+  &:disabled {
+    cursor: progress;
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
 .u-ob-berkas-ikon {
   display: grid;
   place-items: center;

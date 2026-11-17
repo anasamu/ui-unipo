@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.46.0 (2026-11-17)
+
+- **Lampiran obrolan ke Berkas saya** (`unipo-ui/siakad`): tombol "Simpan ke Berkas saya" di setiap lampiran dokumen, di pratinjau gambar, dan di menu pesan berlampiran. Lampiran didekripsi di browser lalu diunggah ke `Berkas saya › Obrolan/<nama obrolan atau orang>`. Berkas yang dikirim pengguna juga disalin otomatis (bawaan aktif; matikan di Pengaturan obrolan → Berkas, `setelan.simpan_kirim`, butuh SIAKAD dengan tabel `obrolan_setelan_berkas`). Salinan tidak lagi terenkripsi end-to-end dan ini disebutkan di UI. Gagal menyalin hanya memunculkan toast peringatan dan tidak pernah menghalangi pengiriman.
+
 ## 1.45.0 (2026-11-17)
 
 - **`KerangkaAplikasi`** (`unipo-ui/siakad`): kerangka bawaan semua aplikasi dasbor dalam satu komponen, mengikuti header BAUK. Sidebar dengan logo + nama aplikasi yang bisa diklik ke beranda dan tombol ciutkan; bilah atas berisi judul halaman, pencarian fitur, ikon notifikasi, ikon pesan masuk, tombol tema, dan `MenuAkunSiakad`; navigasi bawah di ponsel dan `ChatMengambang`. Semua aplikasi React UNIPO memakainya agar tampilan sama.

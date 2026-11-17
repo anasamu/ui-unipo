@@ -16,6 +16,7 @@ import {
   Download,
   EllipsisVertical,
   FileText,
+  FolderDown,
   Hourglass,
   Info,
   KeyRound,
@@ -45,10 +46,10 @@ import {
 import { Badge, Button, Skeleton, Spinner } from '../components/actions';
 import { Alert, Avatar, Empty, Tabs } from '../components/display';
 import { Checkbox, Field, Input, InputGroup, SegmentedControl, Switch } from '../components/forms';
-import { ConfirmDialog, Dialog, Menu, Popover, Tooltip, type MenuEntry } from '../components/overlays';
+import { ConfirmDialog, Dialog, Menu, Popover, Tooltip, useToast, type MenuEntry } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { formatBytes } from '../lib/format';
-import { mesinObrolan, type KeadaanObrolan, type MesinObrolan, type OrangObrolan, type PesanObrolan, type RuangObrolanData } from './obrolan-mesin';
+import { judulRuang, lawanDari, mesinObrolan, namaDepan, type KeadaanObrolan, type MesinObrolan, type OrangObrolan, type PesanObrolan, type RuangObrolanData } from './obrolan-mesin';
 import type { IsiPesan } from './obrolan-kripto';
 import { pesanGalat, useSiakad } from './provider';
 import { TabKabar } from './notifikasi';
@@ -155,26 +156,6 @@ function terakhirAktif(s: string | null): string {
   if (menit < 60) return `aktif ${menit} menit lalu`;
   if (menit < 24 * 60) return `aktif ${Math.round(menit / 60)} jam lalu`;
   return `aktif ${waktuSingkat(s).toLowerCase()}`;
-}
-
-/** Nama panggilan: kata pertama setelah gelar (Dr., Prof., Ir., H., ...). */
-const namaDepan = (n: string) => n.split(/\s+/).find((k) => k && !k.endsWith('.') && !k.endsWith(',')) ?? n.split(/\s+/)[0] ?? n;
-
-function lawanDari(r: RuangObrolanData, saya: string): OrangObrolan | null {
-  if (r.jenis !== 'langsung') return null;
-  return r.anggota.find((a) => a.id !== saya) ?? r.anggota[0] ?? null;
-}
-
-function judulRuang(r: RuangObrolanData, saya: string): string {
-  if (r.jenis === 'langsung') return lawanDari(r, saya)?.nama ?? 'Obrolan';
-  return (
-    r.judul ||
-    r.anggota
-      .filter((a) => a.id !== saya)
-      .map((a) => namaDepan(a.nama))
-      .join(', ') ||
-    'Grup'
-  );
 }
 
 function cuplikan(p: PesanObrolan | null, r: RuangObrolanData, saya: string): string {
@@ -492,6 +473,36 @@ export function DaftarObrolan({ aktif, onPilih, className }: DaftarObrolanProps)
 
 type Berkas = NonNullable<IsiPesan['berkas']>[number];
 
+/**
+ * Salin lampiran (atau File yang baru dikirim) ke Berkas saya › Obrolan/<nama obrolan>. Hasil dan galat tampil sebagai
+ * toast; tidak pernah melempar, jadi aman dipanggil tanpa ditunggu (mis. setelah pesan terkirim).
+ */
+function useSimpanKeBerkas() {
+  const mesin = useMesin();
+  const toast = useToast();
+  const [proses, setProses] = React.useState(false);
+  const simpan = React.useCallback(
+    async (ruangId: string, berkas: Array<File | Berkas>, otomatis = false) => {
+      if (!berkas.length) return;
+      setProses(true);
+      try {
+        const { folder } = await mesin.simpanKeBerkas(ruangId, berkas);
+        toast.add({
+          type: 'success',
+          title: otomatis ? 'Salinan disimpan ke Berkas saya' : berkas.length > 1 ? `${berkas.length} berkas disimpan ke Berkas saya` : 'Disimpan ke Berkas saya',
+          description: `${folder}. Salinan ini tidak terenkripsi end-to-end.`,
+        });
+      } catch (e) {
+        toast.add({ type: 'warning', title: otomatis ? 'Pesan terkirim, salinan ke Berkas saya gagal' : 'Gagal menyimpan ke Berkas saya', description: pesanGalat(e) });
+      } finally {
+        setProses(false);
+      }
+    },
+    [mesin, toast],
+  );
+  return { simpan, proses };
+}
+
 function useUrlLampiran(b: Berkas, aktif = true) {
   const mesin = useMesin();
   const [url, setUrl] = React.useState<string | null>(null);
@@ -526,8 +537,9 @@ function GambarLampiran({ b, onLihat }: { b: Berkas; onLihat: (b: Berkas) => voi
   );
 }
 
-function BerkasLampiran({ b }: { b: Berkas }) {
+function BerkasLampiran({ b, ruangId }: { b: Berkas; ruangId: string }) {
   const mesin = useMesin();
+  const { simpan, proses } = useSimpanKeBerkas();
   const [memuat, setMemuat] = React.useState(false);
   const [galat, setGalat] = React.useState<string | null>(null);
   const unduh = async () => {
@@ -546,21 +558,29 @@ function BerkasLampiran({ b }: { b: Berkas }) {
     }
   };
   return (
-    <button type="button" className="u-ob-berkas" onClick={unduh} disabled={memuat} title={galat ?? undefined}>
-      <span className="u-ob-berkas-ikon" aria-hidden>
-        <FileText />
-      </span>
-      <span className="u-ob-berkas-teks">
-        <span className="u-ob-berkas-nama">{b.nama}</span>
-        <span className="u-ob-berkas-sub">{galat ? 'Gagal mengunduh, coba lagi' : `${formatBytes(b.ukuran)} · ${(b.nama.split('.').pop() ?? '').toUpperCase()}`}</span>
-      </span>
-      {memuat ? <Spinner size="sm" /> : <Download aria-hidden />}
-    </button>
+    <span className="u-ob-berkas-kotak">
+      <button type="button" className="u-ob-berkas" onClick={unduh} disabled={memuat} title={galat ?? undefined}>
+        <span className="u-ob-berkas-ikon" aria-hidden>
+          <FileText />
+        </span>
+        <span className="u-ob-berkas-teks">
+          <span className="u-ob-berkas-nama">{b.nama}</span>
+          <span className="u-ob-berkas-sub">{galat ? 'Gagal mengunduh, coba lagi' : `${formatBytes(b.ukuran)} · ${(b.nama.split('.').pop() ?? '').toUpperCase()}`}</span>
+        </span>
+        {memuat ? <Spinner size="sm" /> : <Download aria-hidden />}
+      </button>
+      <Tooltip content="Simpan ke Berkas saya (salinan tidak terenkripsi end-to-end)">
+        <button type="button" className="u-ob-berkas-simpan" aria-label={`Simpan ${b.nama} ke Berkas saya`} disabled={proses} onClick={(e) => (e.stopPropagation(), void simpan(ruangId, [b]))}>
+          {proses ? <Spinner size="sm" /> : <FolderDown aria-hidden />}
+        </button>
+      </Tooltip>
+    </span>
   );
 }
 
-function LihatGambar({ b, onTutup }: { b: Berkas | null; onTutup: () => void }) {
+function LihatGambar({ b, ruangId, onTutup }: { b: Berkas | null; ruangId: string; onTutup: () => void }) {
   const { url } = useUrlLampiran(b ?? ({ id: '' } as Berkas), Boolean(b));
+  const { simpan, proses } = useSimpanKeBerkas();
   return (
     <Dialog
       open={Boolean(b)}
@@ -569,9 +589,14 @@ function LihatGambar({ b, onTutup }: { b: Berkas | null; onTutup: () => void }) 
       size="xl"
       footer={
         url && b ? (
-          <Button render={<a href={url} download={b.nama} />} variant="outline">
-            <Download aria-hidden /> Unduh
-          </Button>
+          <>
+            <Button variant="ghost" loading={proses} onClick={() => void simpan(ruangId, [b])}>
+              <FolderDown aria-hidden /> Simpan ke Berkas saya
+            </Button>
+            <Button render={<a href={url} download={b.nama} />} variant="outline">
+              <Download aria-hidden /> Unduh
+            </Button>
+          </>
         ) : undefined
       }
     >
@@ -618,9 +643,13 @@ const Gelembung = React.memo(function Gelembung({ p, r, saya, awalKelompok, akhi
   const lain = isi?.berkas?.filter((b) => !gambar.includes(b)) ?? [];
   const st = milikSaya && p.status !== 'dihapus' ? statusBaca(p, r, saya) : null;
   const [salin, setSalin] = React.useState(false);
+  const { simpan } = useSimpanKeBerkas();
 
   const menu: MenuEntry[] = [
     { label: 'Balas', icon: <Reply />, onSelect: onBalas },
+    ...(isi?.berkas?.length
+      ? [{ label: isi.berkas.length > 1 ? `Simpan ${isi.berkas.length} lampiran ke Berkas saya` : 'Simpan ke Berkas saya', icon: <FolderDown />, onSelect: () => void simpan(r.id, isi.berkas ?? []) }]
+      : []),
     ...(isi?.isi
       ? [
           {
@@ -686,7 +715,7 @@ const Gelembung = React.memo(function Gelembung({ p, r, saya, awalKelompok, akhi
                 </div>
               )}
               {[...lain, ...gambar.slice(4)].map((b) => (
-                <BerkasLampiran key={b.id} b={b} />
+                <BerkasLampiran key={b.id} b={b} ruangId={r.id} />
               ))}
               {isi.isi && (
                 <span className="u-ob-teks">
@@ -1139,6 +1168,7 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
   const [berkas, setBerkas] = React.useState<File[]>([]);
   const [unggah, setUnggah] = React.useState(false);
   const [galatKirim, setGalatKirim] = React.useState<string | null>(null);
+  const { simpan: simpanBerkas } = useSimpanKeBerkas();
   const [hapus, setHapus] = React.useState<PesanObrolan | null>(null);
   const [lihat, setLihat] = React.useState<Berkas | null>(null);
   const [info, setInfo] = React.useState(false);
@@ -1199,6 +1229,8 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
       setUnggah(true);
       try {
         await mesin.kirimBerkas(id, f, t, b);
+        // Salinan ke Berkas saya setelah terkirim, tanpa ditunggu: gagal menyimpan tidak menghalangi pengiriman.
+        if (mesin.keadaan.setelan.simpan_kirim) void simpanBerkas(id, f, true);
       } catch (e) {
         if (!x?.daftar.some((p) => p.status === 'gagal')) setGalatKirim(pesanGalat(e));
         setBerkas(f);
@@ -1517,7 +1549,7 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
       )}
 
       <InfoRuang r={r} open={info} onOpenChange={setInfo} onKeluar={() => onKembali?.()} />
-      <LihatGambar b={lihat} onTutup={() => setLihat(null)} />
+      <LihatGambar b={lihat} ruangId={id} onTutup={() => setLihat(null)} />
       <ConfirmDialog
         open={Boolean(hapus)}
         onOpenChange={(o) => !o && setHapus(null)}
@@ -1538,10 +1570,10 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
 export interface PengaturanObrolanProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tab?: 'perangkat' | 'cadangan' | 'privasi' | 'blokir';
+  tab?: 'perangkat' | 'cadangan' | 'privasi' | 'berkas' | 'blokir';
 }
 
-/** Perangkat tertaut, cadangan kunci (dengan sandi), privasi (status daring, tanda dibaca), dan daftar blokir. */
+/** Perangkat tertaut, cadangan kunci (dengan sandi), privasi (status daring, tanda dibaca), salinan lampiran ke Berkas saya, dan daftar blokir. */
 export function PengaturanObrolan({ open, onOpenChange, tab: tabAwal = 'perangkat' }: PengaturanObrolanProps) {
   const { mesin, keadaan: k } = useObrolan();
   const [tab, setTab] = React.useState(tabAwal);
@@ -1703,6 +1735,26 @@ export function PengaturanObrolan({ open, onOpenChange, tab: tabAwal = 'perangka
                   </span>
                   <Switch checked={k.setelan.tanda_baca} onCheckedChange={(v) => void jalan('setelan', () => mesin.simpanSetelan({ tanda_baca: v }))} />
                 </label>
+              </div>
+            ),
+          },
+          {
+            value: 'berkas',
+            label: 'Berkas',
+            content: (
+              <div className="u-ob-atur">
+                <label className="u-ob-info-saklar">
+                  <span>
+                    <strong>Simpan otomatis berkas yang saya kirim</strong>
+                    <small>Setiap berkas yang Anda kirim juga disalin ke Berkas saya › Obrolan › nama obrolan. Pesan tetap terkirim walau penyalinan gagal.</small>
+                  </span>
+                  <Switch checked={k.setelan.simpan_kirim} onCheckedChange={(v) => void jalan('setelan', () => mesin.simpanSetelan({ simpan_kirim: v }))} />
+                </label>
+                <Alert variant="warning" icon={<FolderDown />}>
+                  Salinan di Berkas saya tidak terenkripsi end-to-end: berkas didekripsi di browser ini lalu disimpan seperti berkas biasa (ikut aturan dan enkripsi manajer berkas). Lampiran di obrolan
+                  tetap terenkripsi end-to-end.
+                </Alert>
+                <p className="u-ob-petunjuk">Berkas dari orang lain bisa disimpan lewat tombol Simpan ke Berkas saya pada lampiran atau menu pesan.</p>
               </div>
             ),
           },

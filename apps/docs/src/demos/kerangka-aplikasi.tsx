@@ -139,7 +139,7 @@ export function Lengkap() {
         tema={tema}
         onTema={setTema}
         onKeluar={() => alert('Keluar dari semua aplikasi')}
-        versi="1.45.0"
+        versi="1.46.0"
       >
         <div style={{ display: 'grid', gap: 16 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
