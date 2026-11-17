@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { BadgeCheck, Search, ShieldAlert } from 'lucide-react';
+import { BadgeCheck, ChevronRight, GraduationCap, Search, ShieldAlert, Users } from 'lucide-react';
 import { Badge, type BadgeVariant } from '../components/actions';
 import { Input, InputGroup } from '../components/forms';
 import { cn } from '../lib/cn';
@@ -227,13 +227,13 @@ export function BarisProdi({ prodi, ringkas, className }: { prodi: ProdiReferens
     <span className={cn('u-baris-prodi', className)}>
       <LogoFakultas kode={prodi.kode_fak ?? (prodi.kode_fakultas as string | undefined)} nama={prodi.nama_fakultas} ukuran={ringkas ? 'sm' : 'md'} />
       <span className="u-baris-prodi-teks">
-        <span className="u-baris-prodi-judul">
-          {jenjang && <span className="u-baris-prodi-jenjang">{jenjang}</span>}
-          <span className="u-baris-prodi-nama">{namaRapi(prodi.nama_prodi)}</span>
+        <span className="u-baris-prodi-meta">{[namaRapi(prodi.nama_fakultas), prodi.kode_prodi].filter(Boolean).join(' · ')}</span>
+        <span className="u-baris-prodi-nama" title={namaRapi(prodi.nama_prodi)}>
+          {namaRapi(prodi.nama_prodi)}
         </span>
-        <span className="u-baris-prodi-meta">{[prodi.kode_prodi, namaRapi(prodi.nama_fakultas)].filter(Boolean).join(' · ')}</span>
       </span>
       <span className="u-baris-prodi-lencana">
+        {jenjang && <span className="u-baris-prodi-jenjang">{jenjang}</span>}
         <LencanaAkreditasi prodi={prodi} ringkas />
         {st && <Badge variant={st.tone}>{st.label}</Badge>}
       </span>
@@ -353,6 +353,9 @@ export function useProdiDariKode(kode?: string | null): ProdiReferensi | undefin
   return usePetaProdi(!!kode).get(String(kode ?? ''));
 }
 
+/** Varian tampilan identitas prodi. */
+export type VarianLabelProdi = 'baku' | 'ringkas' | 'kartu' | 'header' | 'sidebar' | 'chip' | 'daftar' | 'vertikal';
+
 export interface LabelProdiProps {
   /** Kode prodi; jenjang, fakultas, logo, dan akreditasi dilengkapi dari /v1/referensi/prodi (cache bersama). */
   kode?: string | null;
@@ -360,19 +363,51 @@ export interface LabelProdiProps {
   nama?: string | null;
   /** Baris prodi lengkap bila sudah ada; tanpa permintaan tambahan. */
   prodi?: Partial<ProdiReferensi> | null;
+  /**
+   * Tampilan:
+   * - `baku` (bawaan): fakultas kecil di atas, nama prodi tebal di bawah, lencana jenjang + akreditasi di kanan.
+   * - `ringkas`: satu baris, logo kecil ("S1 Informatika" + akreditasi), untuk tabel padat.
+   * - `kartu`: kartu berbingkai dengan masa berlaku dan nomor SK akreditasi.
+   * - `header`: besar, untuk kepala halaman/portal prodi.
+   * - `sidebar`: rapat untuk brand sidebar.
+   * - `chip`: pil sebaris di dalam teks atau sel tabel.
+   * - `daftar`: baris daftar dengan panah, bisa diklik.
+   * - `vertikal`: logo di atas, rata tengah, untuk kisi.
+   */
+  varian?: VarianLabelProdi;
   /** Tampilkan lencana akreditasi. Bawaan true. */
   akreditasi?: boolean;
-  /** Baris kedua: `fakultas` (bawaan), `kode`, atau isi sendiri. false = tanpa baris kedua. */
+  /** Baris fakultas: `fakultas` (bawaan), `kode`, atau isi sendiri. false = tanpa baris itu. */
   sub?: 'fakultas' | 'kode' | React.ReactNode | false;
-  ukuran?: 'sm' | 'md';
+  ukuran?: 'sm' | 'md' | 'lg';
+  /** Bentuk logo fakultas. Bawaan kotak membulat. */
+  bentukLogo?: 'kotak' | 'bulat';
+  /** Angka opsional (mis. jumlah mahasiswa aktif dan dosen) di bawah identitas. */
+  statistik?: { mahasiswa?: number | null; dosen?: number | null };
+  /** Varian `daftar`/`kartu`/`chip` sebagai tombol atau tautan. */
+  onClick?: () => void;
+  href?: string;
   className?: string;
 }
 
+const UKURAN_LOGO: Record<VarianLabelProdi, Record<'sm' | 'md' | 'lg', 'sm' | 'md' | 'lg'>> = {
+  baku: { sm: 'sm', md: 'md', lg: 'lg' },
+  ringkas: { sm: 'sm', md: 'sm', lg: 'md' },
+  kartu: { sm: 'md', md: 'lg', lg: 'lg' },
+  header: { sm: 'md', md: 'lg', lg: 'lg' },
+  sidebar: { sm: 'sm', md: 'sm', lg: 'md' },
+  chip: { sm: 'sm', md: 'sm', lg: 'sm' },
+  daftar: { sm: 'sm', md: 'md', lg: 'lg' },
+  vertikal: { sm: 'md', md: 'lg', lg: 'lg' },
+};
+const angka = (n: number) => n.toLocaleString('id-ID');
+
 /**
- * Nama program studi siap pakai di tabel, kartu, profil, dan daftar: logo fakultas, "S1 Teknik Sipil", fakultas, dan
- * lencana akreditasi (dengan peringatan masa berlaku). Cukup isi `kode`; data lain dilengkapi otomatis lewat SDK.
+ * Identitas program studi siap pakai di tabel, kartu, kepala halaman, sidebar, dan daftar: logo fakultas, nama
+ * fakultas, nama prodi, lencana jenjang (S1, D3) dan akreditasi (dengan peringatan masa berlaku). Cukup isi `kode`;
+ * data lain dilengkapi otomatis lewat SDK. Pilih tampilan lewat `varian`.
  */
-export function LabelProdi({ kode, nama, prodi, akreditasi = true, sub = 'fakultas', ukuran = 'sm', className }: LabelProdiProps) {
+export function LabelProdi({ kode, nama, prodi, varian = 'baku', akreditasi = true, sub = 'fakultas', ukuran = 'md', bentukLogo = 'kotak', statistik, onClick, href, className }: LabelProdiProps) {
   const k = String(prodi?.kode_prodi ?? kode ?? '');
   const lengkap = !!prodi && prodi.kode_akreditasi !== undefined && prodi.kode_jenjang !== undefined;
   const peta = usePetaProdi(!lengkap && !!k);
@@ -382,23 +417,77 @@ export function LabelProdi({ kode, nama, prodi, akreditasi = true, sub = 'fakult
   const kodeFak = (p.kode_fak ?? (p.kode_fakultas as string | undefined)) || null;
   const baris2 = sub === false ? null : sub === 'fakultas' ? namaRapi(p.nama_fakultas) || null : sub === 'kode' ? k || null : sub;
   const adaAkred = akreditasi && (p.kode_akreditasi !== undefined || p.tgl_akhir_sk_ban !== undefined);
-  return (
-    <span className={cn('u-label-prodi', className)} data-ukuran={ukuran}>
-      {kodeFak || p.nama_fakultas ? (
-        <LogoFakultas kode={kodeFak} nama={p.nama_fakultas} ukuran="sm" />
-      ) : (
-        <span className="u-logo-fak" data-ukuran="sm" data-monogram style={{ '--u-logo-fak-h': hue(k || namaP) } as React.CSSProperties}>
-          <span aria-hidden>{jenjang || 'PS'}</span>
-        </span>
-      )}
-      <span className="u-label-prodi-teks">
-        <span className="u-label-prodi-judul">
-          {jenjang && <span className="u-baris-prodi-jenjang">{jenjang}</span>}
-          <span className="u-label-prodi-nama">{namaP || '–'}</span>
-          {adaAkred && <LencanaAkreditasi prodi={p as ProdiReferensi} ringkas />}
-        </span>
-        {baris2 && <span className="u-label-prodi-sub">{baris2}</span>}
+  const info = adaAkred ? akreditasiProdi(p as ProdiReferensi) : null;
+  const satuBaris = varian === 'ringkas' || varian === 'chip';
+  const logo =
+    kodeFak || p.nama_fakultas ? (
+      <LogoFakultas kode={kodeFak} nama={p.nama_fakultas} ukuran={UKURAN_LOGO[varian][ukuran]} />
+    ) : (
+      <span className="u-logo-fak" data-ukuran={UKURAN_LOGO[varian][ukuran]} data-monogram style={{ '--u-logo-fak-h': hue(k || namaP) } as React.CSSProperties}>
+        <span aria-hidden>{jenjang || 'PS'}</span>
       </span>
-    </span>
+    );
+  const lencana =
+    jenjang || adaAkred ? (
+      <span className="u-label-prodi-lencana">
+        {jenjang && <span className="u-baris-prodi-jenjang">{jenjang}</span>}
+        {adaAkred && <LencanaAkreditasi prodi={p as ProdiReferensi} ringkas />}
+      </span>
+    ) : null;
+  const stat =
+    statistik && (statistik.mahasiswa != null || statistik.dosen != null) ? (
+      <span className="u-label-prodi-stat">
+        {statistik.mahasiswa != null && (
+          <span>
+            <GraduationCap aria-hidden /> <b>{angka(statistik.mahasiswa)}</b> mahasiswa
+          </span>
+        )}
+        {statistik.dosen != null && (
+          <span>
+            <Users aria-hidden /> <b>{angka(statistik.dosen)}</b> dosen
+          </span>
+        )}
+      </span>
+    ) : null;
+  const masaBerlaku =
+    varian === 'kartu' && info && info.keadaan !== 'belum' ? (
+      <span className="u-label-prodi-sk">
+        {info.berlakuSampai ? `Akreditasi berlaku sampai ${formatDate(info.berlakuSampai)}` : 'Masa berlaku akreditasi tidak tercatat'}
+        {p.no_sk_ban && p.no_sk_ban !== '0' ? ` · SK ${p.no_sk_ban}` : ''}
+      </span>
+    ) : null;
+  const isi = (
+    <>
+      {logo}
+      <span className="u-label-prodi-teks">
+        {satuBaris ? (
+          <span className="u-label-prodi-nama" title={[namaP, baris2].filter((x) => typeof x === 'string').join(' · ') || undefined}>
+            {varian === 'chip' && jenjang ? `${jenjang} ${namaP}` : namaP || '–'}
+          </span>
+        ) : (
+          <>
+            {baris2 && <span className="u-label-prodi-sub">{baris2}</span>}
+            <span className="u-label-prodi-nama" title={namaP || undefined}>
+              {namaP || '–'}
+            </span>
+          </>
+        )}
+        {varian !== 'vertikal' && masaBerlaku}
+        {varian !== 'vertikal' && varian !== 'chip' && varian !== 'ringkas' && stat}
+      </span>
+      {varian === 'chip' ? info && <span className="u-label-prodi-titik" data-tone={info.tone} title={info.label} aria-label={info.label} /> : lencana}
+      {varian === 'vertikal' && masaBerlaku}
+      {varian === 'vertikal' && stat}
+      {varian === 'daftar' && <ChevronRight className="u-label-prodi-panah" aria-hidden />}
+    </>
   );
+  const atribut = {
+    className: cn('u-label-prodi', className),
+    'data-varian': varian,
+    'data-ukuran': ukuran,
+    'data-logo': bentukLogo === 'bulat' ? 'bulat' : undefined,
+  };
+  if (href) return <a {...atribut} href={href}>{isi}</a>;
+  if (onClick) return <button type="button" {...atribut} onClick={onClick}>{isi}</button>;
+  return <span {...atribut}>{isi}</span>;
 }
