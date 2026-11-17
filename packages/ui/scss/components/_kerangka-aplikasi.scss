@@ -1111,3 +1111,33 @@
     margin: 0;
   }
 }
+
+// Halaman kotak masuk notifikasi (KotakNotifikasi)
+.u-kotak-notif {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 48rem;
+  .u-kabar-tab {
+    padding: 0;
+    border: 0;
+  }
+  .u-kabar-daftar {
+    padding: 0.5rem;
+    border: 1px solid var(--u-border);
+    border-radius: calc(var(--u-radius) + 4px);
+    background: var(--u-card);
+    box-shadow: var(--u-elevation-card);
+    overflow: visible;
+  }
+}
+.u-kotak-notif-kepala {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.u-kotak-notif-lagi {
+  justify-self: center;
+  margin: 0.5rem auto 0.25rem;
+}

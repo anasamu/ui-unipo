@@ -347,3 +347,135 @@ export function TabKabar({ nilai, onUbah, belum }: { nilai: 'semua' | 'belum'; o
     </div>
   );
 }
+
+// ================================================================ Halaman kotak masuk
+
+export interface KotakNotifikasiProps {
+  /** Navigasi jalur internal saat notifikasi dibuka. */
+  onNavigasi?: (href: string) => void;
+  /** Saring per modul pengirim (mis. "lms"); kosong = semua modul. */
+  modul?: string;
+  /** Jumlah per halaman. Bawaan 20. */
+  perHalaman?: number;
+  className?: string;
+}
+
+/**
+ * Halaman kotak masuk notifikasi pusat (/v1/notif/kotak) untuk rute /notifikasi tiap aplikasi: tab Semua | Belum dibaca,
+ * dikelompokkan per hari, tandai dibaca per baris atau semua, muat lebih banyak.
+ */
+export function KotakNotifikasi({ onNavigasi, modul, perHalaman = 20, className }: KotakNotifikasiProps) {
+  const siakad = useOptionalSiakad();
+  const [tab, setTab] = React.useState<'semua' | 'belum'>('semua');
+  const [daftar, setDaftar] = React.useState<Notifikasi[] | null>(null);
+  const [halaman, setHalaman] = React.useState(1);
+  const [adaLagi, setAdaLagi] = React.useState(false);
+  const [memuat, setMemuat] = React.useState(false);
+  const [galat, setGalat] = React.useState<string | null>(null);
+  const n = useNotifikasi({ interval: 0 });
+
+  React.useEffect(() => {
+    if (!siakad) return;
+    const ctrl = new AbortController();
+    setMemuat(true);
+    setGalat(null);
+    const query: Record<string, string> = { per_page: String(perHalaman), page: String(halaman) };
+    if (tab === 'belum') query.belum = '1';
+    if (modul) query.modul = modul;
+    siakad
+      .request<Notifikasi[]>({ method: 'GET', path: `${P}/kotak`, query }, { signal: ctrl.signal })
+      .then((r) => {
+        const data = Array.isArray(r.data) ? r.data : [];
+        setDaftar((d) => (halaman === 1 ? data : [...(d ?? []), ...data.filter((x) => !(d ?? []).some((y) => y.id === x.id))]));
+        const meta = r.meta as { page?: number; total_pages?: number } | undefined;
+        setAdaLagi(meta?.total_pages !== undefined ? (meta.page ?? halaman) < meta.total_pages : data.length === perHalaman);
+      })
+      .catch((e) => !ctrl.signal.aborted && setGalat(diam(e) ? 'Akun ini belum punya akses notifikasi.' : String((e as Error)?.message ?? e)))
+      .finally(() => !ctrl.signal.aborted && setMemuat(false));
+    return () => ctrl.abort();
+  }, [siakad, tab, halaman, modul, perHalaman]);
+
+  const gantiTab = (v: 'semua' | 'belum') => {
+    setTab(v);
+    setHalaman(1);
+    setDaftar(null);
+  };
+  const baca = async (x: Notifikasi) => {
+    setDaftar((d) => d?.map((y) => (y.id === x.id ? { ...y, dibaca_pada: y.dibaca_pada ?? new Date().toISOString() } : y)) ?? d);
+    await n.baca(x);
+  };
+  const bacaSemua = async () => {
+    setDaftar((d) => d?.map((y) => ({ ...y, dibaca_pada: y.dibaca_pada ?? new Date().toISOString() })) ?? d);
+    await n.bacaSemua();
+  };
+  const ada = (daftar ?? []).filter((x) => tab === 'semua' || !x.dibaca_pada);
+  return (
+    <div className={cn('u-kotak-notif', className)}>
+      <div className="u-kotak-notif-kepala">
+        <TabKabar nilai={tab} onUbah={gantiTab} belum={n.belum} />
+        {n.belum > 0 && (
+          <Button variant="outline" size="sm" onClick={() => void bacaSemua()}>
+            <CheckCheck /> Tandai semua dibaca
+          </Button>
+        )}
+      </div>
+      {galat ? (
+        <Empty icon={<BellOff />} title="Notifikasi tidak dapat dimuat" description={galat} />
+      ) : daftar === null ? (
+        <div className="u-kabar-daftar" aria-busy>
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} height={56} />
+          ))}
+        </div>
+      ) : ada.length ? (
+        <div className="u-kabar-daftar">
+          {kelompokHari(ada).map((g) => (
+            <div key={g.label} role="group" aria-label={g.label} className="u-kabar-grup">
+              <div className="u-kabar-sub">{g.label}</div>
+              {g.items.map((x) => (
+                <div key={x.id} className="u-kabar-item" data-belum={x.dibaca_pada ? undefined : ''}>
+                  <button
+                    type="button"
+                    className="u-kabar-item-utama"
+                    onClick={() => {
+                      void baca(x);
+                      if (x.tautan) bukaTautan(x.tautan, onNavigasi);
+                    }}
+                  >
+                    <span className="u-kabar-ikon" aria-hidden>
+                      {ikonModulNotifikasi(x.modul)}
+                    </span>
+                    <span className="u-kabar-item-teks">
+                      <span className="u-kabar-item-atas">
+                        <b>{x.judul}</b>
+                        <time dateTime={x.created_at}>{waktuRelatif(x.created_at)}</time>
+                      </span>
+                      {x.isi && <span className="u-kabar-item-isi">{x.isi}</span>}
+                      {x.modul && <span className="u-kabar-item-modul">{x.modul}</span>}
+                    </span>
+                  </button>
+                  {!x.dibaca_pada && (
+                    <Button variant="ghost" size="xs" iconOnly className="u-kabar-item-aksi" aria-label={`Tandai dibaca: ${x.judul}`} onClick={() => void baca(x)}>
+                      <Check />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+          {adaLagi && (
+            <Button variant="ghost" size="sm" className="u-kotak-notif-lagi" loading={memuat} onClick={() => setHalaman((h) => h + 1)}>
+              Muat lebih banyak
+            </Button>
+          )}
+        </div>
+      ) : (
+        <Empty
+          icon={<BellOff />}
+          title={tab === 'belum' ? 'Semua sudah dibaca' : 'Tidak ada notifikasi'}
+          description={tab === 'belum' ? 'Notifikasi baru akan tampil di sini.' : 'Pemberitahuan dari semua aplikasi UNIPO tampil di sini.'}
+        />
+      )}
+    </div>
+  );
+}
