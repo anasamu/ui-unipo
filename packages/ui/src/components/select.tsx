@@ -107,6 +107,8 @@ export interface ComboboxProps<T> {
   itemKey: (item: T) => string;
   /** Tampilan satu butir di daftar. Bawaan: teks dari itemToString. */
   renderItem?: (item: T) => React.ReactNode;
+  /** Kelompokkan butir statis (`items`) dengan judul kelompok, mis. per unit. Urutan kelompok mengikuti butir pertama. */
+  itemGroup?: (item: T) => string | null | undefined;
   value?: T | null;
   defaultValue?: T | null;
   onValueChange?: (value: T | null) => void;
@@ -169,6 +171,7 @@ export function Combobox<T>({
   id,
   errorText = 'Data tidak bisa dimuat. Coba lagi.',
   tambah,
+  itemGroup,
   ...rest
 }: ComboboxProps<T>) {
   const initial = value !== undefined ? value : (defaultValue ?? null);
@@ -210,10 +213,27 @@ export function Combobox<T>({
 
   const list = loadItems ? (tooShort ? [] : remote) : (items ?? []);
   const listWithSelected = selected && loadItems && !list.some((i) => itemKey(i) === itemKey(selected)) ? [selected, ...list] : list;
+  const grouped = React.useMemo(() => {
+    if (!itemGroup || loadItems) return null;
+    const map = new Map<string, T[]>();
+    for (const it of listWithSelected) {
+      const g = itemGroup(it) ?? '';
+      map.set(g, [...(map.get(g) ?? []), it]);
+    }
+    return [...map].map(([value, items]) => ({ value, items }));
+  }, [itemGroup, loadItems, listWithSelected]);
+  const renderEl = (item: T) => (
+    <BaseCombobox.Item key={itemKey(item)} value={item} className="u-listbox-item">
+      {renderItem ? renderItem(item) : itemToString(item)}
+      <BaseCombobox.ItemIndicator className="u-listbox-item-indicator">
+        <Check />
+      </BaseCombobox.ItemIndicator>
+    </BaseCombobox.Item>
+  );
 
   return (
     <BaseCombobox.Root<T>
-      items={listWithSelected}
+      items={(grouped ?? listWithSelected) as T[]}
       filter={loadItems ? null : undefined}
       itemToStringLabel={itemToString}
       itemToStringValue={itemKey}
@@ -265,14 +285,14 @@ export function Combobox<T>({
             </BaseCombobox.Status>
             {!loading && !failed && !tooShort && <BaseCombobox.Empty className="u-listbox-empty">{emptyText}</BaseCombobox.Empty>}
             <BaseCombobox.List>
-              {(item: T) => (
-                <BaseCombobox.Item key={itemKey(item)} value={item} className="u-listbox-item">
-                  {renderItem ? renderItem(item) : itemToString(item)}
-                  <BaseCombobox.ItemIndicator className="u-listbox-item-indicator">
-                    <Check />
-                  </BaseCombobox.ItemIndicator>
-                </BaseCombobox.Item>
-              )}
+              {grouped
+                ? (g: { value: string; items: T[] }) => (
+                    <BaseCombobox.Group key={g.value} items={g.items} className="u-listbox-group">
+                      {g.value && <BaseCombobox.GroupLabel className="u-listbox-group-label">{g.value}</BaseCombobox.GroupLabel>}
+                      <BaseCombobox.Collection>{(item: T) => renderEl(item)}</BaseCombobox.Collection>
+                    </BaseCombobox.Group>
+                  )
+                : (item: T) => renderEl(item)}
             </BaseCombobox.List>
             {tambah && !tooShort && (!tambah.hanyaKosong || (!loading && !listWithSelected.length)) && (
               <button

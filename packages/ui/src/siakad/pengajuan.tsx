@@ -63,6 +63,8 @@ const LABEL_STATUS: Record<string, [string, BadgeVariant]> = {
   diverifikasi: ['Berkas lengkap', 'info'],
   perlu_perbaikan: ['Perlu perbaikan', 'danger'],
   disetujui: ['Disetujui', 'success'],
+  dikembalikan: ['Dikembalikan', 'danger'],
+  ditelaah: ['Ditelaah SPMI', 'info'],
   diterima: ['Diterima', 'success'],
   berjalan: ['Berjalan', 'info'],
   selesai: ['Selesai', 'success'],
@@ -88,15 +90,30 @@ const rupiah = (n: unknown) => (n == null || n === '' ? '-' : `Rp${Number(n).toL
 
 // ================================================================ Linimasa & lampiran (umum)
 /** Linimasa status satu pengajuan (GET {path}/{id}/riwayat): diajukan, diproses, dikembalikan, diputuskan, lampiran. */
-export function LinimasaPengajuan({ path, id, className }: { path: string; id: number | string; className?: string }) {
-  const q = useSiakadQuery<LangkahRiwayat[]>(['riwayat', path, id], (s, signal) => s.request<LangkahRiwayat[]>({ method: 'GET', path: `${path}/${id}/riwayat` }, { signal }), { staleTime: 5_000 });
-  if (q.error) return <GalatApi error={q.error} onRetry={q.refetch} className={className} />;
-  if (!q.data) return <Skeleton className={className} style={{ height: 120 }} />;
-  if (!q.data.length) return <p className={cn('u-linimasa-kosong', className)}>Belum ada riwayat.</p>;
+export function LinimasaPengajuan({
+  path,
+  id,
+  langkah,
+  className,
+}: {
+  path?: string;
+  id?: number | string;
+  /** Langkah yang sudah ada (tanpa memanggil `{path}/{id}/riwayat`), mis. riwayat persetujuan aturan. */
+  langkah?: LangkahRiwayat[];
+  className?: string;
+}) {
+  const q = useSiakadQuery<LangkahRiwayat[]>(['riwayat', path ?? '', id ?? ''], (s, signal) => s.request<LangkahRiwayat[]>({ method: 'GET', path: `${path}/${id}/riwayat` }, { signal }), {
+    staleTime: 5_000,
+    enabled: !langkah && Boolean(path) && id != null,
+  });
+  const data = langkah ?? q.data;
+  if (!langkah && q.error) return <GalatApi error={q.error} onRetry={q.refetch} className={className} />;
+  if (!data) return <Skeleton className={className} style={{ height: 120 }} />;
+  if (!data.length) return <p className={cn('u-linimasa-kosong', className)}>Belum ada riwayat.</p>;
   return (
     <ol className={cn('u-linimasa', className)}>
-      {q.data.map((r, i) => {
-        const nada = r.status === 'ditolak' || r.status === 'dicabut' || r.status === 'perlu_perbaikan' ? 'buruk' : ['disetujui', 'diterima', 'selesai'].includes(r.status ?? '') ? 'baik' : r.aksi.includes('berkas') ? 'berkas' : 'biasa';
+      {data.map((r, i) => {
+        const nada = r.status === 'ditolak' || r.status === 'dicabut' || r.status === 'perlu_perbaikan' || r.status === 'dikembalikan' ? 'buruk' : ['disetujui', 'diterima', 'selesai'].includes(r.status ?? '') ? 'baik' : r.aksi.includes('berkas') ? 'berkas' : 'biasa';
         return (
           <li key={i} className="u-linimasa-item" data-nada={nada}>
             <span className="u-linimasa-titik" aria-hidden>

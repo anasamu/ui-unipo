@@ -51,6 +51,8 @@ export * from './profil-modul';
 export * from './formulir-profil';
 export * from './masuk-aplikasi';
 export * from './aturan';
+export * from './aturan-titik';
+export * from './aturan-keputusan';
 export * from './biaya';
 export * from './panitia';
 export * from './tema-aplikasi';

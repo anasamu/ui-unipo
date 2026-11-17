@@ -5,12 +5,18 @@ import {
   DaftarAturan,
   FormAturan,
   HasilPeriksaAturanPanel,
+  AntreanPersetujuanAturan,
+  AntreanTelaahAturan,
   KelolaAturan,
+  KelolaTitikAturan,
+  PejabatPenyetujuAturan,
+  PesanAturanDilanggar,
   PanelDetailAturan,
   PenyusunKondisi,
   PengaturAturan,
   PilihEntitas,
   SyaratSaya,
+  rapikanKondisi,
   ringkasKondisi,
   useDaftarAturan,
   useKatalogAturan,
@@ -32,7 +38,12 @@ export const meta: DemoMeta = {
   demos: {
     Modul: 'KelolaAturan: ringkasan, daftar, tambah/ubah, detail (SK, dispensasi, uji, riwayat), sampah, pengatur',
     Penyusun: 'PenyusunKondisi: kelompok “semua”/“salah satu” bersarang, indikator per titik, nilai sesuai tipe',
-    Formulir: 'FormAturan: titik, jenis, ketentuan, cakupan, masa berlaku, mode',
+    PenyusunPegawai: 'PenyusunKondisi untuk titik pegawai: pilihan (adalah/salah satu dari), angka dengan satuan, antara, Ya/Tidak, tanggal',
+    Formulir: 'FormAturan: wizard Di mana → Jenis → Ketentuan → Identitas → Dasar hukum (SK) → Tinjau',
+    Persetujuan: 'AntreanPersetujuanAturan dan AntreanTelaahAturan: pasang di dasbor pimpinan dan aplikasi SPMI',
+    Pengecualian: 'PesanAturanDilanggar: pesan 409 aturan_dilanggar dengan tombol Ajukan pengecualian (AjukanPengecualianAturan) untuk aturan yang boleh dikecualikan',
+    Penyetuju: 'PejabatPenyetujuAturan: jabatan penyetuju per kategori, pejabat saat ini, peringatan bila jatuh ke Rektor',
+    Titik: 'KelolaTitikAturan: titik bawaan dan kustom per unit, wizard tambah titik, ubah titik bawaan',
     Detail: 'PanelDetailAturan: aktifkan dengan SK wajib, tulis-tembus ke menu batas waktu lama',
     Syarat: 'SyaratSaya: daftar periksa mahasiswa untuk satu titik (KRS, KKN, wisuda)',
     Periksa: 'usePeriksaAturan + HasilPeriksaAturanPanel: periksa mahasiswa mana pun (petugas)',
@@ -42,6 +53,8 @@ export const meta: DemoMeta = {
   props: [
     ['KelolaAturan.kategori', "'akademik' | 'kelulusan' | 'keuangan' | 'kemahasiswaan' | 'umum'", 'Batasi modul ke satu kategori, mis. halaman Biro Keuangan.'],
     ['KelolaAturan.titik', 'string', 'Batasi ke satu titik penerapan, mis. krs.ambil.'],
+    ['KelolaAturan.tampilTitik', 'boolean', 'Tampilkan tab Titik penerapan untuk admin (GET/POST /v1/aturan/titik).'],
+    ['FormAturan.langkahAwal', 'number', 'Langkah pertama yang dibuka, mis. 4 untuk langsung ke Dasar hukum (SK).'],
     ['FormAturan.aturan', 'Aturan | null', 'Kosong = tambah (draf). Isi = ubah; versi naik dan catatan masuk riwayat.'],
     ['PenyusunKondisi.titik', 'string', 'Menentukan indikator yang tersedia (GET /v1/aturan/katalog).'],
     ['PenyusunKondisi.opsional', 'boolean', 'Boleh kosong, untuk “berlaku bila” di batas waktu/nilai.'],
@@ -58,7 +71,46 @@ export const meta: DemoMeta = {
 };
 
 export function Modul() {
-  return <KelolaAturan />;
+  return <KelolaAturan tampilTitik tautanPejabat="#/pejabat" />;
+}
+
+export function PenyusunPegawai() {
+  const [k, setK] = React.useState<GrupKondisi | null>({
+    semua: [
+      { indikator: 'jenis_pegawai', op: '=', nilai: 'dosen' },
+      { indikator: 'masa_kerja_tahun', op: '>=', nilai: 1 },
+      { indikator: 'sedang_disiplin', op: 'salah' },
+      {
+        salah_satu: [
+          { indikator: 'jenis_cuti', op: 'dalam', nilai: ['TAHUNAN', 'SAKIT'] },
+          { indikator: 'lama_cuti_hari', op: 'antara', nilai: [1, 3] },
+        ],
+      },
+      { indikator: 'status_kepegawaian', op: '=', nilai: '' },
+    ],
+  });
+  return (
+    <div style={{ display: 'grid', gap: '1rem', maxWidth: 900 }}>
+      <PenyusunKondisi titik="sdm.cuti.ajukan" value={k} onValueChange={setK} />
+      <details>
+        <summary style={{ cursor: 'pointer', fontSize: 14 }}>JSON yang dikirim (antara dipecah jadi ≥ dan ≤)</summary>
+        <pre style={{ fontSize: 12, overflow: 'auto' }}>{JSON.stringify({ kondisi: k && rapikanKondisi(k) }, null, 2)}</pre>
+      </details>
+    </div>
+  );
+}
+
+export function Persetujuan() {
+  return (
+    <div style={{ display: 'grid', gap: '1.5rem' }}>
+      <AntreanPersetujuanAturan />
+      <AntreanTelaahAturan />
+    </div>
+  );
+}
+
+export function Titik() {
+  return <KelolaTitikAturan />;
 }
 
 export function Penyusun() {
@@ -174,4 +226,52 @@ export function Daftar() {
 
 export function Pengatur() {
   return <PengaturAturan />;
+}
+
+export function Pengecualian() {
+  const d = useDaftarAturan({ titik: 'krs.ambil', status: 'aktif' });
+  const batas = d.data?.find((a) => a.kode === 'krs.batas-sks');
+  const bayar = d.data?.find((a) => a.kode === 'krs.bayar');
+  if (!batas || !bayar) return null;
+  return (
+    <div style={{ maxWidth: 760 }}>
+      <PesanAturanDilanggar
+        subjek={{ jenis: 'mahasiswa', kode: '2201010006', nama: 'Nur Daud' }}
+        hasil={{
+          titik: 'krs.ambil',
+          judul: 'Ambil/ubah KRS oleh mahasiswa (kontrak KRS)',
+          pelanggaran: [
+            {
+              id: batas.id,
+              aturan_id: batas.id,
+              nama: batas.nama,
+              kode: batas.kode,
+              kategori: 'akademik',
+              jenis: 'batas_nilai',
+              mode: 'blokir',
+              sifat: 'boleh_pengecualian',
+              boleh_pengecualian: true,
+              pesan: 'SKS yang diambil maksimal 21 (sekarang 26).',
+            },
+            {
+              id: bayar.id,
+              aturan_id: bayar.id,
+              nama: bayar.nama,
+              kode: bayar.kode,
+              kategori: 'keuangan',
+              jenis: 'syarat',
+              mode: 'blokir',
+              sifat: 'ketat',
+              pesan: 'Lunasi pembayaran minimal KRS atau ajukan dispensasi ke Biro Keuangan.',
+            },
+          ],
+          peringatan: [],
+        }}
+      />
+    </div>
+  );
+}
+
+export function Penyetuju() {
+  return <PejabatPenyetujuAturan tautanPejabat="#/pejabat" />;
 }

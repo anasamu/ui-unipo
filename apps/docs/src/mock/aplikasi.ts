@@ -303,6 +303,9 @@ const SCOPE: Record<string, string> = {
 const PERAN = [
   ['admin-sistem', 'Administrator sistem', 'ADMIN'],
   ['baak', 'Staf BAAK', 'BAAK'],
+  ['staf-baak', 'Staf BAAK (unit)', null],
+  ['kepala-baak', 'Kepala BAAK', null],
+  ['kepala-bauk', 'Kepala BAUK', null],
   ['keuangan', 'Staf keuangan', 'KEUANGAN'],
   ['dekan', 'Dekan', null],
   ['kaprodi', 'Ketua program studi', 'PRODI'],
