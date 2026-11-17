@@ -2148,3 +2148,109 @@
     font-size: var(--u-text-xs);
   }
 }
+
+// ================================================================ Aturan bawaan dan pengatur
+.u-aturan-bawaan {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card);
+  container-type: inline-size;
+  &[data-perlu] {
+    border-color: color-mix(in oklab, var(--u-warning) 45%, var(--u-border));
+    background: color-mix(in oklab, var(--u-warning) 4%, var(--u-card));
+  }
+  > .u-aturan-sub {
+    margin: 0;
+  }
+}
+.u-aturan-bawaan-kepala {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  > svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin-left: auto;
+    color: var(--u-muted-foreground);
+    transition: transform var(--u-duration-fast) var(--u-ease-out);
+    &[data-buka] {
+      transform: rotate(180deg);
+    }
+  }
+  &:focus-visible {
+    outline: 2px solid var(--u-ring);
+    outline-offset: 4px;
+    border-radius: var(--u-radius-sm);
+  }
+}
+.u-aturan-bawaan-judul {
+  display: grid;
+  gap: 0.125rem;
+  font-size: var(--u-text-sm);
+  > span {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+    font-variant-numeric: tabular-nums;
+  }
+}
+.u-aturan-bawaan-daftar {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+  background: var(--u-card);
+  list-style: none;
+  li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    & + li {
+      border-top: 1px solid var(--u-border);
+    }
+    > div:first-child {
+      display: grid;
+      gap: 0.125rem;
+      min-width: 0;
+      font-size: var(--u-text-sm);
+      > span {
+        overflow: hidden;
+        color: var(--u-muted-foreground);
+        font-size: var(--u-text-xs);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+    @container (max-width: 36rem) {
+      grid-template-columns: minmax(0, 1fr) auto;
+      > .u-aturan-bawaan-aksi {
+        grid-column: 1 / -1;
+      }
+    }
+  }
+}
+.u-aturan-bawaan-aksi {
+  display: flex;
+  gap: 0.25rem;
+  justify-content: flex-end;
+}
+.u-aturan-bawaan-catatan {
+  margin: 0;
+}
+.u-aturan-pengatur-daftar {
+  display: grid;
+  gap: 0.375rem;
+}

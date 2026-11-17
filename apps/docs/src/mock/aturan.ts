@@ -324,7 +324,12 @@ ATURAN[0].pengecualian.push({
 });
 
 const PENGATUR: Baris[] = [
+  { kategori: 'akademik', titik: '', jenis: 'izin', kode: 'aturan:akademik', keterangan: 'Pengatur bawaan kategori akademik' },
+  { kategori: 'akademik', titik: '', jenis: 'peran', kode: 'staf-baak', keterangan: 'Pengatur bawaan kategori akademik' },
+  { kategori: 'akademik', titik: '', jenis: 'peran', kode: 'kepala-baak', keterangan: 'Pengatur bawaan kategori akademik' },
   { kategori: 'akademik', titik: '', jenis: 'peran', kode: 'baak', keterangan: 'Staf BAAK' },
+  { kategori: 'kelulusan', titik: '', jenis: 'peran', kode: 'kepala-baak', keterangan: 'Pengatur bawaan kategori kelulusan' },
+  { kategori: 'keuangan', titik: '', jenis: 'peran', kode: 'kepala-bauk', keterangan: 'Pengatur bawaan kategori keuangan' },
   { kategori: 'akademik', titik: 'nilai.input.dosen', jenis: 'peran', kode: 'baak', keterangan: 'Staf BAAK' },
   { kategori: 'akademik', titik: 'nilai.input.dosen', jenis: 'peran', kode: 'kaprodi', keterangan: 'Ketua program studi' },
   { kategori: 'keuangan', titik: '', jenis: 'peran', kode: 'keuangan', keterangan: 'Staf keuangan' },
@@ -712,14 +717,32 @@ tambahRute(/^\/v1\/aturan$/, (u, init) => {
       (!s.get('kategori') || a.kategori === s.get('kategori')) &&
       (!s.get('status') || a.status === s.get('status')) &&
       (!s.get('jenis') || a.jenis === s.get('jenis')) &&
+      (s.get('bawaan') !== '1' || a.bawaan) &&
+      (!s.get('unit') || a.unit === s.get('unit')) &&
       (!s.get('antrean') || a.status === 'diajukan' || a.usulan?.status === 'diajukan') &&
       (!s.get('tahun_id') || !a.tahun_id || a.tahun_id === s.get('tahun_id')) &&
       (!q || `${a.nama} ${a.kode ?? ''}`.toLowerCase().includes(q)),
   );
   const per = Number(s.get('per_page') ?? 50);
+  const ringkas = (xs: Aturan[]) => ({
+    total: xs.length,
+    menunggu_sk: xs.filter((a) => a.status !== 'aktif' && !lampiranAktif(a).some((l) => l.jenis === 'sk')).length,
+    draf: xs.filter((a) => a.status === 'draf').length,
+    diajukan: xs.filter((a) => a.status === 'diajukan').length,
+    aktif: xs.filter((a) => a.status === 'aktif').length,
+    nonaktif: xs.filter((a) => a.status === 'nonaktif').length,
+  });
+  const bawaan = rows.filter((a) => a.bawaan);
+  const kelompok = (k: 'kategori' | 'unit') => Object.fromEntries([...new Set(bawaan.map((a) => a[k]))].map((v) => [v, ringkas(bawaan.filter((a) => a[k] === v))]));
   return {
-    data: rows.slice(0, per).map((a) => ({ ...bentuk(a), jumlah_sk: lampiranAktif(a).filter((l) => l.jenis === 'sk').length })),
-    meta: { page: 1, per_page: per, total: rows.length, total_pages: Math.ceil(rows.length / per) },
+    data: rows
+      .slice(0, per)
+      .map((a) => ({
+        ...bentuk(a),
+        jumlah_sk: lampiranAktif(a).filter((l) => l.jenis === 'sk').length,
+        menunggu_sk: a.bawaan ? a.status !== 'aktif' && !lampiranAktif(a).some((l) => l.jenis === 'sk') : undefined,
+      })),
+    meta: { page: 1, per_page: per, total: rows.length, total_pages: Math.ceil(rows.length / per), bawaan: { ...ringkas(bawaan), per_kategori: kelompok('kategori'), per_unit: kelompok('unit') } },
   };
 });
 tambahRute(/^\/v1\/aturan\/[^/]+(\/[a-z]+)?$/, (u, init) => {
@@ -750,6 +773,7 @@ tambahRute(/^\/v1\/aturan\/[^/]+(\/[a-z]+)?$/, (u, init) => {
       catat(a, 'nonaktif', b.catatan ?? null);
       return { data: detail(a) };
     case 'hapus':
+      if (a.bawaan) return { __status: 409, error: { code: 'conflict', message: 'Aturan bawaan tidak bisa dihapus.', details: { bawaan: true } } };
       a.dihapus_at = sekarang();
       a.status = a.status === 'aktif' ? 'nonaktif' : a.status;
       catat(a, 'dihapus', b.alasan ?? null);
@@ -1087,3 +1111,80 @@ tambahRute(/^\/v1\/aturan\/[^/]+\/pengecualian\/ajukan$/, (u, init) => {
   });
   return { __status: 201, data: AJUAN[0] };
 });
+
+// Aturan bawaan tambahan per unit (19 di SIAKAD; contoh sebagian).
+ATURAN.push(
+  aturan({
+    nama: 'Masa kontrak KRS mengikuti kalender akademik',
+    kode: 'UNIPO-KRS-MASA',
+    titik: 'krs.ambil',
+    kategori: 'akademik',
+    jenis: 'batas_waktu',
+    status: 'diajukan',
+    bawaan: true,
+    diaktifkan_at: null,
+    diaktifkan_oleh: null,
+    dibuat_oleh: 'migration',
+    parameter: { mulai: `${geser(20)} 08:00:00`, selesai: `${geser(34)} 23:59:59` },
+  }),
+  aturan({
+    nama: 'KRS hanya untuk mahasiswa ber-status aktif',
+    kode: 'UNIPO-KRS-AKTIF',
+    titik: 'krs.ambil',
+    kategori: 'akademik',
+    jenis: 'syarat',
+    bawaan: true,
+    dibuat_oleh: 'migration',
+    kondisi: { semua: [{ indikator: 'status_aktif', op: '=', nilai: 'A' }] },
+  }),
+  aturan(
+    {
+      nama: 'Her-registrasi wajib memenuhi syarat bayar',
+      kode: 'UNIPO-REGISTRASI-SYARAT-BAYAR',
+      titik: 'krs.ambil',
+      kategori: 'keuangan',
+      jenis: 'syarat',
+      status: 'draf',
+      bawaan: true,
+      sifat: 'boleh_pengecualian',
+      diaktifkan_at: null,
+      diaktifkan_oleh: null,
+      dibuat_oleh: 'migration',
+      kondisi: { semua: [{ indikator: 'bayar_syarat_krs', op: 'benar' }] },
+    },
+    false,
+  ),
+  aturan(
+    {
+      nama: 'Yudisium minimal 144 SKS dan IPK 2,00',
+      kode: 'UNIPO-YUDISIUM-DASAR',
+      titik: 'yudisium.tetapkan',
+      kategori: 'kelulusan',
+      jenis: 'syarat',
+      status: 'draf',
+      bawaan: true,
+      diaktifkan_at: null,
+      diaktifkan_oleh: null,
+      dibuat_oleh: 'migration',
+      kondisi: {
+        semua: [
+          { indikator: 'sks_lulus', op: '>=', nilai: 144 },
+          { indikator: 'ipk', op: '>=', nilai: 2 },
+        ],
+      },
+    },
+    false,
+  ),
+);
+const UNIT_KATEGORI: Record<string, string> = {
+  akademik: 'baak',
+  kelulusan: 'baak',
+  kemahasiswaan: 'baak',
+  keuangan: 'bauk',
+  kepegawaian: 'sdm',
+  mutu: 'spmi',
+  penelitian: 'lppm',
+  akun: 'pustikom',
+  umum: 'baak',
+};
+for (const a of ATURAN) if (a.bawaan) a.unit ??= UNIT_KATEGORI[a.kategori] ?? 'baak';

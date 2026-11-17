@@ -111,7 +111,7 @@ export function PilihSifatAturan({
 function usePeranRbac() {
   return useSiakadQuery<Array<{ kode: string; nama: string }>>(
     ['rbac', 'peran'],
-    (s, signal) => s.request<Array<{ kode: string; nama: string }>>({ method: 'GET', path: '/v1/rbac/peran', query: { per_page: 200 } }, { signal }),
+    (s, signal) => s.request<Array<{ kode: string; nama: string }>>({ method: 'GET', path: '/v1/rbac/peran', query: { per_page: 100 } }, { signal }),
     { staleTime: 5 * 60_000 },
   );
 }
@@ -312,7 +312,7 @@ function FormPenyetuju({ baris: r, onTutup }: { baris: PenyetujuKategoriAturan; 
   const toast = useToast();
   const opsiJabatan = useSiakadQuery<Array<{ kode: string; nama: string }>>(
     ['induk', 'jabatan'],
-    (s, signal) => s.request<Array<{ kode: string; nama: string }>>({ method: 'GET', path: '/v1/induk/jabatan', query: { per_page: 200 } }, { signal }),
+    (s, signal) => s.request<Array<{ kode: string; nama: string }>>({ method: 'GET', path: '/v1/induk/jabatan', query: { per_page: 100 } }, { signal }),
     { staleTime: 10 * 60_000 },
   );
   const awal = daftarJabatanPenyetuju(r);
