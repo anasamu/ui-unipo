@@ -129,7 +129,8 @@ const LABEL_TEMA: Record<TemaAkun, string> = { terang: 'Mode terang', gelap: 'Mo
 
 /**
  * Kerangka bawaan aplikasi dasbor UNIPO, sama di semua aplikasi: sidebar dengan logo + nama yang menuju beranda dan
- * tombol ciutkan; bilah atas dengan judul halaman, pencarian fitur (Ctrl/⌘K), notifikasi, pesan masuk, tombol tema,
+ * tombol ciutkan; bilah atas dengan judul halaman, pencarian fitur (Ctrl/⌘K), notifikasi, pesan masuk, tombol tema (hanya bila
+ * tanpa menu akun bawaan, yang sudah memuat pilihan tema),
  * dan menu akun SIAKAD; navigasi bawah di ponsel; obrolan mengambang.
  *
  * ```tsx
@@ -348,7 +349,8 @@ export function KerangkaAplikasi({
             {notifikasi !== false && <TombolNotifikasi {...opsiNotif} onNavigasi={navigasi} />}
             {pesan !== false && <TombolPesan onBuka={opsiPesan.onBuka} />}
             {berkas !== false && <TombolBerkas {...(typeof berkas === 'object' ? berkas : {})} />}
-            {tema && onTema && (
+            {/* Pilihan tema ada di menu akun bawaan (Terang/Gelap/Sistem); tombol bilah atas hanya bila menu akun itu tidak dipakai. */}
+            {tema && onTema && (akun === false || React.isValidElement(akun)) && (
               <Tooltip content={`${LABEL_TEMA[tema]} (ganti ke ${LABEL_TEMA[temaBerikut].toLowerCase()})`}>
                 <Button variant="ghost" size="sm" iconOnly className="u-kerangka-tema" aria-label={`Ganti ke ${LABEL_TEMA[temaBerikut].toLowerCase()}`} onClick={() => onTema(temaBerikut)}>
                   <IkonTema />
