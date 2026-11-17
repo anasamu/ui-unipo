@@ -101,11 +101,14 @@ export function useNotifikasi({ interval = 60_000, username, jumlah = 8, enabled
     const t = setInterval(() => {
       if (typeof document === 'undefined' || document.visibilityState === 'visible') void ringkas();
     }, interval);
+    // Notifikasi yang dibaca di aplikasi lain (akun sama) ikut hilang saat tab ini dilihat atau difokuskan lagi.
     const lihat = () => document.visibilityState === 'visible' && void ringkas();
     document.addEventListener('visibilitychange', lihat);
+    window.addEventListener('focus', lihat);
     return () => {
       clearInterval(t);
       document.removeEventListener('visibilitychange', lihat);
+      window.removeEventListener('focus', lihat);
     };
   }, [aktif, interval, ringkas]);
 

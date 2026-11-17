@@ -291,12 +291,14 @@ export class MesinObrolan {
       await this.muatRuang();
       this.set({ status: 'siap' });
       this.jalankanUmpan(saya.tunggu_maks);
+      this.pasangSegarFokus();
     } catch (e) {
       this.set({ status: 'galat', galat: galatTeks(e) });
     }
   }
 
   berhenti() {
+    this.lepasFokus?.();
     this.loop?.abort();
     this.loop = null;
     this.set({ terhubung: false });
@@ -482,6 +484,28 @@ export class MesinObrolan {
   }
 
   /** Muat ulang pesan terbaru ruang (mis. setelah kunci susulan tiba) tanpa membuang pesan yang sedang dikirim. */
+  /** Ringkasan sebelum "Bersihkan obrolan": pesan dan lampiran yang masih terlihat untuk akun ini. */
+  infoBersihkan(ruangId: string) {
+    return this.req<{ pesan: number; lampiran: number; sudah_disimpan: number; tidak_bisa_disimpan: number }>('GET', `/ruang/${ruangId}/bersihkan`);
+  }
+
+  /**
+   * Bersihkan riwayat obrolan hanya untuk akun ini (anggota lain tetap melihatnya). `simpan` = salin lampiran ke Berkas
+   * saya › Obrolan/<nama obrolan> lebih dulu (di server). Tidak ada yang dihapus permanen.
+   */
+  async bersihkan(ruangId: string, simpan: boolean) {
+    const r = await this.req<{ disimpan: number; dilewati: number }>('POST', `/ruang/${ruangId}/bersihkan`, { body: { simpan }, timeout: 300_000 });
+    this.kosongkanLokal(ruangId);
+    if (r.disimpan) invalidateSiakad('berkas');
+    return r;
+  }
+
+  private kosongkanLokal(ruangId: string) {
+    this.setPesan(ruangId, () => ({ daftar: [], lagi: false, dimuat: true, memuat: false }));
+    const r = this.s.ruang[ruangId];
+    if (r) this.pasangRuang({ ...r, pesan_terakhir: null, belum_dibaca: 0 });
+  }
+
   private async muatUlangPesan(id: string) {
     const x = this.s.pesan[id];
     if (!x?.dimuat) return;
@@ -849,6 +873,29 @@ export class MesinObrolan {
 
   // ---------------------------------------------------------------- umpan realtime
 
+  private lepasFokus: (() => void) | null = null;
+  private segarTerakhir = 0;
+
+  /**
+   * Status baca disimpan per akun di server. Aplikasi lain (akun sama) memberi tahu lewat peristiwa `baca`; bila
+   * peristiwa terlewat (tab di latar, koneksi putus), jumlah belum dibaca disegarkan dari server saat tab dilihat lagi.
+   */
+  private pasangSegarFokus() {
+    if (this.lepasFokus || typeof window === 'undefined') return;
+    const segar = () => {
+      if (document.visibilityState !== 'visible' || Date.now() - this.segarTerakhir < 3000) return;
+      this.segarTerakhir = Date.now();
+      void this.muatRuang().catch(() => {});
+    };
+    document.addEventListener('visibilitychange', segar);
+    window.addEventListener('focus', segar);
+    this.lepasFokus = () => {
+      document.removeEventListener('visibilitychange', segar);
+      window.removeEventListener('focus', segar);
+      this.lepasFokus = null;
+    };
+  }
+
   private jalankanUmpan(tungguMaks: number) {
     this.loop?.abort();
     const ac = new AbortController();
@@ -927,6 +974,7 @@ export class MesinObrolan {
           if (ruang) this.setKetik(ruang, e.data.pemilik as string);
           break;
         case 'ruang':
+          if (ruang && e.data.bersih) this.kosongkanLokal(ruang);
           if (ruang) segarkan.add(ruang);
           else if (e.data.aksi === 'blokir') void this.muatRuang();
           break;

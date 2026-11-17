@@ -14,6 +14,7 @@ import {
   Clock,
   Copy,
   Download,
+  Eraser,
   EllipsisVertical,
   FileText,
   FolderDown,
@@ -1148,6 +1149,7 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
   const [berkas, setBerkas] = React.useState<File[]>([]);
   const [unggah, setUnggah] = React.useState(false);
   const [galatKirim, setGalatKirim] = React.useState<string | null>(null);
+  const [bersihkan, setBersihkan] = React.useState(false);
   const { simpan: simpanBerkas } = useSimpanKeBerkas();
   const [hapus, setHapus] = React.useState<PesanObrolan | null>(null);
   const [lihat, setLihat] = React.useState<Berkas | null>(null);
@@ -1259,6 +1261,8 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
     { label: r.bisu ? 'Bunyikan notifikasi' : 'Bisukan notifikasi', icon: r.bisu ? <Bell /> : <BellOff />, onSelect: () => void mesin.ubahRuang(id, { bisu: !r.bisu }) },
     { label: r.sematkan ? 'Lepas sematan' : 'Sematkan', icon: r.sematkan ? <PinOff /> : <Pin />, onSelect: () => void mesin.ubahRuang(id, { sematkan: !r.sematkan }) },
     { label: r.arsip ? 'Keluarkan dari arsip' : 'Arsipkan', icon: r.arsip ? <ArchiveRestore /> : <Archive />, onSelect: () => void mesin.ubahRuang(id, { arsip: !r.arsip }) },
+    { type: 'separator' as const },
+    { label: 'Bersihkan obrolan', icon: <Eraser />, destructive: true, onSelect: () => setBersihkan(true) },
   ];
 
   // Kelompokkan: pemisah tanggal + gelembung berurutan dari pengirim sama dalam 5 menit.
@@ -1510,6 +1514,7 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
 
       <InfoRuang r={r} open={info} onOpenChange={setInfo} onKeluar={() => onKembali?.()} />
       <LihatGambar b={lihat} ruangId={id} onTutup={() => setLihat(null)} />
+      <DialogBersihkan ruangId={id} nama={judulRuang(r, saya)} open={bersihkan} onOpenChange={setBersihkan} />
       <ConfirmDialog
         open={Boolean(hapus)}
         onOpenChange={(o) => !o && setHapus(null)}
@@ -1522,6 +1527,96 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
         }}
       />
     </div>
+  );
+}
+
+// ================================================================ Bersihkan obrolan
+
+/** Konfirmasi "Bersihkan obrolan": riwayat hilang hanya untuk akun ini; lampiran bisa disimpan dulu ke Berkas saya. */
+function DialogBersihkan({ ruangId, nama, open, onOpenChange }: { ruangId: string; nama: string; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const mesin = useMesin();
+  const toast = useToast();
+  const [info, setInfo] = React.useState<{ pesan: number; lampiran: number; sudah_disimpan: number; tidak_bisa_disimpan: number } | null>(null);
+  const [galat, setGalat] = React.useState<string | null>(null);
+  const [lampiran, setLampiran] = React.useState<'simpan' | 'hapus'>('simpan');
+  const [proses, setProses] = React.useState(false);
+  React.useEffect(() => {
+    if (!open) return;
+    setInfo(null);
+    setGalat(null);
+    setLampiran('simpan');
+    mesin
+      .infoBersihkan(ruangId)
+      .then(setInfo)
+      .catch((e) => setGalat(pesanGalat(e)));
+  }, [open, ruangId, mesin]);
+  const belum = info ? Math.max(0, info.lampiran - info.sudah_disimpan - info.tidak_bisa_disimpan) : 0;
+  const jalan = async () => {
+    setProses(true);
+    try {
+      const r = await mesin.bersihkan(ruangId, info !== null && info.lampiran > 0 && lampiran === 'simpan');
+      toast.add({
+        type: 'success',
+        title: 'Obrolan dibersihkan',
+        description: r.disimpan ? `${r.disimpan} lampiran disimpan ke Berkas saya › Obrolan/${nama}.` : 'Riwayat hilang dari akun Anda; anggota lain tetap melihatnya.',
+      });
+      onOpenChange(false);
+    } catch (e) {
+      setGalat(pesanGalat(e));
+    } finally {
+      setProses(false);
+    }
+  };
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => !proses && onOpenChange(o)}
+      title="Bersihkan obrolan?"
+      size="sm"
+      footer={
+        <div className="u-ob-bersih-aksi">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={proses}>
+            Batal
+          </Button>
+          <Button variant="destructive" onClick={() => void jalan()} loading={proses} disabled={!info}>
+            Bersihkan obrolan
+          </Button>
+        </div>
+      }
+    >
+      <div className="u-ob-bersih">
+        <p className="u-ob-petunjuk">
+          Semua pesan di obrolan dengan <b>{nama}</b> hilang dari akun Anda di semua perangkat. Anggota lain tetap melihatnya. Pesan tidak dihapus permanen dari server.
+        </p>
+        {galat && <Alert variant="danger">{galat}</Alert>}
+        {!info && !galat ? (
+          <Skeleton height={64} />
+        ) : info && info.lampiran > 0 ? (
+          <fieldset className="u-ob-bersih-pilih">
+            <legend>
+              {info.lampiran} lampiran di obrolan ini{info.sudah_disimpan ? ` (${info.sudah_disimpan} sudah ada di Berkas saya)` : ''}
+            </legend>
+            <label data-aktif={lampiran === 'simpan' ? '' : undefined}>
+              <input type="radio" name="lampiran" checked={lampiran === 'simpan'} onChange={() => setLampiran('simpan')} />
+              <span>
+                <strong>Simpan lampiran ke Berkas saya</strong>
+                <small>
+                  {belum ? `${belum} lampiran disalin ke Berkas saya › Obrolan/${nama}.` : 'Semua lampiran yang bisa disalin sudah ada di Berkas saya.'}
+                  {info.tidak_bisa_disimpan ? ` ${info.tidak_bisa_disimpan} lampiran lama tidak bisa disalin.` : ''}
+                </small>
+              </span>
+            </label>
+            <label data-aktif={lampiran === 'hapus' ? '' : undefined}>
+              <input type="radio" name="lampiran" checked={lampiran === 'hapus'} onChange={() => setLampiran('hapus')} />
+              <span>
+                <strong>Hapus lampiran juga</strong>
+                <small>Lampiran ikut hilang dari tampilan Anda (tidak disalin).</small>
+              </span>
+            </label>
+          </fieldset>
+        ) : null}
+      </div>
+    </Dialog>
   );
 }
 
