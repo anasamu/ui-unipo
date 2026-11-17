@@ -140,12 +140,6 @@ export function Lengkap() {
         onTema={setTema}
         onKeluar={() => alert('Keluar dari semua aplikasi')}
         versi="1.45.0"
-        navBawah={[
-          { key: 'beranda', label: 'Beranda', icon: <House />, href: '#beranda' },
-          { key: 'kasir', label: 'Kasir', icon: <Store />, href: '#kasir' },
-          { key: 'laporan', label: 'Laporan', icon: <FileBarChart />, href: '#laporan' },
-          { key: 'gaji', label: 'Payroll', icon: <Wallet />, href: '#gaji' },
-        ]}
       >
         <div style={{ display: 'grid', gap: 16 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
