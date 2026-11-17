@@ -11,6 +11,7 @@ import { DriveBerkas } from './drive-berkas';
 import { useDibagikanBerkas, type BagiBerkas } from './berkas-ruang';
 import { invalidateSiakad, useOptionalSiakad } from './provider';
 import { waktuRelatif } from './notifikasi';
+import { useAkunSaya } from './akun';
 
 /**
  * Kelola berkas cepat dari bilah atas: unggah (tombol atau tarik-lepas), berkas terbaru dengan tombol unduh, dan
@@ -34,10 +35,7 @@ function IkonBerkas({ b }: { b: Berkas }) {
 export interface TombolBerkasProps extends Pick<OpsiUnggahBerkas, 'modul' | 'unit' | 'kategori'> {
   /** Jumlah berkas terbaru di panel. Bawaan 6. */
   jumlah?: number;
-  /**
-   * Aksi "Kelola berkas". Bawaan membuka DriveBerkas dalam dialog. Isi bila aplikasi punya halaman berkas sendiri,
-   * mis. `() => navigate('/berkas')`.
-   */
+  /** @deprecated Diabaikan: "Kelola berkas" selalu membuka file manager (DriveBerkas) dalam modal. */
   onKelola?: () => void;
   /** Unit yang tampil di DriveBerkas dialog bawaan (mis. ["bauk"]). */
   unitTampil?: string[];
@@ -47,7 +45,7 @@ export interface TombolBerkasProps extends Pick<OpsiUnggahBerkas, 'modul' | 'uni
 /**
  * Ikon berkas di bilah atas. Tidak tampil bila token tidak punya akses berkas.
  */
-export function TombolBerkas({ jumlah = 6, onKelola, unitTampil, modul, unit, kategori = 'dokumen', className }: TombolBerkasProps) {
+export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = 'dokumen', className }: TombolBerkasProps) {
   const siakad = useOptionalSiakad();
   const [tersedia, setTersedia] = React.useState(true);
   const [info, setInfo] = React.useState<InfoBerkas | null>(null);
@@ -58,6 +56,7 @@ export function TombolBerkas({ jumlah = 6, onKelola, unitTampil, modul, unit, ka
   const [unggahan, setUnggahan] = React.useState<Unggahan[]>([]);
   const [seret, setSeret] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const saya = useAkunSaya({ foto: false }).data?.akun?.username ?? null;
   const bagi = useDibagikanBerkas('masuk', buka && tab === 'dibagikan' && tersedia);
 
   React.useEffect(() => {
@@ -75,16 +74,18 @@ export function TombolBerkas({ jumlah = 6, onKelola, unitTampil, modul, unit, ka
   const muat = React.useCallback(async () => {
     if (!siakad) return;
     try {
+      // Terbaru = berkas milik saya sendiri (bukan ruang unit/dibagikan). Untuk admin, server menampilkan semua
+      // berkas bila tanpa saringan, jadi pemilik dikirim dan disaring lagi di sini.
       const query: Record<string, string> = { per_page: String(jumlah), urut: 'baru', status: 'tersedia' };
-      if (modul) query.modul = modul;
-      if (unit) query.unit = unit;
-      const r = await siakad.request<Berkas[]>({ method: 'GET', path: '/v1/berkas', query });
-      setDaftar(Array.isArray(r.data) ? r.data : []);
+      if (saya) query.pemilik = saya;
+      const r = await siakad.request<Array<Berkas & { pemilik?: string | null; unit?: string | null }>>({ method: 'GET', path: '/v1/berkas', query });
+      const semua = Array.isArray(r.data) ? r.data : [];
+      setDaftar(semua.filter((b) => !b.unit && (!saya || !b.pemilik || b.pemilik === saya)));
     } catch (e) {
       if (diam(e)) setTersedia(false);
       setDaftar((d) => d ?? []);
     }
-  }, [siakad, jumlah, modul, unit]);
+  }, [siakad, jumlah, saya]);
 
   if (!siakad || !tersedia) return null;
 
@@ -122,8 +123,8 @@ export function TombolBerkas({ jumlah = 6, onKelola, unitTampil, modul, unit, ka
 
   const kelola = (ruang: 'saya' | 'dibagikan' = 'saya') => {
     setBuka(false);
-    if (onKelola && ruang === 'saya') onKelola();
-    else setDrive(ruang);
+    // Selalu membuka file manager dalam modal di semua aplikasi.
+    setDrive(ruang);
   };
 
   return (

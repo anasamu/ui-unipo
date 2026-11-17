@@ -54,8 +54,8 @@ export interface KerangkaAplikasiProps {
   /** Ikon notifikasi (GET /v1/notif). `semuaHref` = halaman semua notifikasi di aplikasi. false = tanpa ikon. */
   notifikasi?: boolean | (OpsiNotifikasi & { semuaHref?: string; belumLuar?: number });
   /**
-   * Ikon kelola berkas (/v1/berkas): unggah cepat, berkas terbaru + unduh, dan "Kelola berkas". `onKelola` bila
-   * aplikasi punya halaman berkas sendiri (bawaan membuka DriveBerkas dalam dialog). false = tanpa ikon.
+   * Ikon kelola berkas (/v1/berkas): unggah cepat, tab Terbaru (berkas milik sendiri) dan Dibagikan dengan saya,
+   * unduh, dan "Kelola berkas" yang selalu membuka file manager (DriveBerkas) dalam modal. false = tanpa ikon.
    */
   berkas?: boolean | TombolBerkasProps;
   /**
