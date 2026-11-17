@@ -36,6 +36,11 @@
   --u-shadow-md: 0 2px 4px -1px rgb(16 24 40 / 0.05), 0 6px 14px -4px rgb(16 24 40 / 0.08);
   --u-shadow-lg: 0 4px 8px -2px rgb(16 24 40 / 0.05), 0 16px 32px -8px rgb(16 24 40 / 0.14);
   --u-shadow-xl: 0 8px 16px -4px rgb(16 24 40 / 0.06), 0 28px 56px -12px rgb(16 24 40 / 0.22);
+  // Efek bayangan (elevasi): bayangan mana yang dipakai permukaan. Diatur `elevasi` di generator tema
+  // (datar | normal | terangkat | melayang); nilai di sini = normal.
+  --u-elevation-card: var(--u-shadow-xs);
+  --u-elevation-card-hover: var(--u-shadow-md);
+  --u-elevation-bar: none;
 }
 
 .dark,

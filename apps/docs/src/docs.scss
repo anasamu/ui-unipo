@@ -756,3 +756,24 @@ html[data-docs-perangkat^='mobile'] .docs-preview-inner {
     max-width: 9.5rem;
   }
 }
+
+// ---------------------------------------------------------------- Kerangka aplikasi (contoh di dalam bingkai)
+.demo-kerangka {
+  position: relative;
+  transform: translateZ(0);
+  overflow: auto;
+  border: 1px solid var(--u-border);
+  border-radius: 14px;
+  background: var(--u-background);
+  .u-app-shell {
+    min-height: 100%;
+  }
+  .u-app-shell-sidebar {
+    height: 100%;
+    max-height: 640px;
+  }
+  .u-ob-apung,
+  .u-nav-bawah {
+    position: absolute;
+  }
+}

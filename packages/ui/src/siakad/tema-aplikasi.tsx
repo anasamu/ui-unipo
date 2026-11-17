@@ -11,6 +11,7 @@ import { invalidateSiakad, useOptionalSiakad, useSiakad, useSiakadQuery } from '
 import {
   FONT,
   NETRAL,
+  PILIHAN_ELEVASI,
   PRESET_TEMA,
   TEMA_BAWAAN,
   buatTema,
@@ -265,6 +266,11 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
                 <Field label="Bayangan">
                   <SegmentedControl fullWidth value={lengkap.bayangan} onValueChange={(v) => ubahTema('bayangan', v as OpsiTema['bayangan'])} options={[{ value: 'tanpa', label: 'Tanpa' }, { value: 'halus', label: 'Halus' }, { value: 'normal', label: 'Normal' }, { value: 'tegas', label: 'Tegas' }]} aria-label="Bayangan" />
                 </Field>
+              </div>
+              <Field label="Efek bayangan" description={PILIHAN_ELEVASI.find((x) => x.value === lengkap.elevasi)?.keterangan}>
+                <SegmentedControl fullWidth value={lengkap.elevasi} onValueChange={(v) => ubahTema('elevasi', v as OpsiTema['elevasi'])} options={PILIHAN_ELEVASI.map(({ value, label }) => ({ value, label }))} aria-label="Efek bayangan" />
+              </Field>
+              <div className="u-tema-dua">
                 <Field label="Gerak animasi">
                   <SegmentedControl fullWidth value={lengkap.gerak} onValueChange={(v) => ubahTema('gerak', v as OpsiTema['gerak'])} options={[{ value: 'cepat', label: 'Cepat' }, { value: 'normal', label: 'Normal' }, { value: 'lambat', label: 'Lambat' }, { value: 'tanpa', label: 'Tanpa' }]} aria-label="Gerak animasi" />
                 </Field>

@@ -89,7 +89,7 @@
   background: var(--u-card);
   color: inherit;
   text-decoration: none;
-  box-shadow: var(--u-shadow-xs);
+  box-shadow: var(--u-elevation-card);
   &:is(a) {
     transition: border-color var(--u-duration-fast) var(--u-ease-out);
     &:hover {
@@ -631,7 +631,7 @@
   border: 1px solid var(--u-border);
   border-radius: calc(var(--u-radius) + 4px);
   background: var(--u-card);
-  box-shadow: var(--u-shadow-xs);
+  box-shadow: var(--u-elevation-card);
 }
 .u-panel-head {
   display: flex;

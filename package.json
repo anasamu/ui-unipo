@@ -1,7 +1,7 @@
 {
   "name": "ui-unipo",
   "private": true,
-  "version": "1.44.0",
+  "version": "1.45.0",
   "description": "Sistem desain dan pustaka komponen UI Universitas Pohuwato (UNIPO)",
   "workspaces": ["packages/tokens", "packages/ui", "apps/docs"],
   "scripts": {

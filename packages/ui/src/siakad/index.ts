@@ -39,6 +39,8 @@ export * from './berkas-ruang';
 export * from './drive-berkas';
 export * from './profil-kampus';
 export * from './obrolan';
+export * from './notifikasi';
+export * from './kerangka-aplikasi';
 export * from './pmb-maba';
 export * from './lms-belajar';
 export * from './modal-fitur';

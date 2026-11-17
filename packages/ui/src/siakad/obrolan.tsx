@@ -86,6 +86,23 @@ const pendengarBuka = new Set<(pemilik: string) => void>();
 export function bukaObrolan(pemilik: string) {
   pendengarBuka.forEach((f) => f(pemilik));
 }
+const pendengarRuang = new Set<(id: string | null) => void>();
+/**
+ * Buka satu ruang obrolan (id ruang) di `ChatMengambang` yang terpasang; `null` membuka daftar obrolan. Dipakai
+ * `TombolPesan` di bilah atas.
+ */
+export function bukaRuangObrolan(id: string | null = null) {
+  pendengarRuang.forEach((f) => f(id));
+}
+function useMintaBukaRuang(fn: (id: string | null) => void) {
+  const ref = React.useRef(fn);
+  ref.current = fn;
+  React.useEffect(() => {
+    const f = (id: string | null) => ref.current(id);
+    pendengarRuang.add(f);
+    return () => void pendengarRuang.delete(f);
+  }, []);
+}
 function useMintaBuka(fn: (pemilik: string) => void) {
   const ref = React.useRef(fn);
   ref.current = fn;
@@ -1993,6 +2010,11 @@ export function ChatMengambang({ posisi = 'kanan', bawah = 20, judul, className 
       .catch(() => {});
   });
 
+  useMintaBukaRuang((id) => {
+    setBuka(true);
+    setAktif(id);
+  });
+
   const tutup = () => {
     setBuka(false);
     tombolRef.current?.focus();
@@ -2026,5 +2048,90 @@ export function ChatMengambang({ posisi = 'kanan', bawah = 20, judul, className 
         {!buka && total > 0 && <span className="u-ob-lencana">{total > 99 ? '99+' : total}</span>}
       </button>
     </div>
+  );
+}
+
+// ================================================================ TombolPesan (bilah atas)
+
+export interface TombolPesanProps {
+  /** Jumlah ruang yang ditampilkan di panel. Bawaan 6. */
+  jumlah?: number;
+  /**
+   * Aksi saat ruang atau "Semua obrolan" dipilih. Bawaan membuka `ChatMengambang` yang terpasang
+   * (`bukaRuangObrolan`). Isi bila aplikasi punya halaman obrolan sendiri, mis. `(id) => navigate(id ? `/obrolan?ruang=${id}` : '/obrolan')`.
+   */
+  onBuka?: (ruang: string | null) => void;
+  className?: string;
+}
+
+/**
+ * Ikon pesan di bilah atas: lencana jumlah pesan belum dibaca (ruang yang tidak dibisukan) dan panel berisi obrolan
+ * terbaru dengan cuplikan pesan yang didekripsi di browser. Tidak tampil bila obrolan tidak tersedia untuk akun ini
+ * (token tanpa scope obrolan, browser tanpa WebCrypto).
+ */
+export function TombolPesan({ jumlah = 6, onBuka = bukaRuangObrolan, className }: TombolPesanProps) {
+  const { keadaan: k } = useObrolan();
+  const [buka, setBuka] = React.useState(false);
+  if (k.status === 'galat' || k.status === 'tidak_didukung' || k.status === 'mati') return null;
+  const saya = k.saya?.id ?? '';
+  const ruang = k.urutan.map((id) => k.ruang[id]).filter((r): r is RuangObrolanData => Boolean(r) && !r.arsip);
+  const total = ruang.reduce((n, r) => n + (r.bisu ? 0 : r.belum_dibaca), 0);
+  const pilih = (id: string | null) => {
+    setBuka(false);
+    onBuka(id);
+  };
+  return (
+    <Popover
+      open={buka}
+      onOpenChange={setBuka}
+      align="end"
+      width={360}
+      className={cn('u-kabar-panel', className)}
+      trigger={
+        <Button variant="ghost" size="sm" iconOnly className="u-kabar-tombol" aria-label={total ? `Pesan, ${total} belum dibaca` : 'Pesan'}>
+          <MessageCircle />
+          {total > 0 && <span className="u-kabar-lencana">{total > 99 ? '99+' : total}</span>}
+        </Button>
+      }
+    >
+      <div className="u-kabar-kepala">
+        <span className="u-kabar-judul">Pesan</span>
+        {total > 0 && <span className="u-kabar-hitung">{total} belum dibaca</span>}
+      </div>
+      {k.status === 'memuat' && !ruang.length ? (
+        <div className="u-kabar-daftar" aria-busy>
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} height={44} />
+          ))}
+        </div>
+      ) : ruang.length ? (
+        <div className="u-kabar-daftar" role="list">
+          {ruang.slice(0, jumlah).map((r) => {
+            const p = r.pesan_terakhir;
+            const belum = r.belum_dibaca > 0 && !r.bisu;
+            return (
+              <button key={r.id} type="button" role="listitem" className="u-kabar-item" data-belum={belum ? '' : undefined} onClick={() => pilih(r.id)}>
+                <AvatarRuang r={r} saya={saya} size="sm" />
+                <span className="u-kabar-item-teks">
+                  <span className="u-kabar-item-atas">
+                    <b>{judulRuang(r, saya)}</b>
+                    {p && <time>{waktuSingkat(p.dibuat_at)}</time>}
+                  </span>
+                  <span className="u-kabar-item-isi">{cuplikan(p, r, saya)}</span>
+                </span>
+                {belum && <span className="u-kabar-item-angka">{r.belum_dibaca > 99 ? '99+' : r.belum_dibaca}</span>}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <Empty icon={<MessageCircle />} title="Belum ada obrolan" description="Pesan dari mahasiswa, dosen, dan tendik tampil di sini." />
+      )}
+      <div className="u-kabar-kaki">
+        <Button variant="ghost" size="sm" onClick={() => pilih(null)}>
+          Semua obrolan
+        </Button>
+      </div>
+    </Popover>
   );
 }

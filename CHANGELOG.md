@@ -1,5 +1,15 @@
 # Catatan perubahan
 
+## 1.45.0 (2026-11-17)
+
+- **`KerangkaAplikasi`** (`unipo-ui/siakad`): kerangka bawaan semua aplikasi dasbor dalam satu komponen, mengikuti header BAUK. Sidebar dengan logo + nama aplikasi yang bisa diklik ke beranda dan tombol ciutkan; bilah atas berisi judul halaman, pencarian fitur, ikon notifikasi, ikon pesan masuk, tombol tema, dan `MenuAkunSiakad`; navigasi bawah di ponsel dan `ChatMengambang`. Semua aplikasi React UNIPO memakainya agar tampilan sama.
+- **Pencarian fitur** (`unipo-ui`): `PencarianFitur` (palet Ctrl/⌘K atau "/", panah + Enter, sorotan kata, sinonim lewat `kataKunci`), `fiturDariMenu(groups)` untuk mengubah menu sidebar menjadi daftar fitur, `cariFitur`, `usePintasanCari`, `labelPintasanCari`.
+- **Notifikasi** (`unipo-ui/siakad`): `TombolNotifikasi` (lencana jumlah belum dibaca dari `GET /v1/notif/ringkas` tiap 60 detik selama tab terlihat, panel kotak masuk, klik = tandai dibaca lalu buka tautan, "Tandai semua dibaca") dan hook `useNotifikasi`. Token tanpa akses (401/403/404) menyembunyikan ikon tanpa pesan galat.
+- **Pesan masuk** (`unipo-ui/siakad`): `TombolPesan` (lencana pesan belum dibaca + obrolan terbaru dengan cuplikan yang didekripsi di browser) dan `bukaRuangObrolan(id)` untuk membuka satu ruang di `ChatMengambang`.
+- **Efek bayangan di pengaturan tema**: opsi tema baru `elevasi` (`datar`, `normal`, `terangkat`, `melayang`) menentukan permukaan yang berbayang: kartu, panel, kartu statistik, sidebar, dan bilah atas. Tersedia di `PengaturanTema` (pilihan "Efek bayangan"), `buatTema`, dan token CSS `--u-elevation-card`, `--u-elevation-card-hover`, `--u-elevation-bar`. Bawaan `normal` sama dengan tampilan sebelumnya. Server SIAKAD dan `/ui/tema.css` di api.unipo.ac.id perlu versi yang menerima kunci `elevasi`.
+- **`PintasanFitur`**: grid pintasan untuk beranda dari menu yang sama dengan sidebar.
+- Dokumentasi: halaman **Mulai › Kerangka aplikasi** dengan contoh lengkap, notifikasi, pesan, pencarian, pintasan, dan perbandingan efek bayangan.
+
 ## 1.44.0 (2026-11-17)
 
 - **Peta tidak lagi diblokir OpenStreetMap**: ubin peta (`Peta`, `PilihLokasiPeta`, presensi kerja) dikirim dengan `referrerpolicy="strict-origin-when-cross-origin"`. Sebelumnya aplikasi ber-header `Referrer-Policy: same-origin` (SDM, fakultas) memuat ubin tanpa perujuk dan server OSM membalas gambar "Access blocked" 403. Bisa diubah lewat `ubin.referrerPolicy`.

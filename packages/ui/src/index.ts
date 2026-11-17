@@ -45,3 +45,4 @@ export * from './components/progres';
 export * from './components/navigasi-modul';
 export * from './components/dua-langkah';
 export * from './components/peta';
+export * from './components/pencarian-fitur';
