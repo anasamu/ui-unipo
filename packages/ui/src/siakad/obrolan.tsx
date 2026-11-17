@@ -1061,7 +1061,7 @@ function InfoRuang({ r, open, onOpenChange, onKeluar }: { r: RuangObrolanData; o
                 fullWidth
               />
               <p className="u-ob-petunjuk">
-                {r.jenis === 'grup' && !admin ? 'Hanya admin grup yang bisa mengubahnya. ' : ''}Berlaku untuk pesan baru; pesan dihapus permanen dari server setelah waktunya lewat.
+                {r.jenis === 'grup' && !admin ? 'Hanya admin grup yang bisa mengubahnya. ' : ''}Berlaku untuk pesan baru; setelah waktunya lewat pesan disembunyikan dari semua anggota (tetap tersimpan terenkripsi di server).
               </p>
             </section>
 
