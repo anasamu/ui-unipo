@@ -527,7 +527,19 @@ function periksa(titik: string, b: Baris, hanya?: Aturan) {
     }
     h.diterapkan.push(a.id);
     if (langgar) {
-      const p = { id: a.id, uuid: a.id, kode: a.kode, nama: a.nama, kategori: a.kategori, jenis: a.jenis, mode: a.mode, ...langgar };
+      const p = {
+        id: a.id,
+        uuid: a.id,
+        aturan_id: a.id,
+        kode: a.kode,
+        nama: a.nama,
+        kategori: a.kategori,
+        jenis: a.jenis,
+        mode: a.mode,
+        sifat: a.sifat ?? 'ketat',
+        boleh_pengecualian: a.sifat === 'boleh_pengecualian',
+        ...langgar,
+      };
       if (a.mode === 'blokir') {
         h.pelanggaran.push(p);
         h.boleh = false;
@@ -555,6 +567,8 @@ const detail = (a: Aturan) => ({
   boleh_setujui: true,
   boleh_telaah: true,
   unit_sk: { unit: 'baak', unit_nama: 'BAAK', folder: 'SK Aturan' },
+  boleh_ajukan_pengecualian: a.sifat === 'boleh_pengecualian',
+  boleh_putus_pengecualian: a.sifat === 'boleh_pengecualian',
   spmi: a.status === 'aktif' && lampiranAktif(a).length ? [{ spmi_dokumen_id: 12, versi: a.versi, status: 'berlaku', status_dokumen: 'disahkan', waktu: a.diaktifkan_at }] : [],
   penyetuju: {
     kategori: a.kategori,
@@ -654,7 +668,9 @@ tambahRute(/^\/v1\/aturan\/saya$/, () => ({
     admin: true,
     boleh_setujui: true,
     boleh_telaah: true,
-    izin: ['aturan.setujui', 'aturan.telaah'],
+    boleh_darurat: true,
+    boleh_pengecualian: true,
+    izin: ['aturan.setujui', 'aturan.telaah', 'aturan.darurat'],
     kategori: Object.entries(KATEGORI).map(([kategori, judul]) => ({ kategori, judul, boleh_atur: true, prodi: null, semua_prodi: true, pengatur: PENGATUR.filter((p) => p.kategori === kategori) })),
   },
 }));
@@ -696,7 +712,7 @@ tambahRute(/^\/v1\/aturan$/, (u, init) => {
       (!s.get('kategori') || a.kategori === s.get('kategori')) &&
       (!s.get('status') || a.status === s.get('status')) &&
       (!s.get('jenis') || a.jenis === s.get('jenis')) &&
-      (!s.get('antrean') || a.status === 'diajukan') &&
+      (!s.get('antrean') || a.status === 'diajukan' || a.usulan?.status === 'diajukan') &&
       (!s.get('tahun_id') || !a.tahun_id || a.tahun_id === s.get('tahun_id')) &&
       (!q || `${a.nama} ${a.kode ?? ''}`.toLowerCase().includes(q)),
   );
@@ -708,7 +724,7 @@ tambahRute(/^\/v1\/aturan$/, (u, init) => {
 });
 tambahRute(/^\/v1\/aturan\/[^/]+(\/[a-z]+)?$/, (u, init) => {
   const [, , , id, aksi] = u.pathname.split('/');
-  if (['katalog', 'saya', 'periksa', 'pengatur', 'titik'].includes(id)) return LEWATI;
+  if (['katalog', 'saya', 'periksa', 'pengatur', 'titik', 'penyetuju', 'pengecualian'].includes(id)) return LEWATI;
   const a = cari(id);
   if (!a) return tidakAda;
   const b = badan(init);
@@ -744,6 +760,17 @@ tambahRute(/^\/v1\/aturan\/[^/]+(\/[a-z]+)?$/, (u, init) => {
       return { data: detail(a) };
     case 'uji':
       return { data: periksa(a.titik, b, a) };
+    case 'darurat':
+      Object.assign(a, {
+        status: 'aktif',
+        darurat: true,
+        darurat_info: { label: 'Aktif lewat jalur darurat', alasan: b.alasan, oleh: 'superadmin', waktu: sekarang() },
+        usulan: { jenis: 'darurat', status: 'diajukan', diajukan_oleh: 'superadmin', diajukan_at: sekarang() },
+        diaktifkan_at: sekarang(),
+        diaktifkan_oleh: 'superadmin',
+      });
+      catat(a, 'darurat', b.alasan ?? null);
+      return { data: detail(a) };
     case 'ajukan':
       if (!lampiranAktif(a).some((l) => l.jenis === 'sk'))
         return { __status: 422, error: { code: 'validation_failed', message: 'Lampirkan SK sebelum mengajukan aturan.', details: { sk: 'SK wajib' } } };
@@ -755,10 +782,17 @@ tambahRute(/^\/v1\/aturan\/[^/]+(\/[a-z]+)?$/, (u, init) => {
     case 'setujui':
       Object.assign(a, { status: 'aktif', diaktifkan_at: sekarang(), diaktifkan_oleh: 'wr1' });
       alur(a, 'disetujui', b.catatan ?? null);
-      catat(a, 'aktif', b.catatan ?? 'Disetujui');
+      catat(a, 'disetujui', a.darurat ? 'Jalur darurat disahkan.' : (b.catatan ?? 'Disetujui dan berlaku.'));
+      Object.assign(a, { darurat: false, darurat_info: null, usulan: null });
+      Object.assign(a.riwayat[0], { oleh: 'wr1', nama_oleh: 'Dr. Hasanuddin Lamatenggo', jabatan: 'WR1' });
       return { data: detail(a) };
     case 'kembalikan':
       if (!String(b.catatan ?? '').trim()) return galat422({ catatan: 'wajib diisi' });
+      if (a.darurat) {
+        Object.assign(a, { status: 'nonaktif', darurat: false, darurat_info: null, usulan: null });
+        catat(a, 'darurat_dicabut', b.catatan);
+        return { data: detail(a) };
+      }
       a.status = 'draf';
       a.usulan = { jenis: 'aktifkan', status: 'dikembalikan', catatan_putusan: b.catatan, diputus_oleh: 'Wakil Rektor I', diputus_at: sekarang() };
       alur(a, 'dikembalikan', b.catatan);
@@ -924,3 +958,132 @@ ATURAN.push(
     kondisi: { semua: [{ indikator: 'sks_lulus', op: '>=', nilai: 110 }] },
   }),
 );
+
+// ---------------------------------------------------------------- Sifat, jalur darurat, penyetuju, pengecualian
+for (const a of ATURAN) a.sifat = ['kkn.syarat', 'krs.batas-sks'].includes(a.kode) ? 'boleh_pengecualian' : 'ketat';
+ATURAN.push(
+  aturan({
+    nama: 'Masa pendaftaran KKN gelombang 2',
+    kode: 'kkn.masa-2',
+    titik: 'kkn.daftar',
+    kategori: 'kemahasiswaan',
+    jenis: 'batas_waktu',
+    sifat: 'ketat',
+    darurat: true,
+    darurat_info: {
+      label: 'Aktif lewat jalur darurat',
+      alasan: 'Pendaftaran dibuka besok sesuai SK Rektor; rapat pimpinan baru pekan depan.',
+      oleh: 'superadmin',
+      waktu: jam(new Date(Date.now() - 3 * 3_600_000)),
+    },
+    usulan: { jenis: 'darurat', status: 'diajukan', diajukan_oleh: 'superadmin', diajukan_at: jam(new Date(Date.now() - 3 * 3_600_000)) },
+    parameter: { mulai: `${geser(-1)} 08:00:00`, selesai: `${geser(13)} 23:59:59` },
+  }),
+);
+const ISI_DI = [
+  {
+    aplikasi: 'Pustikom',
+    menu: 'Modul Pusat data (induk) » Pejabat struktural',
+    path: '/m/induk/induk~pejabat',
+    langkah: 'Tambah pejabat: unit Universitas, jabatan (mis. WR1/REKTOR), username akun SIAKAD pejabat, tanggal mulai, nomor SK. Pejabat tanpa username tidak bisa menyetujui.',
+  },
+  {
+    aplikasi: 'Dasbor Pimpinan',
+    menu: 'Pengaturan » Bidang',
+    path: '/pengaturan/bidang',
+    langkah: 'Pada bidang yang dipetakan, tambahkan pemegang: jabatan struktural, atau orang (username) dengan masa berlaku (mis. Plt).',
+  },
+];
+const PEJABAT: Record<string, { nama: string; pejabat: Baris[] }> = {
+  REKTOR: { nama: 'Rektor', pejabat: [{ username: 'rektor', nama: 'Prof. Rahmat Puluhulawa', plt: false }] },
+  WR1: { nama: 'Wakil Rektor I (Akademik)', pejabat: [{ username: 'wr1', nama: 'Dr. Hasanuddin Lamatenggo', plt: false }] },
+  WR2: { nama: 'Wakil Rektor II (Keuangan & SDM)', pejabat: [{ username: 'wr2', nama: 'Sri Yuliani Abdullah, M.Ak.', plt: false }] },
+  WR3: { nama: 'Wakil Rektor III (Kemahasiswaan)', pejabat: [{ username: null, nama: 'Moh. Rizal Pakaya, M.Pd.', plt: true }] },
+  WR4: { nama: 'Wakil Rektor IV (Penelitian)', pejabat: [] },
+};
+const PETA: Record<string, string[]> = { akademik: ['WR1'], kelulusan: ['WR1', 'REKTOR'], keuangan: ['WR2'], kemahasiswaan: ['WR3'], kepegawaian: ['WR2'], penelitian: ['WR4'], umum: ['REKTOR'] };
+const barisPenyetuju = (k: string) => {
+  const jab = PETA[k]!;
+  const rinci = [...jab, ...(jab.includes('REKTOR') ? [] : ['REKTOR'])].map((kode) => ({ kode, nama: PEJABAT[kode]?.nama ?? kode, pejabat: PEJABAT[kode]?.pejabat ?? [] }));
+  const siap = jab.some((j) => (PEJABAT[j]?.pejabat ?? []).some((p) => p.username));
+  return {
+    kategori: k,
+    judul: KATEGORI[k],
+    jabatan: jab[0],
+    jabatan_daftar: jab,
+    telaah_spmi: k !== 'umum',
+    penyetuju: { kategori: k, jabatan_daftar: jab, rektor: !siap, orang: [], jabatan_rinci: rinci, siap, isi_di: ISI_DI },
+  };
+};
+tambahRute(/^\/v1\/aturan\/penyetuju$/, (_u, init) => {
+  if (metode(init) === 'POST') for (const x of badan(init).penyetuju ?? []) PETA[x.kategori] = Array.isArray(x.jabatan) ? x.jabatan : [x.jabatan];
+  return { data: Object.keys(PETA).map(barisPenyetuju) };
+});
+const AJUAN: Baris[] = [
+  {
+    id: uuid(),
+    subjek_jenis: 'mahasiswa',
+    subjek: MAHASISWA[5].nim,
+    subjek_nama: MAHASISWA[5].nama,
+    tahun_id: TAHUN,
+    berlaku_sampai: geser(120),
+    alasan: 'Mahasiswa pertukaran MBKM; mata kuliah konversi diakui lewat SK Dekan sehingga perlu 26 SKS.',
+    dokumen: { berkas_id: uuid(), jenis: 'sk', nomor: '45/FT-UNIPO/SK/XI/2026', tanggal: geser(-3) },
+    status: 'diajukan',
+    diajukan_oleh: 'operator.ft',
+    diajukan_at: jam(new Date(Date.now() - 5 * 3_600_000)),
+    diputus_oleh: null,
+    diputus_at: null,
+    catatan_putusan: null,
+    aturan: { id: ATURAN.find((a) => a.kode === 'krs.batas-sks')!.id, nama: 'Batas SKS KRS menurut IPS', titik: 'krs.ambil', status: 'aktif' },
+    boleh_putus: true,
+  },
+  {
+    id: uuid(),
+    subjek_jenis: 'mahasiswa',
+    subjek: MAHASISWA[9].nim,
+    subjek_nama: MAHASISWA[9].nama,
+    tahun_id: null,
+    berlaku_sampai: null,
+    alasan: 'Sudah lulus Pendidikan Pancasila di kampus asal (mahasiswa pindahan), nilai diakui lewat dokumen konversi.',
+    dokumen: { berkas_id: uuid(), jenis: 'dokumen_kebijakan', nomor: '12/BAAK/KONV/2026', tanggal: geser(-10) },
+    status: 'diajukan',
+    diajukan_oleh: MAHASISWA[9].nim,
+    diajukan_at: jam(new Date(Date.now() - 26 * 3_600_000)),
+    diputus_oleh: null,
+    diputus_at: null,
+    catatan_putusan: null,
+    aturan: { id: ATURAN.find((a) => a.kode === 'kkn.syarat')!.id, nama: 'Syarat pendaftaran KKN', titik: 'kkn.daftar', status: 'aktif' },
+    boleh_putus: true,
+  },
+];
+tambahRute(/^\/v1\/aturan\/pengecualian\/ajuan$/, (u) => {
+  const st = u.searchParams.get('status');
+  const at = u.searchParams.get('aturan');
+  return { data: AJUAN.filter((x) => (!st || x.status === st) && (!at || x.aturan?.id === at)) };
+});
+tambahRute(/^\/v1\/aturan\/pengecualian\/ajuan\/[^/]+\/(setujui|tolak)$/, (u, init) => {
+  const [, , , , , id, aksi] = u.pathname.split('/');
+  const x = AJUAN.find((y) => y.id === id);
+  if (!x) return tidakAda;
+  if (aksi === 'tolak' && !String(badan(init).catatan ?? '').trim()) return galat422({ catatan: 'wajib diisi' });
+  Object.assign(x, { status: aksi === 'setujui' ? 'disetujui' : 'ditolak', diputus_oleh: 'baak01', diputus_at: sekarang(), catatan_putusan: badan(init).catatan ?? null });
+  return { data: x };
+});
+tambahRute(/^\/v1\/aturan\/[^/]+\/pengecualian\/ajukan$/, (u, init) => {
+  const a = cari(u.pathname.split('/')[3]!);
+  if (!a) return tidakAda;
+  if (a.sifat !== 'boleh_pengecualian') return { __status: 409, error: { code: 'conflict', message: 'Aturan ini ketat dan tidak bisa dikecualikan.', details: { sifat: 'ketat' } } };
+  const b = badan(init);
+  AJUAN.unshift({
+    id: uuid(),
+    ...b,
+    dokumen: { berkas_id: b.berkas_id, jenis: b.dok_jenis, nomor: b.dok_nomor ?? null, tanggal: b.dok_tanggal ?? null },
+    status: 'diajukan',
+    diajukan_oleh: 'baak01',
+    diajukan_at: sekarang(),
+    aturan: { id: a.id, nama: a.nama, titik: a.titik, status: a.status },
+    boleh_putus: true,
+  });
+  return { __status: 201, data: AJUAN[0] };
+});

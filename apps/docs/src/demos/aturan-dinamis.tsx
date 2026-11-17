@@ -9,6 +9,8 @@ import {
   AntreanTelaahAturan,
   KelolaAturan,
   KelolaTitikAturan,
+  PejabatPenyetujuAturan,
+  PesanAturanDilanggar,
   PanelDetailAturan,
   PenyusunKondisi,
   PengaturAturan,
@@ -39,6 +41,8 @@ export const meta: DemoMeta = {
     PenyusunPegawai: 'PenyusunKondisi untuk titik pegawai: pilihan (adalah/salah satu dari), angka dengan satuan, antara, Ya/Tidak, tanggal',
     Formulir: 'FormAturan: wizard Di mana → Jenis → Ketentuan → Identitas → Dasar hukum (SK) → Tinjau',
     Persetujuan: 'AntreanPersetujuanAturan dan AntreanTelaahAturan: pasang di dasbor pimpinan dan aplikasi SPMI',
+    Pengecualian: 'PesanAturanDilanggar: pesan 409 aturan_dilanggar dengan tombol Ajukan pengecualian (AjukanPengecualianAturan) untuk aturan yang boleh dikecualikan',
+    Penyetuju: 'PejabatPenyetujuAturan: jabatan penyetuju per kategori, pejabat saat ini, peringatan bila jatuh ke Rektor',
     Titik: 'KelolaTitikAturan: titik bawaan dan kustom per unit, wizard tambah titik, ubah titik bawaan',
     Detail: 'PanelDetailAturan: aktifkan dengan SK wajib, tulis-tembus ke menu batas waktu lama',
     Syarat: 'SyaratSaya: daftar periksa mahasiswa untuk satu titik (KRS, KKN, wisuda)',
@@ -67,7 +71,7 @@ export const meta: DemoMeta = {
 };
 
 export function Modul() {
-  return <KelolaAturan tampilTitik />;
+  return <KelolaAturan tampilTitik tautanPejabat="#/pejabat" />;
 }
 
 export function PenyusunPegawai() {
@@ -222,4 +226,52 @@ export function Daftar() {
 
 export function Pengatur() {
   return <PengaturAturan />;
+}
+
+export function Pengecualian() {
+  const d = useDaftarAturan({ titik: 'krs.ambil', status: 'aktif' });
+  const batas = d.data?.find((a) => a.kode === 'krs.batas-sks');
+  const bayar = d.data?.find((a) => a.kode === 'krs.bayar');
+  if (!batas || !bayar) return null;
+  return (
+    <div style={{ maxWidth: 760 }}>
+      <PesanAturanDilanggar
+        subjek={{ jenis: 'mahasiswa', kode: '2201010006', nama: 'Nur Daud' }}
+        hasil={{
+          titik: 'krs.ambil',
+          judul: 'Ambil/ubah KRS oleh mahasiswa (kontrak KRS)',
+          pelanggaran: [
+            {
+              id: batas.id,
+              aturan_id: batas.id,
+              nama: batas.nama,
+              kode: batas.kode,
+              kategori: 'akademik',
+              jenis: 'batas_nilai',
+              mode: 'blokir',
+              sifat: 'boleh_pengecualian',
+              boleh_pengecualian: true,
+              pesan: 'SKS yang diambil maksimal 21 (sekarang 26).',
+            },
+            {
+              id: bayar.id,
+              aturan_id: bayar.id,
+              nama: bayar.nama,
+              kode: bayar.kode,
+              kategori: 'keuangan',
+              jenis: 'syarat',
+              mode: 'blokir',
+              sifat: 'ketat',
+              pesan: 'Lunasi pembayaran minimal KRS atau ajukan dispensasi ke Biro Keuangan.',
+            },
+          ],
+          peringatan: [],
+        }}
+      />
+    </div>
+  );
+}
+
+export function Penyetuju() {
+  return <PejabatPenyetujuAturan tautanPejabat="#/pejabat" />;
 }

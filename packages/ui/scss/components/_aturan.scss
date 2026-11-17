@@ -2003,3 +2003,148 @@
     display: none;
   }
 }
+
+// ================================================================ Keputusan: sifat, darurat, penyetuju, pengecualian
+.u-aturan-sifat svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+.u-aturan-sifat-pilih {
+  display: grid;
+  gap: 0.75rem;
+}
+.u-aturan-mode-opsi[data-sifat='ketat'] > span:first-child {
+  color: var(--u-foreground);
+}
+.u-aturan-mode-opsi[data-sifat='boleh_pengecualian'] > span:first-child {
+  color: var(--u-primary);
+}
+.u-aturan-dilanggar {
+  display: grid;
+  gap: 0.5rem;
+  > .u-aturan-langgar > div {
+    flex: 1;
+    min-width: 0;
+  }
+}
+.u-aturan-langgar-aksi {
+  flex: none;
+  align-self: center;
+}
+.u-aturan-langgar-ket {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+}
+.u-aturan-penyetuju {
+  display: grid;
+  gap: 1rem;
+  container-type: inline-size;
+}
+.u-aturan-penyetuju-tabel {
+  display: grid;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card);
+  overflow: hidden;
+}
+.u-aturan-penyetuju-kepala,
+.u-aturan-penyetuju-baris {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1fr) minmax(10rem, 1.2fr) minmax(0, 2.4fr) auto;
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.75rem 1rem;
+  font-size: var(--u-text-sm);
+  @container (max-width: 44rem) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    > :nth-child(2),
+    > :nth-child(3) {
+      grid-column: 1 / -1;
+    }
+  }
+}
+.u-aturan-penyetuju-kepala {
+  background: var(--u-muted);
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-medium);
+  @container (max-width: 44rem) {
+    display: none;
+  }
+}
+.u-aturan-penyetuju-baris {
+  border-top: 1px solid var(--u-border);
+  > span:first-child {
+    display: grid;
+    gap: 0.125rem;
+    em {
+      color: var(--u-muted-foreground);
+      font-size: var(--u-text-xs);
+      font-style: normal;
+    }
+  }
+  &[data-kosong] {
+    background: color-mix(in oklab, var(--u-warning) 5%, var(--u-card));
+  }
+}
+.u-aturan-penyetuju-jabatan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.u-aturan-penyetuju-orang {
+  display: grid;
+  gap: 0.25rem;
+  > span {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    > svg {
+      width: 0.875rem;
+      height: 0.875rem;
+      color: var(--u-success);
+    }
+    em {
+      color: var(--u-muted-foreground);
+      font-size: var(--u-text-xs);
+      font-style: normal;
+    }
+  }
+}
+.u-aturan-penyetuju-orang > .u-aturan-penyetuju-kosong {
+  display: block;
+  color: var(--u-warning-text);
+  > svg {
+    margin-right: 0.25rem;
+    color: var(--u-warning-text);
+    vertical-align: -0.125rem;
+  }
+  a {
+    color: inherit;
+    font-weight: var(--u-weight-medium);
+  }
+}
+.u-aturan-antrean-baris[data-darurat] .u-aturan-ikon {
+  background: var(--u-danger-soft);
+  color: var(--u-danger-text);
+}
+.u-aturan-dialog-isi {
+  display: grid;
+  gap: 1rem;
+}
+.u-aturan-isi-di {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0.5rem 0 0;
+  padding-left: 1.125rem;
+  li {
+    display: grid;
+    gap: 0.125rem;
+  }
+  span {
+    font-size: var(--u-text-xs);
+  }
+}
