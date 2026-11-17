@@ -91,7 +91,7 @@
   }
   > .u-split-aside[data-sticky] {
     position: sticky;
-    top: calc(var(--u-sticky-top, 5rem));
+    top: calc(var(--u-sticky-top, 5rem) + var(--u-offset-atas, 0px));
   }
 }
 @media (min-width: 768px) {
