@@ -1,7 +1,7 @@
 'use client';
 import * as React from 'react';
 import { Skeleton } from '../components/actions';
-import { KartuAkun, MenuAkun, type AkunPengguna, type KartuAkunProps, type MenuAkunProps } from '../components/akun';
+import { KartuAkun, MenuAkun, type AkunPengguna, type ItemMenuAkun, type KartuAkunProps, type MenuAkunProps } from '../components/akun';
 import { useOptionalSiakad, useSiakadQuery } from './provider';
 
 /** Bagian GET /v1/profil/saya yang dipakai menu dan kartu akun. */
@@ -57,7 +57,9 @@ export function useAkunSaya(opsi: { foto?: boolean } = {}) {
         foto,
       }
     : null;
-  return { ...q, pengguna, kelengkapan: d?.kelengkapan?.persen_wajib ?? null, kurang: d?.kelengkapan?.kurang ?? [] };
+  /** Kode peran profil (mahasiswa, dosen, tendik, alumni, pengguna). */
+  const kodePeran = d?.identitas?.peran ?? null;
+  return { ...q, pengguna, kodePeran, kelengkapan: d?.kelengkapan?.persen_wajib ?? null, kurang: d?.kelengkapan?.kurang ?? [] };
 }
 
 /**
@@ -68,7 +70,14 @@ export function MenuAkunSiakad({ cadangan, ...props }: Omit<MenuAkunProps, 'peng
   const a = useAkunSaya();
   const pengguna = a.pengguna ?? cadangan;
   if (!pengguna) return <Skeleton width={props.varian === 'avatar' || props.varian === 'ikon' ? 36 : 180} height={36} className="u-akun-memuat" />;
-  return <MenuAkun {...props} pengguna={pengguna} kelengkapan={a.kelengkapan} />;
+  return <MenuAkun {...props} item={itemDenganGaji(props.item, a.kodePeran)} pengguna={pengguna} kelengkapan={a.kelengkapan} />;
+}
+
+/** Dosen dan tendik mendapat "Riwayat gaji" (Profil /gaji) di menu akun, sebelum "Keamanan akun". */
+function itemDenganGaji(item: ItemMenuAkun[] = ['profil', 'ubah', 'keamanan'], peran: string | null): ItemMenuAkun[] {
+  if ((peran !== 'dosen' && peran !== 'tendik') || item.includes('gaji')) return item;
+  const i = item.indexOf('keamanan');
+  return i < 0 ? [...item, 'gaji'] : [...item.slice(0, i), 'gaji', ...item.slice(i)];
 }
 
 /** KartuAkun yang mengisi dirinya dari /v1/profil/saya. */
