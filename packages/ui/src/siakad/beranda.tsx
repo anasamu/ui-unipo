@@ -15,6 +15,7 @@ import { PengingatKelengkapan } from './kelengkapan';
 import { ModalAjukanLayanan, ModalAmbilKrs, ModalCekKelulusan, ModalDaftarWisuda } from './modal-fitur';
 import { KepegawaianSaya, useProfilSaya, type KeuanganMahasiswaData, type PeranProfil } from './profil-modul';
 import { useSiakadQuery } from './provider';
+import { PintasanBeranda } from './pintasan-menu';
 
 /**
  * Beranda siap pakai per peran: sapaan, pengingat kelengkapan data, aksi cepat yang membuka modal fitur, dan widget
@@ -37,11 +38,16 @@ export interface SapaanBerandaProps {
   lencana?: React.ReactNode;
   /** Tombol atau kontrol (mis. "Lihat profil", pilihan gelombang). */
   aksi?: React.ReactNode;
+  /**
+   * Deret pintasan pengguna (disematkan + sering dibuka) di bawah sapaan, dari tombol Pintasan KerangkaAplikasi.
+   * Hanya tampil di dalam KerangkaAplikasi dan bila ada pintasan. Bawaan true; false = tanpa deret.
+   */
+  pintasan?: boolean;
   className?: string;
 }
 
-/** Kepala beranda: salam sesuai jam, nama, tanggal hari ini, lencana, aksi, dan ilustrasi peran. */
-export function SapaanBeranda({ nama, keterangan, ilustrasi, lencana, aksi, className }: SapaanBerandaProps) {
+/** Kepala beranda: salam sesuai jam, nama, tanggal hari ini, lencana, aksi, pintasan pengguna, dan ilustrasi peran. */
+export function SapaanBeranda({ nama, keterangan, ilustrasi, lencana, aksi, pintasan = true, className }: SapaanBerandaProps) {
   return (
     <section className={cn('u-beranda-sapaan', className)}>
       <div className="u-beranda-sapaan-isi">
@@ -53,6 +59,7 @@ export function SapaanBeranda({ nama, keterangan, ilustrasi, lencana, aksi, clas
         {keterangan && <div className="u-beranda-ket">{keterangan}</div>}
         {lencana && <div className="u-beranda-sapaan-lencana">{lencana}</div>}
         {aksi && <div className="u-beranda-sapaan-aksi">{aksi}</div>}
+        {pintasan && <PintasanBeranda varian="ringkas" maks={6} />}
       </div>
       {ilustrasi && <Ilustrasi nama={ilustrasi} ekspresi="senang" lebar={190} className="u-beranda-ilus" />}
     </section>

@@ -9,6 +9,7 @@
 @use 'components/overlays';
 @use 'components/modal-fitur';
 @use 'components/modul-profil';
+@use 'components/pemutakhiran';
 @use 'components/masuk-aplikasi';
 @use 'components/display';
 @use 'components/code';
@@ -29,9 +30,14 @@
 @use 'components/kalender-unduh';
 @use 'components/content';
 @use 'components/wizard';
+@use 'components/panel-langkah';
+@use 'components/linimasa';
+@use 'components/aturan-versi';
+@use 'components/aturan-karier';
 @use 'components/formulir';
 @use 'components/aturan';
 @use 'components/aturan-fakultas';
+@use 'components/aturan-kelompok';
 @use 'components/biaya';
 @use 'components/panitia';
 @use 'components/ormawa';
@@ -87,6 +93,7 @@
 @use 'components/isian-sk';
 @use 'components/jadwal-bentrok';
 @use 'components/pengajuan';
+@use 'components/pemeriksa';
 @use 'components/kerangka-aplikasi';
 @use 'components/pengumuman-lintas';
 @use 'components/bilah-menyamar';

@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { ArrowRight, CornerDownLeft, Search } from 'lucide-react';
+import { ArrowRight, CornerDownLeft, Search, Star } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Kbd } from './actions';
 import type { NavGroup, NavItem } from './layout';
@@ -125,6 +125,13 @@ export interface PencarianFiturProps {
   placeholder?: string;
   /** Batas hasil yang ditampilkan. Bawaan 50. */
   batas?: number;
+  /**
+   * Bagian di atas daftar saat kotak cari masih kosong, mis. `[{ judul: 'Disematkan', keys }, { judul: 'Sering dibuka', keys }]`
+   * (kunci dari `items`). Bagian tanpa item tidak tampil.
+   */
+  bagianAwal?: Array<{ judul: string; keys: string[] }>;
+  /** Aksi sematkan per hasil (tombol bintang dan Shift+Enter), mis. dari pintasan KerangkaAplikasi. */
+  sematan?: { apakah: (key: string) => boolean; bisa?: (key: string) => boolean; penuh?: boolean; alihkan: (key: string) => void };
   className?: string;
 }
 
@@ -132,12 +139,26 @@ export interface PencarianFiturProps {
  * Palet pencarian fitur (Ctrl/⌘K): cari menu dan aksi aplikasi, pilih dengan panah + Enter. Isi `items` dengan
  * `fiturDariMenu(groups)` ditambah fitur lain yang tidak ada di sidebar.
  */
-export function PencarianFitur({ open, onOpenChange, items, onPilih, placeholder = 'Cari fitur atau menu', batas = 50, className }: PencarianFiturProps) {
+export function PencarianFitur({ open, onOpenChange, items, onPilih, placeholder = 'Cari fitur atau menu', batas = 50, bagianAwal, sematan, className }: PencarianFiturProps) {
   const [q, setQ] = React.useState('');
   const [aktif, setAktif] = React.useState(0);
   const daftarRef = React.useRef<HTMLDivElement>(null);
   const id = React.useId();
-  const hasil = React.useMemo(() => cariFitur(items, q).slice(0, batas), [items, q, batas]);
+  // Saat kosong: bagian awal (Disematkan, Sering dibuka) lalu semua fitur per kelompok.
+  const baris = React.useMemo(() => {
+    const cocok = cariFitur(items, q).slice(0, batas).map((it) => ({ it, judul: it.kelompok }));
+    if (q.trim() || !bagianAwal?.length) return cocok;
+    const byKey = new Map(items.map((it) => [it.key, it]));
+    const awal = bagianAwal.flatMap((b) =>
+      b.keys
+        .map((k) => byKey.get(k))
+        .filter((x): x is ItemFitur => Boolean(x))
+        .map((it) => ({ it, judul: b.judul, awal: true })),
+    );
+    return [...awal, ...cocok];
+  }, [items, q, batas, bagianAwal]);
+  const hasil = baris.map((b) => b.it);
+  const bisaSemat = (it?: ItemFitur) => Boolean(it && sematan && (sematan.bisa ? sematan.bisa(it.key) : true));
 
   React.useEffect(() => {
     if (open) {
@@ -161,7 +182,11 @@ export function PencarianFitur({ open, onOpenChange, items, onPilih, placeholder
     else if (e.key === 'ArrowUp') (e.preventDefault(), setAktif((a) => Math.max(0, a - 1)));
     else if (e.key === 'Home' && e.ctrlKey) (e.preventDefault(), setAktif(0));
     else if (e.key === 'End' && e.ctrlKey) (e.preventDefault(), setAktif(hasil.length - 1));
-    else if (e.key === 'Enter') (e.preventDefault(), pilih(hasil[aktif]));
+    else if (e.key === 'Enter' && e.shiftKey && sematan) {
+      e.preventDefault();
+      const it = hasil[aktif];
+      if (it && bisaSemat(it) && (sematan.apakah(it.key) || !sematan.penuh)) sematan.alihkan(it.key);
+    } else if (e.key === 'Enter') (e.preventDefault(), pilih(hasil[aktif]));
   };
 
   // Kelompokkan berurutan: judul kelompok tampil saat kelompok berganti.
@@ -190,9 +215,11 @@ export function PencarianFitur({ open, onOpenChange, items, onPilih, placeholder
       </div>
       <div ref={daftarRef} id={`${id}-daftar`} className="u-cari-fitur-daftar" role="listbox" aria-label="Hasil pencarian">
         {hasil.length ? (
-          hasil.map((it, i) => {
-            const judul = it.kelompok !== kelompokSebelum && !q.trim() ? it.kelompok : undefined;
-            kelompokSebelum = it.kelompok;
+          baris.map(({ it, judul: kel }, i) => {
+            const judul = kel !== kelompokSebelum && !q.trim() ? kel : undefined;
+            kelompokSebelum = kel;
+            const di = sematan?.apakah(it.key) ?? false;
+            const tombolSemat = bisaSemat(it) && sematan;
             return (
               <React.Fragment key={`${it.key}-${i}`}>
                 {judul && <div className="u-cari-fitur-kelompok">{judul}</div>}
@@ -214,6 +241,24 @@ export function PencarianFitur({ open, onOpenChange, items, onPilih, placeholder
                     </span>
                     {(it.keterangan || (q.trim() && it.kelompok)) && <small>{it.keterangan ?? it.kelompok}</small>}
                   </span>
+                  {tombolSemat && (
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      className="u-pin-bintang u-cari-fitur-bintang"
+                      data-disematkan={di ? '' : undefined}
+                      aria-pressed={di}
+                      aria-disabled={(!di && sematan.penuh) || undefined}
+                      aria-label={di ? `Lepas ${it.label} dari Pintasan` : `Sematkan ${it.label} ke Pintasan`}
+                      title={di ? 'Lepas dari Pintasan (Shift+Enter)' : sematan.penuh ? 'Pintasan penuh' : 'Sematkan ke Pintasan (Shift+Enter)'}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (di || !sematan.penuh) sematan.alihkan(it.key);
+                      }}
+                    >
+                      <Star aria-hidden />
+                    </button>
+                  )}
                   {i === aktif && <CornerDownLeft className="u-cari-fitur-enter" aria-hidden />}
                 </div>
               </React.Fragment>
@@ -231,6 +276,12 @@ export function PencarianFitur({ open, onOpenChange, items, onPilih, placeholder
         <span>
           <Kbd>Enter</Kbd> buka
         </span>
+        {sematan && (
+          <span>
+            <Kbd>Shift</Kbd>
+            <Kbd>Enter</Kbd> sematkan
+          </span>
+        )}
         <span>
           <Kbd>{labelPintasanCari()}</Kbd> cari dari mana saja
         </span>

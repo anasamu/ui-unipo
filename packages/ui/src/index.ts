@@ -23,6 +23,8 @@ export * from './components/status';
 export * from './components/schedule';
 export * from './components/content';
 export * from './components/wizard';
+export * from './components/panel-langkah';
+export * from './components/linimasa';
 export * from './components/formulir';
 export * from './components/charts';
 export * from './components/pemeliharaan';

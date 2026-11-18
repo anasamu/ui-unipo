@@ -467,7 +467,6 @@ function PratinjauKerangka({ t }: { t: TataKerangka }) {
     <div className="u-tema-kerangka-pratinjau" data-sb={t.sidebarGaya} data-hd={t.headerGaya} data-aktif={t.sidebarAktif} data-mini={t.sidebarMode === 'mini' ? '' : undefined} data-ringkas={t.headerTinggi === 'ringkas' ? '' : undefined} aria-hidden>
       <span className="u-tkp-sb">
         <i className="u-tkp-logo" />
-        {t.sidebarPintasan && <i className="u-tkp-pin" />}
         <i data-aktif="" />
         <i />
         <i />
@@ -478,6 +477,7 @@ function PratinjauKerangka({ t }: { t: TataKerangka }) {
         <span className="u-tkp-hd">
           {t.headerJudul !== 'tanpa' && <i className="u-tkp-judul" />}
           {t.headerCari !== 'ikon' && <i className="u-tkp-cari" data-tengah={t.headerCari === 'tengah' ? '' : undefined} />}
+          {t.sidebarPintasan && <i className="u-tkp-ikon" data-pin="" />}
           <i className="u-tkp-ikon" />
           <i className="u-tkp-ikon" />
         </span>
@@ -556,9 +556,9 @@ function PengaturanKerangka({ tata, ubah }: { tata: Record<string, unknown>; uba
         {seg('sidebarAktif', 'Menu aktif', [{ value: 'lembut', label: 'Latar lembut' }, { value: 'garis', label: 'Garis' }, { value: 'pil', label: 'Pil' }])}
         {seg('sidebarLebar', 'Lebar', [{ value: 'sempit', label: 'Sempit' }, { value: 'normal', label: 'Normal' }, { value: 'lebar', label: 'Lebar' }])}
       </div>
-      {seg('sidebarPintasan', 'Pintasan menu sering dibuka', [{ value: 'ya', label: 'Tampilkan' }, { value: 'tidak', label: 'Sembunyikan' }])}
       <div className="u-tema-kelompok">Header</div>
       {seg('headerGaya', 'Gaya', [{ value: 'polos', label: 'Polos' }, { value: 'garis', label: 'Garis' }, { value: 'bayang', label: 'Berbayang' }, { value: 'blur', label: 'Blur' }, { value: 'utama', label: 'Warna utama' }])}
+      {seg('sidebarPintasan', 'Tombol Pintasan di header', [{ value: 'ya', label: 'Tampilkan' }, { value: 'tidak', label: 'Sembunyikan' }], 'Tombol bintang berisi menu yang disematkan dan sering dibuka. Sidebar tidak berubah.')}
       <div className="u-tema-dua">
         {seg('headerTinggi', 'Tinggi', [{ value: 'ringkas', label: 'Ringkas' }, { value: 'normal', label: 'Normal' }])}
         {seg('headerLengket', 'Saat digulir', [{ value: 'ya', label: 'Tetap di atas' }, { value: 'tidak', label: 'Ikut tergulir' }])}

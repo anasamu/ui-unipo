@@ -55,6 +55,7 @@ import type { SelectOption } from '../components/select';
 import { useAkunSaya } from './akun';
 import { PilihTahunAkademik } from './cari';
 import { GalatApi } from './galat';
+import { AlurPemeriksa, LabelPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import { PilihUnit, useUnitSdm } from './pilih-unit';
 import { PilihEntitas } from './pilih';
 import { PilihBerkas } from './pilih-berkas';
@@ -62,6 +63,7 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
 import { IsianSK, PilihSK, type NilaiSK } from './isian-sk';
 import { LinimasaPengajuan } from './pengajuan';
 import { KelolaTitikAturan } from './aturan-titik';
+import { DaftarAturanKelompok } from './aturan-kelompok';
 import {
   AjukanPengecualianAturan,
   AktifkanDaruratAturan,
@@ -256,6 +258,8 @@ export interface UsulanAturan {
   catatan_putusan?: string | null;
   telaah?: TelaahAturan[];
   jumlah_telaah?: number;
+  /** Alur pemeriksa (docs/PEMERIKSA.md SIAKAD): pejabat penyetuju lalu telaah SPMI (berjalan bersamaan). */
+  pemeriksa?: TahapPemeriksa[];
 }
 /** Satu langkah alur persetujuan aturan (diajukan, disetujui, dikembalikan, ditelaah). SIAKAD terbaru. */
 export interface LangkahPersetujuanAturan {
@@ -1001,6 +1005,7 @@ export function KartuAturan({ aturan: a, katalog, onBuka, className }: KartuAtur
           {a.bawaan && <Badge variant="info">Bawaan</Badge>}
           <StatusAturanBadge status={statusTampil(a)} dihapus={Boolean(a.dihapus_at)} />
           {a.status === 'aktif' && a.usulan?.status === 'diajukan' && <Badge variant="info">Versi baru diajukan</Badge>}
+          {a.usulan?.status === 'diajukan' && a.usulan.pemeriksa?.length ? <LabelPemeriksa pemeriksa={a.usulan.pemeriksa} /> : null}
         </div>
       </div>
       {ketentuan && <p className="u-aturan-kartu-isi">{ketentuan}</p>}
@@ -4486,6 +4491,7 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
           {a.penyetuju && !a.penyetuju.orang?.length ? ' Belum ada pejabat penyetuju yang tercatat; hubungi admin.' : ''}
         </Alert>
       )}
+      {usulan?.pemeriksa?.length && usulan.status !== 'draf' ? <AlurPemeriksa pemeriksa={usulan.pemeriksa} judul="Siapa yang memeriksa usulan ini" /> : null}
       {a.darurat && (
         <Alert variant="danger" icon={<Siren />} title={a.darurat_info?.label ?? 'Aktif lewat jalur darurat'}>
           Aturan sudah diperiksa, tetapi masih menunggu pengesahan susulan penyetuju.
@@ -4844,6 +4850,13 @@ export interface KelolaAturanProps {
   tautanPejabat?: string;
   /** Unit aplikasi untuk bagian "Aturan bawaan" (baak, bauk, pmb, sdm, spmi, lppm, pustikom, fakultas). Kosong = per kategori. */
   unit?: string;
+  /**
+   * `kartu` (bawaan): panel aturan bawaan + kisi kartu. `kelompok`: registri berkelompok per bidang langkah, aturan
+   * berjudul sama di beberapa fakultas jadi satu baris induk, saring lingkup/status, lampiran SK massal.
+   */
+  tampilan?: 'kartu' | 'kelompok';
+  /** Portal Fakultas (tampilan kelompok): hanya aturan universitas umum + aturan yang lingkupnya fakultas ini. */
+  fakultas?: string | null;
   className?: string;
 }
 
@@ -5028,7 +5041,8 @@ export function PengingatSkAturan({ unit, kategori, href, onBuka, className }: {
  * riwayat), alur persetujuan (menunggu persetujuan saya, telaah SPMI), sampah (admin), pengatur, dan titik penerapan.
  * Hak akses mengikuti GET /v1/aturan/saya.
  */
-export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik dinamis', tampilTitik = false, tautanPejabat, className }: KelolaAturanProps) {
+export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik dinamis', tampilTitik = false, tautanPejabat, tampilan = 'kartu', fakultas, className }: KelolaAturanProps) {
+  const kelompok = tampilan === 'kelompok' && !titik;
   const saya = useAturanSaya();
   const ringkas = useDaftarAturan({ kategori, titik, per_page: 200 });
   const hakSaya = hakAlur(saya.data);
@@ -5064,7 +5078,7 @@ export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik d
         </div>
         {tombolTambah}
       </div>
-      <div className="u-aturan-statistik">
+      {kelompok ? null : <div className="u-aturan-statistik">
         {[
           { label: 'Aktif', nilai: hitung('aktif'), ikon: <Power />, nada: 'success' },
           { label: 'Draf', nilai: hitung('draf') + hitung('dikembalikan'), ikon: <Pencil />, nada: 'warning', catatan: tanpaSk ? `${tanpaSk} belum ber-SK` : undefined },
@@ -5080,7 +5094,7 @@ export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik d
             </div>
           </div>
         ))}
-      </div>
+      </div>}
       <Tabs
         value={tab}
         onValueChange={setTab}
@@ -5089,7 +5103,17 @@ export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik d
             value: 'aturan',
             label: 'Aturan',
             icon: <Scale />,
-            content: (
+            content: kelompok ? (
+              <DaftarAturanKelompok
+                kategori={kategori}
+                fakultas={fakultas}
+                bolehAtur={Boolean(saya.data?.admin || saya.data?.kategori.some((k) => k.boleh_atur && k.semua_prodi && (!kategori || k.kategori === kategori)))}
+                bolehAturFakultas={Boolean(saya.data?.admin) || (Boolean(fakultas) && bolehTambah)}
+                onBuka={(a) => setBuka(a.id)}
+                onLampirkan={(a) => setForm({ aturan: a, langkah: 4 })}
+                catatanFakultas={fakultas ? null : undefined}
+              />
+            ) : (
               <div className="u-aturan-detail-isi">
                 {!titik && <AturanBawaanPanel kategori={kategori} unit={unit} bolehAtur={bolehTambah} onBuka={(a) => setBuka(a.id)} onLampirkan={(a) => setForm({ aturan: a, langkah: 4 })} />}
                 <DaftarAturan filter={{ kategori, titik }} onBuka={(a) => setBuka(a.id)} />

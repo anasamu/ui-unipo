@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { BarChart3, BookOpen, ClipboardList, FileBarChart, FolderOpen, House, Mail, MessagesSquare, Package, Palette, Receipt, Settings, Store, Users, Wallet } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, PencarianFitur, PintasanFitur, SearchTrigger, StatCard, fiturDariMenu, labelPintasanCari, type ItemFitur, type NavGroup, type TemaAkun } from 'unipo-ui';
-import { KerangkaAplikasi, TombolBerkas, TombolNotifikasi, TombolPesan } from 'unipo-ui/siakad';
+import { KerangkaAplikasi, PintasanBeranda, TombolBerkas, TombolNotifikasi, TombolPesan } from 'unipo-ui/siakad';
 import { buatTema, PILIHAN_ELEVASI, type Elevasi } from 'unipo-ui/tema';
 import type { DemoMeta } from '../registry';
 
@@ -15,7 +15,7 @@ export const meta: DemoMeta = {
     'Kerangka bawaan semua aplikasi dasbor UNIPO dalam satu komponen: sidebar dengan logo yang menuju beranda, judul halaman, pencarian fitur (Ctrl/⌘K), notifikasi masuk, pesan masuk, kelola berkas, tombol tema, menu akun SIAKAD, navigasi bawah di ponsel, dan obrolan mengambang. Pakai ini agar header dan sidebar sama di Pustikom, PMB, LMS, BAAK, BAUK, SDM, dan aplikasi lain.',
   importLine: "import { KerangkaAplikasi, TombolNotifikasi, TombolPesan, useNotifikasi } from 'unipo-ui/siakad';\nimport { PencarianFitur, PintasanFitur, fiturDariMenu } from 'unipo-ui';",
   demos: {
-    Lengkap: 'KerangkaAplikasi: klik logo, coba Ctrl/⌘K atau "/", buka lonceng dan ikon pesan. Di bawah 1024 px sidebar pindah ke laci.',
+    Lengkap: 'KerangkaAplikasi: klik logo, coba Ctrl/⌘K atau "/", buka lonceng dan ikon pesan. Arahkan kursor ke menu lalu klik bintang untuk menyematkan; tombol bintang di bilah atas membuka Pintasan. Di bawah 1024 px sidebar pindah ke laci.',
     Notifikasi: 'TombolNotifikasi: lencana belum dibaca, klik = tandai dibaca lalu buka tautan',
     Pesan: 'TombolPesan: obrolan terbaru dengan cuplikan yang didekripsi di browser',
     Berkas: 'TombolBerkas: unggah cepat (tombol atau tarik-lepas), berkas terbaru dengan tombol unduh, dan Kelola berkas',
@@ -40,16 +40,17 @@ export const meta: DemoMeta = {
     ['sidebarHeader / sidebarFooter', 'ReactNode', 'Isi tambahan sidebar.'],
     ['versi', 'string', 'Versi aplikasi di kaki sidebar, mis. dari package.json lewat define Vite (__VERSI__).'],
     ['statusApi', 'boolean', 'Status layanan API di kaki sidebar (GET /v1/health tiap 60 detik saat tab terlihat). Bawaan true.'],
-    ['pintasan', 'boolean', 'Bagian Pintasan: menu yang paling sering dibuka pengguna ini (localStorage per aplikasi + pengguna), bisa disematkan/dilepas. Bawaan true.'],
+    ['pintasan', 'boolean', 'Pintasan menu pengguna (localStorage per aplikasi + pengguna, maks. 8 disematkan): bintang sematkan saat kursor di item sidebar (item TIDAK dipindah, yang disematkan hanya diberi bintang; klik kanan/tekan lama = menu konteks), tombol bintang "Pintasan" di bilah atas (Disematkan dengan urut seret/panah + Sering dibuka dengan sematkan/sembunyikan + "Sematkan halaman ini"), bagian awal Ctrl/⌘K, navigasi bawah ponsel (Beranda + sematan), dan PintasanBeranda / deret di SapaanBeranda. Bawaan true; false mematikan semuanya.'],
     ['temaAplikasi / temaLingkup', 'string', 'Kode aplikasi dan lingkup tema (/v1/tema) bila berbeda dari kode, untuk membaca variasi Sidebar dan Header.'],
-    ['navBawah / navBawahAktif', 'ItemNavigasiBawah[] / string', 'Navigasi bawah di layar < 768 px.'],
+    ['navBawah / navBawahAktif', 'ItemNavigasiBawah[] / string', 'Navigasi bawah di layar < 768 px. Bawaan Beranda + menu yang disematkan; tanpa sematan: Beranda + menu teratas sidebar.'],
     ['tataMuat / muat', "TataMuatHalaman | (activeKey) => TataMuatHalaman / false | { awal?, pindah? }", 'Efek memuat halaman pertama dan pindah menu (lihat Efek memuat halaman). Bawaan dari tema: bilah progres + kerangka isi, lalu bilah progres + pudar.'],
   ],
   notes: [
     'Notifikasi: GET /v1/notif/ringkas tiap 60 detik selama tab terlihat (berhenti saat tab disembunyikan), GET /v1/notif/kotak saat panel dibuka, POST /v1/notif/kotak/{id}/baca saat diklik, POST /v1/notif/kotak/baca-semua untuk "Tandai semua dibaca". Galat 401/403/404 menyembunyikan ikon tanpa pesan galat.',
     'Pesan: memakai mesin obrolan yang sama dengan ChatMengambang (satu koneksi long-poll per halaman). Lencana = jumlah pesan belum dibaca di obrolan yang tidak dibisukan. Ikon tidak tampil bila token tidak punya scope obrolan.',
     'BFF aplikasi harus meneruskan /v1/notif dan /v1/obrolan ke SIAKAD, dan klien API aplikasi butuh scope notif:read, notif:write, obrolan:read, obrolan:write (daftar wajib di siakad app/Modules/Rbac/Data/scope_aplikasi.php).',
-    'Tampilan sidebar dan header (gaya, mode bawaan penuh/mini/otomatis, kepadatan, gaya menu aktif, pintasan, lebar; gaya header, tinggi, posisi cari, lengket, judul/jejak) diatur di PengaturanTema bagian Sidebar dan header, disimpan di tata (`sidebar_*`, `header_*`). Lapis kampus menjadi bawaan semua aplikasi.',
+    'Tampilan sidebar dan header (gaya, mode bawaan penuh/mini/otomatis, kepadatan, gaya menu aktif, lebar; gaya header, tombol Pintasan (`sidebar_pintasan`), tinggi, posisi cari, lengket, judul/jejak) diatur di PengaturanTema bagian Sidebar dan header, disimpan di tata (`sidebar_*`, `header_*`). Lapis kampus menjadi bawaan semua aplikasi.',
+    'Pintasan di beranda: `<PintasanBeranda />` (petak berikon + bintang, ajakan saat kosong) dari unipo-ui/siakad, atau otomatis sebagai deret chip di bawah SapaanBeranda (`pintasan={false}` untuk mematikan). Keduanya hanya tampil di dalam KerangkaAplikasi.',
     'Efek bayangan diatur di Pengaturan tema (PengaturanTema → Efek bayangan) dan disimpan sebagai tema.elevasi lewat /v1/tema. Kekuatan bayangan tetap diatur pilihan Bayangan.',
   ],
 };
@@ -148,6 +149,7 @@ export function Lengkap() {
             <StatCard label="Tagihan belum lunas" value="412" delta={-3.1} deltaLabel="dari Oktober" inverse />
             <StatCard label="Payroll diproses" value="187 pegawai" />
           </div>
+          <PintasanBeranda />
           <Card>
             <CardHeader title="Pintasan" description="Dari menu yang sama dengan sidebar" />
             <CardContent>
