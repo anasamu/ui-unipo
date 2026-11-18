@@ -149,3 +149,45 @@
   overflow: hidden;
   pointer-events: none;
 }
+.u-bagan-staf {
+  cursor: pointer;
+  outline: none;
+  &:hover text,
+  &:focus-visible text {
+    text-decoration: underline;
+  }
+}
+.u-bagan-daftar-staf {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 60vh;
+  overflow-y: auto;
+  li + li {
+    border-top: 1px solid var(--u-border);
+  }
+  button,
+  div {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.5rem 0.25rem;
+    border: 0;
+    background: none;
+    text-align: start;
+    font: inherit;
+    color: var(--u-foreground);
+  }
+  button {
+    cursor: pointer;
+    border-radius: var(--u-radius-sm);
+    &:hover {
+      background: var(--u-hover, var(--u-muted));
+    }
+  }
+  span {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+}

@@ -1,10 +1,10 @@
 'use client';
 import * as React from 'react';
-import { ChevronsDownUp, ChevronsUpDown, Download, FileImage, FileText, Maximize, Minimize, Minus, Plus, Printer, ScanSearch } from 'lucide-react';
+import { ChevronsDownUp, ChevronsUpDown, Download, FileImage, FileText, Maximize, Minimize, Minus, Plus, Printer, ScanSearch, UsersRound } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { hueFromString, initials } from '../lib/format';
 import { Button } from './actions';
-import { Menu } from './overlays';
+import { Dialog, Menu } from './overlays';
 
 // ================================================================ Bagan organisasi (struktur organisasi v2)
 
@@ -45,6 +45,16 @@ export interface UnitBagan {
   aktif?: boolean;
   /** Jabatan terisi dan kosong; yang pertama terisi menjadi pimpinan di kartu ringkas. */
   jabatan?: JabatanBagan[];
+  /** Tendik dan staf unit (mis. dari SDM): tampil sebagai kelompok kecil di kartu (beberapa + "+N lainnya"). */
+  staf?: StafBagan[];
+}
+
+export interface StafBagan {
+  nama: string;
+  /** Tugas/jabatan fungsional, mis. "Operator akademik", "Laboran". */
+  tugas?: string | null;
+  /** Data tambahan pemanggil (mis. id pegawai), dikembalikan di onPilihStaf. */
+  ref?: unknown;
 }
 
 export interface GayaJenisBagan {
@@ -87,6 +97,10 @@ export interface BaganOrganisasiProps {
   onPilihUnit?: (u: UnitBagan) => void;
   /** Klik "Isi" pada jabatan kosong (mis. buka formulir pejabat). Tanpa ini tombol Isi tidak tampil. */
   onIsiJabatan?: (u: UnitBagan, j: JabatanBagan) => void;
+  /** Tampilkan tendik/staf di kartu (bila data punya `staf`). Bawaan true; bisa disembunyikan dari bilah alat. */
+  tampilStaf?: boolean;
+  /** Klik nama tendik/staf (mis. buka profil pegawai di SDM). */
+  onPilihStaf?: (s: StafBagan, u: UnitBagan) => void;
   /** Nama berkas unduhan tanpa ekstensi. */
   namaBerkas?: string;
   /** Peta mini di pojok. Bawaan true. */
@@ -96,7 +110,9 @@ export interface BaganOrganisasiProps {
 
 // ---------------------------------------------------------------- ukuran
 
-const W = 248;
+/** Lebar kartu; kartu rinci (semua jabatan) lebih lebar supaya nama jabatan berbidang terbaca. */
+const W_RINGKAS = 248;
+const W_RINCI = 296;
 const IND = 30;
 const GAP_X = 28;
 const GAP_Y = 64;
@@ -122,9 +138,21 @@ interface Simpul {
   y: number;
 }
 
-function tinggiKartu(u: UnitBagan, rinci: boolean): number {
+const STAF_MAKS = 3;
+const STAF_BARIS = 22;
+
+function tinggiInti(u: UnitBagan, rinci: boolean): number {
   if (!rinci) return H_RINGKAS;
   return KEPALA + Math.max(1, u.jabatan?.length ?? 0) * BARIS + 12;
+}
+
+function tinggiStaf(u: UnitBagan): number {
+  const n = u.staf?.length ?? 0;
+  return n ? 30 + Math.min(n, STAF_MAKS) * STAF_BARIS + (n > STAF_MAKS ? 20 : 0) + 4 : 0;
+}
+
+function tinggiKartu(u: UnitBagan, rinci: boolean, staf: boolean): number {
+  return tinggiInti(u, rinci) + (staf ? tinggiStaf(u) : 0);
 }
 
 function potong(teks: string, lebar: number, ukuran: number, maks: number): string[] {
@@ -154,7 +182,8 @@ function potong(teks: string, lebar: number, ukuran: number, maks: number): stri
 }
 
 /** Susun pohon dari data datar dan hitung posisi. */
-function tata(data: UnitBagan[], akar: string | null | undefined, rinci: boolean, tertutup: Set<string>, urutJenis: string[]) {
+function tata(data: UnitBagan[], akar: string | null | undefined, rinci: boolean, tertutup: Set<string>, urutJenis: string[], staf = false) {
+  const W = rinci ? W_RINCI : W_RINGKAS;
   const peta = new Map(data.map((u) => [u.id, u]));
   const anakDari = new Map<string | null, UnitBagan[]>();
   for (const u of data) {
@@ -189,7 +218,7 @@ function tata(data: UnitBagan[], akar: string | null | undefined, rinci: boolean
       u, tingkat, turunan, tutup,
       anak: biasa,
       koord: tutup ? [] : anakS.filter((a) => a.u.koordinasi),
-      tumpuk: false, w: W, h: tinggiKartu(u, rinci), sw: 0, sh: 0, x: 0, y: 0,
+      tumpuk: false, w: W, h: tinggiKartu(u, rinci, staf), sw: 0, sh: 0, x: 0, y: 0,
     };
   };
   const akarU = akar ? [peta.get(akar)].filter((x): x is UnitBagan => !!x) : anakDari.get(null) ?? [];
@@ -304,9 +333,13 @@ interface SvgProps {
   onToggle?: (id: string) => void;
   onPilih?: (u: UnitBagan) => void;
   onIsi?: (u: UnitBagan, j: JabatanBagan) => void;
+  staf?: boolean;
+  onSemuaStaf?: (u: UnitBagan) => void;
+  onPilihStaf?: (s: StafBagan, u: UnitBagan) => void;
 }
 
 function Garis({ s, p, tumpul = 10 }: { s: Simpul; p: Palet; tumpul?: number }) {
+  const W = s.w;
   const cx = s.x + W / 2;
   const bawah = s.y + s.h;
   const out: React.ReactNode[] = [];
@@ -359,7 +392,8 @@ function Avatar({ x, y, r, nama, foto, kosong, p, id }: { x: number; y: number; 
   );
 }
 
-function Kartu({ s, rinci, palet: p, gaya, ekspor, onToggle, onPilih, onIsi }: SvgProps & { s: Simpul }) {
+function Kartu({ s, rinci, palet: p, gaya, ekspor, onToggle, onPilih, onIsi, staf, onSemuaStaf, onPilihStaf }: SvgProps & { s: Simpul }) {
+  const W = s.w;
   const u = s.u;
   const g = gaya[u.jenis ?? ''] ?? { label: u.jenis ?? 'Unit', warna: '#5b7083' };
   const nonaktif = u.aktif === false;
@@ -419,6 +453,49 @@ function Kartu({ s, rinci, palet: p, gaya, ekspor, onToggle, onPilih, onIsi }: S
               </g>
             );
           })
+        )}
+        {staf && !!u.staf?.length && (
+          <g transform={`translate(0,${tinggiInti(u, rinci)})`}>
+            <line x1={14} x2={W - 14} y1={2} y2={2} stroke={p.tepi} strokeWidth={0.75} strokeDasharray="3 3" />
+            <text x={14} y={20} fontSize={10} fontWeight={600} fill={p.redup}>Tendik & staf · {u.staf.length}</text>
+            {u.staf.slice(0, STAF_MAKS).map((t, i) => {
+              const bisa = !ekspor && !!onPilihStaf;
+              const nama = potong(t.nama, t.tugas ? 132 : W - 52, 11, 1)[0];
+              const lebarNama = Math.min(t.tugas ? 132 : W - 52, nama.length * (nama === nama.toUpperCase() ? 7.4 : 6.2));
+              const tugas = t.tugas ? potong(t.tugas, W - 52 - lebarNama - 8, 10, 1)[0] : '';
+              return (
+                <g
+                  key={i}
+                  transform={`translate(0,${30 + i * STAF_BARIS})`}
+                  className={bisa ? 'u-bagan-staf' : undefined}
+                  role={bisa ? 'button' : undefined}
+                  tabIndex={bisa ? 0 : undefined}
+                  aria-label={bisa ? `${t.nama}: lihat profil` : undefined}
+                  onClick={bisa ? (e) => { e.stopPropagation(); onPilihStaf?.(t, u); } : undefined}
+                  onKeyDown={bisa ? (e) => { if (e.key === 'Enter') { e.stopPropagation(); onPilihStaf?.(t, u); } } : undefined}
+                >
+                  <Avatar x={22} y={8} r={8} nama={t.nama} p={p} id={`${uid}-s${i}`} />
+                  <text x={36} y={12} fontSize={11} fill={p.teks}>
+                    <tspan fontWeight={600}>{nama}</tspan>
+                    {tugas && <tspan fill={p.redup} fontSize={10}>{`  ${tugas}`}</tspan>}
+                  </text>
+                </g>
+              );
+            })}
+            {u.staf.length > STAF_MAKS && (
+              <g
+                transform={`translate(0,${30 + STAF_MAKS * STAF_BARIS})`}
+                className={!ekspor && onSemuaStaf ? 'u-bagan-staf' : undefined}
+                role={!ekspor && onSemuaStaf ? 'button' : undefined}
+                tabIndex={!ekspor && onSemuaStaf ? 0 : undefined}
+                aria-label={`Semua tendik dan staf ${u.nama}`}
+                onClick={!ekspor && onSemuaStaf ? (e) => { e.stopPropagation(); onSemuaStaf(u); } : undefined}
+                onKeyDown={!ekspor && onSemuaStaf ? (e) => { if (e.key === 'Enter') { e.stopPropagation(); onSemuaStaf(u); } } : undefined}
+              >
+                <text x={36} y={10} fontSize={10.5} fontWeight={600} fill={p.sorot}>+{u.staf.length - STAF_MAKS} lainnya</text>
+              </g>
+            )}
+          </g>
         )}
       </g>
       {s.turunan > 0 && !ekspor && (
@@ -585,7 +662,13 @@ function cetak(svg: SVGSVGElement, judul: string) {
 export function BaganOrganisasi({
   data, akar, judul, judulBerkas, subjudul, rinci: rinciAwal = false, gantiRinci = true, buka = 3, tinggi = 640, gayaJenis = GAYA_JENIS_BAGAN,
   urutJenis = URUT_JENIS, onPilihUnit, onIsiJabatan, namaBerkas = 'struktur-organisasi', petaMini = true, className,
+  tampilStaf: tampilStafAwal = true, onPilihStaf,
 }: BaganOrganisasiProps) {
+  const adaStaf = React.useMemo(() => data.some((u) => (u.staf?.length ?? 0) > 0), [data]);
+  const [tampilStaf, setTampilStaf] = React.useState(tampilStafAwal);
+  React.useEffect(() => setTampilStaf(tampilStafAwal), [tampilStafAwal]);
+  const staf = adaStaf && tampilStaf;
+  const [daftarStaf, setDaftarStaf] = React.useState<UnitBagan | null>(null);
   const [rinci, setRinci] = React.useState(rinciAwal);
   React.useEffect(() => setRinci(rinciAwal), [rinciAwal]);
   // Cabang tertutup awal: tingkat >= buka.
@@ -609,8 +692,8 @@ export function BaganOrganisasi({
   const kunciData = React.useMemo(() => data.map((u) => u.id).join(','), [data]);
   React.useEffect(() => setTertutup(awalTutup()), [kunciData, akar]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const hasil = React.useMemo(() => tata(data, akar, rinci, tertutup, urutJenis), [data, akar, rinci, tertutup, urutJenis]);
-  const hasilPenuh = React.useMemo(() => tata(data, akar, rinci, new Set(), urutJenis), [data, akar, rinci, urutJenis]);
+  const hasil = React.useMemo(() => tata(data, akar, rinci, tertutup, urutJenis, staf), [data, akar, rinci, tertutup, urutJenis, staf]);
+  const hasilPenuh = React.useMemo(() => tata(data, akar, rinci, new Set(), urutJenis, staf), [data, akar, rinci, urutJenis, staf]);
 
   const wadah = React.useRef<HTMLDivElement>(null);
   const svgEkspor = React.useRef<SVGSVGElement>(null);
@@ -638,7 +721,7 @@ export function BaganOrganisasi({
     const akar = hasil.akar[0];
     if (terbaca && k < 0.6 && akar) {
       const kb = 0.6;
-      setLihat({ k: kb, x: ukuran.w / 2 - (akar.x + W / 2) * kb, y: PAD });
+      setLihat({ k: kb, x: ukuran.w / 2 - (akar.x + akar.w / 2) * kb, y: PAD });
       return;
     }
     setLihat({ k, x: (ukuran.w - kotak.w * k) / 2 - kotak.x * k, y: PAD });
@@ -747,6 +830,11 @@ export function BaganOrganisasi({
               {rinci ? 'Semua jabatan' : 'Pimpinan saja'}
             </Button>
           )}
+          {adaStaf && (
+            <Button variant={tampilStaf ? 'soft' : 'outline'} size="sm" aria-pressed={tampilStaf} onClick={() => setTampilStaf((t) => !t)}>
+              <UsersRound />{tampilStaf ? 'Tendik tampil' : 'Tendik disembunyikan'}
+            </Button>
+          )}
         </div>
         <div className="u-bagan-alat-grup">
           <Menu
@@ -783,7 +871,7 @@ export function BaganOrganisasi({
         ) : (
           <svg width="100%" height="100%" role="group" aria-label={teksJudul}>
             <g transform={`translate(${lihat.x},${lihat.y}) scale(${lihat.k})`}>
-              <IsiSvg hasil={hasil} rinci={rinci} palet={PALET_LAYAR} gaya={gayaJenis} onToggle={toggle} onPilih={onPilihUnit} onIsi={onIsiJabatan} />
+              <IsiSvg hasil={hasil} rinci={rinci} palet={PALET_LAYAR} gaya={gayaJenis} onToggle={toggle} onPilih={onPilihUnit} onIsi={onIsiJabatan} staf={staf} onSemuaStaf={setDaftarStaf} onPilihStaf={onPilihStaf} />
             </g>
           </svg>
         )}
@@ -803,7 +891,7 @@ export function BaganOrganisasi({
           >
             <g transform="translate(6,6)">
               {hasil.semua.filter((s) => !s.virtual).map((s) => (
-                <rect key={s.u.id} x={(s.x - hasil.kotak.x) * mk} y={s.y * mk} width={W * mk} height={Math.max(2, s.h * mk)} rx={1.5} fill={(gayaJenis[s.u.jenis ?? ''] ?? { warna: '#5b7083' }).warna} opacity={0.7} />
+                <rect key={s.u.id} x={(s.x - hasil.kotak.x) * mk} y={s.y * mk} width={s.w * mk} height={Math.max(2, s.h * mk)} rx={1.5} fill={(gayaJenis[s.u.jenis ?? ''] ?? { warna: '#5b7083' }).warna} opacity={0.7} />
               ))}
               <rect x={vx} y={vy} width={vw} height={vh} fill="none" stroke="var(--u-primary, #244ce6)" strokeWidth={1.5} rx={2} />
             </g>
@@ -816,6 +904,21 @@ export function BaganOrganisasi({
           {hasilPenuh.semua.some((s) => s.u.koordinasi) && <span><i className="u-bagan-legenda-putus" />Garis koordinasi</span>}
         </div>
       )}
+      {daftarStaf && (
+        <Dialog open onOpenChange={(o) => !o && setDaftarStaf(null)} title={`Tendik & staf ${daftarStaf.nama}`} description={`${daftarStaf.staf?.length ?? 0} orang`} size="sm">
+          <ul className="u-bagan-daftar-staf">
+            {(daftarStaf.staf ?? []).map((t, i) => (
+              <li key={i}>
+                {onPilihStaf ? (
+                  <button type="button" onClick={() => { onPilihStaf(t, daftarStaf); setDaftarStaf(null); }}><b>{t.nama}</b>{t.tugas && <span>{t.tugas}</span>}</button>
+                ) : (
+                  <div><b>{t.nama}</b>{t.tugas && <span>{t.tugas}</span>}</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Dialog>
+      )}
       {/* Salinan untuk unduh/cetak: semua cabang terbuka, palet terang. */}
       <div className="u-bagan-ekspor" aria-hidden>
         <svg ref={svgEkspor} xmlns="http://www.w3.org/2000/svg" width={ew} height={eh} viewBox={`0 0 ${ew} ${eh}`} fontFamily="Inter, 'Segoe UI', system-ui, sans-serif">
@@ -823,7 +926,7 @@ export function BaganOrganisasi({
           <text x={40} y={44} fontSize={22} fontWeight={700} fill="#171a21">{teksJudul}</text>
           <text x={40} y={64} fontSize={12} fill="#6b7482">{subjudul ? `${subjudul} · ` : ''}Dicetak {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</text>
           <g transform={`translate(${40 - hasilPenuh.kotak.x + (ew - 80 - hasilPenuh.kotak.w) / 2},${kepalaEkspor + 16})`}>
-            <IsiSvg hasil={hasilPenuh} rinci={rinci} palet={PALET_CETAK} gaya={gayaJenis} ekspor />
+            <IsiSvg hasil={hasilPenuh} rinci={rinci} palet={PALET_CETAK} gaya={gayaJenis} ekspor staf={staf} />
           </g>
           <g transform={`translate(40,${eh - 20})`}>
             {legenda.map(([j, g], i) => (
