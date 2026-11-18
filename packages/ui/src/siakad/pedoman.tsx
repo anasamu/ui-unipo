@@ -535,7 +535,7 @@ function PanelPutusPenerapan({ aksi, usulan, onOpenChange, onSelesai }: { aksi: 
       title={aksi === 'setujui' ? 'Setujui penerapan pedoman' : 'Tolak penerapan pedoman'}
       description={
         aksi === 'setujui'
-          ? 'Aturan berversi: versi baru diterbitkan dengan SK pedoman. Mesin aturan: usulan perubahan aturan dengan lampiran SK pedoman masuk persetujuan aturan yang biasa.'
+          ? 'Satu kali persetujuan: aturan berversi diterbitkan sebagai versi baru dan Mesin aturan langsung berlaku sebagai versi baru, keduanya dengan SK pedoman dan dasar pasalnya. Tidak ada tahap persetujuan pejabat kedua.'
           : 'Aturan tidak diubah. Selisih dengan pedoman tercatat dan muncul di dasbor kepatuhan SPMI untuk ditindaklanjuti.'
       }
       footer={

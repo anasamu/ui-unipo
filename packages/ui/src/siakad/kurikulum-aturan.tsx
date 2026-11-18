@@ -665,7 +665,7 @@ export function PanelAturanKurikulum({ referensi: r, aturan: a, onOpenChange, on
             <Textarea rows={4} value={id.dasar_hukum} onChange={(e) => setId({ ...id, dasar_hukum: e.target.value })} />
           </Field>
           <PilihSK value={id.sk_id} onValueChange={(v: string | null) => setId({ ...id, sk_id: v })} jenis="aturan" label="SK yang dirujuk" description="Dari registri SK; berkas tidak perlu diunggah ulang." />
-          <Field label="Catatan perubahan" optional>
+          <Field label="Alasan perubahan" required description="Wajib (minimal 10 karakter) sebelum versi diterbitkan; tampil di riwayat dan pemeriksaan pedoman.">
             <Textarea rows={2} value={id.catatan_perubahan} onChange={(e) => setId({ ...id, catatan_perubahan: e.target.value })} />
           </Field>
         </div>
