@@ -30,6 +30,7 @@ import { Select } from '../components/select';
 import { AgendaList, type CalendarEvent } from '../components/schedule';
 import { ConfirmDialog, Dialog, Sheet, useToast } from '../components/overlays';
 import { useUnggahBerkas } from './berkas';
+import { PilihDosenBersyarat, type PeranPenetapanDosen } from './aturan-fakultas';
 import { PilihSK } from './isian-sk';
 import { PilihEntitas } from './pilih';
 import { invalidateSiakad, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
@@ -883,6 +884,8 @@ export function DetailUjianTa({ id, open, onOpenChange, onJadwal }: { id: string
 interface Ruang {
   kode: string;
   nama: string;
+  sumber?: 'sarpras' | 'ruang_kuliah';
+  kapasitas?: number | null;
 }
 
 /** Susun jadwal dan tim: cek bentrok dan syarat dosen langsung, saran slot kosong. */
@@ -949,6 +952,9 @@ export function FormJadwalUjianTa({ u, open, onOpenChange }: { u: UjianTa | null
     }
   };
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((o) => ({ ...o, [k]: v }));
+  // Pemilih dosen bersyarat (aturan universitas + fakultas mahasiswa, /v1/aturan/calon-dosen?nim=): ketua = penguji_1,
+  // penguji ke-n = penguji_(n+1). Syarat bergantung mahasiswa (bukan pembimbingnya, kuota) ikut tampil di pemilih.
+  const titikPenguji = u?.jenis === 'proposal' ? 'ta.penguji.proposal.tetapkan' : 'ta.penguji.skripsi.tetapkan';
   const maks = u?.pengaturan?.maks_penguji ?? 3;
   const min = u?.pengaturan?.min_penguji ?? 2;
   const lunak = cek?.bentrok.filter((b) => !b.keras) ?? [];
@@ -976,11 +982,18 @@ export function FormJadwalUjianTa({ u, open, onOpenChange }: { u: UjianTa | null
             <p>{u.pembimbing.map((p, i) => `${i === 0 ? 'I' : 'II'}. ${p.nama}`).join(' · ') || '-'}</p>
           </Field>
           <Field label="Ketua sidang (pimpinan sidang)" required>
-            <PilihEntitas jenis={SUMBER_DOSEN_TA} value={f.ketua || null} onValueChange={(v) => set('ketua', v ?? '')} />
+            <PilihDosenBersyarat titik={titikPenguji} nim={u.nim} peran="penguji_1" value={f.ketua || null} onValueChange={(v) => set('ketua', v ?? '')} placeholder="Pilih ketua sidang" />
           </Field>
           {Array.from({ length: Math.max(min, f.penguji.length) }, (_, i) => (
             <Field key={i} label={`Penguji ${i + 1}`} required={i < min}>
-              <PilihEntitas jenis={SUMBER_DOSEN_TA} value={f.penguji[i] || null} onValueChange={(v) => set('penguji', Object.assign([...f.penguji], { [i]: v ?? '' }))} />
+              <PilihDosenBersyarat
+                titik={titikPenguji}
+                nim={u.nim}
+                peran={`penguji_${Math.min(4, i + 2)}` as PeranPenetapanDosen}
+                value={f.penguji[i] || null}
+                onValueChange={(v) => set('penguji', Object.assign([...f.penguji], { [i]: v ?? '' }))}
+                placeholder={`Pilih penguji ${i + 1}`}
+              />
             </Field>
           ))}
           {f.penguji.length < maks && f.penguji.length >= min && (
@@ -1011,7 +1024,7 @@ export function FormJadwalUjianTa({ u, open, onOpenChange }: { u: UjianTa | null
             </Field>
           ) : (
             <Field label="Ruang" required>
-              <Select options={(ruang.data ?? []).map((r) => ({ value: r.kode, label: r.nama, description: r.kode }))} value={f.ruang || null} onValueChange={(v) => set('ruang', v ?? '')} placeholder="Pilih ruang" />
+              <Select options={(ruang.data ?? []).map((r) => ({ value: r.kode, label: r.nama, description: `${r.kode}${r.sumber === 'ruang_kuliah' ? ' · ruang kuliah lama (belum di Sarpras)' : ' · Sarpras'}${r.kapasitas ? ` · ${r.kapasitas} orang` : ''}` }))} value={f.ruang || null} onValueChange={(v) => set('ruang', v ?? '')} placeholder="Pilih ruang" />
             </Field>
           )}
           <div className="u-ujta-aksi">
@@ -1704,12 +1717,17 @@ interface BuktiAntrean {
   aturan: { nama: string } | null;
 }
 
-/** Antrean validasi bukti syarat unit (BAUK, LP2M, Perpustakaan, UPT Bahasa, ...): terima/tolak dengan alasan. */
-export function AntreanBuktiSyarat() {
+/**
+ * Antrean validasi bukti syarat unit (BAUK, LP2M, Perpustakaan, UPT Bahasa, ...): terima/tolak dengan alasan. `unit` =
+ * kode induk_unit (mis. BAUK) untuk panel satu unit; kosong = semua unit yang boleh divalidasi pengguna.
+ */
+export function AntreanBuktiSyarat({ unit: unitAwal }: { unit?: string } = {}) {
   const siakad = useSiakad();
   const toast = useToast();
   const [status, setStatus] = React.useState('menunggu');
-  const q = useSiakadQuery<BuktiAntrean[]>(['bukti', 'antrean', status], (s, signal) => s.request<BuktiAntrean[]>({ method: 'GET', path: '/v1/bukti-syarat/antrean', query: { status, per_page: 100 } }, { signal }));
+  const q = useSiakadQuery<BuktiAntrean[]>(['bukti', 'antrean', status, unitAwal ?? ''], (s, signal) =>
+    s.request<BuktiAntrean[]>({ method: 'GET', path: '/v1/bukti-syarat/antrean', query: { status, unit: unitAwal, per_page: 100 } }, { signal }),
+  );
   useSaatInvalidasi('bukti', q.refetch);
   const [alasan, setAlasan] = React.useState('');
   const putus = async (b: BuktiAntrean, keputusan: 'terima' | 'tolak') => {
@@ -1723,6 +1741,13 @@ export function AntreanBuktiSyarat() {
     }
   };
   const unit = (q.meta as unknown as { unit?: string[] } | undefined)?.unit ?? [];
+  if ((q.error as { status?: number } | null)?.status === 403)
+    return (
+      <Alert variant="warning" title="Akun Anda belum ditugaskan memvalidasi bukti syarat">
+        {unitAwal ? `Validasi bukti unit ${unitAwal} butuh peran Petugas validasi syarat (atau pimpinan unit) berlingkup ${unitAwal}.` : 'Minta Pustikom memberi peran Petugas validasi syarat berlingkup unit Anda.'}{' '}
+        {q.error?.message}
+      </Alert>
+    );
   return (
     <div className="u-ta">
       <div className="u-ujta-saring">
