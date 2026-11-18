@@ -161,7 +161,7 @@ export interface PilihDosenBersyaratProps {
   peran?: PeranPenetapanDosen | null;
   value?: string | null;
   onValueChange?: (nidn: string | null, dosen: CalonDosenAturan | null) => void;
-  /** Dosen yang tidak memenuhi: nonaktif (tampil, tidak bisa dipilih; bawaan), tandai (bisa dipilih), sembunyikan. */
+  /** Dosen yang tidak memenuhi: tandai (tampil dengan alasan, bisa dipilih tetapi ditolak saat disimpan; bawaan), nonaktif (tidak bisa dipilih; pemilih cari menyembunyikannya), sembunyikan. */
   tidakMemenuhi?: 'nonaktif' | 'tandai' | 'sembunyikan';
   placeholder?: string;
   id?: string;
@@ -182,7 +182,7 @@ export function PilihDosenBersyarat({
   peran,
   value,
   onValueChange,
-  tidakMemenuhi = 'nonaktif',
+  tidakMemenuhi = 'tandai',
   placeholder,
   id,
   disabled,
@@ -312,7 +312,7 @@ export function CobaSyaratDosen({ titik: titikAwal, className }: { titik?: strin
       {hasil && (
         <div className="u-aturan-coba-hasil">
           <Alert variant={hasil.boleh ? (hasil.peringatan.length ? 'warning' : 'success') : 'danger'} title={hasil.boleh ? 'Memenuhi syarat' : 'Belum memenuhi syarat'}>
-            {hasil.dosen?.nama ?? dosen} {hasil.boleh ? 'boleh' : 'belum boleh'} ditetapkan sebagai {peran ? LABEL_PERAN[peran].toLowerCase() : 'dosen'} ({judulTitik(titik).toLowerCase()})
+            {hasil.dosen?.nama ?? dosen} {hasil.boleh ? 'boleh' : 'belum boleh'} ditetapkan sebagai {peran ? LABEL_PERAN[peran] : "dosen"} ({judulTitik(titik).toLowerCase()})
             {nim ? ` untuk mahasiswa ${nim}` : ''}. {hasil.diterapkan.length} aturan aktif diperiksa.
           </Alert>
           <HasilPeriksaAturanPanel hasil={hasil} />
