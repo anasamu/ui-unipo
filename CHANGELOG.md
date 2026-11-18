@@ -1,5 +1,10 @@
 # Catatan perubahan
 
+## Belum dirilis
+
+- **Bagan organisasi** (`BaganOrganisasi`, `GAYA_JENIS_BAGAN`; struktur organisasi v2, `StrukturOrganisasi` lama tetap): bagan pohon bertingkat sungguhan dari data datar `{ id, induk_id }`, digambar sebagai SVG. Tata letak per tingkat dengan garis siku berujung tumpul; anak yang semuanya daun (prodi di bawah fakultas, biro di bawah Wakil Rektor) dan saudara-saudara daun di samping cabang ditumpuk vertikal supaya tidak melebar; unit `koordinasi` (Senat, Yayasan, SPI) di samping garis utama dengan garis putus. Kartu: lencana jenis berwarna, nama unit, pimpinan (foto atau inisial, Plt./Plh.), atau semua jabatan termasuk "Belum diisi" (`rinci`) dengan tombol Isi (`onIsiJabatan`). Lipat/buka per cabang, perbesar/perkecil (Ctrl/⌘ + gulir), geser (seret atau gulir), paskan layar, layar penuh, peta mini, keterangan warna, mode gelap. Unduh PNG (hingga 300 dpi), PDF satu halaman A4/A3 (arah mengikuti bagan, tanpa pustaka tambahan), dan Cetak (vektor) dengan judul dan tanggal cetak, semua cabang terbuka.
+- **`PilihEntitas jenis="unit"`** hanya menawarkan unit aktif (`aktif=1`); nilai lama tetap terbaca.
+
 ## 1.48.0 (2026-11-18)
 
 - **Garis waktu** (`GarisWaktu`, `unipo-ui/siakad`): gantt sederhana per baris untuk tahapan periode akademik (dan rentang lain). Sumbu bulan otomatis dari tanggal paling awal sampai paling akhir (atau `dari`/`sampai`), batang berwarna per baris (`warna`), batang bergaris untuk libur (`libur`), batang pudar (`redup`), penanda hari ini (`hariIni`, `false` untuk menyembunyikan), judul + keterangan + lencana di kolom kiri, dan `onPilih` (batang jadi tombol). Di wadah sempit judul pindah ke atas batangnya; warna batang ikut tercetak. Dipakai halaman Kalender & periode BAAK.
