@@ -1181,6 +1181,20 @@
     .u-button[data-variant='ghost'] {
       color: var(--u-primary-foreground);
     }
+    // Pemilih konteks (prodi, periode, unit) di topbarKiri: latar tembus agar teks putih tetap terbaca.
+    .u-select-trigger,
+    .u-input {
+      border-color: color-mix(in oklab, var(--u-primary-foreground) 25%, transparent);
+      background: color-mix(in oklab, var(--u-primary-foreground) 12%, transparent);
+      color: var(--u-primary-foreground);
+      &:hover {
+        background: color-mix(in oklab, var(--u-primary-foreground) 18%, transparent);
+      }
+    }
+    .u-select-value[data-placeholder],
+    .u-select-icon {
+      color: color-mix(in oklab, var(--u-primary-foreground) 75%, transparent);
+    }
   }
   &[data-header-tinggi='ringkas'] .u-topbar {
     min-height: 3rem;
