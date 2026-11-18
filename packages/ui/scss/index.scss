@@ -22,6 +22,7 @@
 @use 'components/pilih-unit';
 @use 'components/bagan-organisasi';
 @use 'components/kelola-pejabat';
+@use 'components/struktur-unit';
 @use 'components/status';
 @use 'components/schedule';
 @use 'components/garis-waktu';
@@ -33,6 +34,7 @@
 @use 'components/aturan-fakultas';
 @use 'components/biaya';
 @use 'components/panitia';
+@use 'components/ormawa';
 @use 'components/charts';
 @use 'components/kurikulum';
 @use 'components/kurikulum-kelola';
