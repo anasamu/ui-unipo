@@ -1,7 +1,7 @@
 'use client';
 import * as React from 'react';
 import { Menu as BaseMenu } from '@base-ui/react/menu';
-import { Banknote, ChevronDown, ChevronsUpDown, Camera, Check, IdCard, KeyRound, LogOut, Monitor, Moon, PenLine, ShieldCheck, Sun, UserRound, Users } from 'lucide-react';
+import { Banknote, ChevronDown, ChevronsUpDown, Camera, Check, IdCard, KeyRound, LogOut, Monitor, Moon, PenLine, ScrollText, ShieldCheck, Sun, UserRound, Users } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Avatar, type AvatarSize } from './display';
 import type { MenuEntry } from './overlays';
@@ -34,10 +34,13 @@ export interface TautanAkun {
   keamanan: string;
   /** Riwayat gaji dan slip (dosen/tendik) di aplikasi Profil. */
   gaji: string;
+  /** Halaman baca pedoman & peraturan universitas (SPMI /pedoman/baca). */
+  pedoman: string;
   keluar: string;
 }
 export const PROFIL_URL = 'https://profile.unipo.ac.id';
 export const SSO_URL = 'https://sso.unipo.ac.id';
+export const SPMI_URL = 'https://spmi.unipo.ac.id';
 
 /** Alamat aplikasi saudara di domain yang sama (mis. di stack lokal baak.unipo.dev -> profile.unipo.dev); null bila bukan domain UNIPO. */
 function saudara(sub: string): string | null {
@@ -58,6 +61,7 @@ export function tautanAkun(profilUrl: string = saudara('profile') ?? PROFIL_URL,
     password: `${p}/akun`,
     keamanan: `${s}/akun`,
     gaji: `${p}/gaji`,
+    pedoman: `${(saudara('spmi') ?? SPMI_URL).replace(/\/+$/, '')}/pedoman/baca`,
     keluar: `${s}/logout`,
     ...ganti,
   };
@@ -73,7 +77,7 @@ export type TemaAkun = 'terang' | 'gelap' | 'sistem';
 // ================================================================ Menu akun
 
 export type VarianMenuAkun = 'pil' | 'nama' | 'avatar' | 'sidebar' | 'ikon';
-export type ItemMenuAkun = 'profil' | 'ubah' | 'data' | 'foto' | 'password' | 'gaji' | 'keamanan';
+export type ItemMenuAkun = 'profil' | 'ubah' | 'data' | 'foto' | 'password' | 'gaji' | 'pedoman' | 'keamanan';
 
 export interface MenuAkunProps {
   pengguna: AkunPengguna;
@@ -118,6 +122,7 @@ const LABEL_ITEM: Record<ItemMenuAkun, { label: string; ikon: React.ReactNode; k
   foto: { label: 'Ganti foto', ikon: <Camera />, kunci: 'foto' },
   password: { label: 'Ganti password', ikon: <KeyRound />, kunci: 'password' },
   gaji: { label: 'Riwayat gaji', ikon: <Banknote />, kunci: 'gaji' },
+  pedoman: { label: 'Pedoman & peraturan', ikon: <ScrollText />, kunci: 'pedoman' },
   keamanan: { label: 'Keamanan akun', ikon: <ShieldCheck />, kunci: 'keamanan' },
 };
 

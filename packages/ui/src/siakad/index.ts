@@ -103,3 +103,6 @@ export * from './aturan-verifikasi';
 export * from './bkd';
 export * from './bkd-alur';
 export * from './bkd-aturan';
+export * from './pedoman';
+export * from './pedoman-ruang';
+export * from './pedoman-kelola';
