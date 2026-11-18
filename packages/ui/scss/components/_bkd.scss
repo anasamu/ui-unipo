@@ -424,3 +424,393 @@
     color: var(--u-muted-foreground);
   }
 }
+
+// ------------------------------------------------------------------ alur (siakad/bkd-alur.tsx, bkd-aturan.tsx)
+.u-bkd-ruang,
+.u-bkd-laporan,
+.u-bkd-rekap,
+.u-bkd-periode,
+.u-bkd-form,
+.u-bkd-aturan-rincian {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.u-bkd-form {
+  gap: 0.875rem;
+}
+.u-bkd-buka {
+  border-color: color-mix(in oklab, var(--u-primary) 35%, var(--u-border));
+  background: color-mix(in oklab, var(--u-primary) 4%, var(--u-card));
+}
+.u-bkd-buka-isi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.875rem;
+  > div {
+    flex: 1 1 16rem;
+    min-width: 0;
+  }
+  h3 {
+    margin: 0.125rem 0;
+    font-size: var(--u-text-lg);
+    font-weight: var(--u-weight-semibold);
+  }
+}
+.u-bkd-buka-ikon {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--u-radius-lg);
+  background: var(--u-primary-soft);
+  color: var(--u-primary-soft-foreground);
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+.u-bkd-riwayat {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  button {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-full);
+    background: var(--u-card);
+    color: var(--u-foreground);
+    font: inherit;
+    font-size: var(--u-text-sm);
+    cursor: pointer;
+    &[aria-selected='true'] {
+      border-color: var(--u-primary);
+      box-shadow: 0 0 0 1px var(--u-primary);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--u-ring);
+      outline-offset: 2px;
+    }
+  }
+}
+.u-bkd-kepala {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  > div:first-child {
+    min-width: 0;
+  }
+}
+.u-bkd-kepala-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.u-bkd-judul {
+  margin: 0.125rem 0;
+  font-family: var(--u-font-heading);
+  font-size: var(--u-text-lg);
+  font-weight: var(--u-weight-semibold);
+  overflow-wrap: anywhere;
+}
+.u-bkd-tahap-laporan {
+  margin: 1.25rem 0 0.25rem;
+}
+.u-bkd-aksi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  .u-bkd-form > &,
+  .u-bkd-periode > & {
+    margin-top: 0;
+  }
+}
+.u-bkd-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 1rem;
+  @media (max-width: 56rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .u-bkd-laporan-ringkas & {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.u-bkd-samping {
+  display: grid;
+  gap: 1.25rem;
+}
+.u-bkd-periksa {
+  display: grid;
+  gap: 0.375rem;
+  ul {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0;
+    padding-left: 1.125rem;
+    font-size: var(--u-text-sm);
+  }
+  ul[data-jenis='blokir'] {
+    color: var(--u-danger-text);
+  }
+  ul[data-jenis='peringatan'] {
+    color: var(--u-warning-text);
+  }
+}
+.u-bkd-info-kategori {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: var(--u-radius-md);
+  background: var(--u-muted);
+}
+.u-bkd-pratinjau-sks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  padding: 0.75rem;
+  border: 1px dashed var(--u-border-strong);
+  border-radius: var(--u-radius-md);
+  span {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
+  }
+  strong {
+    font-size: var(--u-text-lg);
+    font-variant-numeric: tabular-nums;
+  }
+  small {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+  }
+}
+.u-bkd-berkas {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding-left: 1.125rem;
+  font-size: var(--u-text-sm);
+}
+.u-bkd-setuju {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: var(--u-text-sm);
+  line-height: var(--u-leading-snug);
+  cursor: pointer;
+}
+.u-bkd-kaki {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  width: 100%;
+  > p {
+    flex: 1 1 12rem;
+    margin: 0;
+  }
+}
+.u-bkd-galat {
+  color: var(--u-danger-text);
+  font-size: var(--u-text-sm);
+}
+.u-bkd-nilai {
+  display: grid;
+  grid-template-columns: auto 6.5rem minmax(0, 1fr);
+  gap: 0.5rem;
+  padding: 0 0.875rem 0.75rem;
+  &[data-hasil='TM'] {
+    background: color-mix(in oklab, var(--u-danger) 4%, transparent);
+  }
+  @media (max-width: 40rem) {
+    grid-template-columns: minmax(0, 1fr) 6rem;
+    > :last-child {
+      grid-column: 1 / -1;
+    }
+  }
+}
+.u-bkd-sel {
+  display: grid;
+  min-width: 0;
+  small {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+  }
+}
+.u-bkd-rekap-kepala {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  > :first-child {
+    flex: 0 1 22rem;
+  }
+}
+.u-bkd-kartu-periode {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
+  gap: 1rem;
+  .u-bkd-tahap {
+    margin-top: 1rem;
+  }
+}
+
+// aturan BKD
+.u-bkd-aturan {
+  display: grid;
+  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+  align-items: start;
+  gap: 1rem;
+  @media (max-width: 56rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.u-bkd-aturan-daftar {
+  display: grid;
+  gap: 0.5rem;
+  button {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-lg);
+    background: var(--u-card);
+    color: var(--u-foreground);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    &[aria-current='true'] {
+      border-color: var(--u-primary);
+      box-shadow: 0 0 0 1px var(--u-primary);
+    }
+    &:hover {
+      background: var(--u-hover);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--u-ring);
+      outline-offset: 2px;
+    }
+    small {
+      color: var(--u-muted-foreground);
+      font-size: var(--u-text-xs);
+    }
+  }
+}
+.u-bkd-aturan-nama {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-semibold);
+}
+.u-bkd-daftar {
+  display: grid;
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--u-text-sm);
+  small {
+    display: block;
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+  }
+}
+.u-bkd-perubahan {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--u-text-sm);
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    padding: 0.375rem 0;
+    border-bottom: 1px solid var(--u-border);
+  }
+  del {
+    color: var(--u-danger-text);
+  }
+  ins {
+    color: var(--u-success-text);
+    text-decoration: none;
+    font-weight: var(--u-weight-semibold);
+  }
+}
+.u-bkd-perubahan-judul {
+  font-weight: var(--u-weight-medium);
+}
+.u-bkd-perubahan-nilai {
+  font-variant-numeric: tabular-nums;
+}
+.u-bkd-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  @media (max-width: 40rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.u-bkd-tabel-isian {
+  display: grid;
+  gap: 0.5rem;
+}
+.u-bkd-baris-isian {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5.5rem 5.5rem auto;
+  align-items: center;
+  gap: 0.5rem;
+  &.u-bkd-baris-isian-2 {
+    grid-template-columns: minmax(0, 1fr) 7rem;
+  }
+}
+.u-bkd-kategori-isian {
+  display: grid;
+  gap: 0.75rem;
+}
+.u-bkd-kartu-isian {
+  display: grid;
+  gap: 0.625rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  &:not([data-aktif]) {
+    background: var(--u-muted);
+  }
+  legend {
+    padding: 0 0.25rem;
+    color: var(--u-muted-foreground);
+    font-family: var(--u-font-mono);
+    font-size: var(--u-text-xs);
+  }
+}
+.u-bkd-kategori-isian > .u-bkd-kartu-isian:not([data-aktif]) {
+  opacity: 0.85;
+}
+.u-bkd-tambah-kode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  > :first-child {
+    flex: 1 1 12rem;
+  }
+}
