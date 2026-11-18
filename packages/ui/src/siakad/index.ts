@@ -96,3 +96,4 @@ export * from './pemeriksa';
 export * from './aturan-versi';
 export * from './karier-aturan';
 export * from './aturan-verifikasi';
+export * from './bkd';
