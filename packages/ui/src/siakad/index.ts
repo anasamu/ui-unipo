@@ -30,6 +30,7 @@ export * from './beranda';
 export * from './aplikasi';
 export * from './log';
 export * from './pilih';
+export * from './pilih-unit';
 export * from './pemeliharaan';
 export * from './berkas';
 export * from './media-editor';
