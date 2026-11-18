@@ -409,6 +409,421 @@
   }
 }
 
+// ================================================================ Panel notifikasi (TombolNotifikasi, KotakNotifikasi)
+// Satu isi untuk panel lonceng, lembar bawah ponsel, dan halaman /notifikasi: kepala (saklar belum dibaca + aksi),
+// tab label bergulir, konfirmasi bersihkan, daftar per waktu, bilah urungkan.
+.u-notif {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+// Bagian tetap tidak ikut menyusut saat daftar panjang (hanya daftar yang bergulir).
+.u-notif-kepala,
+.u-notif-tab,
+.u-notif-konfirmasi,
+.u-notif-urung,
+.u-notif > .u-kabar-kaki {
+  flex: none;
+}
+.u-notif-kepala {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.625rem 0.625rem 0.375rem 1.25rem;
+}
+.u-notif-lembar .u-notif-kepala,
+.u-notif-halaman .u-notif-kepala {
+  justify-content: flex-end;
+  padding-inline: 0;
+}
+.u-notif-alat {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  margin-inline-start: auto;
+}
+// Saklar "Belum dibaca": pil dengan titik indikator.
+.u-notif-saklar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 1.75rem;
+  margin-inline-end: 0.25rem;
+  padding-inline: 0.625rem;
+  border: 1px solid var(--u-border);
+  border-radius: 999px;
+  background: none;
+  color: var(--u-muted-foreground);
+  font: inherit;
+  font-size: var(--u-text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color var(--u-duration-fast),
+    border-color var(--u-duration-fast),
+    color var(--u-duration-fast);
+  &:hover {
+    color: var(--u-foreground);
+  }
+  &[aria-pressed='true'] {
+    border-color: color-mix(in oklab, var(--u-primary) 40%, transparent);
+    background: var(--u-primary-soft);
+    color: var(--u-primary-soft-foreground);
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+.u-notif-saklar-titik {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--u-border);
+  [aria-pressed='true'] > & {
+    background: var(--u-primary);
+  }
+}
+// Tab label: baris bergulir mendatar tanpa bilah gulir.
+.u-notif-tab {
+  display: flex;
+  gap: 0.375rem;
+  padding: 0.25rem 1rem 0.625rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--u-border);
+  scrollbar-width: none;
+  scroll-padding-inline: 1rem;
+  mask-image: linear-gradient(to right, transparent 0, #000 0.75rem, #000 calc(100% - 1.5rem), transparent);
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  button {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+    height: 1.875rem;
+    padding-inline: 0.75rem;
+    border: 1px solid var(--u-border);
+    border-radius: 999px;
+    background: var(--u-background);
+    color: var(--u-muted-foreground);
+    font: inherit;
+    font-size: var(--u-text-xs);
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color var(--u-duration-fast),
+      border-color var(--u-duration-fast),
+      color var(--u-duration-fast);
+    &:hover {
+      color: var(--u-foreground);
+      background: var(--u-hover);
+    }
+    &[aria-selected='true'] {
+      border-color: var(--u-foreground);
+      background: var(--u-foreground);
+      color: var(--u-background);
+      .u-notif-tab-angka {
+        background: var(--u-background);
+        color: var(--u-foreground);
+      }
+    }
+    &[data-bisu]:not([aria-selected='true']) {
+      opacity: 0.65;
+    }
+    &:focus-visible {
+      @include focus-ring;
+    }
+  }
+}
+.u-notif-tab-ikon {
+  display: inline-flex;
+  margin-inline-start: -0.125rem;
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+}
+.u-notif-tab-angka {
+  min-width: 1.125rem;
+  padding: 0 0.3125rem;
+  border-radius: 999px;
+  background: var(--u-primary);
+  color: var(--u-primary-foreground);
+  font-size: 0.625rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.125rem;
+  text-align: center;
+}
+// Konfirmasi bersihkan, di dalam panel (tidak membuka dialog kedua di atas popover).
+.u-notif-konfirmasi {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.5rem 0.75rem 0;
+  padding: 0.75rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius);
+  background: color-mix(in oklab, var(--u-muted) 55%, transparent);
+  p {
+    margin: 0;
+    font-size: var(--u-text-xs);
+    line-height: 1.5;
+  }
+  div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+}
+// Satu notifikasi (atau gabungan notifikasi identik).
+.u-notif-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 0.75rem 0.625rem;
+  border-radius: calc(var(--u-radius) + 2px);
+  transition: background-color var(--u-duration-fast);
+  &[data-belum] {
+    background: color-mix(in oklab, var(--u-primary) 5%, transparent);
+  }
+  &:hover {
+    background: var(--u-hover);
+  }
+  &[data-belum]:hover {
+    background: color-mix(in oklab, var(--u-primary) 9%, transparent);
+  }
+  > .u-kabar-ikon {
+    margin-top: 0.125rem;
+  }
+}
+.u-notif-item-badan {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  flex: 1;
+  min-width: 0;
+}
+.u-notif-item-utama {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+  padding: 0;
+  padding-inline-end: 3.75rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  border-radius: 4px;
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+.u-notif-item-judul,
+.u-notif-item-isi {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  [data-luas] & {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: none;
+  }
+}
+.u-notif-item-judul {
+  font-size: var(--u-text-sm);
+  font-weight: 500;
+  line-height: 1.4;
+  [data-belum] & {
+    font-weight: 600;
+  }
+}
+.u-notif-item-isi {
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  line-height: 1.5;
+}
+.u-notif-item-riwayat {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.5rem 0.625rem;
+  border-inline-start: 2px solid var(--u-border);
+  list-style: none;
+  font-size: var(--u-text-xs);
+  li {
+    display: grid;
+    gap: 0.125rem;
+  }
+  time {
+    color: var(--u-muted-foreground);
+    font-variant-numeric: tabular-nums;
+  }
+}
+.u-notif-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.5rem;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  .u-kabar-item-modul {
+    margin: 0;
+  }
+  time {
+    font-variant-numeric: tabular-nums;
+    [data-belum] & {
+      color: var(--u-primary-soft-foreground);
+    }
+  }
+}
+.u-notif-item-kali {
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  background: var(--u-muted);
+  color: var(--u-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.125rem;
+}
+.u-notif-item-lagi {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    transition: transform var(--u-duration-fast);
+  }
+  [data-luas] & svg {
+    transform: rotate(180deg);
+  }
+}
+.u-notif-item-buka {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  margin-inline-start: auto;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--u-border);
+  border-radius: 999px;
+  background: var(--u-background);
+  color: var(--u-foreground);
+  font: inherit;
+  font-size: var(--u-text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  &:hover {
+    border-color: var(--u-primary);
+    color: var(--u-primary);
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+// Aksi baris (tandai dibaca, hapus): tampil saat kursor di atas baris; selalu tampil di layar sentuh.
+.u-notif-item-aksi {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 0.125rem;
+  padding: 0.125rem;
+  border-radius: var(--u-radius);
+  background: var(--u-popover);
+  box-shadow: var(--u-shadow-sm);
+  opacity: 0;
+  transition: opacity var(--u-duration-fast);
+  .u-notif-item:hover &,
+  &:focus-within {
+    opacity: 1;
+  }
+  @media (hover: none) {
+    opacity: 1;
+    background: none;
+    box-shadow: none;
+  }
+}
+.u-notif-ujung {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 0 0.25rem;
+}
+.u-notif-urung {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0.25rem 0.75rem 0.5rem;
+  padding: 0.375rem 0.375rem 0.375rem 0.875rem;
+  border-radius: var(--u-radius);
+  background: var(--u-foreground);
+  color: var(--u-background);
+  font-size: var(--u-text-xs);
+  .u-button {
+    color: inherit;
+    font-weight: 600;
+    &:hover {
+      background: color-mix(in oklab, var(--u-background) 15%, transparent);
+    }
+  }
+}
+// Panel lonceng: isi notifikasi mengisi tinggi panel.
+.u-kabar-panel:has(> .u-notif) {
+  max-height: min(40rem, 82dvh);
+  > .u-notif .u-kabar-daftar {
+    flex: 1;
+  }
+}
+// Lembar bawah di ponsel: tinggi hampir penuh, kepala dialog sebagai judul, isi tanpa padding ganda.
+.u-sheet.u-kabar-lembar {
+  height: 88dvh;
+  max-height: 88dvh;
+  .u-dialog-header {
+    padding-block: 1rem 0.5rem;
+    border-bottom: 0;
+  }
+  .u-dialog-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0;
+  }
+  .u-notif-kepala {
+    padding: 0 1rem 0.375rem;
+  }
+  .u-kabar-daftar {
+    flex: 1;
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+  }
+  .u-notif-item-utama {
+    padding-inline-end: 0;
+  }
+  .u-notif-item-aksi {
+    position: static;
+    align-self: flex-start;
+    flex-direction: column;
+  }
+}
+
 // ================================================================ PencarianFitur (palet Ctrl/⌘K)
 .u-cari-fitur {
   --u-dialog-w: 36rem;
@@ -1261,9 +1676,21 @@
   display: grid;
   gap: 0.75rem;
   max-width: 48rem;
-  .u-kabar-tab {
-    padding: 0;
+  .u-kabar-tab,
+  .u-notif-tab {
+    padding: 0 0 0.25rem;
     border: 0;
+    mask-image: none;
+  }
+  .u-notif-kepala {
+    padding: 0;
+  }
+  .u-notif {
+    gap: 0.5rem;
+  }
+  .u-notif-konfirmasi,
+  .u-notif-urung {
+    margin-inline: 0;
   }
   .u-kabar-daftar {
     padding: 0.5rem;
