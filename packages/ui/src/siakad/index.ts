@@ -85,3 +85,4 @@ export * from './pengajuan';
 export * from './presensi-kerja';
 export * from './kelola-pejabat';
 export * from './struktur-unit';
+export * from './ormawa';

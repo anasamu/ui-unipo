@@ -1,7 +1,7 @@
 'use client';
 import * as React from 'react';
 import {
-  ChevronsDownUp, ChevronsUpDown, Download, FileImage, FileText, Info, Maximize, Minimize, Minus, MoveHorizontal, MoveVertical, Plus, Printer, ScanSearch, UsersRound,
+  ChevronsDownUp, ChevronsUpDown, Download, FileImage, FileText, Info, Layers, Maximize, Minimize, Minus, MoveHorizontal, MoveVertical, Plus, Printer, ScanSearch, UsersRound,
 } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { hueFromString, initials } from '../lib/format';
@@ -111,8 +111,26 @@ const URUT_JENIS = ['yayasan', 'universitas', 'kelompok', 'rektorat', 'kampus', 
 export type OrientasiBagan = 'vertikal' | 'horizontal';
 export type GayaBagan = 'modern' | 'resmi';
 
+/**
+ * Lapisan tambahan yang bisa ditampilkan/disembunyikan dari bilah alat (mis. organisasi mahasiswa di bagan kampus).
+ * Simpul lapisan menempel ke unit bagan lewat `induk_id` (id unit kampus); warna jenisnya digabung ke `gayaJenis`.
+ */
+export interface LapisanBagan {
+  kunci: string;
+  /** Label tombol, mis. "Organisasi mahasiswa". */
+  label: string;
+  data: UnitBagan[];
+  gayaJenis?: Record<string, GayaJenisBagan>;
+  /** Urutan jenis simpul lapisan di antara saudara (ditambahkan di belakang urutJenis bagan). */
+  urutJenis?: string[];
+  /** Tampil sejak awal. Bawaan false. */
+  awal?: boolean;
+}
+
 export interface BaganOrganisasiProps {
   data: UnitBagan[];
+  /** Lapisan opsional dengan sakelar di bilah alat (mis. "Tampilkan organisasi mahasiswa"). Tidak mengubah `data`. */
+  lapisan?: LapisanBagan[];
   /** id unit akar (bagan sub-pohon, mis. satu fakultas). Bawaan: semua akar. */
   akar?: string | null;
   judul?: React.ReactNode;
@@ -776,12 +794,18 @@ function IsiSvg(props: SvgProps) {
 }
 
 /** Legenda di dalam SVG (unduhan/cetak): warna jenis dan jenis garis. */
+/** Lebar legenda unduhan: menyesuaikan label terpanjang (mis. jenis lapisan ormawa yang panjang). */
+function lebarLegendaSvg(jenis: [string, GayaJenisBagan][], garis: GarisBagan[]): number {
+  const teks = [...garis.map((g) => `Garis ${GARIS_BAGAN[g].label.toLowerCase()}`), ...jenis.map(([, j]) => j.label), 'Keterangan'];
+  return Math.max(180, Math.ceil(Math.max(...teks.map((t) => t.length)) * 6.3) + 62);
+}
+
 function LegendaSvg({ x, y, jenis, garis }: { x: number; y: number; jenis: [string, GayaJenisBagan][]; garis: GarisBagan[] }) {
   const baris = [...garis.map((g) => ({ t: 'g' as const, g })), ...jenis.map(([, j]) => ({ t: 'j' as const, j }))];
   const tinggi = 30 + baris.length * 18;
   return (
     <g transform={`translate(${x},${y})`}>
-      <rect width={210} height={tinggi} rx={6} fill="#ffffff" stroke="#c9cfd8" />
+      <rect width={lebarLegendaSvg(jenis, garis)} height={tinggi} rx={6} fill="#ffffff" stroke="#c9cfd8" />
       <text x={12} y={20} fontSize={11} fontWeight={700} fill="#171a21">Keterangan</text>
       {baris.map((b, i) => (
         <g key={i} transform={`translate(12,${36 + i * 18})`}>
@@ -953,11 +977,17 @@ const tanggalTeks = (v?: string | null) => {
 };
 
 export function BaganOrganisasi({
-  data, akar, judul, judulBerkas, subjudul, dasar, berlaku, rinci: rinciAwal = false, gantiRinci = true, buka = 3, tinggi = 640, gayaJenis = GAYA_JENIS_BAGAN,
-  urutJenis = URUT_JENIS, onPilihUnit, onIsiJabatan, namaBerkas = 'struktur-organisasi', petaMini = true, className,
-  tampilStaf: tampilStafAwal = true, onPilihStaf, orientasi: orientasiAwal = 'vertikal', gaya: gayaAwal = 'modern', seragam = true, labelGaris = true, sorot,
+  data: dataUnit, akar, judul, judulBerkas, subjudul, dasar, berlaku, rinci: rinciAwal = false, gantiRinci = true, buka = 3, tinggi = 640, gayaJenis: gayaUnit = GAYA_JENIS_BAGAN,
+  urutJenis: urutUnit = URUT_JENIS, onPilihUnit, onIsiJabatan, namaBerkas = 'struktur-organisasi', petaMini = true, className,
+  tampilStaf: tampilStafAwal = true, onPilihStaf, lapisan, orientasi: orientasiAwal = 'vertikal', gaya: gayaAwal = 'modern', seragam = true, labelGaris = true, sorot,
   kunciSimpan = 'unipo-bagan-tampilan',
 }: BaganOrganisasiProps) {
+  // Lapisan aktif digabung ke data, warna, dan urutan jenis bagan.
+  const [lapisanAktif, setLapisanAktif] = React.useState<Set<string>>(() => new Set((lapisan ?? []).filter((l) => l.awal).map((l) => l.kunci)));
+  const terpakai = React.useMemo(() => (lapisan ?? []).filter((l) => lapisanAktif.has(l.kunci)), [lapisan, lapisanAktif]);
+  const data = React.useMemo(() => (terpakai.length ? [...dataUnit, ...terpakai.flatMap((l) => l.data)] : dataUnit), [dataUnit, terpakai]);
+  const gayaJenis = React.useMemo<Record<string, GayaJenisBagan>>(() => terpakai.reduce((a, l) => ({ ...a, ...(l.gayaJenis ?? {}) }), gayaUnit), [gayaUnit, terpakai]);
+  const urutJenis = React.useMemo(() => (terpakai.length ? [...urutUnit, ...terpakai.flatMap((l) => l.urutJenis ?? [])] : urutUnit), [urutUnit, terpakai]);
   const adaStaf = React.useMemo(() => data.some((u) => (u.staf?.length ?? 0) > 0), [data]);
   const [tampilStaf, setTampilStaf] = React.useState(tampilStafAwal);
   React.useEffect(() => setTampilStaf(tampilStafAwal), [tampilStafAwal]);
@@ -1080,9 +1110,9 @@ export function BaganOrganisasi({
 
   // SVG ekspor: semua cabang terbuka, palet terang, kepala berjudul (+ dasar SK, tanggal berlaku), legenda di sudut.
   const kepalaEkspor = dasar || berlaku ? 96 : 76;
-  const lebarLegenda = 230;
+  const lebarLegenda = lebarLegendaSvg(legenda, garisAda);
   const tinggiLegenda = 30 + (legenda.length + garisAda.length) * 18;
-  const ew = Math.max(hasilPenuh.kotak.w + 80, 760);
+  const ew = Math.max(hasilPenuh.kotak.w + 80, 760, lebarLegenda + 60);
   const eh = hasilPenuh.kotak.h + kepalaEkspor + 60 + (tampilan.legenda ? tinggiLegenda + 20 : 0);
   const tglCetak = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -1148,6 +1178,21 @@ export function BaganOrganisasi({
               <UsersRound />{tampilStaf ? 'Tendik tampil' : 'Tendik disembunyikan'}
             </Button>
           )}
+          {(lapisan ?? []).map((l) => {
+            const on = lapisanAktif.has(l.kunci);
+            return (
+              <Button
+                key={l.kunci}
+                variant={on ? 'soft' : 'outline'}
+                size="sm"
+                aria-pressed={on}
+                title={l.data.length ? undefined : 'Belum ada data'}
+                onClick={() => setLapisanAktif((s) => { const n = new Set(s); if (n.has(l.kunci)) n.delete(l.kunci); else n.add(l.kunci); return n; })}
+              >
+                <Layers />{on ? `${l.label} tampil` : `Tampilkan ${l.label.toLowerCase()}`}
+              </Button>
+            );
+          })}
         </div>
         <div className="u-bagan-alat-grup">
           <SegmentedControl<OrientasiBagan>

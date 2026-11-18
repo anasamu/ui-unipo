@@ -7,6 +7,7 @@ import { Select } from '../components/select';
 import { DataTable, type DataColumn } from '../components/data-table';
 import { BaganOrganisasi, type UnitBagan } from '../components/bagan-organisasi';
 import { pesanGalat, useSiakadQuery } from './provider';
+import { useLapisanOrmawa } from './ormawa';
 
 // ================================================================ Struktur organisasi unit (lihat saja)
 
@@ -95,6 +96,8 @@ export function StrukturUnit({ aplikasi, judul, tinggiBagan = 620 }: StrukturUni
   const q = useSiakadQuery<StrukturUnitData>(['organisasi', 'unit-aplikasi', aplikasi, unit], (s, signal) =>
     s.request<StrukturUnitData>({ method: 'GET', path: `/v1/induk/organisasi/unit-aplikasi/${aplikasi}`, query: unit ? { unit } : {} }, { signal }), { staleTime: 120_000 });
   const d = q.data;
+  // Lapisan organisasi mahasiswa (bila pengguna berhak melihatnya): tombol "Tampilkan organisasi mahasiswa" di bagan.
+  const ormawa = useLapisanOrmawa();
 
   const bagan = React.useMemo<UnitBagan[]>(() => (d?.unit ?? []).map((u) => ({
     id: String(u.id),
@@ -159,7 +162,7 @@ export function StrukturUnit({ aplikasi, judul, tinggiBagan = 620 }: StrukturUni
         ]}
       />
       {tab === 'bagan' && (
-        <BaganOrganisasi data={bagan} akar={String(d.akar.id)} rinci buka={4} tinggi={tinggiBagan} judulBerkas={judul ?? `Struktur ${d.akar.nama}`} subjudul={`${bagan.length} unit`} namaBerkas={`struktur-${d.akar.kode.toLowerCase()}`} gantiRinci />
+        <BaganOrganisasi data={bagan} lapisan={ormawa ? [ormawa] : undefined} akar={String(d.akar.id)} rinci buka={4} tinggi={tinggiBagan} judulBerkas={judul ?? `Struktur ${d.akar.nama}`} subjudul={`${bagan.length} unit`} namaBerkas={`struktur-${d.akar.kode.toLowerCase()}`} gantiRinci />
       )}
       {tab === 'pejabat' && (
         <DataTable<PejabatData> columns={kolom} rows={d.pejabat} rowKey={(p) => String(p.id)} defaultDensity="compact" defaultSort={{ key: 'jabatan', dir: 'asc' }} exportCsv={`pejabat-${d.akar.kode.toLowerCase()}`}
