@@ -104,3 +104,4 @@ export * from './bkd';
 export * from './bkd-alur';
 export * from './bkd-aturan';
 export * from './bkd-tamu';
+export * from './kurikulum-aturan';
