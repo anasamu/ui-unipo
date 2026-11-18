@@ -10,6 +10,7 @@ import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { usePlatform } from '../lib/platform';
 import { Button, Kbd, Spinner } from './actions';
+import { infoGalatDari, TombolLaporGalat, type InfoGalat } from './galat';
 
 function Arrow() {
   return (
@@ -264,9 +265,30 @@ const ICONS: Record<string, React.ReactNode> = {
   info: <Info />,
 };
 
+/**
+ * Kode laporan pada toast galat: `data.galat` (objek galat API), `data.requestId`, atau teks "Kode laporan: abc123" /
+ * "(request_id: abc123)" di deskripsi atau judul (pesanGalat menyertakannya untuk galat 5xx). Dipakai untuk tombol "Buat tiket" di toast.
+ */
+function galatToast(t: { type?: string; title?: React.ReactNode; description?: React.ReactNode; data?: unknown }): InfoGalat | null {
+  const d = (t.data ?? {}) as { galat?: unknown; requestId?: unknown };
+  const dariData = infoGalatDari(d.galat, typeof d.requestId === 'string' ? d.requestId : null);
+  if (dariData) return dariData;
+  if (t.type !== 'error') return null;
+  // Teks galat dari pesanGalat(): "... Kode laporan: abc123." atau "... (request_id: abc123)".
+  const pola = /\(?\s*(?:Kode laporan|request_id):?\s*([A-Za-z0-9._:-]{6,64}?)\.?\)?(?=[\s.)]|$)/;
+  for (const teks of [t.description, t.title]) {
+    if (typeof teks !== 'string') continue;
+    const m = pola.exec(teks);
+    if (m) return { requestId: m[1], pesan: teks.replace(pola, '').trim() || null };
+  }
+  return null;
+}
+
 function ToastList() {
   const { toasts } = BaseToast.useToastManager();
-  return toasts.map((t) => (
+  return toasts.map((t) => {
+    const galat = galatToast(t);
+    return (
     <BaseToast.Root key={t.id} toast={t} className="u-toast">
       {t.type && (
         <span className="u-toast-icon" data-type={t.type}>
@@ -276,12 +298,14 @@ function ToastList() {
       <BaseToast.Content className="u-toast-content">
         <BaseToast.Title className="u-toast-title" />
         <BaseToast.Description className="u-toast-description" />
+        {galat && <TombolLaporGalat info={galat} className="u-toast-lapor" />}
       </BaseToast.Content>
       <BaseToast.Close className="u-toast-close" aria-label="Tutup">
         <X />
       </BaseToast.Close>
     </BaseToast.Root>
-  ));
+    );
+  });
 }
 
 /** Pasang sekali di akar aplikasi (sudah termasuk di <UnipoProvider>). */
@@ -301,6 +325,7 @@ export function Toaster({ children, limit = 3, timeout = 5000 }: { children?: Re
 /**
  * const toast = useToast();
  * toast.add({ title: 'Data tersimpan', type: 'success' });
+ * toast.add({ title: 'Gagal menyimpan', description: pesanGalat(e), type: 'error', data: { galat: e } }); // + tombol Buat tiket
  * toast.promise(simpan(), { loading: 'Menyimpan…', success: 'Tersimpan', error: 'Gagal menyimpan' });
  */
 export const useToast = BaseToast.useToastManager;

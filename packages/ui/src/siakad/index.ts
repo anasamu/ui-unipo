@@ -2,6 +2,7 @@
 // Impor terpisah agar aplikasi tanpa SDK tidak ikut memuatnya: import { CariMahasiswa } from 'unipo-ui/siakad'.
 export * from './provider';
 export * from './galat';
+export * from './lapor-galat';
 export * from './negara';
 export * from './cari';
 export * from './filter-presets';

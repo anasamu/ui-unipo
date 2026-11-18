@@ -60,6 +60,10 @@ export interface LogApiProps {
   perPage?: number;
   /** Tampilkan bilah saringan (bawaan true). */
   saringan?: boolean;
+  /** Saring satu permintaan berdasarkan kode laporan (request_id), mis. dari tiket laporan bug. */
+  requestId?: string;
+  /** Tanggal awal rentang (Y-m-d), mis. tanggal galat; `hari` lalu dihitung maju dari tanggal ini. */
+  tanggal?: string;
   className?: string;
 }
 
@@ -67,15 +71,18 @@ export interface LogApiProps {
  * Tabel permintaan API terbaru dulu: metode, path, status, durasi, aplikasi, pengguna. Saring status, metode, tanggal,
  * dan path; klik baris untuk rincian (request ID, IP, query, database).
  */
-export function LogApi({ clientId, username, hari = 1, perPage: pp = 50, saringan = true, className }: LogApiProps) {
+export function LogApi({ clientId, username, hari = 1, perPage: pp = 50, saringan = true, requestId, tanggal, className }: LogApiProps) {
   const [f, setF] = React.useState<FilterValues>({});
   const [page, setPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(pp);
   const [pilih, setPilih] = React.useState<BarisLogApi | null>(null);
   const tgl = (f.tanggal ?? {}) as DateRangeValue;
+  const maju = tanggal ? new Date(Date.parse(`${tanggal}T00:00:00Z`) + (hari - 1) * 86_400_000).toISOString().slice(0, 10) : null;
   const query = {
-    dari: tgl.from || (tgl.to ? undefined : mundur(hari)),
-    sampai: tgl.to || (tgl.from ? undefined : hariIni()),
+    dari: tgl.from || (tgl.to ? undefined : (tanggal ?? mundur(hari))),
+    // Dengan `tanggal` rentang dihitung maju dari tanggal itu (tanpa dibandingkan dengan hariIni() yang memakai UTC).
+    sampai: tgl.to || (tgl.from ? undefined : (maju ?? hariIni())),
+    request_id: requestId || undefined,
     client_id: clientId ?? ((f.client_id as string) || undefined),
     username: username ?? ((f.username as string) || undefined),
     status: (f.status as string) || undefined,
