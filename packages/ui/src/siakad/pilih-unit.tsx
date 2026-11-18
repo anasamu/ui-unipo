@@ -674,7 +674,7 @@ export function PilihUnit(props: PilihUnitProps) {
           </button>
         )}
         <BasePopover.Portal>
-          <BasePopover.Positioner className="u-popup-positioner" side="bottom" align="start" sideOffset={6} collisionPadding={12} anchor={pemicuRef}>
+          <BasePopover.Positioner className="u-popup-positioner" side="bottom" align="start" sideOffset={6} collisionPadding={12} collisionAvoidance={{ side: 'flip', align: 'shift', fallbackAxisSide: 'none' }} anchor={pemicuRef}>
             <BasePopover.Popup className="u-pilih-unit-popup" initialFocus={inputRef} aria-label={props['aria-label'] ?? 'Pilih unit organisasi'}>
               <div className="u-pilih-unit-cari">
                 <Search aria-hidden />

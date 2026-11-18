@@ -11,6 +11,7 @@ import { cn } from '../lib/cn';
 import { formatDate } from '../lib/format';
 import { CariAtauUnggahDokumen } from './cari-dokumen';
 import { pesanGalat, useOptionalSiakad } from './provider';
+import { PilihUnit } from './pilih-unit';
 
 /*
  * Registri SK tunggal (SIAKAD /v1/sk, docs/SK.md). Satu SK dicatat satu kali oleh unit penerbitnya (mis. Rektorat untuk
@@ -533,6 +534,7 @@ interface PenerbitSK {
   kode: string;
   jenis: string;
   nama: string;
+  induk_id?: number | null;
   boleh_catat: boolean;
 }
 
@@ -567,6 +569,11 @@ export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor
   const [tanggal, setTanggal] = React.useState<string | null>(isian.tanggal ?? null);
   const [perihal, setPerihal] = React.useState(isian.perihal ?? '');
   const [penerbit, setPenerbit] = React.useState<number | null>(isian.penerbitLuar ? LUAR : (isian.penerbitUnitId ?? null));
+  // Unit terakhir yang dipilih, dipulihkan saat beralih kembali dari "Instansi luar".
+  const unitTerakhir = React.useRef<number | null>(isian.penerbitUnitId ?? null);
+  React.useEffect(() => {
+    if (penerbit !== null && penerbit !== LUAR) unitTerakhir.current = penerbit;
+  }, [penerbit]);
   const [luar, setLuar] = React.useState(isian.penerbitLuar ?? '');
   const [ttd, setTtd] = React.useState<NilaiPenandatangan | null>(isian.penandatangan ?? null);
   const [tempat, setTempat] = React.useState('');
@@ -650,7 +657,10 @@ export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor
     }
   };
   const sama = cek?.sama?.[0];
-  const opsiPenerbit = [...daftarPenerbit.map((u) => ({ value: u.unit_id, label: u.nama, description: u.boleh_catat ? 'Anda pencatat SK unit ini' : undefined })), { value: LUAR, label: 'Instansi luar (Yayasan, LLDIKTI, BAN-PT, ...)' }];
+  const unitPilihan = React.useMemo(() => daftarPenerbit.map((u) => ({ id: u.unit_id, induk_id: u.induk_id ?? null, kode: u.kode, jenis: u.jenis, nama: u.nama })), [daftarPenerbit]);
+  const pencatat = React.useMemo(() => new Set(daftarPenerbit.filter((u) => u.boleh_catat).map((u) => u.unit_id)), [daftarPenerbit]);
+  // Lencana "Anda pencatat" hanya bila membedakan (bukan di semua unit, mis. admin).
+  const semuaPencatat = daftarPenerbit.length > 0 && pencatat.size === daftarPenerbit.length;
   return (
     <Dialog
       open={open}
@@ -697,25 +707,37 @@ export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor
             {cek.mirip.map((m) => `${m.nomor} (${m.penerbit?.nama ?? 'penerbit belum diketahui'})`).join(', ')}. Pastikan penerbitnya benar.
           </Alert>
         ) : null}
-        <div className="u-ajukan-sk-dua">
-          <Field label="Unit penerbit" required description="Universitas untuk SK Rektor, fakultas untuk SK Dekan; SK pengangkatan Rektor diterbitkan Yayasan (instansi luar).">
-            <Select<number> value={penerbit} onValueChange={setPenerbit} options={opsiPenerbit} placeholder="Pilih unit penerbit" />
-          </Field>
-          {penerbit === LUAR ? (
-            <Field label="Nama instansi" required>
-              <Input value={luar} onChange={(e) => setLuar(e.target.value)} placeholder="mis. Yayasan (Badan Penyelenggara)" />
-            </Field>
-          ) : (
-            <Field label="Tanggal SK" optional>
-              <DatePicker value={isoKeTanggal(tanggal)} onValueChange={(d) => setTanggal(tanggalKeIso(d))} placeholder="Tanggal SK" />
-            </Field>
-          )}
-        </div>
-        {penerbit === LUAR && (
-          <Field label="Tanggal SK" optional>
-            <DatePicker value={isoKeTanggal(tanggal)} onValueChange={(d) => setTanggal(tanggalKeIso(d))} placeholder="Tanggal SK" />
-          </Field>
-        )}
+        <Field label="Penerbit" required description="Universitas untuk SK Rektor, fakultas untuk SK Dekan; SK pengangkatan Rektor diterbitkan Yayasan (instansi luar).">
+          <div className="u-ajukan-sk-penerbit">
+            <SegmentedControl<'unit' | 'luar'>
+              aria-label="Jenis penerbit"
+              value={penerbit === LUAR ? 'luar' : 'unit'}
+              onValueChange={(v) => setPenerbit(v === 'luar' ? LUAR : unitTerakhir.current)}
+              options={[
+                { value: 'unit', label: 'Unit UNIPO' },
+                { value: 'luar', label: 'Instansi luar' },
+              ]}
+            />
+            {penerbit === LUAR ? (
+              <Input value={luar} onChange={(e) => setLuar(e.target.value)} placeholder="Nama instansi, mis. Yayasan (Badan Penyelenggara), LLDIKTI, BAN-PT" aria-label="Nama instansi penerbit" />
+            ) : (
+              <PilihUnit
+                dataCadangan={unitPilihan}
+                value={penerbit}
+                onValueChange={(v) => {
+                  unitTerakhir.current = v;
+                  setPenerbit(v);
+                }}
+                keterangan={semuaPencatat ? undefined : (u) => (pencatat.has(Number(u.id)) ? 'Anda pencatat' : null)}
+                placeholder="Pilih unit penerbit"
+                aria-label="Unit penerbit"
+              />
+            )}
+          </div>
+        </Field>
+        <Field label="Tanggal SK" optional>
+          <DatePicker value={isoKeTanggal(tanggal)} onValueChange={(d) => setTanggal(tanggalKeIso(d))} placeholder="Tanggal SK" />
+        </Field>
         <Field label="Perihal" optional>
           <Input value={perihal} onChange={(e) => setPerihal(e.target.value)} placeholder="mis. Pengangkatan Dekan Fakultas Ilmu Komputer" />
         </Field>
