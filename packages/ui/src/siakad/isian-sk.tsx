@@ -3,7 +3,7 @@ import * as React from 'react';
 import { FilePlus2, FileText, ScrollText, ShieldCheck } from 'lucide-react';
 import { Combobox, OptionContent, Select } from '../components/select';
 import { DatePicker } from '../components/calendar';
-import { Field, Input, type ControlSize } from '../components/forms';
+import { Field, Input, SegmentedControl, type ControlSize } from '../components/forms';
 import { Alert } from '../components/display';
 import { Badge, Button } from '../components/actions';
 import { Dialog, useToast } from '../components/overlays';
@@ -30,7 +30,8 @@ export interface SKRegistri {
   jenis?: string;
   jenis_label?: string;
   penerbit?: { unit_id: number | null; nama: string; kode?: string; jenis?: string; luar?: boolean } | null;
-  penandatangan?: { pejabat_id: number | null; jabatan: string | null; nama: string | null; ttd?: string | null } | null;
+  /** tautan: pejabat = data pejabat; jabatan = jabatan di unit tanpa orang; teks = diketik, belum tertaut. */
+  penandatangan?: { pejabat_id: number | null; jabatan_id?: number | null; unit_id?: number | null; jabatan: string | null; nama: string | null; tautan?: 'pejabat' | 'jabatan' | 'teks'; ttd?: string | null } | null;
   tempat?: string | null;
   berkas?: { ada: boolean; nama?: string | null; mime?: string | null; ukuran?: number | null; url: string } | null;
   status: 'draf' | 'terbit' | 'ditolak' | 'dicabut' | 'diubah';
@@ -213,7 +214,11 @@ export function KartuSK({ sk, aksi, className }: { sk: SKRegistri; aksi?: React.
           </div>
           <div>
             <dt>Penandatangan</dt>
-            <dd>{sk.penandatangan?.nama ? `${sk.penandatangan.jabatan ?? ''}${sk.penandatangan.jabatan ? ', ' : ''}${sk.penandatangan.nama}` : 'Diisi penerbit di registri'}</dd>
+            <dd>
+              {sk.penandatangan?.jabatan || sk.penandatangan?.nama ? [sk.penandatangan.jabatan, sk.penandatangan.nama].filter(Boolean).join(', ') : 'Diisi penerbit di registri'}
+              {sk.penandatangan?.tautan === 'teks' ? <small className="u-kartu-sk-catatan"> (belum tertaut ke data pejabat)</small> : null}
+              {sk.penandatangan?.tautan === 'jabatan' && !sk.penandatangan.nama ? <small className="u-kartu-sk-catatan"> (jabatan; pejabatnya belum tercatat)</small> : null}
+            </dd>
           </div>
           {sk.tempat && (
             <div>
@@ -239,6 +244,121 @@ export function KartuSK({ sk, aksi, className }: { sk: SKRegistri; aksi?: React.
   );
 }
 
+/** Penandatangan SK: pejabat aktif, jabatan di unit tanpa orang, atau teks (belum tertaut). */
+export interface NilaiPenandatangan {
+  tautan: 'pejabat' | 'jabatan' | 'teks';
+  pejabat_id?: number | null;
+  jabatan_id?: number | null;
+  unit_id?: number | null;
+  jabatan?: string | null;
+  nama?: string | null;
+}
+
+/** Body API dari {@link NilaiPenandatangan}. */
+export function bodyPenandatangan(t: NilaiPenandatangan | null | undefined): Record<string, unknown> {
+  if (!t) return { penandatangan_pejabat_id: null, penandatangan_jabatan_id: null, penandatangan_jabatan: null, penandatangan_nama: null };
+  if (t.tautan === 'pejabat' && t.pejabat_id) return { penandatangan_pejabat_id: t.pejabat_id };
+  if (t.tautan === 'jabatan' && t.jabatan_id) return { penandatangan_jabatan_id: t.jabatan_id, penandatangan_unit_id: t.unit_id ?? null, penandatangan_nama: t.nama || null };
+  return { penandatangan_pejabat_id: null, penandatangan_jabatan_id: null, penandatangan_jabatan: t.jabatan || null, penandatangan_nama: t.nama || null };
+}
+
+interface PenandatanganSK {
+  pejabat_id: number;
+  nama: string;
+  jabatan: string;
+  unit_penerbit_id: number;
+}
+interface JabatanSK {
+  jabatan_id: number;
+  kode: string;
+  jabatan_lengkap: string;
+  unit_id: number | null;
+}
+
+/**
+ * Isian penandatangan SK tanpa ketergantungan melingkar: pilih pejabat aktif, atau JABATAN di unit (mis. "Rektor
+ * Universitas Pohuwato") bila pejabatnya belum tercatat, atau ketik jabatan + nama (mis. Ketua Yayasan) yang ditandai
+ * belum tertaut. Tidak wajib.
+ */
+export function IsianPenandatangan({ value, onValueChange, unitId, label = 'Penandatangan' }: { value: NilaiPenandatangan | null; onValueChange: (v: NilaiPenandatangan | null) => void; unitId?: number | null; label?: React.ReactNode }) {
+  const siakad = useOptionalSiakad();
+  const [pejabat, setPejabat] = React.useState<PenandatanganSK[]>([]);
+  const [jabatan, setJabatan] = React.useState<JabatanSK[]>([]);
+  const tautan = value?.tautan ?? 'pejabat';
+  React.useEffect(() => {
+    if (!siakad) return;
+    const q = { unit_id: unitId ?? undefined };
+    siakad.request<PenandatanganSK[]>({ method: 'GET', path: '/v1/sk/penandatangan', query: q }).then((r) => setPejabat(Array.isArray(r.data) ? r.data : [])).catch(() => setPejabat([]));
+    siakad.request<JabatanSK[]>({ method: 'GET', path: '/v1/sk/jabatan-penandatangan', query: q }).then((r) => setJabatan(Array.isArray(r.data) ? r.data : [])).catch(() => setJabatan([]));
+  }, [siakad, unitId]);
+  const set = (patch: Partial<NilaiPenandatangan>) => onValueChange({ tautan, ...value, ...patch } as NilaiPenandatangan);
+  return (
+    <Field
+      label={label}
+      optional
+      description={
+        tautan === 'pejabat'
+          ? 'Dari data pejabat (Organisasi & pejabat).'
+          : tautan === 'jabatan'
+            ? 'Jabatan di unit penerbit tanpa orang, mis. sebelum pejabatnya tercatat. Tertaut otomatis saat pejabat jabatan itu ditetapkan.'
+            : 'Jabatan dan nama diketik (mis. Ketua Yayasan). Ditandai belum tertaut; bisa ditautkan ke pejabat kemudian.'
+      }
+    >
+      <div className="u-isian-ttd">
+        <SegmentedControl<'pejabat' | 'jabatan' | 'teks'>
+          value={tautan}
+          onValueChange={(t) => onValueChange({ tautan: t })}
+          options={[
+            { value: 'pejabat', label: 'Pejabat' },
+            { value: 'jabatan', label: 'Jabatan saja' },
+            { value: 'teks', label: 'Ketik' },
+          ]}
+          aria-label="Jenis penandatangan"
+        />
+        {tautan === 'pejabat' ? (
+          <Select<number>
+            value={value?.pejabat_id ?? null}
+            onValueChange={(v) => set({ pejabat_id: v })}
+            options={pejabat.map((p) => ({ value: p.pejabat_id, label: p.nama, description: p.jabatan }))}
+            placeholder={pejabat.length ? 'Pilih pejabat' : 'Belum ada pejabat aktif; pilih "Jabatan saja" atau "Ketik"'}
+            aria-label="Pejabat penandatangan"
+          />
+        ) : tautan === 'jabatan' ? (
+          <div className="u-ajukan-sk-dua">
+            <Select<number>
+              value={value?.jabatan_id ?? null}
+              onValueChange={(v) => set({ jabatan_id: v, unit_id: jabatan.find((j) => j.jabatan_id === v)?.unit_id ?? unitId ?? null })}
+              options={jabatan.map((j) => ({ value: j.jabatan_id, label: j.jabatan_lengkap }))}
+              placeholder="Pilih jabatan"
+              aria-label="Jabatan penandatangan"
+            />
+            <Input value={value?.nama ?? ''} onChange={(e) => set({ nama: e.target.value })} placeholder="Nama (opsional)" aria-label="Nama penandatangan" />
+          </div>
+        ) : (
+          <div className="u-ajukan-sk-dua">
+            <Input value={value?.jabatan ?? ''} onChange={(e) => set({ jabatan: e.target.value })} placeholder="Jabatan, mis. Ketua Yayasan" aria-label="Jabatan penandatangan" />
+            <Input value={value?.nama ?? ''} onChange={(e) => set({ nama: e.target.value })} placeholder="Nama penandatangan" aria-label="Nama penandatangan" />
+          </div>
+        )}
+      </div>
+    </Field>
+  );
+}
+
+/** Isian awal pencatatan SK (tombol "Catat SK ... sekarang" di form pemakai). */
+export interface IsianAwalSK {
+  nomor?: string;
+  tanggal?: string | null;
+  perihal?: string;
+  jenis?: string;
+  penerbitUnitId?: number | null;
+  penerbitLuar?: string | null;
+  penandatangan?: NilaiPenandatangan | null;
+  /** Ambil bawaan dari server (/v1/sk/bawaan): penerbit, perihal, penandatangan menurut jabatan yang diangkat. */
+  untukJabatanId?: number | null;
+  untukUnitId?: number | null;
+}
+
 export interface PilihSKProps {
   /** UUID SK registri terpilih. */
   value?: string | null;
@@ -253,6 +373,13 @@ export interface PilihSKProps {
   perihal?: string;
   /** Tampilkan tombol "Ajukan pencatatan SK baru" bila SK belum ada di registri. Bawaan true. */
   bolehAjukan?: boolean;
+  /**
+   * Tombol "Catat SK ... sekarang" di bawah isian (bila belum ada SK terpilih): membuka dialog pencatatan dengan isian
+   * terisi; setelah tersimpan SK langsung terpilih.
+   */
+  catatSekarang?: { label?: string; isian?: IsianAwalSK };
+  /** Tampilkan "SK ini juga dipakai untuk: ..." (SK kolektif). `kecuali` = baris milik form ini. */
+  tampilPemakaian?: boolean | { kecuali?: { tabel: string; baris: string | number } };
   label?: React.ReactNode;
   description?: React.ReactNode;
   required?: boolean;
@@ -264,31 +391,47 @@ export interface PilihSKProps {
   className?: string;
 }
 
+interface PemakaianSK {
+  tabel: string;
+  baris: string;
+  label: string;
+  uraian: string | null;
+}
+
 /**
  * Pilih SK dari registri SK tunggal: cari nomor/perihal, tampilkan nomor, tanggal, perihal, penerbit, penandatangan, dan
  * status, lihat berkasnya (hak baca, tanpa salinan). Nomor yang belum tercatat bisa diajukan pencatatannya ke penerbit;
  * nomor yang sama dengan tulisan berbeda langsung disarankan. Simpan `id` sebagai `sk_id` di data Anda.
  */
-export function PilihSK({ value, sk: skAwal, onValueChange, jenis, penerbitUnitId, perihal, bolehAjukan = true, label = 'Surat keputusan', description, required, error, placeholder = 'Cari nomor atau perihal SK di registri', disabled, size, id, className }: PilihSKProps) {
+export function PilihSK({
+  value, sk: skAwal, onValueChange, jenis, penerbitUnitId, perihal, bolehAjukan = true, catatSekarang, tampilPemakaian, label = 'Surat keputusan', description, required, error,
+  placeholder = 'Cari nomor atau perihal SK di registri', disabled, size, id, className,
+}: PilihSKProps) {
   const siakad = useOptionalSiakad();
   const cari = useCariSK();
   const periksa = usePeriksaSK();
   const [sk, setSk] = React.useState<SKRegistri | null>(skAwal ?? null);
-  const [ajukan, setAjukan] = React.useState<string | null>(null);
+  const [ajukan, setAjukan] = React.useState<{ isian: IsianAwalSK } | null>(null);
   const [saran, setSaran] = React.useState<string | null>(null);
+  const [pakai, setPakai] = React.useState<PemakaianSK[]>([]);
   React.useEffect(() => {
     if (skAwal && skAwal.id === value) setSk(skAwal);
   }, [skAwal, value]);
   React.useEffect(() => {
     if (!value) {
       setSk(null);
+      setPakai([]);
       return;
     }
-    if (sk?.id === value || !siakad || value.startsWith('surat:')) return;
+    if (!siakad || value.startsWith('surat:') || (sk?.id === value && !tampilPemakaian)) return;
     const ac = new AbortController();
     siakad
-      .request<SKRegistri>({ method: 'GET', path: `/v1/sk/${value}` }, { signal: ac.signal })
-      .then((r) => setSk(r.data))
+      .request<SKRegistri & { pemakaian?: PemakaianSK[] }>({ method: 'GET', path: `/v1/sk/${value}` }, { signal: ac.signal })
+      .then((r) => {
+        setSk(r.data);
+        const k = typeof tampilPemakaian === 'object' ? tampilPemakaian.kecuali : undefined;
+        setPakai((r.data.pemakaian ?? []).filter((p) => !k || !(p.tabel === k.tabel && String(p.baris) === String(k.baris))));
+      })
       .catch(() => undefined);
     return () => ac.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -298,6 +441,7 @@ export function PilihSK({ value, sk: skAwal, onValueChange, jenis, penerbitUnitI
     onValueChange?.(s?.id ?? null, s);
   };
   const item = sk ? keDitemukan(sk) : null;
+  const isianDasar: IsianAwalSK = { jenis, penerbitUnitId, perihal, ...(catatSekarang?.isian ?? {}) };
   return (
     <div className={cn('u-pilih-sk', className)}>
       <Field
@@ -332,7 +476,7 @@ export function PilihSK({ value, sk: skAwal, onValueChange, jenis, penerbitUnitI
           tambah={
             bolehAjukan && siakad
               ? {
-                  label: (k) => (k.trim() ? `Belum ada? Ajukan pencatatan SK “${k.trim()}”` : 'Ajukan pencatatan SK baru'),
+                  label: (k) => (k.trim() ? `Belum ada? Catat/ajukan SK “${k.trim()}”` : 'Catat atau ajukan SK baru'),
                   onTambah: async (k) => {
                     const nomor = k.trim();
                     const h = nomor ? await periksa(nomor, penerbitUnitId) : null;
@@ -342,7 +486,7 @@ export function PilihSK({ value, sk: skAwal, onValueChange, jenis, penerbitUnitI
                       setSaran(`SK ini sudah tercatat sebagai ${h.sama[0].nomor}. SK itu yang dipilih; tidak perlu mencatat ulang.`);
                       return keDitemukan(h.sama[0]);
                     }
-                    setAjukan(nomor);
+                    setAjukan({ isian: { ...isianDasar, nomor } });
                     return null;
                   },
                 }
@@ -350,23 +494,33 @@ export function PilihSK({ value, sk: skAwal, onValueChange, jenis, penerbitUnitI
           }
         />
       </Field>
+      {!sk && catatSekarang && bolehAjukan && siakad && !disabled && (
+        <div>
+          <Button variant="outline" size="sm" onClick={() => setAjukan({ isian: isianDasar })}>
+            <FilePlus2 /> {catatSekarang.label ?? 'Catat SK sekarang'}
+          </Button>
+        </div>
+      )}
       {saran && (
-        <Alert variant="info" title={saran.startsWith('Ajuan') ? 'Ajuan pencatatan terkirim' : 'SK sudah tercatat'}>
+        <Alert variant="info" title={saran.startsWith('Ajuan') ? 'Ajuan pencatatan terkirim' : saran.startsWith('SK tercatat') ? 'SK tercatat' : 'SK sudah tercatat'}>
           {saran}
         </Alert>
       )}
       {sk && <KartuSK sk={sk} />}
+      {sk && tampilPemakaian && pakai.length > 0 && (
+        <p className="u-pilih-sk-saran">
+          SK ini juga dipakai untuk: {pakai.slice(0, 6).map((p) => p.uraian ?? `${p.label} #${p.baris}`).join('; ')}
+          {pakai.length > 6 ? `; dan ${pakai.length - 6} lainnya` : ''}.
+        </p>
+      )}
       {ajukan !== null && (
         <AjukanPencatatanSK
           open
           onOpenChange={(o) => !o && setAjukan(null)}
-          nomor={ajukan}
-          jenis={jenis}
-          penerbitUnitId={penerbitUnitId}
-          perihal={perihal}
+          isian={ajukan.isian}
           onTercatat={(s, pesan) => {
             setAjukan(null);
-            setSaran(pesan ?? null);
+            setSaran(pesan ?? (s.status === 'terbit' ? 'SK tercatat di registri dan langsung dipilih.' : null));
             pilih(s);
           }}
         />
@@ -383,44 +537,53 @@ interface PenerbitSK {
   induk_id?: number | null;
   boleh_catat: boolean;
 }
-interface PenandatanganSK {
-  pejabat_id: number;
-  nama: string;
-  jabatan: string;
-  unit_penerbit_id: number;
-}
 
 export interface AjukanPencatatanSKProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Isian awal (nomor, tanggal, perihal, jenis, penerbit, penandatangan, atau jabatan yang diangkat untuk bawaan). */
+  isian?: IsianAwalSK;
+  /** @deprecated pakai isian.nomor */
   nomor?: string;
+  /** @deprecated pakai isian.jenis */
   jenis?: string;
+  /** @deprecated pakai isian.penerbitUnitId */
   penerbitUnitId?: number | null;
+  /** @deprecated pakai isian.perihal */
   perihal?: string;
   /** SK hasil pencatatan (atau SK yang ternyata sudah ada). */
   onTercatat: (sk: SKRegistri, pesan?: string) => void;
 }
 
+const LUAR = -1;
+
 /**
- * Dialog mencatat SK ke registri. Pemegang sk.catat di unit penerbit: SK langsung terbit (penandatangan dipilih dari
- * data pejabat, tidak diketik). Unit lain: ajuan pencatatan (draf) yang diverifikasi penerbit.
+ * Dialog mencatat SK ke registri. Pemegang sk.catat di unit penerbit: SK langsung terbit. Unit lain: ajuan pencatatan
+ * (draf) yang diverifikasi penerbit. Penandatangan opsional: pejabat, jabatan saja, atau teks (Ketua Yayasan, dsb.).
  */
-export function AjukanPencatatanSK({ open, onOpenChange, nomor: nomorAwal = '', jenis, penerbitUnitId, perihal: perihalAwal = '', onTercatat }: AjukanPencatatanSKProps) {
+export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor: nomorLama, jenis: jenisLama, penerbitUnitId: penerbitLama, perihal: perihalLama, onTercatat }: AjukanPencatatanSKProps) {
+  const isian: IsianAwalSK = { nomor: nomorLama, jenis: jenisLama, penerbitUnitId: penerbitLama, perihal: perihalLama, ...(isianProp ?? {}) };
   const siakad = useOptionalSiakad();
   const periksa = usePeriksaSK();
-  const [nomor, setNomor] = React.useState(nomorAwal);
-  const [tanggal, setTanggal] = React.useState<string | null>(null);
-  const [perihal, setPerihal] = React.useState(perihalAwal);
-  const [penerbit, setPenerbit] = React.useState<number | null>(penerbitUnitId ?? null);
-  const [pejabat, setPejabat] = React.useState<number | null>(null);
+  const [nomor, setNomor] = React.useState(isian.nomor ?? '');
+  const [tanggal, setTanggal] = React.useState<string | null>(isian.tanggal ?? null);
+  const [perihal, setPerihal] = React.useState(isian.perihal ?? '');
+  const [penerbit, setPenerbit] = React.useState<number | null>(isian.penerbitLuar ? LUAR : (isian.penerbitUnitId ?? null));
+  // Unit terakhir yang dipilih, dipulihkan saat beralih kembali dari "Instansi luar".
+  const unitTerakhir = React.useRef<number | null>(isian.penerbitUnitId ?? null);
+  React.useEffect(() => {
+    if (penerbit !== null && penerbit !== LUAR) unitTerakhir.current = penerbit;
+  }, [penerbit]);
+  const [luar, setLuar] = React.useState(isian.penerbitLuar ?? '');
+  const [ttd, setTtd] = React.useState<NilaiPenandatangan | null>(isian.penandatangan ?? null);
   const [tempat, setTempat] = React.useState('');
   const [berkas, setBerkas] = React.useState<string | null>(null);
   const [daftarPenerbit, setDaftarPenerbit] = React.useState<PenerbitSK[]>([]);
-  const [daftarPejabat, setDaftarPejabat] = React.useState<PenandatanganSK[]>([]);
   const [cek, setCek] = React.useState<PeriksaSK | null>(null);
   const [mirip, setMirip] = React.useState(false);
   const [kirim, setKirim] = React.useState(false);
   const [galat, setGalat] = React.useState<string | null>(null);
+  const jenis = isian.jenis;
   React.useEffect(() => {
     if (!siakad || !open) return;
     siakad
@@ -429,36 +592,44 @@ export function AjukanPencatatanSK({ open, onOpenChange, nomor: nomorAwal = '', 
         const d = Array.isArray(r.data) ? r.data : [];
         setDaftarPenerbit(d);
         // SK kalender, aturan, pengangkatan pejabat, dan kurikulum lazimnya SK Rektor: bawaan penerbit universitas.
-        if (penerbitUnitId == null && jenis && ['kalender', 'aturan', 'pengangkatan', 'kurikulum'].includes(jenis)) {
+        if (isian.penerbitUnitId == null && !isian.penerbitLuar && !isian.untukJabatanId && jenis && ['kalender', 'aturan', 'pengangkatan', 'kurikulum'].includes(jenis)) {
           const u = d.find((x) => x.jenis === 'universitas');
           if (u) setPenerbit((p) => p ?? u.unit_id);
         }
       })
       .catch(() => setDaftarPenerbit([]));
-  }, [siakad, open, penerbitUnitId, jenis]);
-  const bolehCatat = daftarPenerbit.find((u) => u.unit_id === penerbit)?.boleh_catat ?? false;
-  const unitPenerbit = React.useMemo(() => daftarPenerbit.map((u) => ({ id: u.unit_id, induk_id: u.induk_id ?? null, kode: u.kode, jenis: u.jenis, nama: u.nama })), [daftarPenerbit]);
-  const pencatat = React.useMemo(() => new Set(daftarPenerbit.filter((u) => u.boleh_catat).map((u) => u.unit_id)), [daftarPenerbit]);
-  // Lencana "Anda pencatat" hanya bila membedakan (bukan di semua unit, mis. admin).
-  const semuaPencatat = daftarPenerbit.length > 0 && pencatat.size === daftarPenerbit.length;
-  React.useEffect(() => {
-    if (!siakad || !penerbit || !bolehCatat) {
-      setDaftarPejabat([]);
-      return;
+    // Bawaan menurut jenis SK dan jabatan yang diangkat (pengangkatan Rektor -> Yayasan; pejabat lain -> Rektor).
+    if (isian.untukJabatanId || (jenis && !isian.penandatangan)) {
+      siakad
+        .request<{ penerbit_unit_id: number | null; penerbit_luar: string | null; perihal: string | null; penandatangan: (NilaiPenandatangan & { jabatan?: string | null }) | null }>({
+          method: 'GET',
+          path: '/v1/sk/bawaan',
+          query: { jenis, penerbit_unit_id: isian.penerbitUnitId ?? undefined, untuk_jabatan_id: isian.untukJabatanId ?? undefined, untuk_unit_id: isian.untukUnitId ?? undefined },
+        })
+        .then(({ data: b }) => {
+          if (isian.untukJabatanId) {
+            if (b.penerbit_luar) {
+              setPenerbit(LUAR);
+              setLuar(b.penerbit_luar);
+            } else if (b.penerbit_unit_id) setPenerbit(b.penerbit_unit_id);
+            if (b.perihal) setPerihal((p) => p || b.perihal!);
+          }
+          if (b.penandatangan && !isian.penandatangan) setTtd(b.penandatangan);
+        })
+        .catch(() => undefined);
     }
-    siakad
-      .request<PenandatanganSK[]>({ method: 'GET', path: '/v1/sk/penandatangan', query: { unit_id: penerbit } })
-      .then((r) => setDaftarPejabat(Array.isArray(r.data) ? r.data : []))
-      .catch(() => setDaftarPejabat([]));
-  }, [siakad, penerbit, bolehCatat]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [siakad, open]);
+  const unitPenerbit = penerbit === LUAR ? null : penerbit;
+  const bolehCatat = (penerbit === LUAR ? daftarPenerbit.some((u) => u.boleh_catat) : daftarPenerbit.find((u) => u.unit_id === penerbit)?.boleh_catat) ?? false;
   React.useEffect(() => {
     if (!nomor.trim()) {
       setCek(null);
       return;
     }
-    const t = setTimeout(() => void periksa(nomor, penerbit).then(setCek), 350);
+    const t = setTimeout(() => void periksa(nomor, unitPenerbit).then(setCek), 350);
     return () => clearTimeout(t);
-  }, [nomor, penerbit, periksa]);
+  }, [nomor, unitPenerbit, periksa]);
   const simpan = async () => {
     if (!siakad) return;
     setKirim(true);
@@ -467,7 +638,10 @@ export function AjukanPencatatanSK({ open, onOpenChange, nomor: nomorAwal = '', 
       const r = await siakad.request<SKRegistri>({
         method: 'POST',
         path: '/v1/sk',
-        body: { nomor, tanggal, perihal: perihal || null, jenis, penerbit_unit_id: penerbit, penandatangan_pejabat_id: bolehCatat ? pejabat : null, tempat: bolehCatat ? tempat || null : null, berkas_id: berkas, abaikan_mirip: mirip || undefined },
+        body: {
+          nomor, tanggal, perihal: perihal || null, jenis, ...(penerbit === LUAR ? { penerbit_luar: luar || null } : { penerbit_unit_id: penerbit }),
+          ...bodyPenandatangan(ttd), tempat: tempat || null, berkas_id: berkas, abaikan_mirip: mirip || undefined,
+        },
       });
       onTercatat(r.data, r.data.status === 'draf' ? 'Ajuan pencatatan SK terkirim ke unit penerbit untuk diverifikasi. SK ini sudah bisa dirujuk.' : undefined);
     } catch (e) {
@@ -483,6 +657,10 @@ export function AjukanPencatatanSK({ open, onOpenChange, nomor: nomorAwal = '', 
     }
   };
   const sama = cek?.sama?.[0];
+  const unitPilihan = React.useMemo(() => daftarPenerbit.map((u) => ({ id: u.unit_id, induk_id: u.induk_id ?? null, kode: u.kode, jenis: u.jenis, nama: u.nama })), [daftarPenerbit]);
+  const pencatat = React.useMemo(() => new Set(daftarPenerbit.filter((u) => u.boleh_catat).map((u) => u.unit_id)), [daftarPenerbit]);
+  // Lencana "Anda pencatat" hanya bila membedakan (bukan di semua unit, mis. admin).
+  const semuaPencatat = daftarPenerbit.length > 0 && pencatat.size === daftarPenerbit.length;
   return (
     <Dialog
       open={open}
@@ -491,7 +669,7 @@ export function AjukanPencatatanSK({ open, onOpenChange, nomor: nomorAwal = '', 
       title={bolehCatat ? 'Catat SK di registri' : 'Ajukan pencatatan SK'}
       description={
         bolehCatat
-          ? 'Anda pencatat SK unit penerbit ini: SK langsung terbit dan bisa dirujuk semua unit.'
+          ? 'Anda pencatat SK unit ini: SK langsung terbit dan bisa dirujuk semua unit.'
           : 'SK belum ada di registri. Ajuan dikirim ke unit penerbit untuk diverifikasi; sementara itu SK sudah bisa dirujuk.'
       }
       footer={
@@ -499,7 +677,7 @@ export function AjukanPencatatanSK({ open, onOpenChange, nomor: nomorAwal = '', 
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Batal
           </Button>
-          <Button onClick={simpan} loading={kirim} disabled={!nomor.trim() || !penerbit || !!sama}>
+          <Button onClick={simpan} loading={kirim} disabled={!nomor.trim() || penerbit === null || (penerbit === LUAR && !luar.trim()) || !!sama}>
             {bolehCatat ? <ShieldCheck /> : <FilePlus2 />} {mirip ? 'Tetap catat' : bolehCatat ? 'Catat SK' : 'Ajukan pencatatan'}
           </Button>
         </>
@@ -529,42 +707,44 @@ export function AjukanPencatatanSK({ open, onOpenChange, nomor: nomorAwal = '', 
             {cek.mirip.map((m) => `${m.nomor} (${m.penerbit?.nama ?? 'penerbit belum diketahui'})`).join(', ')}. Pastikan penerbitnya benar.
           </Alert>
         ) : null}
-        <Field label="Unit penerbit" required description="Rektorat/universitas untuk SK Rektor, fakultas untuk SK Dekan, dan seterusnya.">
-          <PilihUnit
-            dataCadangan={unitPenerbit}
-            value={penerbit}
-            onValueChange={(v) => {
-              setPenerbit(v);
-              setPejabat(null);
-            }}
-            keterangan={semuaPencatat ? undefined : (u) => (pencatat.has(Number(u.id)) ? 'Anda pencatat' : null)}
-            placeholder="Pilih unit penerbit"
-            aria-label="Unit penerbit"
-          />
-        </Field>
-        <div className="u-ajukan-sk-dua">
-          <Field label="Tanggal SK" optional>
-            <DatePicker value={isoKeTanggal(tanggal)} onValueChange={(d) => setTanggal(tanggalKeIso(d))} placeholder="Tanggal SK" />
-          </Field>
-          <Field label="Perihal" optional>
-            <Input value={perihal} onChange={(e) => setPerihal(e.target.value)} placeholder="mis. Kalender Akademik 2026/2027" />
-          </Field>
-        </div>
-        {bolehCatat && (
-          <div className="u-ajukan-sk-dua">
-            <Field label="Penandatangan" description="Dari data pejabat (Organisasi & pejabat), tidak diketik.">
-              <Select<number>
-                value={pejabat}
-                onValueChange={setPejabat}
-                options={daftarPejabat.map((p) => ({ value: p.pejabat_id, label: p.nama, description: p.jabatan }))}
-                placeholder={daftarPejabat.length ? 'Pilih pejabat' : 'Belum ada pejabat aktif'}
+        <Field label="Penerbit" required description="Universitas untuk SK Rektor, fakultas untuk SK Dekan; SK pengangkatan Rektor diterbitkan Yayasan (instansi luar).">
+          <div className="u-ajukan-sk-penerbit">
+            <SegmentedControl<'unit' | 'luar'>
+              aria-label="Jenis penerbit"
+              value={penerbit === LUAR ? 'luar' : 'unit'}
+              onValueChange={(v) => setPenerbit(v === 'luar' ? LUAR : unitTerakhir.current)}
+              options={[
+                { value: 'unit', label: 'Unit UNIPO' },
+                { value: 'luar', label: 'Instansi luar' },
+              ]}
+            />
+            {penerbit === LUAR ? (
+              <Input value={luar} onChange={(e) => setLuar(e.target.value)} placeholder="Nama instansi, mis. Yayasan (Badan Penyelenggara), LLDIKTI, BAN-PT" aria-label="Nama instansi penerbit" />
+            ) : (
+              <PilihUnit
+                dataCadangan={unitPilihan}
+                value={penerbit}
+                onValueChange={(v) => {
+                  unitTerakhir.current = v;
+                  setPenerbit(v);
+                }}
+                keterangan={semuaPencatat ? undefined : (u) => (pencatat.has(Number(u.id)) ? 'Anda pencatat' : null)}
+                placeholder="Pilih unit penerbit"
+                aria-label="Unit penerbit"
               />
-            </Field>
-            <Field label="Ditetapkan di" optional>
-              <Input value={tempat} onChange={(e) => setTempat(e.target.value)} placeholder="Kosong = sama dengan SK terakhir unit ini" />
-            </Field>
+            )}
           </div>
-        )}
+        </Field>
+        <Field label="Tanggal SK" optional>
+          <DatePicker value={isoKeTanggal(tanggal)} onValueChange={(d) => setTanggal(tanggalKeIso(d))} placeholder="Tanggal SK" />
+        </Field>
+        <Field label="Perihal" optional>
+          <Input value={perihal} onChange={(e) => setPerihal(e.target.value)} placeholder="mis. Pengangkatan Dekan Fakultas Ilmu Komputer" />
+        </Field>
+        <IsianPenandatangan value={ttd} onValueChange={setTtd} unitId={unitPenerbit} />
+        <Field label="Ditetapkan di" optional>
+          <Input value={tempat} onChange={(e) => setTempat(e.target.value)} placeholder="Kosong = sama dengan SK terakhir unit penerbit" />
+        </Field>
         <Field label="Berkas SK" optional description="Satu berkas, disimpan di Berkas unit penerbit. Unit lain membacanya dari registri, tidak mengunggah ulang.">
           <CariAtauUnggahDokumen value={berkas} onValueChange={setBerkas} accept=".pdf,.jpg,.jpeg,.png" kategori="sk" placeholder="Cari atau unggah berkas SK" />
         </Field>

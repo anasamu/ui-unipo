@@ -115,6 +115,13 @@
   gap: 1rem;
   container-type: inline-size;
 }
+.u-ajukan-sk-penerbit {
+  display: grid;
+  gap: 0.5rem;
+  > .u-segmented {
+    justify-self: start;
+  }
+}
 .u-ajukan-sk-dua {
   display: grid;
   gap: 1rem;
@@ -191,4 +198,8 @@
   font-weight: 600;
   text-decoration: underline;
   cursor: pointer;
+}
+.u-isian-ttd {
+  display: grid;
+  gap: 0.5rem;
 }

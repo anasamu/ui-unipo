@@ -3352,6 +3352,7 @@ export function FormLampiranAturan({
             value={isi.sk_id || null}
             onValueChange={(id) => set('sk_id', id ?? '')}
             jenis="aturan"
+            catatSekarang={{ label: 'Catat SK aturan sekarang', isian: { jenis: 'aturan' } }}
             label="SK dari registri"
             required
             error={galat.sk_id || galat.nomor || undefined}

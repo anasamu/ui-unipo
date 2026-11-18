@@ -593,7 +593,7 @@ export function FormSkPanitia({ panitia, trigger, open, onOpenChange }: { paniti
         toast.add({ title: 'SK dilampirkan', type: 'success' });
       }}
     >
-      <PilihSK value={skId} sk={panitia.sk_registri ?? null} onValueChange={(id) => setSkId(id)} jenis="panitia" penerbitUnitId={panitia.unit?.id ?? null} perihal={`Pembentukan ${panitia.nama}`} label="SK panitia" required error={galat.sk_id || galat.nomor_sk || galat.berkas_id || undefined} />
+      <PilihSK value={skId} sk={panitia.sk_registri ?? null} onValueChange={(id) => setSkId(id)} jenis="panitia" penerbitUnitId={panitia.unit?.id ?? null} perihal={`Pembentukan ${panitia.nama}`} label="SK panitia" required catatSekarang={{ label: 'Catat SK panitia sekarang', isian: { jenis: 'panitia', penerbitUnitId: panitia.unit?.id ?? null, perihal: `Pembentukan ${panitia.nama}` } }} error={galat.sk_id || galat.nomor_sk || galat.berkas_id || undefined} />
     </PanelForm>
   );
 }

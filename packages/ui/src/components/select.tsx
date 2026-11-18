@@ -67,7 +67,7 @@ export function Select<V = string>({ options, placeholder = 'Pilih…', size, cl
         </BaseSelect.Icon>
       </BaseSelect.Trigger>
       <BaseSelect.Portal>
-        <BaseSelect.Positioner className="u-popup-positioner" sideOffset={6} alignItemWithTrigger={false}>
+        <BaseSelect.Positioner className="u-popup-positioner" sideOffset={6} alignItemWithTrigger={false} collisionPadding={8}>
           <BaseSelect.Popup className="u-listbox">
             {groups.map(([g, items], gi) => (
               <BaseSelect.Group key={g || gi}>
@@ -78,7 +78,7 @@ export function Select<V = string>({ options, placeholder = 'Pilih…', size, cl
                     {o.icon}
                     <span className="u-option-text">
                       <BaseSelect.ItemText>{o.label}</BaseSelect.ItemText>
-                      {o.description && <span className="u-option-meta">{o.description}</span>}
+                      {o.description && <span className="u-option-meta" title={typeof o.description === 'string' ? o.description : undefined}>{o.description}</span>}
                     </span>
                     <BaseSelect.ItemIndicator className="u-listbox-item-indicator">
                       <Check />
@@ -270,7 +270,7 @@ export function Combobox<T>({
         </span>
       </div>
       <BaseCombobox.Portal>
-        <BaseCombobox.Positioner className="u-popup-positioner" sideOffset={6}>
+        <BaseCombobox.Positioner className="u-popup-positioner" sideOffset={6} collisionPadding={8}>
           <BaseCombobox.Popup className="u-listbox">
             <BaseCombobox.Status className="u-listbox-status">
               {failed ? (
@@ -332,7 +332,7 @@ export function OptionContent({ media, mediaShape, title, meta }: { media?: Reac
       )}
       <span className="u-option-text">
         <span>{title}</span>
-        {meta && <span className="u-option-meta">{meta}</span>}
+        {meta && <span className="u-option-meta" title={typeof meta === 'string' ? meta : undefined}>{meta}</span>}
       </span>
     </>
   );
