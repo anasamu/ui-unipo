@@ -16,6 +16,7 @@ import type { MediaEditor, OpsiPilihMedia } from '../editor/konteks';
 import { KEAMANAN_SURAT, SIFAT_SURAT } from './filter-presets';
 import { GalatApi } from './galat';
 import { PilihEntitas, type SumberEntitas } from './pilih';
+import { PilihUnit, type PilihUnitTunggalProps, type UnitOrganisasi } from './pilih-unit';
 import { PilihTemplatSurat, jenisDariKode } from './surat-galeri';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 
@@ -64,7 +65,7 @@ const JENIS_TUJUAN = [
   { value: 'eksternal', label: 'Pihak luar' },
 ] as const;
 
-/** Sumber PilihEntitas untuk unit arsip (tujuan surat jenis unit). */
+/** Sumber PilihEntitas untuk unit arsip (cari datar). Tujuan surat jenis unit kini memakai PilihUnit `sumber="arsip"`. */
 export const SUMBER_UNIT_ARSIP: SumberEntitas = {
   nama: 'unit arsip',
   path: '/v1/arsip/unit',
@@ -75,6 +76,23 @@ export const SUMBER_UNIT_ARSIP: SumberEntitas = {
   ikon: <Network />,
   placeholder: 'Cari nama atau kode unit',
 };
+
+/**
+ * Pemilih unit arsip berpohon (arsip_unit, `/v1/arsip/unit`) yang hanya menawarkan unit di `unit`, mis. unit tempat
+ * pengguna bertugas dari `useUnitArsipSaya()`. Induknya tampil sebagai jalur. Bila pohon gagal dimuat, daftar `unit` saja.
+ */
+export function PilihUnitArsipSaya({
+  unit,
+  alasan = 'Anda tidak bertugas di unit ini.',
+  ...props
+}: { unit: readonly UnitArsip[] } & Omit<PilihUnitTunggalProps, 'data' | 'sumber' | 'dataCadangan' | 'boleh' | 'sembunyikanTerlarang' | 'multiple'>) {
+  const kunci = unit.map((u) => u.id).join(',');
+  const boleh = React.useMemo(() => {
+    const ids = new Set(kunci.split(','));
+    return (u: UnitOrganisasi) => ids.has(String(u.id));
+  }, [kunci]);
+  return <PilihUnit sumber="arsip" dataCadangan={unit} boleh={boleh} sembunyikanTerlarang alasan={alasan} {...props} />;
+}
 
 // ---------------------------------------------------------------- hook data
 
@@ -162,13 +180,7 @@ export function KelolaTemplatSurat({ kop, penandatangan, unggah, tinggi = 'calc(
           <Search aria-hidden />
           <input type="search" value={q} placeholder="Cari nama templat" aria-label="Cari templat" onChange={(e) => setQ(e.target.value)} />
         </div>
-        <Select<number | null>
-          aria-label="Saring unit"
-          value={unitFilter}
-          onValueChange={setUnitFilter}
-          placeholder="Semua unit"
-          options={[{ value: null, label: 'Semua unit' }, ...(unit.data ?? []).map((u) => ({ value: u.id as number | null, label: u.nama }))]}
-        />
+        <PilihUnitArsipSaya aria-label="Saring unit" unit={unit.data ?? []} memuat={unit.loading} value={unitFilter} onValueChange={(v) => setUnitFilter(v)} placeholder="Semua unit" />
         <Button variant="outline" onClick={() => setGaleri(true)} disabled={!unitKelola.length && !unit.loading}>
           <BookCopy />
           Salin dari galeri
@@ -331,12 +343,11 @@ function PenyuntingTemplat({
         onChange={() => setStatus('Belum disimpan')}
         panelTambahan={
           <>
-            <Field label="Unit pemilik" description={unitId ? undefined : 'Templat bersama dipakai semua unit (khusus admin arsip).'}>
-              <Select<number | null>
-                value={unitId}
-                onValueChange={setUnitId}
-                options={[...unitKelola.map((u) => ({ value: u.id as number | null, label: u.nama })), { value: null, label: 'Bersama (semua unit)' }]}
-              />
+            <Field
+              label="Unit pemilik"
+              description={unitId ? 'Kosongkan (×) untuk templat bersama semua unit (khusus admin arsip).' : 'Templat bersama dipakai semua unit (khusus admin arsip).'}
+            >
+              <PilihUnitArsipSaya unit={unitKelola} value={unitId} onValueChange={(v) => setUnitId(v)} placeholder="Bersama (semua unit)" />
             </Field>
             <Field label="Jenis naskah" optional description="Jenis surat yang dibuat dari templat ini, dipakai di nomor surat.">
               <Select<number | null> value={jenisId} onValueChange={setJenisId} placeholder="Pilih jenis" options={[{ value: null, label: 'Tanpa jenis' }, ...jenis.map((j) => ({ value: j.id as number | null, label: `${j.nama} (${j.kode})` }))]} />
@@ -479,11 +490,13 @@ export function BuatSuratDariTemplat({ onSelesai, unitId, kop, penandatangan, un
             <GalatApi error={unit.error} onRetry={unit.refetch} />
           ) : (
             <Field label="Unit pengirim" required>
-              <Select<number | null>
+              <PilihUnitArsipSaya
+                unit={unitPetugas}
+                memuat={unit.loading}
+                kosongkan={false}
                 value={d.unitId}
                 onValueChange={(v) => set({ unitId: v, templatId: null, isi: null })}
-                placeholder={unit.loading ? 'Memuat unit…' : 'Pilih unit'}
-                options={unitPetugas.map((x) => ({ value: x.id as number | null, label: x.nama }))}
+                placeholder="Pilih unit"
               />
             </Field>
           )}
@@ -752,15 +765,22 @@ export function DaftarTujuan({ nilai, ganti }: { nilai: TujuanSuratInput[]; gant
                 <Input value={t.alamat ?? ''} onChange={(e) => ubah(i, { alamat: e.target.value })} />
               </Field>
             </FormGrid>
+          ) : t.jenis === 'unit' ? (
+            <PilihUnit
+              sumber="arsip"
+              aria-label={`Penerima ${i + 1}`}
+              value={t.unit_id ?? null}
+              onValueChange={(v, u) => ubah(i, { unit_id: v ?? undefined, nama: u ? u.nama : undefined })}
+              placeholder="Pilih unit"
+            />
           ) : (
             <PilihEntitas
               aria-label={`Penerima ${i + 1}`}
-              jenis={t.jenis === 'unit' ? SUMBER_UNIT_ARSIP : t.jenis}
-              value={t.jenis === 'unit' ? (t.unit_id ?? null) : t.jenis === 'dosen' ? (t.nidn ?? null) : t.jenis === 'mahasiswa' ? (t.nim ?? null) : (t.username ?? null)}
+              jenis={t.jenis}
+              value={t.jenis === 'dosen' ? (t.nidn ?? null) : t.jenis === 'mahasiswa' ? (t.nim ?? null) : (t.username ?? null)}
               onValueChange={(v, baris) => {
                 const nama = baris ? String(baris.nama ?? baris.nama_lengkap ?? '') : undefined;
-                if (t.jenis === 'unit') ubah(i, { unit_id: v ? Number(v) : undefined, nama });
-                else if (t.jenis === 'dosen') ubah(i, { nidn: v ?? undefined, nama });
+                if (t.jenis === 'dosen') ubah(i, { nidn: v ?? undefined, nama });
                 else if (t.jenis === 'mahasiswa') ubah(i, { nim: v ?? undefined, nama });
                 else ubah(i, { username: v ?? undefined, nama });
               }}

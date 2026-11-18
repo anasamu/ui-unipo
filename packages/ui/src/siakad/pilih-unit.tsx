@@ -119,6 +119,44 @@ export function useUnitOrganisasi({ enabled = true }: { enabled?: boolean } = {}
   return { data, loading: q.loading, error: q.error, refetch: q.refetch };
 }
 
+/**
+ * Sumber unit selain induk_unit yang bentuknya sama (`{ id, induk_id, kode, jenis, nama, singkatan, aktif }`):
+ * `sdm` = unit kerja SDM (sdm_unit, `/v1/sdm/master/unit`), `spmi` = unit SPMI (spmi_unit, `/v1/spmi/unit`),
+ * `arsip` = unit arsip/persuratan (arsip_unit, `/v1/arsip/unit`). `induk` = unit organisasi (induk_unit).
+ */
+export type SumberUnit = 'induk' | 'sdm' | 'spmi' | 'arsip';
+
+const PATH_SUMBER_UNIT: Record<Exclude<SumberUnit, 'induk'>, string> = { sdm: '/v1/sdm/master/unit', spmi: '/v1/spmi/unit', arsip: '/v1/arsip/unit' };
+
+/**
+ * Semua unit (aktif dan nonaktif) dari satu sumber, dimuat semua halaman sekaligus dan ter-cache 5 menit, dibagi semua pemakai.
+ * Muat ulang dengan `invalidateSiakad('unit-sumber')`.
+ */
+export function useUnitSumber(sumber: SumberUnit, { enabled = true }: { enabled?: boolean } = {}) {
+  const induk = useUnitOrganisasi({ enabled: enabled && sumber === 'induk' });
+  const path = sumber === 'induk' ? null : PATH_SUMBER_UNIT[sumber];
+  const q = useSiakadQuery<UnitOrganisasi[]>(
+    ['unit-sumber', sumber],
+    async (s, signal) => {
+      const ambil = (page: number) => s.request<UnitOrganisasi[]>({ method: 'GET', path: path!, query: { per_page: 100, page } }, { signal });
+      const pertama = await ambil(1);
+      const halaman = Math.min(Number((pertama.meta as { total_pages?: number } | undefined)?.total_pages ?? 1), 20);
+      const sisa = await Promise.all(Array.from({ length: Math.max(0, halaman - 1) }, (_, i) => ambil(i + 2)));
+      return { ...pertama, data: [...(Array.isArray(pertama.data) ? pertama.data : []), ...sisa.flatMap((r) => (Array.isArray(r.data) ? r.data : []))] };
+    },
+    { staleTime: 5 * 60_000, enabled: enabled && !!path },
+  );
+  if (sumber === 'induk') return induk;
+  return { data: q.data, loading: q.loading, error: q.error, refetch: q.refetch };
+}
+
+/** Unit kerja SDM (sdm_unit). */
+export const useUnitSdm = (o?: { enabled?: boolean }) => useUnitSumber('sdm', o);
+/** Unit SPMI (spmi_unit). */
+export const useUnitSpmi = (o?: { enabled?: boolean }) => useUnitSumber('spmi', o);
+/** Unit arsip/persuratan (arsip_unit). */
+export const useUnitArsip = (o?: { enabled?: boolean }) => useUnitSumber('arsip', o);
+
 /** Leluhur unit dari akar sampai induk langsung. */
 export function leluhurUnit(id: IdUnit, data: readonly UnitOrganisasi[]): UnitOrganisasi[] {
   const peta = new Map(data.map((u) => [String(u.id), u]));
@@ -146,6 +184,11 @@ export function jalurUnit(id: IdUnit, data: readonly UnitOrganisasi[], { maks = 
 interface PilihUnitDasar {
   /** Sumber unit sendiri (mis. dari `/v1/sk/penerbit`). Tanpa ini dimuat dari `/v1/induk/unit-pohon` (ter-cache). */
   data?: readonly UnitOrganisasi[];
+  /**
+   * Sumber unit bila `data` tidak diisi. Bawaan `induk` (induk_unit). `sdm`, `spmi`, `arsip` memakai tabel unit modul itu
+   * (ID yang dikirim = ID tabel itu), tampil dengan pohon yang sama.
+   */
+  sumber?: SumberUnit;
   /** Dipakai bila `/v1/induk/unit-pohon` gagal dimuat (mis. klien API tanpa scope `induk:read`), mis. daftar unit dari API modul. */
   dataCadangan?: readonly UnitOrganisasi[];
   /** Hanya jenis ini yang bisa dipilih, mis. `['fakultas', 'prodi']`. Induknya tetap tampil sebagai jalur (tidak bisa dipilih). */
@@ -258,11 +301,11 @@ const idUnik = () => `u-pu-${Math.random().toString(36).slice(2, 9)}`;
  */
 export function PilihUnit(props: PilihUnitProps) {
   const {
-    data: dataLuar, dataCadangan, jenis, akar, kecuali, boleh, alasan: alasanProp, nonaktifkan, sembunyikanTerlarang, keterangan, kampus, semua, buka, placeholder, placeholderCari,
+    data: dataLuar, sumber: sumberUnit = 'induk', dataCadangan, jenis, akar, kecuali, boleh, alasan: alasanProp, nonaktifkan, sembunyikanTerlarang, keterangan, kampus, semua, buka, placeholder, placeholderCari,
     disabled, kosongkan = true, invalid, required, name, id, size, className, memuat, teksKosong,
   } = props;
   const banyak = props.multiple === true;
-  const muat = useUnitOrganisasi({ enabled: !dataLuar });
+  const muat = useUnitSumber(sumberUnit, { enabled: !dataLuar });
   const cadangan = !dataLuar && !muat.data && muat.error && dataCadangan ? dataCadangan : undefined;
   const sumber = dataLuar ?? muat.data ?? cadangan;
   const loading = memuat || (!dataLuar && muat.loading && !muat.data);
@@ -852,13 +895,13 @@ export function PilihUnit(props: PilihUnitProps) {
 }
 
 /** Nama unit + jalur ringkas untuk tampilan baca saja (tabel, kartu), dari data ter-cache yang sama dengan PilihUnit. */
-export function NamaUnit({ id, data, jalur = true, ikon = true, className }: { id: IdUnit | null | undefined; data?: readonly UnitOrganisasi[]; jalur?: boolean; ikon?: boolean; className?: string }) {
-  const muat = useUnitOrganisasi({ enabled: !data && id != null && id !== '' });
-  const sumber = data ?? muat.data;
+export function NamaUnit({ id, data, sumber = 'induk', jalur = true, ikon = true, className }: { id: IdUnit | null | undefined; data?: readonly UnitOrganisasi[]; sumber?: SumberUnit; jalur?: boolean; ikon?: boolean; className?: string }) {
+  const muat = useUnitSumber(sumber, { enabled: !data && id != null && id !== '' });
+  const daftar = data ?? muat.data;
   if (id == null || id === '') return null;
-  const u = sumber?.find((x) => String(x.id) === String(id));
+  const u = daftar?.find((x) => String(x.id) === String(id));
   if (!u) return <span className={cn('u-nama-unit', className)}>{muat.loading ? '…' : `Unit #${id}`}</span>;
-  const j = jalur && sumber ? jalurUnit(u.id, sumber, { maks: 2 }) : '';
+  const j = jalur && daftar ? jalurUnit(u.id, daftar, { maks: 2 }) : '';
   return (
     <span className={cn('u-nama-unit', className)} title={[j, namaUnitRapi(u.nama)].filter(Boolean).join(' › ')}>
       {ikon && <IkonJenisUnit jenis={u.jenis} size="sm" />}
