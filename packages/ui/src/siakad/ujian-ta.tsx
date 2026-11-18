@@ -559,7 +559,9 @@ export function KartuJadwalUjianTa({ u, aksi }: { u: UjianTa; aksi?: React.React
           )}
         </Alert>
       )}
-      {(u.catatan_pembimbing || u.alasan) && <p className="u-ta-redup">{u.alasan ?? u.catatan_pembimbing}</p>}
+      {u.alasan && <p className="u-ta-redup">Alasan {u.status === 'ditunda' ? 'ditunda' : 'dibatalkan'}: {u.alasan}</p>}
+      {u.catatan_pembimbing && <p className="u-ta-redup">Catatan pembimbing: {u.catatan_pembimbing}</p>}
+      {u.catatan_dekan && u.status === 'draf' && <p className="u-ta-redup">Catatan Dekan: {u.catatan_dekan}</p>}
       {aksi}
     </Card>
   );
@@ -1053,9 +1055,9 @@ export function FormJadwalUjianTa({ u, open, onOpenChange }: { u: UjianTa | null
               {cek.syarat_dosen.length > 0 && (
                 <Alert variant={cek.syarat_dosen.some((s) => s.mode === 'blokir') ? 'danger' : 'info'} title="Syarat dosen (aturan fakultas)">
                   <ul>
-                    {cek.syarat_dosen.map((s, i) => (
+                    {[...cek.syarat_dosen].sort((a, b) => (a.mode === b.mode ? 0 : a.mode === 'blokir' ? -1 : 1)).map((s, i) => (
                       <li key={i} data-mode={s.mode}>
-                        <strong>{s.nama}</strong>: {s.pesan}
+                        <strong>{s.nama}</strong>: {s.mode === 'blokir' ? <strong>{s.pesan}</strong> : s.pesan}
                       </li>
                     ))}
                   </ul>
@@ -1466,6 +1468,7 @@ export function AgendaUjianTa({ untuk = 'kelola' }: { untuk?: 'kelola' | 'saya' 
 // ================================================================ Dosen
 interface UjianSayaDosen {
   peran: 'dosen' | 'lain';
+  nidn?: string | null;
   ujian?: UjianTa[];
   menunggu_persetujuan?: number;
   perlu_nilai?: number;
@@ -1500,7 +1503,7 @@ export function UjianTaDosen() {
         <DataTable
           columns={[
             ...kolomUjian((u) => setBuka(u.id)).slice(0, 4),
-            { key: 'peran', header: 'Tugas saya', cell: (u) => u.tim.filter((t) => t.nidn).map((t) => t.peran_label)[0] ?? 'Pembimbing' },
+            { key: 'peran', header: 'Tugas saya', cell: (u) => u.tim.filter((t) => t.nidn === q.data?.nidn).map((t) => t.peran_label).join(', ') || 'Pembimbing' },
             { key: 'status', header: 'Status', shrink: true, cell: (u) => <LencanaStatusUjianTa u={u} /> },
             {
               key: 'aksi',

@@ -192,9 +192,13 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
-  > .u-input,
-  > input {
+  > * {
+    flex: 0 1 auto;
+    width: auto;
     max-width: 16rem;
+  }
+  > :first-child {
+    max-width: none;
   }
 }
 .u-ujta-angkatan {
