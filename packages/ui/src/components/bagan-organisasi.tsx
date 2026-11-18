@@ -35,7 +35,10 @@ export interface JabatanBagan {
   jabatan: string;
   /** Kosong = jabatan belum diisi (tampil "Belum diisi"). */
   nama?: string | null;
+  /** URL/data URL pas foto (data URL ikut ke unduhan PNG/PDF). */
   foto?: string | null;
+  /** Alamat API pas foto (mis. `/v1/induk/organisasi/foto/pejabat/12`) untuk `useFotoBagan` (unipo-ui/siakad). */
+  fotoRef?: string | null;
   /** Pelaksana tugas / harian. */
   status?: 'plt' | 'plh' | null;
   /** Data tambahan pemanggil (mis. jabatan_id), dikembalikan di onIsiJabatan/onPilihPejabat. */
@@ -67,6 +70,8 @@ export interface UnitBagan {
   jabatan?: JabatanBagan[];
   /** Tendik dan staf unit (mis. dari SDM): tampil sebagai kelompok kecil di kartu (beberapa + "+N lainnya"). */
   staf?: StafBagan[];
+  /** Mode ringkas: sub-unit daun yang dilipat ke dalam kartu (mis. prodi + Kaprodi), diisi bagan sendiri. */
+  ringkasAnak?: { nama: string; pimpinan?: string | null; tendik?: number }[];
 }
 
 export interface StafBagan {
@@ -85,9 +90,9 @@ export interface GayaJenisBagan {
 /** Warna kalem per jenis unit. */
 export const GAYA_JENIS_BAGAN: Record<string, GayaJenisBagan> = {
   yayasan: { label: 'Badan penyelenggara', warna: '#8a6a3f' },
-  universitas: { label: 'Universitas', warna: '#1e3a8a' },
-  kelompok: { label: 'Pengelompokan', warna: '#64748b' },
-  rektorat: { label: 'Pimpinan', warna: '#4338ca' },
+  universitas: { label: 'Pimpinan universitas', warna: '#1e3a8a' },
+  kelompok: { label: 'Rektorat', warna: '#4338ca' },
+  rektorat: { label: 'Wakil Rektor', warna: '#4338ca' },
   kampus: { label: 'Kampus pengembangan', warna: '#9d174d' },
   biro: { label: 'Biro', warna: '#6d28d9' },
   bagian: { label: 'Bagian', warna: '#64748b' },
@@ -155,8 +160,14 @@ export interface BaganOrganisasiProps {
   orientasi?: OrientasiBagan;
   /** Gaya awal (pilihan pengguna yang tersimpan lebih diutamakan). */
   gaya?: GayaBagan;
-  /** Kotak berukuran seragam per tingkat. Bawaan true. */
+  /** Kotak berukuran seragam per kelompok saudara. Bawaan false (tinggi kotak mengikuti isi). */
   seragam?: boolean;
+  /**
+   * ringkas (bawaan; tidak melebar): prodi dilipat ke kartu fakultas, tendik sebagai jumlah, sub-unit daun dikelompokkan
+   * per jenis dalam baris maks 4 kartu. rinci: semua sub-unit sebagai kotak dan daftar tendik (bagan per fakultas/unit).
+   * Pilihan pengguna tersimpan dan ikut ke unduhan.
+   */
+  mode?: ModeBagan;
   /** Label singkat di garis staf/koordinasi/pembinaan. Bawaan true. */
   labelGaris?: boolean;
   /** id unit yang cabangnya disorot (mis. kampus terpilih); cabang lain diredupkan. */
@@ -186,13 +197,39 @@ const IND = 30;
 const H_RINGKAS = 132;
 const BARIS = 40;
 const KEPALA = 80;
-const H_KELOMPOK = 34;
+const H_KELOMPOK = 0;
 const STAF_MAKS = 3;
 const STAF_BARIS = 22;
+/** Mode ringkas: kartu per baris di blok sub-unit dan jumlah sub-unit yang dilipat ke kartu. */
+const KOLOM_BLOK = 3;
+const RINGKAS_MAKS = 5;
+const RINGKAS_BARIS = 28;
+/** Jarak horizontal kartu koordinasi di samping induknya. */
+const GAP_SISI = 56;
 
 const garisUnit = (u: UnitBagan): GarisBagan => u.garis ?? (u.koordinasi ? 'koordinasi' : 'lini');
 const samping = (u: UnitBagan) => garisUnit(u) !== 'lini';
 const kelompok = (u: UnitBagan) => u.jenis === 'kelompok';
+
+/** Label kelompok kecil di blok sub-unit (mode ringkas). */
+const LABEL_BLOK: Record<string, string> = {
+  fakultas: 'Fakultas', lembaga: 'Lembaga', upt: 'UPT', kampus: 'Kampus pengembangan', biro: 'Biro', bagian: 'Bagian', unit: 'Unit lain', prodi: 'Program studi', rektorat: 'Wakil Rektor',
+};
+const URUT_BLOK = ['fakultas', 'lembaga', 'upt', 'kampus', 'biro', 'bagian', 'unit', 'prodi'];
+
+export type ModeBagan = 'ringkas' | 'rinci';
+
+interface BarisBlok {
+  /** Posisi kedalaman relatif ke atas blok. */
+  d: number;
+  sel: Simpul[];
+  /** Label kelompok yang dimulai di baris ini: indeks sel pertama kelompok. */
+  label: { teks: string; mulai: number }[];
+  /** Kolom blok: 0 = Fakultas (grid 3 kolom), 1 = Lembaga/UPT/Kampus di samping kanannya (supaya lanskap). */
+  kol: number;
+  /** Posisi melintang kolom (relatif ke kiri blok), diisi saat ukur. */
+  x?: number;
+}
 
 interface Simpul {
   u: UnitBagan;
@@ -200,12 +237,16 @@ interface Simpul {
   induk?: Simpul;
   anak: Simpul[];
   koord: Simpul[];
+  /** Koordinasi di samping kartu (sebaris dengan induk). */
+  sisi: Simpul[];
   tingkat: number;
   turunan: number;
   tutup: boolean;
   tumpuk: boolean;
   /** Kolom virtual (tanpa kartu) berisi saudara-saudara daun yang ditumpuk, di samping cabang lain. */
   virtual?: boolean;
+  /** Blok virtual (mode ringkas): sub-unit daun dikelompokkan per jenis dalam baris berisi maks KOLOM_BLOK kartu. */
+  blok?: BarisBlok[];
   /** Ukuran kartu. */
   w: number;
   h: number;
@@ -222,17 +263,41 @@ interface Simpul {
 
 function tinggiInti(u: UnitBagan, rinci: boolean): number {
   if (kelompok(u)) return H_KELOMPOK;
-  if (!rinci) return H_RINGKAS;
-  return KEPALA + Math.max(1, u.jabatan?.length ?? 0) * BARIS + 12;
+  const n = u.ringkasAnak?.length ?? 0;
+  const lipat = n ? 26 + Math.min(n, RINGKAS_MAKS) * RINGKAS_BARIS + (n > RINGKAS_MAKS ? 16 : 0) : 0;
+  if (!rinci) return H_RINGKAS + lipat;
+  return KEPALA + Math.max(1, u.jabatan?.length ?? 0) * BARIS + 12 + lipat;
 }
 
-function tinggiStaf(u: UnitBagan): number {
+function tinggiStaf(u: UnitBagan, ringkas = false): number {
   const n = u.staf?.length ?? 0;
-  return n ? 30 + Math.min(n, STAF_MAKS) * STAF_BARIS + (n > STAF_MAKS ? 20 : 0) + 4 : 0;
+  if (!n) return 0;
+  // Ringkas: hanya jumlah ("Tendik & staf: 3"), rinciannya lewat klik.
+  if (ringkas) return 26;
+  return 30 + Math.min(n, STAF_MAKS) * STAF_BARIS + (n > STAF_MAKS ? 20 : 0) + 4;
 }
 
-function tinggiKartu(u: UnitBagan, rinci: boolean, staf: boolean): number {
-  return tinggiInti(u, rinci) + (staf && !kelompok(u) ? tinggiStaf(u) : 0);
+function tinggiKartu(u: UnitBagan, rinci: boolean, staf: boolean, ringkas = false): number {
+  return tinggiInti(u, rinci) + (staf && !kelompok(u) ? tinggiStaf(u, ringkas) : 0);
+}
+
+/**
+ * Mode ringkas: sub-unit daun berjenis prodi dilipat ke kartu induknya (nama prodi + pimpinan), supaya bagan
+ * universitas tidak melebar. Unit yang punya turunan tetap digambar.
+ */
+function lipatRingkas(data: UnitBagan[]): UnitBagan[] {
+  const punyaAnak = new Set(data.map((u) => u.induk_id).filter(Boolean) as string[]);
+  const lipat = new Map<string, { nama: string; pimpinan?: string | null; tendik?: number }[]>();
+  const buang = new Set<string>();
+  for (const u of data) {
+    if (u.jenis !== 'prodi' || !u.induk_id || punyaAnak.has(u.id) || samping(u)) continue;
+    const nama = u.nama.replace(/^Program Studi\s+/i, '').toLowerCase().replace(/(^|[\s/(])\S/g, (h) => h.toUpperCase());
+    const l = lipat.get(u.induk_id) ?? [];
+    l.push({ nama: nama.charAt(0).toUpperCase() + nama.slice(1), pimpinan: (u.jabatan ?? []).find((j) => j.nama)?.nama ?? null, tendik: u.staf?.length ?? 0 });
+    lipat.set(u.induk_id, l);
+    buang.add(u.id);
+  }
+  return data.filter((u) => !buang.has(u.id)).map((u) => (lipat.has(u.id) ? { ...u, ringkasAnak: lipat.get(u.id) } : u));
 }
 
 function potong(teks: string, lebar: number, ukuran: number, maks: number): string[] {
@@ -266,6 +331,7 @@ interface OpsiTata {
   staf: boolean;
   orientasi: OrientasiBagan;
   seragam: boolean;
+  ringkas: boolean;
 }
 
 /** Susun pohon dari data datar dan hitung posisi (dalam sumbu melintang/kedalaman, lalu dipetakan ke x/y). */
@@ -274,6 +340,7 @@ function tata(data: UnitBagan[], akar: string | null | undefined, tertutup: Set<
   const vert = o.orientasi === 'vertikal';
   const GA = vert ? 28 : 18;
   const GD = vert ? 64 : 76;
+  const BARIS_BLOK = 46;
   const peta = new Map(data.map((u) => [u.id, u]));
   const anakDari = new Map<string | null, UnitBagan[]>();
   for (const u of data) {
@@ -287,8 +354,8 @@ function tata(data: UnitBagan[], akar: string | null | undefined, tertutup: Set<
     return i < 0 ? urutJenis.length : i;
   };
   const baru = (u: UnitBagan, tingkat: number, extra: Partial<Simpul> = {}): Simpul => {
-    const h = extra.virtual ? 0 : tinggiKartu(u, o.rinci, o.staf);
-    return { u, tingkat, turunan: 0, tutup: false, anak: [], koord: [], tumpuk: false, w: W, h, A: vert ? W : h, D: vert ? h : W, sA: 0, sD: 0, pa: 0, pd: 0, x: 0, y: 0, ...extra };
+    const h = extra.virtual ? 0 : tinggiKartu(u, o.rinci, o.staf, o.ringkas);
+    return { u, tingkat, turunan: 0, tutup: false, anak: [], koord: [], sisi: [], tumpuk: false, w: W, h, A: vert ? W : h, D: vert ? h : W, sA: 0, sD: 0, pa: 0, pd: 0, x: 0, y: 0, ...extra };
   };
   const dilihat = new Set<string>();
   const bangun = (u: UnitBagan, tingkat: number): Simpul => {
@@ -296,23 +363,74 @@ function tata(data: UnitBagan[], akar: string | null | undefined, tertutup: Set<
     const semua = (anakDari.get(u.id) ?? []).filter((x) => !dilihat.has(x.id)).map((x, i) => ({ x, i }));
     semua.sort((a, b) => ur(a.x.jenis) - ur(b.x.jenis) || a.i - b.i);
     const s = baru(u, tingkat);
-    const anakS = semua.map(({ x }) => bangun(x, tingkat + 1));
+    // Pengelompokan (Rektorat) tidak digambar sebagai kartu: anak-anaknya setingkat dengan dirinya.
+    const anakS = semua.map(({ x }) => bangun(x, kelompok(u) ? tingkat : tingkat + 1));
     anakS.forEach((a) => { a.induk = s; });
     s.turunan = anakS.reduce((n, a) => n + 1 + a.turunan, 0);
     s.tutup = tertutup.has(u.id) && anakS.length > 0;
     let biasa = s.tutup ? [] : anakS.filter((a) => !samping(a.u));
-    // Vertikal: saudara campuran yang daun (tanpa anak terlihat) dikumpulkan dalam satu kolom bertumpuk supaya tidak melebar.
-    const daun = biasa.filter((a) => a.anak.length === 0 && a.koord.length === 0 && !kelompok(a.u) && !a.u.bingkai);
-    if (vert && daun.length >= 2 && daun.length < biasa.length) {
-      const v = baru({ id: `${u.id}#daun`, nama: '' }, tingkat + 1, { anak: daun, tumpuk: true, virtual: true });
+    const daunDari = (l: Simpul[]) => l.filter((a) => a.anak.length === 0 && a.koord.length === 0 && a.sisi.length === 0 && !kelompok(a.u));
+    const daun = daunDari(biasa);
+    if (vert && o.ringkas && daun.length >= 3) {
+      // Ringkas: daun dikelompokkan per jenis (Fakultas | Lembaga | UPT | Kampus) dalam baris maks KOLOM_BLOK kartu.
+      const kelompokJ = new Map<string, Simpul[]>();
+      for (const a of daun) {
+        const k = LABEL_BLOK[a.u.jenis ?? ''] ? (a.u.jenis as string) : 'unit';
+        kelompokJ.set(k, [...(kelompokJ.get(k) ?? []), a]);
+      }
+      const urutK = [...kelompokJ.keys()].sort((a, b) => URUT_BLOK.indexOf(a) - URUT_BLOK.indexOf(b));
+      const baris: BarisBlok[] = [];
+      // Fakultas (grid 3 kolom) di kolom kiri; kelompok lain (Lembaga, UPT, Kampus) di kolom kanan, maks 2 per baris.
+      const adaFak = kelompokJ.has('fakultas') && kelompokJ.size > 1;
+      for (const kol of adaFak ? [0, 1] : [0]) {
+        const maks = kol === 0 ? KOLOM_BLOK : 2;
+        let kini: BarisBlok | null = null;
+        for (const k of urutK.filter((x) => !adaFak || (kol === 0) === (x === 'fakultas'))) {
+          const isi = kelompokJ.get(k)!;
+          if (!kini || kini.sel.length + Math.min(isi.length, maks) > maks || isi.length > maks) {
+            kini = { d: 0, sel: [], label: [], kol };
+            baris.push(kini);
+          }
+          isi.forEach((a, i) => {
+            if (kini!.sel.length >= maks) {
+              kini = { d: 0, sel: [], label: [], kol };
+              baris.push(kini);
+            }
+            if (i === 0) kini!.label.push({ teks: `${LABEL_BLOK[k]}${isi.length > 1 ? ` (${isi.length})` : ''}`, mulai: kini!.sel.length });
+            kini!.sel.push(a);
+          });
+        }
+      }
+      const v = baru({ id: `${u.id}#blok`, nama: '' }, tingkat + 1, { anak: daun, virtual: true, blok: baris });
       daun.forEach((a) => { a.induk = s; });
-      // Kolom tumpukan menempati posisi daun pertama supaya urutan saudara tetap terbaca.
       const pertama = biasa.indexOf(daun[0]);
-      const sisa = biasa.filter((a) => !daun.includes(a));
-      biasa = [...sisa.slice(0, biasa.slice(0, pertama).filter((a) => !daun.includes(a)).length), v, ...sisa.slice(biasa.slice(0, pertama).filter((a) => !daun.includes(a)).length)];
+      const sebelum = biasa.slice(0, pertama).filter((a) => !daun.includes(a));
+      biasa = [...sebelum, ...biasa.filter((a) => !daun.includes(a) && !sebelum.includes(a)), v];
+    } else if (vert && daun.length >= 2 && daun.length < biasa.length) {
+      // Saudara campuran: yang daun dikumpulkan dalam satu kolom bertumpuk supaya tidak melebar.
+      const daunT = daun.filter((a) => !a.u.bingkai);
+      if (daunT.length >= 2) {
+        const v = baru({ id: `${u.id}#daun`, nama: '' }, tingkat + 1, { anak: daunT, tumpuk: true, virtual: true });
+        daunT.forEach((a) => { a.induk = s; });
+        const pertama = biasa.indexOf(daunT[0]);
+        const sisa = biasa.filter((a) => !daunT.includes(a));
+        const n = biasa.slice(0, pertama).filter((a) => !daunT.includes(a)).length;
+        biasa = [...sisa.slice(0, n), v, ...sisa.slice(n)];
+      }
     }
     s.anak = biasa;
-    s.koord = s.tutup ? [] : anakS.filter((a) => samping(a.u));
+    const lain = s.tutup ? [] : anakS.filter((a) => samping(a.u));
+    // Koordinasi (organ, mis. Senat) di samping kartu sebaris dengan induknya; staf/pembinaan di pita bawah.
+    s.sisi = lain.filter((a) => garisUnit(a.u) === 'koordinasi' && !kelompok(u));
+    s.koord = lain.filter((a) => !s.sisi.includes(a));
+    // Staf pengelompokan (SPI pada Rektorat) tampil di samping pimpinan induknya (Rektor), bukan di dalam bingkai.
+    for (const a of s.anak) {
+      if (kelompok(a.u) && a.koord.length) {
+        a.koord.forEach((k) => { k.induk = s; });
+        s.koord.push(...a.koord);
+        a.koord = [];
+      }
+    }
     return s;
   };
   const akarU = akar ? [peta.get(akar)].filter((x): x is UnitBagan => !!x) : anakDari.get(null) ?? [];
@@ -321,34 +439,76 @@ function tata(data: UnitBagan[], akar: string | null | undefined, tertutup: Set<
   const semua: Simpul[] = [];
   const jalan = (s: Simpul) => {
     semua.push(s);
+    s.sisi.forEach(jalan);
     s.koord.forEach(jalan);
     s.anak.forEach(jalan);
   };
   akarS.forEach(jalan);
 
-  // Kotak seragam per tingkat (bukan label pengelompokan): tinggi kartu = tertinggi di tingkatnya.
+  // Kotak seragam per tingkat (bukan pengelompokan): tinggi kartu = tertinggi di tingkatnya.
   if (o.seragam) {
-    const maks = new Map<number, number>();
-    for (const s of semua) if (!s.virtual && !kelompok(s.u)) maks.set(s.tingkat, Math.max(maks.get(s.tingkat) ?? 0, s.h));
+    // Seragam per kelompok saudara (anak lini satu induk, termasuk sel blok dan tumpukan), bukan seluruh tingkat:
+    // kartu kosong tidak ikut setinggi kartu fakultas yang memuat daftar prodi.
+    const samakan = (l: Simpul[]) => {
+      const k = l.filter((x) => !x.virtual && !kelompok(x.u));
+      if (k.length < 2) return;
+      const h = Math.max(...k.map((x) => x.h));
+      for (const x of k) {
+        x.h = h;
+        x.A = vert ? x.w : x.h;
+        x.D = vert ? x.h : x.w;
+      }
+    };
     for (const s of semua) {
-      if (s.virtual || kelompok(s.u)) continue;
-      s.h = maks.get(s.tingkat) ?? s.h;
-      s.A = vert ? s.w : s.h;
-      s.D = vert ? s.h : s.w;
+      if (s.blok) for (const b of s.blok) samakan(b.sel);
+      else samakan(s.anak.flatMap((a) => (a.virtual && !a.blok ? a.anak : [a])));
     }
   }
 
   // Ukuran sub-pohon.
+  const lebarSisi = (s: Simpul) => {
+    const kanan = s.sisi.filter((_, i) => i % 2 === 0);
+    const kiri = s.sisi.filter((_, i) => i % 2 === 1);
+    const ext = (l: Simpul[]) => (l.length ? GAP_SISI + l.reduce((t, k) => t + k.A, 0) + GA * (l.length - 1) : 0);
+    return Math.max(ext(kanan), ext(kiri));
+  };
   const ukur = (s: Simpul) => {
     s.anak.forEach(ukur);
     s.koord.forEach(ukur);
-    const daun = s.anak.length > 0 && s.anak.every((a) => a.anak.length === 0 && a.koord.length === 0 && !a.virtual && !kelompok(a.u));
-    s.tumpuk = vert && (!!s.virtual || (daun && s.tingkat > 0 && s.anak.length > 1));
+    s.sisi.forEach(ukur);
+    if (s.blok) {
+      let x = 0;
+      let tinggi = 0;
+      for (const kol of [...new Set(s.blok.map((b) => b.kol))]) {
+        let d = 0;
+        let lebar = 0;
+        for (const b of s.blok.filter((bb) => bb.kol === kol)) {
+          b.d = d + BARIS_BLOK;
+          b.x = x;
+          lebar = Math.max(lebar, b.sel.length * W + (b.sel.length - 1) * GA);
+          d = b.d + Math.max(...b.sel.map((a) => a.D));
+        }
+        tinggi = Math.max(tinggi, d);
+        x += IND + lebar + GA * 2;
+      }
+      s.sA = x - GA * 2;
+      s.sD = tinggi;
+      return;
+    }
+    const daun = s.anak.length > 0 && s.anak.every((a) => a.anak.length === 0 && a.koord.length === 0 && a.sisi.length === 0 && !a.virtual && !kelompok(a.u));
+    s.tumpuk = vert && (!!s.virtual || (daun && s.tingkat > 0 && s.anak.length > 1 && !kelompok(s.u)));
     let lebarAnak = 0;
     let tinggiAnak = 0;
+    const blokB = s.anak.find((a) => a.blok);
+    const baris1 = blokB ? s.anak.filter((a) => a !== blokB) : [];
     if (s.tumpuk) {
       lebarAnak = IND + W;
       tinggiAnak = s.anak.reduce((t, a) => t + a.D + 16, 0) - 16;
+    } else if (blokB && baris1.length) {
+      // Bertingkat: pimpinan bawahan (mis. Rektorat: para WR) di baris pertama, blok sub-unit (Fakultas | Lembaga | UPT |
+      // Kampus) di baris berikutnya, keduanya bergaris lini dari induk.
+      lebarAnak = Math.max(baris1.reduce((t, a) => t + a.sA, 0) + GA * (baris1.length - 1), blokB.sA) + GA * 2;
+      tinggiAnak = Math.max(...baris1.map((a) => a.sD)) + GD + blokB.sD;
     } else if (s.anak.length) {
       lebarAnak = s.anak.reduce((t, a) => t + a.sA, 0) + GA * (s.anak.length - 1);
       tinggiAnak = Math.max(...s.anak.map((a) => a.sD));
@@ -361,14 +521,38 @@ function tata(data: UnitBagan[], akar: string | null | undefined, tertutup: Set<
       lebarKoord = 2 * Math.max(sisi(s.koord.slice(0, kiriN)), sisi(s.koord.slice(kiriN))) + GA * 2;
       tinggiKoord = Math.max(...s.koord.map((k) => k.D)) + GD * 0.55;
     }
-    s.sA = Math.max(s.A, lebarAnak, lebarKoord);
-    s.sD = s.virtual ? tinggiAnak : s.D + tinggiKoord + (s.anak.length ? GD + tinggiAnak : 0);
+    const dKepala = Math.max(s.D, ...s.sisi.map((k) => k.D));
+    s.sA = Math.max(s.A + 2 * lebarSisi(s), lebarAnak, lebarKoord);
+    s.sD = s.virtual ? tinggiAnak : dKepala + tinggiKoord + (s.anak.length ? GD + tinggiAnak : 0);
   };
   const letak = (s: Simpul, kiri: number, atas: number) => {
     s.pd = atas;
+    if (s.blok) {
+      s.pa = kiri;
+      for (const b of s.blok) {
+        b.sel.forEach((a, i) => {
+          a.sA = a.A;
+          letak(a, s.pa + (b.x ?? 0) + IND + i * (W + GA), atas + b.d);
+        });
+      }
+      return;
+    }
     s.pa = s.tumpuk ? kiri + (s.sA - (IND + W)) / 2 : kiri + (s.sA - s.A) / 2;
     const ca = s.pa + s.A / 2;
-    let d = atas + s.D;
+    // Koordinasi di samping: kanan dulu, lalu kiri, tengahnya sejajar tengah kartu.
+    let kn = s.pa + s.A + GAP_SISI;
+    let kr = s.pa - GAP_SISI;
+    s.sisi.forEach((k, i) => {
+      const dk = atas + (s.D - k.D) / 2;
+      if (i % 2 === 0) {
+        letak(k, kn - (k.sA - k.A) / 2, Math.max(atas, dk));
+        kn += k.A + GA;
+      } else {
+        letak(k, kr - k.A - (k.sA - k.A) / 2, Math.max(atas, dk));
+        kr -= k.A + GA;
+      }
+    });
+    let d = atas + Math.max(s.D, ...s.sisi.map((k) => k.D));
     if (s.koord.length) {
       d += GD * 0.55;
       const kiriN = Math.ceil(s.koord.length / 2);
@@ -395,6 +579,18 @@ function tata(data: UnitBagan[], akar: string | null | undefined, tertutup: Set<
       }
       return;
     }
+    const blokB = s.anak.find((a) => a.blok);
+    const baris1 = blokB ? s.anak.filter((a) => a !== blokB) : [];
+    if (blokB && baris1.length) {
+      const t1 = baris1.reduce((t, a) => t + a.sA, 0) + GA * (baris1.length - 1);
+      let x1 = kiri + (s.sA - t1) / 2;
+      for (const a of baris1) {
+        letak(a, x1, d);
+        x1 += a.sA + GA;
+      }
+      letak(blokB, kiri + (s.sA - blokB.sA) / 2, d + Math.max(...baris1.map((a) => a.sD)) + GD);
+      return;
+    }
     const total = s.anak.reduce((t, a) => t + a.sA, 0) + GA * (s.anak.length - 1);
     let x = kiri + (s.sA - total) / 2;
     for (const a of s.anak) {
@@ -417,7 +613,7 @@ function tata(data: UnitBagan[], akar: string | null | undefined, tertutup: Set<
   const minY = Math.min(0, ...kartu.map((s) => s.y));
   const maxX = Math.max(...kartu.map((s) => s.x + s.w), 0);
   const maxY = Math.max(...kartu.map((s) => s.y + s.h), 0);
-  return { akar: akarS, semua, vert, GD, kotak: { x: minX, y: minY, w: maxX - minX, h: maxY - minY } };
+  return { akar: akarS, semua, vert, GD, BARIS_BLOK, kotak: { x: minX, y: minY - 22, w: maxX - minX, h: maxY - minY + 22 } };
 }
 
 type Hasil = ReturnType<typeof tata>;
@@ -432,6 +628,7 @@ function batasCabang(s: Simpul): { x1: number; y1: number; x2: number; y2: numbe
       b.x2 = Math.max(b.x2, n.x + n.w);
       b.y2 = Math.max(b.y2, n.y + n.h);
     }
+    n.sisi.forEach(jalan);
     n.koord.forEach(jalan);
     n.anak.forEach(jalan);
   };
@@ -477,9 +674,14 @@ interface SvgProps {
   onPilih?: (u: UnitBagan) => void;
   onIsi?: (u: UnitBagan, j: JabatanBagan) => void;
   staf?: boolean;
+  /** Mode ringkas: tendik sebagai jumlah, sub-unit dilipat ke kartu. */
+  ringkas?: boolean;
   onSemuaStaf?: (u: UnitBagan) => void;
   onPilihStaf?: (s: StafBagan, u: UnitBagan) => void;
 }
+
+/** Foto boleh ikut unduhan hanya bila data URL (gambar luar tidak dimuat di SVG yang dirender ke kanvas). */
+const fotoEkspor = (foto: string | null | undefined, ekspor?: boolean) => (!foto ? null : ekspor && !foto.startsWith('data:') ? null : foto);
 
 /** Tooltip garis (diisi BaganOrganisasi): teks + posisi layar, atau null saat keluar. */
 const TipGaris = React.createContext<((t: { teks: string; x: number; y: number } | null) => void) | null>(null);
@@ -514,6 +716,52 @@ function Garis({ s, hasil, p, labelGaris, ekspor }: { s: Simpul; hasil: Hasil; p
   const out: React.ReactNode[] = [];
   const nama = (n?: Simpul) => (n ? n.u.singkatan || n.u.nama : '');
   const indukNyata = s.virtual ? s.induk : s;
+  // Blok ringkas: tulang di kiri, bus per baris, tetes ke tiap kartu.
+  if (s.blok) {
+    const kolom = [...new Set(s.blok.map((b) => b.kol))];
+    const tulangKol = (kol: number) => s.pa + (s.blok!.find((b) => b.kol === kol)?.x ?? 0) + IND / 2;
+    // Penghubung atas antarkolom, lalu tulang tiap kolom sampai bus baris terakhirnya.
+    if (kolom.length > 1) out.push(<GarisSatu key="bk" d={`M${pt(tulangKol(kolom[0]), s.pd)} L${pt(tulangKol(kolom[kolom.length - 1]), s.pd)}`} jenis="lini" judul={`Lini: ${nama(indukNyata)}`} p={p} ekspor={ekspor} />);
+    for (const kol of kolom) {
+      const akhir = s.blok.filter((b) => b.kol === kol).pop()!;
+      out.push(<GarisSatu key={`bt${kol}`} d={`M${pt(tulangKol(kol), s.pd)} L${pt(tulangKol(kol), s.pd + akhir.d - 12 - r)}`} jenis="lini" judul={`Lini: ${nama(indukNyata)}`} p={p} ekspor={ekspor} />);
+    }
+    s.blok.forEach((b, bi) => {
+      const tulang = tulangKol(b.kol);
+      const bus = s.pd + b.d - 12;
+      const ujung = b.sel[b.sel.length - 1];
+      const ux = ujung.pa + ujung.A / 2;
+      out.push(<GarisSatu key={`bb${bi}`} d={`M${pt(tulang, bus - r)} Q${pt(tulang, bus)} ${pt(tulang + r, bus)} L${pt(ux, bus)}`} jenis="lini" judul={`Lini: ${nama(indukNyata)}`} p={p} ekspor={ekspor} />);
+      b.sel.forEach((a, ai) => {
+        const ax = a.pa + a.A / 2;
+        out.push(<GarisSatu key={`bd${bi}-${ai}`} d={`M${pt(ax, bus)} L${pt(ax, a.pd)}`} jenis="lini" judul={`Lini: ${nama(indukNyata)} → ${nama(a)}`} p={p} ekspor={ekspor} />);
+      });
+      // Label kelompok kecil di atas bus.
+      b.label.forEach((l, li) => {
+        const a = b.sel[l.mulai];
+        if (a.u.bingkai) return;
+        const t = xy(a.pa + 2, bus - 6);
+        out.push(<text key={`bl${bi}-${li}`} x={t.x} y={t.y} fontSize={10} fontWeight={700} letterSpacing={0.6} fill={p.redup}>{l.teks.toUpperCase()}</text>);
+      });
+    });
+    return <>{out}</>;
+  }
+  // Koordinasi di samping kartu (sebaris): garis horizontal dari tepi kartu.
+  s.sisi.forEach((k, i) => {
+    const jenis = garisUnit(k.u);
+    const g = GARIS_BAGAN[jenis];
+    const kanan = k.pa > ca;
+    const dari = kanan ? s.pa + s.A : s.pa;
+    const ke = kanan ? k.pa : k.pa + k.A;
+    const dm = s.pd + s.D / 2;
+    const dk = k.pd + k.D / 2;
+    const d = Math.abs(dm - dk) < 1 ? `M${pt(dari, dm)} L${pt(ke, dm)}` : `M${pt(dari, dm)} L${pt((dari + ke) / 2, dm)} L${pt((dari + ke) / 2, dk)} L${pt(ke, dk)}`;
+    const l = xy((dari + ke) / 2, dm - 6);
+    out.push(
+      <GarisSatu key={`s${i}`} d={d} jenis={jenis} p={p} ekspor={ekspor} judul={`${g.keterangan}: ${nama(k)} ↔ ${nama(s)}`}
+        label={labelGaris ? (k.u.labelGaris ?? g.keterangan.toLowerCase()) : k.u.labelGaris} lx={l.x} ly={l.y} />,
+    );
+  });
   if (s.koord.length) {
     const kd = s.koord.map((k) => k.pd + k.D / 2);
     const ujung = s.anak.length ? s.anak[0].pd - GD / 2 : Math.max(...kd);
@@ -543,10 +791,21 @@ function Garis({ s, hasil, p, labelGaris, ekspor }: { s: Simpul; hasil: Hasil; p
     });
     return <>{out}</>;
   }
-  const midD = s.anak[0].pd - GD / 2;
+  const blokB = s.anak.find((a) => a.blok);
+  const baris1 = blokB ? s.anak.filter((a) => a !== blokB) : [];
+  const anakBaris = blokB && baris1.length ? baris1 : s.anak;
+  const midD = Math.min(...anakBaris.map((a) => a.pd)) - GD / 2;
   const mulai = s.koord.length ? Math.max(bawah, ...s.koord.map((k) => k.pd + k.D / 2)) : bawah;
   out.push(<GarisSatu key="tr" d={`M${pt(ca, mulai)} L${pt(ca, midD)}`} jenis="lini" judul={`Lini: ${nama(s)}`} p={p} ekspor={ekspor} />);
-  s.anak.forEach((a, i) => {
+  if (blokB && baris1.length) {
+    // Garis lini dari induk ke blok baris kedua, memutar di sisi kiri baris pertama (tidak menembus bingkai Rektorat).
+    // Di luar batas cabang baris pertama (termasuk bingkai Rektorat).
+    const kiriB1 = Math.min(...baris1.map((a) => { const b = batasCabang(a); return vert ? b.x1 : b.y1; })) - 34;
+    const d2 = blokB.pd - GD / 2;
+    const tulang = blokB.pa + IND / 2;
+    out.push(<GarisSatu key="tb" d={`M${pt(ca, midD)} L${pt(kiriB1 + r, midD)} Q${pt(kiriB1, midD)} ${pt(kiriB1, midD + r)} L${pt(kiriB1, d2 - r)} Q${pt(kiriB1, d2)} ${pt(kiriB1 + (tulang > kiriB1 ? r : -r), d2)} L${pt(tulang + (tulang > kiriB1 ? -r : r), d2)} Q${pt(tulang, d2)} ${pt(tulang, d2 + r)} L${pt(tulang, blokB.pd)}`} jenis="lini" judul={`Lini: ${nama(s)} → ${blokB.blok!.flatMap((b) => b.label.map((l) => l.teks)).join(', ')}`} p={p} ekspor={ekspor} />);
+  }
+  anakBaris.forEach((a, i) => {
     const aa = a.virtual ? a.pa + IND / 2 : a.pa + a.A / 2;
     const d = Math.abs(aa - ca) < 1 ? `M${pt(aa, midD)} L${pt(aa, a.pd)}` : `M${pt(ca, midD)} L${pt(aa + (aa > ca ? -r : r), midD)} Q${pt(aa, midD)} ${pt(aa, midD + r)} L${pt(aa, a.pd)}`;
     out.push(<GarisSatu key={`a${i}`} d={d} jenis="lini" judul={a.virtual ? `Lini: ${nama(s)}` : `Lini: ${nama(s)} → ${nama(a)}`} p={p} ekspor={ekspor} />);
@@ -572,18 +831,6 @@ function Avatar({ x, y, r, nama, foto, kosong, p, id }: { x: number; y: number; 
   );
 }
 
-function LabelKelompok({ s, p, g, ekspor }: { s: Simpul; p: Palet; g: GayaJenisBagan; ekspor?: boolean }) {
-  const teks = potong(s.u.nama, s.w - 40, 12, 1)[0];
-  const lebar = Math.min(s.w, teks.length * 7.2 + 40);
-  const x0 = (s.w - lebar) / 2;
-  return (
-    <g>
-      <rect x={x0} y={4} width={lebar} height={s.h - 8} rx={(s.h - 8) / 2} fill={p.kartu} stroke={g.warna} strokeOpacity={0.55} strokeWidth={1} />
-      <text x={s.w / 2} y={s.h / 2 + 4} textAnchor="middle" fontSize={12} fontWeight={650} letterSpacing={0.3} fill={ekspor ? g.warna : p.teks}>{teks}</text>
-    </g>
-  );
-}
-
 function Kartu(props: SvgProps & { s: Simpul; redup?: boolean }) {
   const { s, rinci, palet: p, gaya, tampilan, ekspor, onToggle, onPilih, onIsi, staf, onSemuaStaf, onPilihStaf, redup } = props;
   const W = s.w;
@@ -591,7 +838,8 @@ function Kartu(props: SvgProps & { s: Simpul; redup?: boolean }) {
   const g = gaya[u.jenis ?? ''] ?? { label: u.jenis ?? 'Unit', warna: '#475569' };
   const nonaktif = u.aktif === false;
   const resmi = tampilan === 'resmi';
-  const judul = potong(u.nama, W - 28, 13, 2);
+  // Kotak puncak universitas = kotak Rektor (nama universitas cukup di judul bagan).
+  const judul = potong(u.jenis === 'universitas' ? (u.jabatan?.[0]?.jabatan ?? 'Rektor') : u.nama, W - 28, 13, 2);
   const pimpinan = (u.jabatan ?? []).find((j) => j.nama);
   const kosongN = (u.jabatan ?? []).filter((j) => !j.nama).length;
   const isiN = (u.jabatan ?? []).length - kosongN;
@@ -603,9 +851,7 @@ function Kartu(props: SvgProps & { s: Simpul; redup?: boolean }) {
   const labelJenis = `${g.label}${jenisGaris !== 'lini' ? ` · ${GARIS_BAGAN[jenisGaris].keterangan.toLowerCase()}` : ''}${nonaktif ? ' · nonaktif' : ''}`;
   return (
     <g transform={`translate(${s.x},${s.y})`} opacity={nonaktif ? 0.55 : redup ? 0.32 : 1}>
-      {kelompok(u) ? (
-        <LabelKelompok s={s} p={p} g={g} ekspor={ekspor} />
-      ) : (
+      {kelompok(u) ? null : (
         <g
           className={bisaKlik ? 'u-bagan-kartu' : undefined}
           role={bisaKlik ? 'button' : undefined}
@@ -637,9 +883,16 @@ function Kartu(props: SvgProps & { s: Simpul; redup?: boolean }) {
           {!rinci ? (
             <>
               <line x1={14} x2={W - 14} y1={88} y2={88} stroke={p.tepi} strokeWidth={0.75} />
-              <Avatar x={30} y={109} r={14} nama={pimpinan?.nama} foto={ekspor ? null : pimpinan?.foto} kosong={!pimpinan} p={p} id={`${uid}-a`} />
-              <text x={52} y={106} fontSize={12} fontWeight={600} fill={pimpinan ? p.teks : p.redup} fontStyle={pimpinan ? undefined : 'italic'} opacity={pimpinan ? 1 : 0.8}>{potong(pimpinan ? `${pimpinan.status ? `${pimpinan.status === 'plt' ? 'Plt.' : 'Plh.'} ` : ''}${pimpinan.nama}` : 'Belum diisi', W - 66, 12, 1)[0]}</text>
-              <text x={52} y={121} fontSize={10.5} fill={p.redup}>{potong(pimpinan?.jabatan ?? (u.jabatan?.[0]?.jabatan ?? 'Pimpinan unit'), W - 66, 10.5, 1)[0]}{isiN > 1 ? ` · +${isiN - 1} pejabat` : ''}</text>
+              {pimpinan ? (
+                <>
+                  <Avatar x={30} y={109} r={15} nama={pimpinan.nama} foto={fotoEkspor(pimpinan.foto, ekspor)} p={p} id={`${uid}-a`} />
+                  <text x={53} y={106} fontSize={12} fontWeight={600} fill={p.teks}>{potong(`${pimpinan.status ? `${pimpinan.status === 'plt' ? 'Plt.' : 'Plh.'} ` : ''}${pimpinan.nama}`, W - 67, 12, 1)[0]}</text>
+                  <text x={53} y={121} fontSize={10.5} fill={p.redup}>{potong(pimpinan.jabatan, W - 67, 10.5, 1)[0]}{isiN > 1 ? ` · +${isiN - 1} pejabat` : ''}</text>
+                </>
+              ) : (
+                // Kosong: satu baris halus, tanpa lingkaran besar.
+                <text x={14} y={112} fontSize={10.5} fontStyle="italic" fill={p.redup} opacity={0.75}>{potong(`${u.jabatan?.[0]?.jabatan ?? 'Pimpinan'}: belum diisi`, W - 28, 10.5, 1)[0]}</text>
+              )}
             </>
           ) : (
             (u.jabatan?.length ? u.jabatan : [{ jabatan: 'Belum ada jabatan tercatat' } as JabatanBagan]).map((j, i) => {
@@ -649,7 +902,7 @@ function Kartu(props: SvgProps & { s: Simpul; redup?: boolean }) {
               return (
                 <g key={i} transform={`translate(0,${y})`}>
                   <line x1={14} x2={W - 14} y1={2} y2={2} stroke={p.tepi} strokeWidth={0.75} />
-                  <Avatar x={28} y={22} r={12} nama={j.nama} foto={ekspor ? null : j.foto} kosong={kosong} p={p} id={`${uid}-${i}`} />
+                  <Avatar x={28} y={22} r={12} nama={j.nama} foto={fotoEkspor(j.foto, ekspor)} kosong={kosong} p={p} id={`${uid}-${i}`} />
                   <text x={48} y={19} fontSize={11.5} fontWeight={600} fill={kosong ? p.redup : p.teks} fontStyle={kosong ? 'italic' : undefined} opacity={kosong ? 0.8 : 1}>{potong(kosong ? 'Belum diisi' : `${j.status ? `${j.status === 'plt' ? 'Plt.' : 'Plh.'} ` : ''}${j.nama}`, W - (tampilIsi ? 104 : 62), 11.5, 1)[0]}</text>
                   <text x={48} y={33} fontSize={10} fill={p.redup}>{potong(j.jabatan, W - (tampilIsi ? 104 : 62), 10, 1)[0]}</text>
                   {tampilIsi && (
@@ -669,7 +922,35 @@ function Kartu(props: SvgProps & { s: Simpul; redup?: boolean }) {
               );
             })
           )}
-          {staf && !!u.staf?.length && (
+          {!!u.ringkasAnak?.length && (
+            <g transform={`translate(0,${tinggiInti(u, rinci) - (26 + Math.min(u.ringkasAnak.length, RINGKAS_MAKS) * RINGKAS_BARIS + (u.ringkasAnak.length > RINGKAS_MAKS ? 16 : 0))})`}>
+              <line x1={14} x2={W - 14} y1={2} y2={2} stroke={p.tepi} strokeWidth={0.75} />
+              <text x={14} y={19} fontSize={10} fontWeight={700} letterSpacing={0.4} fill={p.redup}>PROGRAM STUDI · {u.ringkasAnak.length}</text>
+              {u.ringkasAnak.slice(0, RINGKAS_MAKS).map((a, i) => (
+                <g key={i} transform={`translate(0,${30 + i * RINGKAS_BARIS})`}>
+                  <circle cx={18} cy={-3.5} r={2.2} fill={g.warna} />
+                  <text x={26} y={0} fontSize={10.5} fontWeight={600} fill={p.teks}>{potong(a.nama, W - 40, 10.5, 1)[0]}</text>
+                  <text x={26} y={12} fontSize={9.5} fill={p.redup}>{potong(`${a.pimpinan ? `Kaprodi: ${a.pimpinan}` : 'Kaprodi belum diisi'}${a.tendik ? ` · ${a.tendik} tendik` : ''}`, W - 40, 9.5, 1)[0]}</text>
+                </g>
+              ))}
+              {u.ringkasAnak.length > RINGKAS_MAKS && <text x={26} y={26 + RINGKAS_MAKS * RINGKAS_BARIS} fontSize={10} fontWeight={600} fill={p.redup}>+{u.ringkasAnak.length - RINGKAS_MAKS} prodi lainnya</text>}
+            </g>
+          )}
+          {staf && !!u.staf?.length && props.ringkas && (
+            <g
+              transform={`translate(0,${tinggiInti(u, rinci)})`}
+              className={!ekspor && onSemuaStaf ? 'u-bagan-staf' : undefined}
+              role={!ekspor && onSemuaStaf ? 'button' : undefined}
+              tabIndex={!ekspor && onSemuaStaf ? 0 : undefined}
+              aria-label={`Tendik dan staf ${u.nama}: ${u.staf.length} orang`}
+              onClick={!ekspor && onSemuaStaf ? (e) => { e.stopPropagation(); onSemuaStaf(u); } : undefined}
+              onKeyDown={!ekspor && onSemuaStaf ? (e) => { if (e.key === 'Enter') { e.stopPropagation(); onSemuaStaf(u); } } : undefined}
+            >
+              <line x1={14} x2={W - 14} y1={2} y2={2} stroke={p.tepi} strokeWidth={0.75} strokeDasharray="3 3" />
+              <text x={14} y={18} fontSize={10.5} fill={p.redup}>Tendik & staf: <tspan fontWeight={700} fill={p.teks}>{u.staf.length}</tspan>{!ekspor && onSemuaStaf ? <tspan fill={p.sorot}>  · lihat</tspan> : null}</text>
+            </g>
+          )}
+          {staf && !!u.staf?.length && !props.ringkas && (
             <g transform={`translate(0,${tinggiInti(u, rinci)})`}>
               <line x1={14} x2={W - 14} y1={2} y2={2} stroke={p.tepi} strokeWidth={0.75} strokeDasharray="3 3" />
               <text x={14} y={20} fontSize={10} fontWeight={600} fill={p.redup}>Tendik & staf · {u.staf.length}</text>
@@ -714,7 +995,7 @@ function Kartu(props: SvgProps & { s: Simpul; redup?: boolean }) {
           )}
         </g>
       )}
-      {s.turunan > 0 && !ekspor && (
+      {s.turunan > 0 && !ekspor && !kelompok(u) && (
         <g
           className="u-bagan-lipat"
           role="button"
@@ -742,9 +1023,9 @@ function Bingkai({ s, g, jenis }: { s: Simpul; p?: Palet; g: GayaJenisBagan; jen
   const b = batasCabang(s);
   if (!Number.isFinite(b.x1)) return null;
   const pad = jenis === 'kelompok' ? 12 : 16;
-  const atas = jenis === 'kelompok' ? 0 : 20;
+  const atas = 20;
   const warna = jenis === 'kelompok' ? g.warna : s.u.bingkai?.warna ?? g.warna;
-  const labelPenuh = jenis === 'kelompok' ? null : s.u.bingkai?.label ?? s.u.nama;
+  const labelPenuh = jenis === 'kelompok' ? s.u.nama : s.u.bingkai?.label ?? s.u.nama;
   const label = labelPenuh ? potong(labelPenuh.toUpperCase(), b.x2 - b.x1 + pad * 2 - 24, 10.5, 1)[0] : null;
   return (
     <g pointerEvents="none">
@@ -766,6 +1047,7 @@ function IsiSvg(props: SvgProps) {
     const set = new Set<string>();
     const jalan = (n: Simpul) => {
       set.add(n.u.id);
+      n.sisi.forEach(jalan);
       n.koord.forEach(jalan);
       n.anak.forEach(jalan);
     };
@@ -794,31 +1076,45 @@ function IsiSvg(props: SvgProps) {
 }
 
 /** Legenda di dalam SVG (unduhan/cetak): warna jenis dan jenis garis. */
-/** Lebar legenda unduhan: menyesuaikan label terpanjang (mis. jenis lapisan ormawa yang panjang). */
-function lebarLegendaSvg(jenis: [string, GayaJenisBagan][], garis: GarisBagan[]): number {
-  const teks = [...garis.map((g) => `Garis ${GARIS_BAGAN[g].label.toLowerCase()}`), ...jenis.map(([, j]) => j.label), 'Keterangan'];
-  return Math.max(180, Math.ceil(Math.max(...teks.map((t) => t.length)) * 6.3) + 62);
-}
-
-function LegendaSvg({ x, y, jenis, garis }: { x: number; y: number; jenis: [string, GayaJenisBagan][]; garis: GarisBagan[] }) {
-  const baris = [...garis.map((g) => ({ t: 'g' as const, g })), ...jenis.map(([, j]) => ({ t: 'j' as const, j }))];
-  const tinggi = 30 + baris.length * 18;
+function LegendaSvg({ x, y, lebar, jenis, garis }: { x: number; y: number; lebar: number; jenis: [string, GayaJenisBagan][]; garis: GarisBagan[] }) {
+  // Satu baris horizontal (membungkus bila tidak muat): jenis garis lalu warna jenis unit.
+  const item = [...garis.map((g) => ({ t: 'g' as const, g, teks: `Garis ${GARIS_BAGAN[g].label.toLowerCase()}` })), ...jenis.map(([, j]) => ({ t: 'j' as const, j, teks: j.label }))];
+  const pos: { x: number; y: number }[] = [];
+  let cx = 84;
+  let cy = 0;
+  for (const it of item) {
+    const w = (it.t === 'g' ? 36 : 18) + it.teks.length * 6.1 + 18;
+    if (cx + w > lebar && cx > 84) { cx = 84; cy += 18; }
+    pos.push({ x: cx, y: cy });
+    cx += w;
+  }
   return (
     <g transform={`translate(${x},${y})`}>
-      <rect width={lebarLegendaSvg(jenis, garis)} height={tinggi} rx={6} fill="#ffffff" stroke="#c9cfd8" />
-      <text x={12} y={20} fontSize={11} fontWeight={700} fill="#171a21">Keterangan</text>
-      {baris.map((b, i) => (
-        <g key={i} transform={`translate(12,${36 + i * 18})`}>
-          {b.t === 'g' ? (
-            <line x1={0} x2={28} y1={-4} y2={-4} stroke={GARIS_BAGAN[b.g].warna ?? '#5b6472'} strokeWidth={GARIS_BAGAN[b.g].tebal} strokeDasharray={GARIS_BAGAN[b.g].dash} strokeLinecap={GARIS_BAGAN[b.g].cap} />
+      <text x={0} y={0} fontSize={11} fontWeight={700} fill="#171a21">Keterangan:</text>
+      {item.map((it, i) => (
+        <g key={i} transform={`translate(${pos[i].x},${pos[i].y})`}>
+          {it.t === 'g' ? (
+            <line x1={0} x2={28} y1={-4} y2={-4} stroke={GARIS_BAGAN[it.g].warna ?? '#5b6472'} strokeWidth={GARIS_BAGAN[it.g].tebal} strokeDasharray={GARIS_BAGAN[it.g].dash} strokeLinecap={GARIS_BAGAN[it.g].cap} />
           ) : (
-            <rect x={8} y={-9} width={10} height={10} rx={2} fill={b.j.warna} />
+            <rect x={0} y={-9} width={10} height={10} rx={2} fill={it.j.warna} />
           )}
-          <text x={38} y={0} fontSize={10.5} fill="#3f4753">{b.t === 'g' ? `Garis ${GARIS_BAGAN[b.g].label.toLowerCase()}` : b.j.label}</text>
+          <text x={it.t === 'g' ? 34 : 16} y={0} fontSize={10.5} fill="#3f4753">{it.teks}</text>
         </g>
       ))}
     </g>
   );
+}
+
+/** Tinggi legenda horizontal unduhan untuk lebar tertentu. */
+function tinggiLegendaSvg(lebar: number, jenis: [string, GayaJenisBagan][], garis: GarisBagan[]): number {
+  let cx = 84;
+  let baris = 1;
+  for (const teks of [...garis.map((g) => `Garis ${GARIS_BAGAN[g].label.toLowerCase()}`), ...jenis.map(([, j]) => j.label)]) {
+    const w = 36 + teks.length * 6.1 + 18;
+    if (cx + w > lebar && cx > 84) { cx = 84; baris++; }
+    cx += w;
+  }
+  return baris * 18 + 8;
 }
 
 // ---------------------------------------------------------------- unduh dan cetak
@@ -951,6 +1247,8 @@ interface Tampilan {
   orientasi: OrientasiBagan;
   gaya: GayaBagan;
   legenda: boolean;
+  /** Per kunciSimpan + mode bawaan: mode yang dipilih pengguna. */
+  mode?: ModeBagan;
 }
 
 function bacaTampilan(kunci: string): Partial<Tampilan> {
@@ -979,13 +1277,19 @@ const tanggalTeks = (v?: string | null) => {
 export function BaganOrganisasi({
   data: dataUnit, akar, judul, judulBerkas, subjudul, dasar, berlaku, rinci: rinciAwal = false, gantiRinci = true, buka = 3, tinggi = 640, gayaJenis: gayaUnit = GAYA_JENIS_BAGAN,
   urutJenis: urutUnit = URUT_JENIS, onPilihUnit, onIsiJabatan, namaBerkas = 'struktur-organisasi', petaMini = true, className,
-  tampilStaf: tampilStafAwal = true, onPilihStaf, lapisan, orientasi: orientasiAwal = 'vertikal', gaya: gayaAwal = 'modern', seragam = true, labelGaris = true, sorot,
-  kunciSimpan = 'unipo-bagan-tampilan',
+  tampilStaf: tampilStafAwal = true, onPilihStaf, lapisan, orientasi: orientasiAwal = 'vertikal', gaya: gayaAwal = 'modern', seragam = false, labelGaris = true, sorot,
+  kunciSimpan = 'unipo-bagan-tampilan', mode: modeAwal = 'ringkas',
 }: BaganOrganisasiProps) {
   // Lapisan aktif digabung ke data, warna, dan urutan jenis bagan.
   const [lapisanAktif, setLapisanAktif] = React.useState<Set<string>>(() => new Set((lapisan ?? []).filter((l) => l.awal).map((l) => l.kunci)));
   const terpakai = React.useMemo(() => (lapisan ?? []).filter((l) => lapisanAktif.has(l.kunci)), [lapisan, lapisanAktif]);
-  const data = React.useMemo(() => (terpakai.length ? [...dataUnit, ...terpakai.flatMap((l) => l.data)] : dataUnit), [dataUnit, terpakai]);
+  const dataMentah = React.useMemo(() => (terpakai.length ? [...dataUnit, ...terpakai.flatMap((l) => l.data)] : dataUnit), [dataUnit, terpakai]);
+  // Mode ringkas/rinci: bawaan dari pemanggil (bagan per unit memakai rinci); pilihan pengguna disimpan per mode bawaan.
+  const kunciMode = `${kunciSimpan}:mode:${modeAwal}`;
+  const [mode, setModeState] = React.useState<ModeBagan>(() => (bacaTampilan(kunciMode).mode ?? modeAwal));
+  const setMode = (m: ModeBagan) => { setModeState(m); simpanTampilan(kunciMode, { orientasi: 'vertikal', gaya: 'modern', legenda: true, mode: m }); };
+  const ringkas = mode === 'ringkas';
+  const data = React.useMemo(() => (ringkas ? lipatRingkas(dataMentah) : dataMentah), [dataMentah, ringkas]);
   const gayaJenis = React.useMemo<Record<string, GayaJenisBagan>>(() => terpakai.reduce((a, l) => ({ ...a, ...(l.gayaJenis ?? {}) }), gayaUnit), [gayaUnit, terpakai]);
   const urutJenis = React.useMemo(() => (terpakai.length ? [...urutUnit, ...terpakai.flatMap((l) => l.urutJenis ?? [])] : urutUnit), [urutUnit, terpakai]);
   const adaStaf = React.useMemo(() => data.some((u) => (u.staf?.length ?? 0) > 0), [data]);
@@ -1023,9 +1327,9 @@ export function BaganOrganisasi({
   const kunciData = React.useMemo(() => data.map((u) => u.id).join(','), [data]);
   React.useEffect(() => setTertutup(awalTutup()), [kunciData, akar]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const opsi: OpsiTata = { rinci, staf, orientasi: tampilan.orientasi, seragam };
-  const hasil = React.useMemo(() => tata(data, akar, tertutup, urutJenis, opsi), [data, akar, rinci, tertutup, urutJenis, staf, tampilan.orientasi, seragam]); // eslint-disable-line react-hooks/exhaustive-deps
-  const hasilPenuh = React.useMemo(() => tata(data, akar, new Set(), urutJenis, opsi), [data, akar, rinci, urutJenis, staf, tampilan.orientasi, seragam]); // eslint-disable-line react-hooks/exhaustive-deps
+  const opsi: OpsiTata = { rinci, staf, orientasi: tampilan.orientasi, seragam, ringkas };
+  const hasil = React.useMemo(() => tata(data, akar, tertutup, urutJenis, opsi), [data, akar, rinci, tertutup, urutJenis, staf, tampilan.orientasi, seragam, ringkas]); // eslint-disable-line react-hooks/exhaustive-deps
+  const hasilPenuh = React.useMemo(() => tata(data, akar, new Set(), urutJenis, opsi), [data, akar, rinci, urutJenis, staf, tampilan.orientasi, seragam, ringkas]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const wadah = React.useRef<HTMLDivElement>(null);
   const svgEkspor = React.useRef<SVGSVGElement>(null);
@@ -1106,14 +1410,16 @@ export function BaganOrganisasi({
 
   // Legenda: jenis unit dan jenis garis yang muncul.
   const legenda = Object.entries(gayaJenis).filter(([j]) => hasilPenuh.semua.some((s) => !s.virtual && s.u.jenis === j && !kelompok(s.u)));
-  const garisAda = (['lini', 'staf', 'koordinasi', 'pembinaan'] as GarisBagan[]).filter((g) => g === 'lini' ? hasilPenuh.semua.length > 1 : hasilPenuh.semua.some((s) => garisUnit(s.u) === g && !!s.u.induk_id));
+  // Legenda garis selalu lengkap (lini, staf, koordinasi, pembinaan) supaya pembaca cetakan tahu arti tiap garis.
+  const garisAda: GarisBagan[] = ['lini', 'staf', 'koordinasi', 'pembinaan'];
 
   // SVG ekspor: semua cabang terbuka, palet terang, kepala berjudul (+ dasar SK, tanggal berlaku), legenda di sudut.
-  const kepalaEkspor = dasar || berlaku ? 96 : 76;
-  const lebarLegenda = lebarLegendaSvg(legenda, garisAda);
-  const tinggiLegenda = 30 + (legenda.length + garisAda.length) * 18;
-  const ew = Math.max(hasilPenuh.kotak.w + 80, 760, lebarLegenda + 60);
-  const eh = hasilPenuh.kotak.h + kepalaEkspor + 60 + (tampilan.legenda ? tinggiLegenda + 20 : 0);
+  const kepalaJudul = dasar || berlaku ? 96 : 76;
+  const ew = Math.max(hasilPenuh.kotak.w + 80, 900);
+  // Legenda satu baris (membungkus) di bawah judul, di atas bagan.
+  const tinggiLegenda = tampilan.legenda ? tinggiLegendaSvg(ew - 80, legenda, garisAda) + 8 : 0;
+  const kepalaEkspor = kepalaJudul + tinggiLegenda;
+  const eh = hasilPenuh.kotak.h + kepalaEkspor + 60;
   const tglCetak = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
   const jalankan = async (jenis: 'png' | 'pdf' | 'cetak', kertas: KertasBagan = 'otomatis') => {
@@ -1147,7 +1453,7 @@ export function BaganOrganisasi({
   const vy = (-lihat.y / lihat.k - hasil.kotak.y) * mk;
   const vw = (ukuran.w / lihat.k) * mk;
   const vh = (ukuran.h / lihat.k) * mk;
-  const svgProps = { rinci, gaya: gayaJenis, tampilan: tampilan.gaya, labelGaris, sorot, staf };
+  const svgProps = { rinci, gaya: gayaJenis, tampilan: tampilan.gaya, labelGaris, sorot, staf, ringkas };
   const [tip, setTip] = React.useState<{ teks: string; x: number; y: number } | null>(null);
   const kotakWadah = wadah.current?.getBoundingClientRect();
 
@@ -1201,6 +1507,12 @@ export function BaganOrganisasi({
             onValueChange={(v) => setTampilan({ orientasi: v })}
             options={[{ value: 'vertikal', label: 'Vertikal', icon: <MoveVertical aria-hidden /> }, { value: 'horizontal', label: 'Horizontal', icon: <MoveHorizontal aria-hidden /> }]}
           />
+          <SegmentedControl<ModeBagan>
+            aria-label="Kerapatan bagan"
+            value={mode}
+            onValueChange={setMode}
+            options={[{ value: 'ringkas', label: 'Ringkas' }, { value: 'rinci', label: 'Rinci' }]}
+          />
           <SegmentedControl<GayaBagan>
             aria-label="Gaya bagan"
             value={tampilan.gaya}
@@ -1223,6 +1535,18 @@ export function BaganOrganisasi({
           <Button variant="outline" size="sm" iconOnly aria-label={penuh ? 'Keluar layar penuh' : 'Layar penuh'} onClick={layarPenuh}>{penuh ? <Minimize /> : <Maximize />}</Button>
         </div>
       </div>
+      {tampilan.legenda && (legenda.length > 1 || garisAda.length > 1) && (
+          <div className="u-bagan-legenda u-bagan-legenda-lengkap" aria-label="Keterangan bagan">
+            <b>Keterangan:</b>
+            {garisAda.map((g) => (
+              <span key={g} title={GARIS_BAGAN[g].label}>
+                <svg width="30" height="8" aria-hidden><line x1="1" x2="29" y1="4" y2="4" stroke={GARIS_BAGAN[g].warna ?? 'currentColor'} strokeWidth={GARIS_BAGAN[g].tebal} strokeDasharray={GARIS_BAGAN[g].dash} strokeLinecap={GARIS_BAGAN[g].cap} /></svg>
+                Garis {GARIS_BAGAN[g].label.toLowerCase()}
+              </span>
+            ))}
+            {legenda.map(([j, g]) => <span key={j}><i style={{ background: g.warna }} />{g.label}</span>)}
+          </div>
+        )}
       {galat && <p className="u-bagan-galat" role="alert">{galat}</p>}
       <div
         ref={wadah}
@@ -1253,18 +1577,6 @@ export function BaganOrganisasi({
         )}
         {tip && kotakWadah && (
           <div className="u-bagan-tip" role="tooltip" style={{ left: tip.x - kotakWadah.left + 12, top: tip.y - kotakWadah.top + 12 }}>{tip.teks}</div>
-        )}
-        {tampilan.legenda && (legenda.length > 1 || garisAda.length > 1) && (
-          <div className="u-bagan-legenda-sudut" aria-label="Keterangan bagan">
-            <b>Keterangan</b>
-            {garisAda.map((g) => (
-              <span key={g} title={GARIS_BAGAN[g].label}>
-                <svg width="30" height="8" aria-hidden><line x1="1" x2="29" y1="4" y2="4" stroke={GARIS_BAGAN[g].warna ?? 'currentColor'} strokeWidth={GARIS_BAGAN[g].tebal} strokeDasharray={GARIS_BAGAN[g].dash} strokeLinecap={GARIS_BAGAN[g].cap} /></svg>
-                Garis {GARIS_BAGAN[g].label.toLowerCase()}
-              </span>
-            ))}
-            {legenda.map(([j, g]) => <span key={j}><i style={{ background: g.warna }} />{g.label}</span>)}
-          </div>
         )}
         {petaMini && hasil.semua.length > 3 && (
           <svg
@@ -1318,11 +1630,11 @@ export function BaganOrganisasi({
           <text x={ew / 2} y={dasar ? 80 : 62} textAnchor="middle" fontSize={11} fill="#6b7482">
             {[subjudul, berlaku ? `Berlaku sejak ${tanggalTeks(berlaku)}` : null, `Dicetak ${tglCetak}`].filter(Boolean).join(' · ')}
           </text>
+          {tampilan.legenda && <LegendaSvg x={40} y={kepalaJudul + 4} lebar={ew - 80} jenis={legenda} garis={garisAda} />}
           <line x1={40} x2={ew - 40} y1={kepalaEkspor - 8} y2={kepalaEkspor - 8} stroke="#c9cfd8" />
           <g transform={`translate(${40 - hasilPenuh.kotak.x + (ew - 80 - hasilPenuh.kotak.w) / 2},${kepalaEkspor + 16 - hasilPenuh.kotak.y})`}>
             <IsiSvg hasil={hasilPenuh} palet={PALET_CETAK} {...svgProps} ekspor />
           </g>
-          {tampilan.legenda && <LegendaSvg x={ew - lebarLegenda - 20} y={eh - tinggiLegenda - 20} jenis={legenda} garis={garisAda} />}
         </svg>
       </div>
     </div>
