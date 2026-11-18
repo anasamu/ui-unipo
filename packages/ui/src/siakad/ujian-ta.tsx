@@ -952,9 +952,8 @@ export function FormJadwalUjianTa({ u, open, onOpenChange }: { u: UjianTa | null
     }
   };
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((o) => ({ ...o, [k]: v }));
-  // Pemilih dosen bersyarat (aturan universitas + fakultas, /v1/aturan/calon-dosen) menurut prodi mahasiswa: ketua =
-  // penguji_1, penguji ke-n = penguji_(n+1). Syarat yang bergantung mahasiswa (mis. bukan pembimbingnya) diperiksa
-  // server saat periksa/simpan jadwal (calon-dosen ber-nim hanya untuk pengelola akademik mahasiswa).
+  // Pemilih dosen bersyarat (aturan universitas + fakultas mahasiswa, /v1/aturan/calon-dosen?nim=): ketua = penguji_1,
+  // penguji ke-n = penguji_(n+1). Syarat bergantung mahasiswa (bukan pembimbingnya, kuota) ikut tampil di pemilih.
   const titikPenguji = u?.jenis === 'proposal' ? 'ta.penguji.proposal.tetapkan' : 'ta.penguji.skripsi.tetapkan';
   const maks = u?.pengaturan?.maks_penguji ?? 3;
   const min = u?.pengaturan?.min_penguji ?? 2;
@@ -983,13 +982,13 @@ export function FormJadwalUjianTa({ u, open, onOpenChange }: { u: UjianTa | null
             <p>{u.pembimbing.map((p, i) => `${i === 0 ? 'I' : 'II'}. ${p.nama}`).join(' · ') || '-'}</p>
           </Field>
           <Field label="Ketua sidang (pimpinan sidang)" required>
-            <PilihDosenBersyarat titik={titikPenguji} prodi={u.kode_prodi} peran="penguji_1" value={f.ketua || null} onValueChange={(v) => set('ketua', v ?? '')} placeholder="Pilih ketua sidang" />
+            <PilihDosenBersyarat titik={titikPenguji} nim={u.nim} peran="penguji_1" value={f.ketua || null} onValueChange={(v) => set('ketua', v ?? '')} placeholder="Pilih ketua sidang" />
           </Field>
           {Array.from({ length: Math.max(min, f.penguji.length) }, (_, i) => (
             <Field key={i} label={`Penguji ${i + 1}`} required={i < min}>
               <PilihDosenBersyarat
                 titik={titikPenguji}
-                prodi={u.kode_prodi}
+                nim={u.nim}
                 peran={`penguji_${Math.min(4, i + 2)}` as PeranPenetapanDosen}
                 value={f.penguji[i] || null}
                 onValueChange={(v) => set('penguji', Object.assign([...f.penguji], { [i]: v ?? '' }))}
