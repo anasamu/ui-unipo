@@ -182,3 +182,50 @@
     min-width: 0;
   }
 }
+
+/* Aturan verifikasi data (AturanVerifikasiData) */
+.u-pmk-aturan-pengantar {
+  max-width: 48rem;
+}
+.u-pmk-aturan-kepala,
+.u-pmk-aturan-isian {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(10rem, 13rem) minmax(10rem, 13rem) 6.5rem 6.5rem;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.625rem 1rem;
+}
+.u-pmk-aturan-kepala {
+  padding-block: 0.5rem;
+  border-top: 1px solid var(--u-border);
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
+}
+.u-pmk-aturan-isian {
+  border-top: 1px solid var(--u-border);
+  &.is-buka {
+    background: color-mix(in oklab, var(--u-primary) 5%, transparent);
+  }
+  .u-pmk-atur-label span .u-badge {
+    margin-inline-start: 0.25rem;
+    vertical-align: middle;
+  }
+}
+/* Di layar lebar judul kolom sudah ada; label sakelar hanya untuk layar sempit. */
+.u-pmk-aturan-sel {
+  display: none;
+}
+@media (max-width: 900px) {
+  .u-pmk-aturan-kepala {
+    display: none;
+  }
+  .u-pmk-aturan-isian {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    > .u-pmk-atur-label {
+      grid-column: 1 / -1;
+    }
+  }
+  .u-pmk-aturan-sel {
+    display: inline;
+  }
+}
