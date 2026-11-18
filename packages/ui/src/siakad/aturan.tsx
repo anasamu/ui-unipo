@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { ProgressTenggat } from '../components/progres';
 import { cn } from '../lib/cn';
+import { IsianPemenuhan, type ParameterPemenuhan } from './pemenuhan-aturan';
 import { Badge, Button, Skeleton, Tag } from '../components/actions';
 import { Alert, Card, DescriptionList, Empty, Progress, Stepper, Tabs } from '../components/display';
 import { Field, Input, SegmentedControl, Textarea } from '../components/forms';
@@ -1646,6 +1647,8 @@ interface IsiAturan {
   penyetujuPengecualian: string[];
   /** Ubah aturan aktif: id lampiran SK lama yang dipakai sebagai dasar versi baru. */
   skLama: string;
+  /** Aturan syarat: cara memenuhi (otomatis/unggah/isian/ceklis/plagiasi) dan unit pemilik; lihat pemenuhan-aturan.tsx. */
+  pemenuhan: ParameterPemenuhan | null;
 }
 
 /** Isian cakupan untuk titik bersubjek pegawai (sdm.*): jenis, kategori, status kepegawaian, dan unit SDM. */
@@ -1732,6 +1735,7 @@ function isiDari(a: Partial<Aturan> | null | undefined, titikAwal?: string): Isi
     skLama: '',
     sifat: a?.sifat ?? 'ketat',
     penyetujuPengecualian: (a?.pengecualian_oleh ?? []).filter((p) => p.jenis === 'peran').map((p) => p.kode),
+    pemenuhan: a?.jenis === 'syarat' && a.parameter && typeof a.parameter === 'object' ? (a.parameter as unknown as ParameterPemenuhan) : null,
   };
 }
 
@@ -1798,6 +1802,7 @@ function bodyAturan(x: IsiAturan, katalog: KatalogAturan | undefined, ubah: bool
     if (x.tabel.length) p.tabel = x.tabel.map((b) => ({ jika: rapikanKondisi(b.jika as GrupKondisi, katalog), nilai: Number(b.nilai) }));
     parameter = p;
   }
+  if (x.jenis === 'syarat' && x.pemenuhan) parameter = x.pemenuhan as unknown as ParameterBatasWaktu;
   const body: Record<string, unknown> = {
     kategori: x.kategori,
     jenis: x.jenis,
@@ -2465,6 +2470,7 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
       {isi.jenis === 'syarat' && (
         <>
           <p className="u-aturan-langkah-ket">Susun kondisi yang harus dipenuhi. Untuk alternatif ({contoh.alternatif}), pakai Tambah pilihan “atau”.</p>
+          <IsianPemenuhan value={isi.pemenuhan} onValueChange={(v) => set('pemenuhan', v)} kondisi={isi.kondisi} onKondisi={(v) => set('kondisi', v)} indikator={katalog.data?.indikator ?? []} />
           <PenyusunKondisi id="aturan-kondisi" titik={isi.titik} value={isi.kondisi} onValueChange={(v) => set('kondisi', v)} galat={galat.kondisi || undefined} />
         </>
       )}
