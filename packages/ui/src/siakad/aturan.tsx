@@ -78,6 +78,7 @@ import {
   useAjuanPengecualianAturan,
   type AjukanPengecualianAturanProps,
 } from './aturan-keputusan';
+import { DasarPedoman } from './pedoman';
 
 /*
  * Aturan akademik, kelulusan, dan keuangan dinamis (/v1/aturan): aturan disusun di satu titik penerapan (langkah
@@ -4376,6 +4377,8 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
           </p>
         </div>
       </div>
+      {/* Dasar pedoman (modul Pedoman): pasal dasar, "Berbeda dari pedoman", atau "Belum diatur pedoman". */}
+      <DasarPedoman targetJenis="mesin_aturan" targetRef={a.id} />
 
       {(a.boleh_atur || ((diajukan || a.darurat) && hak.setujui) || (diajukan && hak.telaah)) && !dihapus && (
         <div className="u-aturan-detail-aksi">

@@ -75,9 +75,14 @@ export function MenuAkunSiakad({ cadangan, ...props }: Omit<MenuAkunProps, 'peng
 
 /** Dosen dan tendik mendapat "Riwayat gaji" (Profil /gaji) di menu akun, sebelum "Keamanan akun". */
 function itemDenganGaji(item: ItemMenuAkun[] = ['profil', 'ubah', 'keamanan'], peran: string | null): ItemMenuAkun[] {
-  if ((peran !== 'dosen' && peran !== 'tendik') || item.includes('gaji')) return item;
-  const i = item.indexOf('keamanan');
-  return i < 0 ? [...item, 'gaji'] : [...item.slice(0, i), 'gaji', ...item.slice(i)];
+  // Pedoman & peraturan universitas (dasar aturan sistem) dapat dibuka dari menu akun semua aplikasi.
+  const sisip = (daftar: ItemMenuAkun[], x: ItemMenuAkun): ItemMenuAkun[] => {
+    if (daftar.includes(x)) return daftar;
+    const i = daftar.indexOf('keamanan');
+    return i < 0 ? [...daftar, x] : [...daftar.slice(0, i), x, ...daftar.slice(i)];
+  };
+  const dasar = sisip(item, 'pedoman');
+  return peran !== 'dosen' && peran !== 'tendik' ? dasar : sisip(dasar, 'gaji');
 }
 
 /** KartuAkun yang mengisi dirinya dari /v1/profil/saya. */
