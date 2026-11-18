@@ -331,6 +331,7 @@
   outline: 0;
   transition: color var(--u-duration-fast);
   svg {
+    flex: none;
     width: 1rem;
     height: 1rem;
   }
@@ -452,6 +453,23 @@
 }
 .u-tab-label {
   min-width: 0;
+}
+// Judul kelompok di daftar tab vertikal (TabItem.group).
+.u-tabs-grup {
+  display: block;
+  padding: 0.875rem 0.75rem 0.25rem;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  &:first-child {
+    padding-top: 0.25rem;
+  }
+}
+.u-tabs-list[data-variant='side'] > .u-tab .u-badge[data-kosong] {
+  background: transparent;
+  color: var(--u-muted-foreground);
+  font-weight: 500;
 }
 .u-tabs-pilih {
   width: 100%;

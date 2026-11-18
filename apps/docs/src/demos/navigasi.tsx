@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { BookOpen, ClipboardCheck, ClipboardList, GraduationCap, Wallet } from 'lucide-react';
-import { Accordion, Badge, Breadcrumb, Button, PageHeader, Pagination, Progress, ProgressRing, Stepper, Tabs } from 'unipo-ui';
+import { Award, BookOpen, Briefcase, ClipboardCheck, ClipboardList, GraduationCap, Medal, Users, Wallet } from 'lucide-react';
+import { Accordion, Badge, Breadcrumb, Button, Field, Input, PageHeader, Pagination, PanelLangkah, Progress, ProgressRing, Stepper, Tabs, WizardReview } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 import { jsxProps } from '../Playground';
 
@@ -13,6 +13,8 @@ export const meta: DemoMeta = {
   demos: {
     TabGaris: 'Tabs garis bawah',
     TabPil: 'Tabs pil',
+    PanelLangkahDemo: 'PanelLangkah (wizard di panel samping)',
+    TabVertikal: 'Tabs vertikal berkelompok (ikon, jumlah; pilihan tarik-turun di wadah sempit)',
     Langkah: 'Stepper',
     LangkahVertikal: 'Stepper vertikal',
     Halaman: 'Pagination',
@@ -67,6 +69,47 @@ export function TabPil() {
         { value: 'berita', label: 'Berita' },
         { value: 'agenda', label: 'Agenda' },
         { value: 'pengumuman', label: 'Pengumuman' },
+      ]}
+    />
+  );
+}
+
+export function PanelLangkahDemo() {
+  const [buka, setBuka] = React.useState(false);
+  const [nama, setNama] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  return (
+    <>
+      <Button onClick={() => setBuka(true)}>Tambah pegawai</Button>
+      <PanelLangkah
+        open={buka}
+        onOpenChange={setBuka}
+        title="Tambah pegawai"
+        description="Isi bertahap; data bisa diubah lagi nanti."
+        footerNote="Kolom bertanda * wajib diisi."
+        onFinish={() => undefined}
+        steps={[
+          { id: 'identitas', title: 'Identitas', content: <Field label="Nama lengkap" required><Input value={nama} onChange={(e) => setNama(e.target.value)} /></Field>, validate: () => (nama.trim() ? null : 'Nama wajib diisi.') },
+          { id: 'kontak', title: 'Kontak', optional: true, content: <Field label="Email"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field> },
+          { id: 'tinjau', title: 'Tinjau & simpan', content: <WizardReview sections={[{ title: 'Identitas', items: [{ label: 'Nama', value: nama }, { label: 'Email', value: email || undefined }] }]} /> },
+        ]}
+      />
+    </>
+  );
+}
+
+export function TabVertikal() {
+  const isi = (t: string) => <p className="u-field-description">{t}</p>;
+  return (
+    <Tabs
+      orientation="vertical"
+      aria-label="Jenis riwayat"
+      items={[
+        { value: 'jabatan', label: 'Jabatan akademik', icon: <Briefcase />, count: 2, group: 'Karier', content: isi('Lektor · TMT 1 Mar 2024') },
+        { value: 'pangkat', label: 'Pangkat/golongan', icon: <Medal />, count: 0, group: 'Karier', content: isi('Belum ada riwayat pangkat.') },
+        { value: 'pendidikan', label: 'Pendidikan formal', icon: <GraduationCap />, count: 3, group: 'Pendidikan & kompetensi', content: isi('S1, S2, S3') },
+        { value: 'sertifikasi', label: 'Sertifikasi', icon: <Award />, count: 1, group: 'Pendidikan & kompetensi', content: isi('Serdos 2019') },
+        { value: 'keluarga', label: 'Keluarga', icon: <Users />, count: 4, group: 'Pribadi', content: isi('Pasangan dan 3 anak') },
       ]}
     />
   );
