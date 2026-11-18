@@ -89,3 +89,4 @@ export * from './kelola-pejabat';
 export * from './struktur-unit';
 export * from './ormawa';
 export * from './foto-bagan';
+export * from './pemutakhiran';
