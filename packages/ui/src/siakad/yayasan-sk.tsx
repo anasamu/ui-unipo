@@ -4,12 +4,15 @@ import { History, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Select } from '../components/select';
 import { DatePicker } from '../components/calendar';
 import { Field, Input, Switch } from '../components/forms';
-import { Alert, Empty } from '../components/display';
+import { Alert, Avatar, Empty } from '../components/display';
 import { Badge, Button, Spinner } from '../components/actions';
-import { ConfirmDialog, Dialog, useToast } from '../components/overlays';
+import { ConfirmDialog, Dialog, Sheet, useToast } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { formatDate } from '../lib/format';
 import { PilihBerkas } from './pilih-berkas';
+import { useUnggahBerkas } from './berkas';
+import { PilihSK } from './isian-sk';
+import { lupakanFotoBagan, useFotoApi } from './foto-bagan';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 
 /*
@@ -19,14 +22,34 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
  * Ubah: izin sk.atur (Rektorat, Pustikom) atau administrator. Semua perubahan tercatat di riwayat.
  */
 
+export type JabatanPengurusYayasan = 'pembina' | 'ketua' | 'wakil_ketua' | 'sekretaris' | 'bendahara' | 'anggota' | 'pengawas';
+
 export interface PengurusYayasan {
   id?: number;
-  jabatan: 'ketua' | 'sekretaris' | 'bendahara' | 'anggota';
+  jabatan: JabatanPengurusYayasan;
+  jabatan_label?: string;
+  /** Organ Yayasan (UU Yayasan): pembina, pengurus, pengawas. */
+  organ?: 'pembina' | 'pengurus' | 'pengawas';
   nama: string;
+  /** Nama dengan gelar depan/belakang. */
+  nama_lengkap?: string;
+  gelar_depan?: string | null;
+  gelar_belakang?: string | null;
+  nik?: string | null;
+  telepon?: string | null;
+  email?: string | null;
+  foto_berkas_id?: string | null;
   mulai: string | null;
   selesai: string | null;
   pejabat_id: number | null;
+  sk_id?: string | null;
+  akta_nomor?: string | null;
+  catatan?: string | null;
+  /** Status aktif yang diatur (bukan dihitung dari masa). */
+  status_aktif?: boolean;
+  /** Menjabat hari ini (status aktif dan dalam masa). */
   aktif?: boolean;
+  urut?: number;
 }
 
 export interface ProfilYayasanData {
@@ -66,7 +89,10 @@ export interface KewenanganSKBaris {
 
 const isoKeTanggal = (s?: string | null) => (s ? new Date(`${s.slice(0, 10)}T00:00:00`) : null);
 const tanggalKeIso = (d: Date | null) => (d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : null);
-const LABEL_PENGURUS: Record<PengurusYayasan['jabatan'], string> = { ketua: 'Ketua', sekretaris: 'Sekretaris', bendahara: 'Bendahara', anggota: 'Anggota' };
+const LABEL_PENGURUS: Record<JabatanPengurusYayasan, string> = {
+  pembina: 'Pembina', ketua: 'Ketua', wakil_ketua: 'Wakil Ketua', sekretaris: 'Sekretaris', bendahara: 'Bendahara', anggota: 'Anggota Pengurus', pengawas: 'Pengawas',
+};
+const ORGAN: Record<JabatanPengurusYayasan, string> = { pembina: 'Pembina', ketua: 'Pengurus', wakil_ketua: 'Pengurus', sekretaris: 'Pengurus', bendahara: 'Pengurus', anggota: 'Pengurus', pengawas: 'Pengawas' };
 
 export function useProfilYayasan() {
   return useSiakadQuery<ProfilYayasanData>(['sk', 'yayasan'], (s, signal) => s.request<ProfilYayasanData>({ method: 'GET', path: '/v1/sk/yayasan' }, { signal }), { staleTime: 60_000 });
@@ -125,7 +151,6 @@ export function ProfilYayasan({ className }: { className?: string }) {
       <DatePicker value={isoKeTanggal(isi[k])} onValueChange={(d) => set(k, tanggalKeIso(d))} disabled={!boleh} />
     </Field>
   );
-  const ubahPengurus = (i: number, patch: Partial<PengurusYayasan>) => set('pengurus', isi.pengurus.map((p, j) => (j === i ? { ...p, ...patch } : p)));
   const simpan = async () => {
     setKirim(true);
     setGalat({});
@@ -137,7 +162,6 @@ export function ProfilYayasan({ className }: { className?: string }) {
           ...Object.fromEntries(
             (['nama_resmi', 'singkatan', 'akta_nomor', 'akta_tanggal', 'notaris', 'sk_kemenkumham_nomor', 'sk_kemenkumham_tanggal', 'alamat', 'telepon', 'email', 'situs', 'logo_berkas_id'] as const).map((k) => [k, isi[k] || null]),
           ),
-          pengurus: isi.pengurus.map(({ jabatan, nama, mulai, selesai, pejabat_id }) => ({ jabatan, nama, mulai, selesai, pejabat_id })),
         },
       });
       invalidateSiakad('sk');
@@ -179,35 +203,8 @@ export function ProfilYayasan({ className }: { className?: string }) {
         <Field label="Logo" optional>
           <PilihBerkas value={isi.logo_berkas_id} onValueChange={(v) => set('logo_berkas_id', v ?? null)} accept=".png,.jpg,.jpeg,.svg" />
         </Field>
-        <h3 className="u-sk-subjudul">Pengurus</h3>
-        {isi.pengurus.length === 0 && <p className="u-sk-kosong">Belum ada pengurus. Tambahkan minimal Ketua Yayasan (penandatangan SK pengangkatan Rektor).</p>}
-        {isi.pengurus.map((p, i) => (
-          <div key={i} className="u-yayasan-pengurus">
-            <Select<PengurusYayasan['jabatan']>
-              value={p.jabatan}
-              onValueChange={(v) => v && ubahPengurus(i, { jabatan: v })}
-              options={(Object.keys(LABEL_PENGURUS) as PengurusYayasan['jabatan'][]).map((k) => ({ value: k, label: LABEL_PENGURUS[k] }))}
-              aria-label="Jabatan pengurus"
-              disabled={!boleh}
-            />
-            <Input value={p.nama} onChange={(e) => ubahPengurus(i, { nama: e.target.value })} placeholder="Nama lengkap dengan gelar" aria-label="Nama pengurus" disabled={!boleh} />
-            <DatePicker value={isoKeTanggal(p.mulai)} onValueChange={(d) => ubahPengurus(i, { mulai: tanggalKeIso(d) })} placeholder="Mulai" disabled={!boleh} />
-            <DatePicker value={isoKeTanggal(p.selesai)} onValueChange={(d) => ubahPengurus(i, { selesai: tanggalKeIso(d) })} placeholder="Selesai" disabled={!boleh} />
-            {p.aktif === false && <Badge variant="neutral">Tidak menjabat</Badge>}
-            {boleh && (
-              <Button variant="ghost" size="sm" iconOnly aria-label={`Hapus ${p.nama}`} onClick={() => set('pengurus', isi.pengurus.filter((_, j) => j !== i))}>
-                <Trash2 />
-              </Button>
-            )}
-          </div>
-        ))}
-        {boleh && (
-          <div>
-            <Button variant="outline" size="sm" onClick={() => set('pengurus', [...isi.pengurus, { jabatan: isi.pengurus.some((p) => p.jabatan === 'ketua') ? 'anggota' : 'ketua', nama: '', mulai: null, selesai: null, pejabat_id: null }])}>
-              <Plus /> Tambah pengurus
-            </Button>
-          </div>
-        )}
+        <h3 className="u-sk-subjudul">Pembina, Pengurus, dan Pengawas</h3>
+        <DaftarPengurusYayasan pengurus={isi.pengurus} boleh={boleh} />
         {isi.ketua && (
           <p className="u-pilih-sk-saran">
             Penandatangan bawaan SK pengangkatan Rektor: {isi.ketua.jabatan}, {isi.ketua.nama}.
@@ -375,5 +372,215 @@ export function KewenanganSK({ className }: { className?: string }) {
         </Dialog>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------- pengurus Yayasan (kartu + panel samping)
+
+/** Potong gambar ke rasio 3:4 (tengah), perkecil ke 600x800, JPEG; menolak berkas > 2 MB atau bukan JPG/PNG. */
+async function pasFoto34(file: File): Promise<File> {
+  if (!/^image\/(jpeg|png)$/.test(file.type)) throw new Error('Pas foto harus JPG atau PNG.');
+  if (file.size > 2 * 1024 * 1024) throw new Error('Pas foto maksimal 2 MB.');
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = () => rej(new Error('Gambar tidak bisa dibaca.'));
+      i.src = url;
+    });
+    const rasio = 3 / 4;
+    let sw = img.naturalWidth;
+    let sh = img.naturalHeight;
+    let sx = 0;
+    let sy = 0;
+    if (sw / sh > rasio) { sw = Math.round(sh * rasio); sx = Math.round((img.naturalWidth - sw) / 2); } else { sh = Math.round(sw / rasio); sy = Math.round((img.naturalHeight - sh) / 4); }
+    const c = document.createElement('canvas');
+    c.width = 600;
+    c.height = 800;
+    const ctx = c.getContext('2d')!;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    const blob = await new Promise<Blob | null>((res) => c.toBlob(res, 'image/jpeg', 0.88));
+    if (!blob) throw new Error('Pas foto gagal diproses.');
+    return new File([blob], (file.name.replace(/\.[^.]+$/, '') || 'pas-foto') + '.jpg', { type: 'image/jpeg' });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function FotoPengurus({ p, besar }: { p: PengurusYayasan; besar?: boolean }) {
+  const foto = useFotoApi(p.id && p.foto_berkas_id ? `/v1/induk/organisasi/foto/pengurus/${p.id}?v=${p.foto_berkas_id.slice(0, 8)}` : null);
+  return (
+    <span className="u-yys-foto" data-besar={besar ? '' : undefined}>
+      {foto ? <img src={foto} alt={`Pas foto ${p.nama_lengkap ?? p.nama}`} /> : <Avatar name={p.nama} size={besar ? 'lg' : 'md'} />}
+    </span>
+  );
+}
+
+/** Daftar Pembina, Pengurus, Pengawas Yayasan sebagai kartu berpas foto; tambah/ubah lewat panel samping. */
+export function DaftarPengurusYayasan({ pengurus, boleh }: { pengurus: PengurusYayasan[]; boleh: boolean }) {
+  const [panel, setPanel] = React.useState<PengurusYayasan | 'baru' | null>(null);
+  const kelompok = (['pembina', 'pengurus', 'pengawas'] as const).map((o) => ({ o, isi: pengurus.filter((p) => (p.organ ?? 'pengurus') === o) }));
+  return (
+    <div className="u-yys">
+      {pengurus.length === 0 && <p className="u-sk-kosong">Belum ada pengurus. Tambahkan minimal Ketua Yayasan (penandatangan SK pengangkatan Rektor).</p>}
+      {kelompok.filter((k) => k.isi.length).map((k) => (
+        <section key={k.o}>
+          <h4>{k.o === 'pembina' ? 'Pembina' : k.o === 'pengawas' ? 'Pengawas' : 'Pengurus'}</h4>
+          <ul className="u-yys-kartu">
+            {k.isi.map((p) => (
+              <li key={p.id} data-nonaktif={p.aktif === false ? '' : undefined}>
+                <button type="button" onClick={() => boleh && setPanel(p)} disabled={!boleh} aria-label={`Ubah ${p.nama_lengkap ?? p.nama}`}>
+                  <FotoPengurus p={p} />
+                  <span>
+                    <b>{p.nama_lengkap ?? p.nama}</b>
+                    <small>{p.jabatan_label ?? LABEL_PENGURUS[p.jabatan]}</small>
+                    <small>{p.mulai ? formatDate(p.mulai) : '…'} – {p.selesai ? formatDate(p.selesai) : 'sekarang'}</small>
+                    {p.aktif === false && <Badge variant="neutral">Tidak menjabat</Badge>}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      {boleh && <div><Button variant="outline" size="sm" onClick={() => setPanel('baru')}><Plus /> Tambah pengurus</Button></div>}
+      {panel && <PanelPengurusYayasan awal={panel === 'baru' ? null : panel} tutup={() => setPanel(null)} />}
+    </div>
+  );
+}
+
+const ISIAN_KOSONG = { jabatan: 'ketua' as JabatanPengurusYayasan, nama: '', gelar_depan: '', gelar_belakang: '', nik: '', telepon: '', email: '', foto_berkas_id: null as string | null, mulai: null as string | null, selesai: null as string | null, sk_id: null as string | null, akta_nomor: '', catatan: '', aktif: true };
+
+/** Panel samping tambah/ubah pengurus Yayasan: pas foto 3:4, nama + gelar, jabatan (organ), NIK, kontak, masa, dasar SK/akta, status. */
+function PanelPengurusYayasan({ awal, tutup }: { awal: PengurusYayasan | null; tutup: () => void }) {
+  const siakad = useSiakad();
+  const toast = useToast();
+  const unggah = useUnggahBerkas({ kategori: 'pas_foto', modul: 'sk', keterangan: 'Pas foto pengurus Yayasan' });
+  const [f, setF] = React.useState(() => (awal ? {
+    jabatan: awal.jabatan, nama: awal.nama, gelar_depan: awal.gelar_depan ?? '', gelar_belakang: awal.gelar_belakang ?? '', nik: awal.nik ?? '', telepon: awal.telepon ?? '', email: awal.email ?? '',
+    foto_berkas_id: awal.foto_berkas_id ?? null, mulai: awal.mulai, selesai: awal.selesai, sk_id: awal.sk_id ?? null, akta_nomor: awal.akta_nomor ?? '', catatan: awal.catatan ?? '', aktif: awal.status_aktif !== false,
+  } : { ...ISIAN_KOSONG }));
+  const [pratinjau, setPratinjau] = React.useState<string | null>(null);
+  const fotoLama = useFotoApi(awal?.id && awal.foto_berkas_id ? `/v1/induk/organisasi/foto/pengurus/${awal.id}?v=${awal.foto_berkas_id.slice(0, 8)}` : null);
+  const [galat, setGalat] = React.useState<Record<string, string>>({});
+  const [sibuk, setSibuk] = React.useState<null | 'foto' | 'simpan' | 'hapus'>(null);
+  const [hapus, setHapus] = React.useState(false);
+  const masuk = React.useRef<HTMLInputElement>(null);
+  const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
+  const pilihFoto = async (file?: File | null) => {
+    if (!file) return;
+    setGalat((g) => ({ ...g, foto_berkas_id: '' }));
+    setSibuk('foto');
+    try {
+      const kecil = await pasFoto34(file);
+      setPratinjau(URL.createObjectURL(kecil));
+      const b = await unggah(kecil);
+      set('foto_berkas_id', b.id);
+    } catch (e) {
+      setGalat((g) => ({ ...g, foto_berkas_id: e instanceof Error ? e.message : pesanGalat(e) }));
+    } finally {
+      setSibuk(null);
+    }
+  };
+  const simpan = async () => {
+    setSibuk('simpan');
+    setGalat({});
+    try {
+      const body = { ...f, nik: f.nik || null, gelar_depan: f.gelar_depan || null, gelar_belakang: f.gelar_belakang || null, telepon: f.telepon || null, email: f.email || null, akta_nomor: f.akta_nomor || null, catatan: f.catatan || null };
+      await siakad.request({ method: 'POST', path: awal?.id ? `/v1/sk/yayasan/pengurus/${awal.id}` : '/v1/sk/yayasan/pengurus', body });
+      if (awal?.id) lupakanFotoBagan();
+      invalidateSiakad('sk');
+      invalidateSiakad('organisasi');
+      toast.add({ title: awal ? 'Pengurus diperbarui' : 'Pengurus ditambahkan', type: 'success' });
+      tutup();
+    } catch (e) {
+      const d = (e as { details?: Record<string, string> })?.details;
+      if (d && typeof d === 'object') setGalat(d);
+      toast.add({ title: 'Belum tersimpan', description: pesanGalat(e), type: 'error' });
+    } finally {
+      setSibuk(null);
+    }
+  };
+  const aksi = async (jenis: 'akhiri' | 'hapus') => {
+    if (!awal?.id) return;
+    setSibuk(jenis === 'hapus' ? 'hapus' : 'simpan');
+    try {
+      await siakad.request({ method: 'POST', path: `/v1/sk/yayasan/pengurus/${awal.id}/${jenis}`, body: {} });
+      invalidateSiakad('sk');
+      toast.add({ title: jenis === 'hapus' ? 'Pengurus dihapus' : 'Masa pengurus diakhiri hari ini', type: 'success' });
+      tutup();
+    } catch (e) {
+      toast.add({ title: 'Gagal', description: pesanGalat(e), type: 'error' });
+    } finally {
+      setSibuk(null);
+    }
+  };
+  const foto = pratinjau ?? fotoLama;
+  return (
+    <Sheet
+      open
+      onOpenChange={(o) => !o && tutup()}
+      title={awal ? `Ubah ${LABEL_PENGURUS[awal.jabatan].toLowerCase()} Yayasan` : 'Tambah pengurus Yayasan'}
+      description="Organ Yayasan (UU Yayasan): Pembina, Pengurus (Ketua, Wakil Ketua, Sekretaris, Bendahara, Anggota), dan Pengawas. Pas foto tampil di bagan organisasi."
+      size="lg"
+      footer={
+        <div className="u-yys-kaki">
+          {awal?.id ? (
+            <span>
+              <Button variant="outline" size="sm" onClick={() => void aksi('akhiri')} disabled={!!sibuk}>Akhiri hari ini</Button>
+              <Button variant="destructive-soft" size="sm" onClick={() => setHapus(true)} disabled={!!sibuk}><Trash2 />Hapus</Button>
+            </span>
+          ) : <span />}
+          <span>
+            <Button variant="outline" onClick={tutup}>Batal</Button>
+            <Button loading={sibuk === 'simpan'} disabled={!f.nama.trim() || sibuk === 'foto'} onClick={() => void simpan()}>{awal ? 'Simpan perubahan' : 'Tambah pengurus'}</Button>
+          </span>
+        </div>
+      }
+    >
+      <div className="u-yys-form">
+        <div className="u-yys-pasfoto">
+          <span className="u-yys-foto" data-besar="">{foto ? <img src={foto} alt="Pratinjau pas foto" /> : <Avatar name={f.nama || '?'} size="lg" />}</span>
+          <div>
+            <b>Pas foto</b>
+            <small>JPG/PNG maks 2 MB; dipotong otomatis ke 3:4 (tengah). Gunakan latar polos.</small>
+            <span>
+              <Button size="sm" variant="outline" loading={sibuk === 'foto'} onClick={() => masuk.current?.click()}>{foto ? 'Ganti foto' : 'Unggah pas foto'}</Button>
+              {f.foto_berkas_id && <Button size="sm" variant="ghost" onClick={() => { set('foto_berkas_id', null); setPratinjau(null); }}>Hapus foto</Button>}
+            </span>
+            {galat.foto_berkas_id && <em role="alert">{galat.foto_berkas_id}</em>}
+            <input ref={masuk} type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" hidden onChange={(e) => { void pilihFoto(e.target.files?.[0]); e.target.value = ''; }} />
+          </div>
+        </div>
+        <Field label="Jabatan" required error={galat.jabatan}>
+          <Select<JabatanPengurusYayasan> value={f.jabatan} onValueChange={(v) => v && set('jabatan', v)}
+            options={(Object.keys(LABEL_PENGURUS) as JabatanPengurusYayasan[]).map((k) => ({ value: k, label: LABEL_PENGURUS[k], group: ORGAN[k] }))} />
+        </Field>
+        <div className="u-yys-tiga">
+          <Field label="Gelar depan" optional><Input value={f.gelar_depan} onChange={(e) => set('gelar_depan', e.target.value)} placeholder="Dr., Prof., H." /></Field>
+          <Field label="Nama lengkap" required error={galat.nama}><Input value={f.nama} onChange={(e) => set('nama', e.target.value)} /></Field>
+          <Field label="Gelar belakang" optional><Input value={f.gelar_belakang} onChange={(e) => set('gelar_belakang', e.target.value)} placeholder="S.H., M.H." /></Field>
+        </div>
+        <div className="u-yys-tiga">
+          <Field label="NIK" optional error={galat.nik}><Input value={f.nik} onChange={(e) => set('nik', e.target.value.replace(/\D/g, '').slice(0, 16))} inputMode="numeric" /></Field>
+          <Field label="Telepon" optional><Input value={f.telepon} onChange={(e) => set('telepon', e.target.value)} /></Field>
+          <Field label="Email" optional error={galat.email}><Input type="email" value={f.email} onChange={(e) => set('email', e.target.value)} /></Field>
+        </div>
+        <div className="u-yys-dua">
+          <Field label="Mulai menjabat" optional error={galat.mulai}><DatePicker value={isoKeTanggal(f.mulai)} onValueChange={(d) => set('mulai', tanggalKeIso(d))} /></Field>
+          <Field label="Selesai" optional error={galat.selesai}><DatePicker value={isoKeTanggal(f.selesai)} onValueChange={(d) => set('selesai', tanggalKeIso(d))} placeholder="Belum ditentukan" /></Field>
+        </div>
+        <PilihSK value={f.sk_id} onValueChange={(v) => set('sk_id', v)} label="Dasar pengangkatan (SK)" error={galat.sk_id} description="Pilih SK/keputusan Pembina dari registri SK, atau isi nomor akta di bawah." />
+        <Field label="Nomor akta" optional><Input value={f.akta_nomor} onChange={(e) => set('akta_nomor', e.target.value)} placeholder="Akta notaris pengangkatan pengurus" /></Field>
+        <Field label="Catatan" optional><Input value={f.catatan} onChange={(e) => set('catatan', e.target.value)} /></Field>
+        <label className="u-yys-saklar"><Switch checked={f.aktif} onCheckedChange={(v) => set('aktif', !!v)} />Status aktif</label>
+      </div>
+      {hapus && (
+        <ConfirmDialog open onOpenChange={(o) => !o && setHapus(false)} title={`Hapus ${f.nama}?`} description="Hanya untuk salah input. Pergantian pengurus pakai Akhiri supaya riwayatnya tetap ada." confirmLabel="Hapus pengurus" onConfirm={() => void aksi('hapus')} />
+      )}
+    </Sheet>
   );
 }

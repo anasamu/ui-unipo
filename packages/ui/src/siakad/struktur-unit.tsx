@@ -8,6 +8,7 @@ import { DataTable, type DataColumn } from '../components/data-table';
 import { BaganOrganisasi, type UnitBagan } from '../components/bagan-organisasi';
 import { pesanGalat, useSiakadQuery } from './provider';
 import { useLapisanOrmawa } from './ormawa';
+import { fotoRefPejabat, useFotoBagan } from './foto-bagan';
 
 // ================================================================ Struktur organisasi unit (lihat saja)
 
@@ -23,7 +24,7 @@ import { useLapisanOrmawa } from './ormawa';
  *   <StrukturUnit aplikasi="baak" />
  */
 
-interface PejabatRingkas { id: number | null; nama: string; plt: boolean; plh: boolean; mulai?: string | null; selesai?: string | null; idkp?: string | null }
+interface PejabatRingkas { id: number | null; nama: string; plt: boolean; plh: boolean; mulai?: string | null; selesai?: string | null; idkp?: string | null; ada_foto?: boolean; pengurus_id?: number }
 
 interface UnitData {
   id: number;
@@ -108,10 +109,11 @@ export function StrukturUnit({ aplikasi, judul, tinggiBagan = 620 }: StrukturUni
     garis: u.hubungan ?? (u.koordinasi ? 'koordinasi' : 'lini'),
     aktif: u.aktif,
     bingkai: u.jenis === 'kampus' ? { label: `Kampus pengembangan · ${u.nama_kampus ?? u.nama}` } : null,
-    jabatan: u.jabatan.map((j) => ({ jabatan: j.jabatan, nama: j.pejabat?.nama ?? null, status: j.pejabat?.plt ? 'plt' : j.pejabat?.plh ? 'plh' : null })),
+    jabatan: u.jabatan.map((j) => ({ jabatan: j.jabatan, nama: j.pejabat?.nama ?? null, status: j.pejabat?.plt ? 'plt' : j.pejabat?.plh ? 'plh' : null, fotoRef: fotoRefPejabat(j.pejabat) })),
     staf: (u.tendik ?? []).map((t) => ({ nama: t.nama, tugas: t.tugas })),
   })), [d]);
 
+  const baganFoto = useFotoBagan(bagan);
   if (q.loading && !d) return <Skeleton style={{ height: 480, borderRadius: 'var(--u-radius-xl)' }} />;
   if (q.error || !d) return <Alert variant="warning">{q.error ? pesanGalat(q.error) : 'Struktur organisasi belum bisa dimuat.'}</Alert>;
 
@@ -162,7 +164,7 @@ export function StrukturUnit({ aplikasi, judul, tinggiBagan = 620 }: StrukturUni
         ]}
       />
       {tab === 'bagan' && (
-        <BaganOrganisasi data={bagan} lapisan={ormawa ? [ormawa] : undefined} akar={String(d.akar.id)} rinci buka={4} tinggi={tinggiBagan} judulBerkas={judul ?? `Struktur ${d.akar.nama}`} subjudul={`${bagan.length} unit`} namaBerkas={`struktur-${d.akar.kode.toLowerCase()}`} gantiRinci />
+        <BaganOrganisasi data={baganFoto} mode={aplikasi === 'dashboard' ? 'ringkas' : 'rinci'} lapisan={ormawa ? [ormawa] : undefined} akar={String(d.akar.id)} rinci buka={4} tinggi={tinggiBagan} judulBerkas={judul ?? `Struktur ${d.akar.nama}`} subjudul={`${bagan.length} unit`} namaBerkas={`struktur-${d.akar.kode.toLowerCase()}`} gantiRinci />
       )}
       {tab === 'pejabat' && (
         <DataTable<PejabatData> columns={kolom} rows={d.pejabat} rowKey={(p) => String(p.id)} defaultDensity="compact" defaultSort={{ key: 'jabatan', dir: 'asc' }} exportCsv={`pejabat-${d.akar.kode.toLowerCase()}`}
