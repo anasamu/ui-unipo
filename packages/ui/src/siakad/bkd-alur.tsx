@@ -19,6 +19,7 @@ import { PilihTahunAkademik } from './cari';
 import { PilihBerkas } from './pilih-berkas';
 import { PilihEntitas } from './pilih';
 import { AlurPemeriksa, LabelPemeriksa, type TahapPemeriksa } from './pemeriksa';
+import { BannerPeriodeTerkunci, usePeriodeTerkunci } from './kunci-periode';
 import { DaftarKegiatanBkd, KesimpulanBkd, RingkasanBebanBkd, SyaratBkd, TahapBkd, sksBkd, type BidangBkd, type KegiatanBkd, type SyaratBkdItem } from './bkd';
 
 /*
@@ -255,9 +256,7 @@ export function RuangBkdDosen({ className }: { className?: string }) {
                   {p.nama_tahun ?? p.tahun_id} · aturan {p.aturan_nama ?? '-'} v{p.aturan_versi ?? '-'} · rencana sampai {tglPendek(p.rencana_selesai)} · kirim sampai {tglPendek(p.kirim_selesai ?? p.batas_pengisian)}
                 </p>
               </div>
-              <Button onClick={() => setSusun(p.id)} disabled={!!d.dibebaskan}>
-                <FilePlus2 /> Susun rencana BKD
-              </Button>
+              <TombolSusunBkd tahunId={p.tahun_id} prodi={d.pegawai?.kode_prodi ?? null} disabled={!!d.dibebaskan} onClick={() => setSusun(p.id)} />
             </div>
             {d.dibebaskan ? (
               <Alert variant="info" title={`Anda dibebaskan dari BKD: ${d.dibebaskan.nama}`}>
@@ -286,6 +285,16 @@ export function RuangBkdDosen({ className }: { className?: string }) {
       ) : null}
       {susun !== null ? <PanelSusunRencanaBkd periode={d.periode} awal={susun} onOpenChange={(o) => !o && setSusun(null)} onSelesai={(id) => setPilih(id)} /> : null}
     </div>
+  );
+}
+
+/** Tombol mulai rencana; nonaktif bila semester periode ditutup (kunci periode akademik, fitur bkd). */
+function TombolSusunBkd({ tahunId, prodi, disabled, onClick }: { tahunId: string | null; prodi: string | null; disabled?: boolean; onClick: () => void }) {
+  const k = usePeriodeTerkunci(tahunId, { fitur: 'bkd', prodi });
+  return (
+    <Button onClick={onClick} disabled={disabled || k.terkunci} title={k.terkunci ? k.pesan : undefined}>
+      <FilePlus2 /> Susun rencana BKD
+    </Button>
   );
 }
 
@@ -381,11 +390,15 @@ export function LaporanBkd({ id, ringkas = false, className }: { id: number | st
   const [hapus, setHapus] = React.useState<LaporanBkdData['item'][number] | null>(null);
   const [panel, setPanel] = React.useState<'kirim' | 'nilai' | 'ketahui' | 'kembalikan' | 'asesor' | 'tetapkan' | 'tindak' | 'impor' | null>(null);
   const [sibuk, setSibuk] = React.useState(false);
+  // Kunci periode akademik (BAAK): semester yang ditutup hanya bisa dilihat kecuali dibuka kembali untuk fitur bkd.
+  const kunci = usePeriodeTerkunci(lap.data?.periode.tahun_id ?? null, { fitur: 'bkd', prodi: lap.data?.pegawai.kode_prodi ?? null });
   if (lap.loading && !lap.data) return <Skeleton style={{ height: 420 }} />;
   if (lap.error || !lap.data) return <Alert variant="danger" title="Laporan BKD belum bisa dimuat">{pesanGalat(lap.error)}</Alert>;
   const L = lap.data;
   const h = L.hasil;
-  const b = L.bisa;
+  const b: LaporanBkdData['bisa'] = kunci.terkunci
+    ? { ...L.bisa, ubah_isi: false, impor: false, fase: false, kirim: false, nilai: false, kembalikan: false, mengetahui: [], tetapkan: false, atur_asesor: false, tindak_lanjut: false }
+    : L.bisa;
   const kat = Object.fromEntries((L.aturan?.kategori ?? []).map((k) => [k.kode, k.nama]));
   const jadwal = L.bkd.jadwal;
   const fase = async (f: 'rencana' | 'pelaksanaan') => {
@@ -476,6 +489,7 @@ export function LaporanBkd({ id, ringkas = false, className }: { id: number | st
           </div>
         </CardContent>
       </Card>
+      <BannerPeriodeTerkunci periode={L.periode.tahun_id} fitur="bkd" prodi={L.pegawai.kode_prodi} />
       {L.status === 'dikembalikan' && L.catatan_penilai ? (
         <Alert variant="warning" title="Laporan dikembalikan untuk diperbaiki">
           {L.catatan_penilai}
