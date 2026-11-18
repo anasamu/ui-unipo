@@ -40,6 +40,7 @@ import type { SelectOption } from '../components/select';
 import { GalatApi } from './galat';
 import { PilihNomorSK } from './isian-sk';
 import { PilihBerkas } from './pilih-berkas';
+import { PilihUnit } from './pilih-unit';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 
 /*
@@ -474,13 +475,6 @@ export function BatangKomponenBiaya({ hasil, className }: { hasil: HasilBagi | n
   );
 }
 
-function opsiUnit(ref: ReferensiBiaya | undefined, jenis?: string[]): SelectOption<string>[] {
-  const nama: Record<string, string> = { universitas: 'Universitas', fakultas: 'Fakultas', prodi: 'Program studi' };
-  return (ref?.unit ?? [])
-    .filter((u) => !jenis || jenis.includes(u.jenis))
-    .map((u) => ({ value: String(u.id), label: u.nama, description: u.singkatan ?? undefined, group: nama[u.jenis] ?? 'Unit lain' }));
-}
-
 // ================================================================ Formulir aturan
 type IsiKomponen = {
   nama: string;
@@ -689,7 +683,7 @@ export function IsianKomponenBiaya({
               </Field>
               {k.penerima === 'unit' && (
                 <Field label="Unit" required error={galat?.[`komponen.${i}.unit_id`]}>
-                  <Pilihan options={opsiUnit(referensi)} value={k.unit_id || null} tampilan="cari" placeholder="Pilih unit" onValueChange={(v) => ubah(i, { unit_id: v ?? '' })} />
+                  <PilihUnit data={referensi?.unit} memuat={!referensi} value={k.unit_id || null} placeholder="Pilih unit" onValueChange={(v) => ubah(i, { unit_id: v == null ? '' : String(v) })} />
                 </Field>
               )}
               {k.penerima === 'jabatan' && (
@@ -890,21 +884,22 @@ export function FormAturanBiaya({ aturan, trigger, open, onOpenChange, onTersimp
           <Pilihan options={jenisBiaya} value={isi.kode_biaya || null} tampilan="cari" placeholder="Pilih jenis biaya" onValueChange={(v) => set('kode_biaya', v ?? '')} />
         </Field>
         <Field label="Berlaku untuk" optional description="Kosong = seluruh universitas. Aturan unit yang lebih khusus didahulukan.">
-          <Pilihan
-            options={opsiUnit(ref.data, ['universitas', 'fakultas', 'prodi'])}
+          <PilihUnit
+            data={ref.data?.unit}
+            memuat={ref.loading}
+            jenis={['universitas', 'fakultas', 'prodi']}
             value={isi.cakupan_unit_id || null}
-            tampilan="cari"
             placeholder="Seluruh universitas"
-            onValueChange={(v) => set('cakupan_unit_id', v ?? '')}
+            onValueChange={(v) => set('cakupan_unit_id', v == null ? '' : String(v))}
           />
         </Field>
         <Field label="Unit penyelenggara" optional description="Unit yang mengadakan kegiatan, mis. fakultas untuk ujian.">
-          <Pilihan
-            options={opsiUnit(ref.data)}
+          <PilihUnit
+            data={ref.data?.unit}
+            memuat={ref.loading}
             value={isi.penyelenggara_unit_id || null}
-            tampilan="cari"
             placeholder="Sama dengan cakupan"
-            onValueChange={(v) => set('penyelenggara_unit_id', v ?? '')}
+            onValueChange={(v) => set('penyelenggara_unit_id', v == null ? '' : String(v))}
           />
         </Field>
         <Field label="Tarif standar" optional description="Dasar komponen nominal. Kosongkan bila tarif berbeda per mahasiswa (mis. UKT per golongan) dan pakai persen.">
@@ -1023,7 +1018,7 @@ export function LampiranAturanBiaya({ aturan: a }: { aturan: DetailAturanBiaya }
 export function FormLampiranBiaya({ aturanId, trigger, open, onOpenChange }: { aturanId: string; trigger?: React.ReactElement; open?: boolean; onOpenChange?: (o: boolean) => void }) {
   const siakad = useSiakad();
   const toast = useToast();
-  const kosong = { berkas_id: '', jenis: 'sk', nomor: '', tanggal: '', perihal: '' };
+  const kosong = { berkas_id: '', jenis: 'sk', nomor: '', tanggal: '', perihal: '', sk_id: '' };
   const [isi, setIsi] = React.useState(kosong);
   const [galat, setGalat] = React.useState<Record<string, string>>({});
   const [inner, setInner] = React.useState(false);
@@ -1054,7 +1049,8 @@ export function FormLampiranBiaya({ aturanId, trigger, open, onOpenChange }: { a
       labelSimpan="Lampirkan"
       onSimpan={async () => {
         const g: Record<string, string> = {};
-        if (!isi.berkas_id) g.berkas_id = 'Unggah atau pilih berkas.';
+        // SK dari registri sudah berberkas di sana (tidak diunggah ulang).
+        if (!isi.berkas_id && !isi.sk_id) g.berkas_id = 'Unggah atau pilih berkas.';
         if (isi.jenis === 'sk' && !isi.nomor.trim()) g.nomor = 'Nomor SK wajib diisi.';
         setGalat(g);
         if (Object.keys(g).length) return 'Periksa isian yang ditandai.';
@@ -1062,7 +1058,7 @@ export function FormLampiranBiaya({ aturanId, trigger, open, onOpenChange }: { a
           await siakad.request({
             method: 'POST',
             path: `/v1/biaya/aturan/${aturanId}/lampiran`,
-            body: { berkas_id: isi.berkas_id, jenis: isi.jenis, nomor: isi.nomor.trim() || null, tanggal: isi.tanggal || null, perihal: isi.perihal.trim() || null },
+            body: isi.jenis === 'sk' && isi.sk_id ? { sk_id: isi.sk_id, jenis: 'sk', berkas_id: isi.berkas_id || undefined } : { berkas_id: isi.berkas_id, jenis: isi.jenis, nomor: isi.nomor.trim() || null, tanggal: isi.tanggal || null, perihal: isi.perihal.trim() || null },
           });
         } catch (e) {
           const f = (e as { fields?: Record<string, unknown> }).fields;
@@ -1105,6 +1101,7 @@ export function FormLampiranBiaya({ aturanId, trigger, open, onOpenChange }: { a
               value={isi.nomor || null}
               onValueChange={(nomor, sk) => {
                 set('nomor', nomor ?? '');
+                set('sk_id', sk?.id ?? '');
                 if (sk?.tanggal && !isi.tanggal) set('tanggal', sk.tanggal);
                 if (sk?.perihal && !isi.perihal) set('perihal', sk.perihal);
               }}
@@ -1859,6 +1856,7 @@ export function FormPencairanBiaya({
   };
   const sisa = rekap.data?.per_penerima.find((p) => (isi.penerima === 'yayasan' ? p.jenis === 'yayasan' : p.jenis === 'unit' && String(p.unit_id) === isi.unit_id))?.sisa ?? 0;
   const unitPunyaBagian = (rekap.data?.per_penerima ?? []).filter((p) => p.jenis === 'unit');
+  const sisaUnit = new Map(unitPunyaBagian.map((p) => [String(p.unit_id), p.sisa]));
   return (
     <PanelForm
       open={isOpen}
@@ -1916,12 +1914,16 @@ export function FormPencairanBiaya({
         </Field>
         {isi.penerima === 'unit' && (
           <Field label="Unit" required className="u-form-lebar" error={galat.unit_id || undefined}>
-            <Pilihan
-              options={unitPunyaBagian.map((p) => ({ value: String(p.unit_id), label: p.nama, description: `Sisa ${formatRupiah(p.sisa)}` }))}
+            <PilihUnit
+              dataCadangan={unitPunyaBagian.map((p) => ({ id: Number(p.unit_id), nama: p.nama }))}
+              boleh={(u) => sisaUnit.has(String(u.id))}
+              alasan="Unit ini tidak punya bagian di pembayaran ini."
+              sembunyikanTerlarang
+              keterangan={(u) => (sisaUnit.has(String(u.id)) ? `Sisa ${formatRupiah(sisaUnit.get(String(u.id)) ?? 0)}` : null)}
               value={isi.unit_id || null}
-              tampilan="cari"
               placeholder="Pilih unit penerima"
-              onValueChange={(v) => set('unit_id', v ?? '')}
+              invalid={Boolean(galat.unit_id)}
+              onValueChange={(v) => set('unit_id', v == null ? '' : String(v))}
             />
           </Field>
         )}

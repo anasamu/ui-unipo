@@ -2254,3 +2254,9 @@
   display: grid;
   gap: 0.375rem;
 }
+.u-aturan-lencana-baris {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}

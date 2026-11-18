@@ -6,6 +6,7 @@ import type { ControlSize } from '../components/forms';
 import { Avatar } from '../components/display';
 import { Dialog } from '../components/overlays';
 import { useOptionalSiakad } from './provider';
+import { PilihUnit } from './pilih-unit';
 import { BarisProdi, LogoFakultas, judulProdi, namaRapi, type ProdiReferensi } from './prodi';
 
 type Baris = Record<string, unknown>;
@@ -163,6 +164,8 @@ export const SUMBER_ENTITAS = {
   unit: {
     nama: 'unit',
     path: '/v1/induk/unit',
+    // Unit nonaktif (mis. unit bawaan yang tidak ada di kampus ini) tidak ditawarkan; nilai lama tetap terbaca lewat `satu`.
+    query: { aktif: 1 },
     kunci: 'id',
     satu: '/v1/induk/unit/{id}',
     judul: (r) => teks(r.nama),
@@ -257,7 +260,29 @@ export interface TambahEntitas {
  * <PilihEntitas jenis={jenisEntitasDariKolom(kolom.nama, kolom.keterangan) ?? 'pengguna'} ... />
  * ```
  */
-export function PilihEntitas({ jenis, value, defaultValue, onValueChange, query, load, limit = 20, placeholder, name, id, disabled, size, className, tambah, ...rest }: PilihEntitasProps) {
+export function PilihEntitas(props: PilihEntitasProps) {
+  // Unit organisasi memakai pemilih berpohon yang sama di semua aplikasi (kecuali pemuat/tambah sendiri).
+  if (props.jenis === 'unit' && !props.load && !props.tambah) {
+    const { value, defaultValue, onValueChange, placeholder, name, id, disabled, size, className } = props;
+    return (
+      <PilihUnit
+        value={value}
+        defaultValue={defaultValue}
+        onValueChange={(v, u) => onValueChange?.(v == null ? null : String(v), (u as Baris | null) ?? null)}
+        placeholder={placeholder}
+        name={name}
+        id={id}
+        disabled={disabled}
+        size={size}
+        className={className}
+        aria-label={props['aria-label']}
+      />
+    );
+  }
+  return <PilihEntitasDasar {...props} />;
+}
+
+function PilihEntitasDasar({ jenis, value, defaultValue, onValueChange, query, load, limit = 20, placeholder, name, id, disabled, size, className, tambah, ...rest }: PilihEntitasProps) {
   const [dialogTambah, setDialogTambah] = React.useState<{ kata: string; selesai: (b: Baris | null) => void } | null>(null);
   const siakad = useOptionalSiakad();
   const src: SumberEntitas = typeof jenis === 'string' ? SUMBER_ENTITAS[jenis] : jenis;

@@ -19,6 +19,10 @@
 @use 'components/filter';
 @use 'components/data-table';
 @use 'components/pohon';
+@use 'components/pilih-unit';
+@use 'components/bagan-organisasi';
+@use 'components/kelola-pejabat';
+@use 'components/struktur-unit';
 @use 'components/status';
 @use 'components/schedule';
 @use 'components/garis-waktu';
@@ -27,8 +31,10 @@
 @use 'components/wizard';
 @use 'components/formulir';
 @use 'components/aturan';
+@use 'components/aturan-fakultas';
 @use 'components/biaya';
 @use 'components/panitia';
+@use 'components/ormawa';
 @use 'components/charts';
 @use 'components/kurikulum';
 @use 'components/kurikulum-kelola';
@@ -49,6 +55,7 @@
 @use 'components/persuratan';
 @use 'components/persuratan-unit';
 @use 'components/tugas-akhir';
+@use 'components/ujian-ta';
 @use 'components/lppm-pengajuan';
 @use 'components/alur';
 @use 'components/ai';
