@@ -12,6 +12,7 @@ import { PilihBerkas } from './pilih-berkas';
 import { SyaratSaya } from './aturan';
 import { useProdiReferensi, judulProdi } from './prodi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { AlurPemeriksa, LabelPemeriksa, PratinjauPemeriksa, type TahapPemeriksa } from './pemeriksa';
 
 /*
  * Pengajuan mandiri mahasiswa ke unit lain, ujung ke ujung (docs/PRASYARAT.md di SIAKAD):
@@ -45,7 +46,16 @@ interface LampiranPusat {
   ukuran: number;
   created_at?: string;
 }
-type Baris = Record<string, unknown> & { id: number; status: string; created_at?: string; catatan?: string | null; lampiran_wajib?: number; jumlah_lampiran?: number };
+type Baris = Record<string, unknown> & { id: number; status: string; created_at?: string; catatan?: string | null; lampiran_wajib?: number; jumlah_lampiran?: number; pemeriksa?: TahapPemeriksa[] };
+
+/** Kunci katalog alur pemeriksa (GET /v1/pemeriksa/alur/{jenis}) per jenis pengajuan mahasiswa. */
+const JENIS_PEMERIKSA: Record<JenisPengajuanMahasiswa, string> = {
+  status: 'akademik.pengajuan',
+  layanan: 'layanan.permohonan',
+  beasiswa: 'kemahasiswaan.beasiswa',
+  mbkm: 'mbkm.peserta',
+  dispensasi: 'keuangan.dispensasi',
+};
 
 const JENIS_STATUS: Record<string, string> = {
   cuti: 'Cuti akademik',
@@ -424,7 +434,10 @@ function DaftarPengajuan({ jenis, nim }: { jenis: JenisPengajuanMahasiswa; nim: 
                     {r.status === 'perlu_perbaikan' && r.catatan ? ` · ${r.catatan}` : ''}
                   </small>
                 </span>
-                <LencanaStatusPengajuan status={r.status} />
+                <span className="u-pengajuan-lencana">
+                  {/* Tahap berjalan/ditolak: lencana pemeriksa ("Menunggu BAAK") menggantikan status umum. */}
+                  {r.pemeriksa?.some((t) => t.status === 'sedang' || t.status === 'ditolak') ? <LabelPemeriksa pemeriksa={r.pemeriksa} /> : <LencanaStatusPengajuan status={r.status} />}
+                </span>
               </button>
             </li>
           ))}
@@ -506,6 +519,11 @@ function DetailPengajuan({ jenis, id, peta, onClose, onBerubah }: { jenis: Jenis
             </Alert>
           )}
           <DescriptionList items={d.rincian(r, peta)} />
+          {r.pemeriksa && r.pemeriksa.length > 0 && (
+            <Card className="u-pengajuan-kartu">
+              <AlurPemeriksa pemeriksa={r.pemeriksa} judul="Siapa yang memeriksa" />
+            </Card>
+          )}
           <Card className="u-pengajuan-kartu">
             <h3>
               <Paperclip aria-hidden /> Dokumen pendukung
@@ -644,6 +662,7 @@ function FormPengajuan({ jenis, nim, open, onOpenChange, program, onSelesai }: {
           </Card>
         )}
         {(!butuhProgram || terpilih) && <SyaratSaya titik={titik} nim={nim} konteks={konteks} judul="Pemeriksaan syarat" />}
+        <PratinjauPemeriksa jenis={JENIS_PEMERIKSA[jenis]} judul="Pengajuan ini akan diperiksa oleh" />
 
         {jenis === 'status' && (
           <>

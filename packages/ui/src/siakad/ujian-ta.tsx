@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import { AlurPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import {
   CalendarClock,
   CalendarDays,
@@ -123,6 +124,8 @@ export interface UjianTa {
   kode_fak: string;
   judul: string | null;
   pembimbing: Array<{ nidn: string; nama: string }>;
+  /** Alur pemeriksa (docs/PEMERIKSA.md): pembimbing, penjadwalan prodi/fakultas, penetapan SK Dekan. */
+  pemeriksa?: TahapPemeriksa[];
   status: string;
   status_label: string;
   tanggal: string | null;
@@ -563,6 +566,7 @@ export function KartuJadwalUjianTa({ u, aksi }: { u: UjianTa; aksi?: React.React
       {u.alasan && <p className="u-ta-redup">Alasan {u.status === 'ditunda' ? 'ditunda' : 'dibatalkan'}: {u.alasan}</p>}
       {u.catatan_pembimbing && <p className="u-ta-redup">Catatan pembimbing: {u.catatan_pembimbing}</p>}
       {u.catatan_dekan && u.status === 'draf' && <p className="u-ta-redup">Catatan Dekan: {u.catatan_dekan}</p>}
+      {u.pemeriksa && u.pemeriksa.length > 0 && <AlurPemeriksa pemeriksa={u.pemeriksa} ringkas judul="Alur pemeriksaan" />}
       {aksi}
     </Card>
   );
