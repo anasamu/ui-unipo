@@ -91,4 +91,6 @@ export * from './ormawa';
 export * from './foto-bagan';
 export * from './pemutakhiran';
 export * from './pemeriksa';
+export * from './aturan-versi';
+export * from './karier-aturan';
 export * from './aturan-verifikasi';
