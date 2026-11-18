@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import { AlurPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import {
   ArrowRight,
   BellRing,
@@ -131,6 +132,9 @@ export interface PengajuanPemutakhiran {
   diputus_at: string | null;
   created_at: string;
   isian: IsianPengajuanPemutakhiran[];
+  /** Alur pemeriksa (docs/PEMERIKSA.md): unit pemilik data (Biro SDM / BAAK / BAUK) dan petugas yang memutus. */
+  pemeriksa?: TahapPemeriksa[];
+  pemeriksa_label?: string | null;
 }
 
 export const STATUS_PENGAJUAN_PEMUTAKHIRAN: Record<string, { label: string; variant: 'warning' | 'info' | 'success' | 'danger' | 'neutral' }> = {
@@ -591,6 +595,7 @@ function RincianPengajuanPetugas({ pemilik, ringkas, bffApi, onTutup }: { pemili
               {p.alasan}
             </Alert>
           ) : null}
+          {p.pemeriksa?.length ? <AlurPemeriksa pemeriksa={p.pemeriksa} judul="Alur pemeriksaan" /> : null}
           {galat.keputusan ? <Alert variant="danger">{galat.keputusan}</Alert> : null}
           <div className="u-pmk-isian-daftar">
             {p.isian.map((i) => {
