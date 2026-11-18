@@ -163,6 +163,10 @@ export interface Aturan {
   bawaan?: boolean;
   /** Draf yang menunggu SK sebelum bisa diaktifkan. SIAKAD terbaru. */
   menunggu_sk?: boolean;
+  /** Belum ada SK terlampir. */
+  tanpa_sk?: boolean;
+  /** Aturan aktif tanpa SK (aturan bawaan yang aktif otomatis): tampilkan "Belum ada SK, lampirkan". */
+  perlu_lampir_sk?: boolean;
   /** Unit pemilik (aturan bawaan). SIAKAD terbaru. */
   unit?: string | null;
   /** SK terbaru aturan (di daftar). SIAKAD terbaru. */
@@ -447,6 +451,8 @@ export interface FilterAturan {
   /** Unit pemilik aturan bawaan: baak, bauk, pmb, sdm, spmi, lppm, pustikom, fakultas. */
   unit?: string;
   menunggu_sk?: boolean;
+  /** 1 = hanya aturan aktif tanpa SK (aturan bawaan aktif otomatis). */
+  tanpa_sk?: boolean;
   page?: number;
   per_page?: number;
 }
@@ -1002,9 +1008,10 @@ export function KartuAturan({ aturan: a, katalog, onBuka, className }: KartuAtur
         </span>
         {(a.jumlah_sk !== undefined || a.sk) && (
           <span data-kurang={(!a.sk?.nomor && a.jumlah_sk === 0) || undefined}>
-            <FileBadge aria-hidden /> {a.sk?.nomor ? `SK ${a.sk.nomor}` : a.jumlah_sk ? `${a.jumlah_sk} SK` : a.bawaan ? 'Menunggu SK' : 'Belum ada SK'}
+            <FileBadge aria-hidden /> {a.sk?.nomor ? `SK ${a.sk.nomor}` : a.jumlah_sk ? `${a.jumlah_sk} SK` : a.bawaan && a.status !== 'aktif' ? 'Menunggu SK' : 'Belum ada SK'}
           </span>
         )}
+        {a.perlu_lampir_sk && <LencanaLampirSK />}
       </div>
     </Card>
   );
@@ -3207,8 +3214,10 @@ export function LampiranSkAturan({ aturan: a, onBerubah }: { aturan: DetailAtura
   return (
     <div className="u-aturan-lampiran">
       {!sk.length && (
-        <Alert variant={a.status === 'draf' ? 'warning' : 'neutral'} title="Belum ada SK">
-          Aturan hanya bisa diajukan untuk disetujui setelah SK dilampirkan.
+        <Alert variant={a.status === 'draf' || a.status === 'aktif' ? 'warning' : 'neutral'} title={a.status === 'aktif' ? 'Belum ada SK, lampirkan' : 'Belum ada SK'}>
+          {a.status === 'aktif'
+            ? 'Aturan bawaan ini sudah aktif dan ditegakkan, tetapi belum punya dasar hukum. Lampirkan SK dari registri SK (Lampirkan SK di bawah); SK-nya ikut terdaftar di SPMI.'
+            : 'Aturan hanya bisa diajukan untuk disetujui setelah SK dilampirkan.'}
         </Alert>
       )}
       {a.lampiran.length > 0 && (
@@ -4630,7 +4639,12 @@ export function AntreanPersetujuanAturan({ kategori, onBuka, className }: { kate
 }
 /** Antrean telaah SPMI (GET /v1/aturan?antrean=telaah): catatan telaah yang tidak memblokir. Untuk aplikasi SPMI. */
 export function AntreanTelaahAturan({ kategori, onBuka, className }: { kategori?: KategoriAturan; onBuka?: (a: Aturan) => void; className?: string }) {
-  return <AntreanAlurAturan antrean="telaah" kategori={kategori} onBuka={onBuka} className={className} />;
+  return (
+    <>
+      <PengingatSkAturan kategori={kategori} />
+      <AntreanAlurAturan antrean="telaah" kategori={kategori} onBuka={onBuka} className={className} />
+    </>
+  );
 }
 
 function AntreanAlurAturan({ antrean, kategori, onBuka, className }: { antrean: 'persetujuan_saya' | 'telaah'; kategori?: KategoriAturan; onBuka?: (a: Aturan) => void; className?: string }) {
@@ -4768,6 +4782,7 @@ export function AturanBawaanPanel({
   const katalog = useKatalogAturan();
   const d = useDaftarAturan({ bawaan: true, kategori: unit ? undefined : kategori, unit, per_page: 100 });
   const [buka, setBuka] = React.useState<boolean | null>(null);
+  const [lampir, setLampir] = React.useState<string | null>(null);
   if (!d.data) return null;
   const daftar = d.data.filter((a) => a.bawaan !== false && !a.dihapus_at);
   if (!daftar.length) return null;
@@ -4778,12 +4793,16 @@ export function AturanBawaanPanel({
     aktif: daftar.filter((a) => a.status === 'aktif').length,
   };
   const diajukan = daftar.filter((a) => statusTampil(a) === 'diajukan').length;
-  const terbuka = buka ?? r.menunggu_sk > 0;
+  const tanpaSkAktif = daftar.filter((a) => a.perlu_lampir_sk).length;
+  const terbuka = buka ?? (r.menunggu_sk > 0 || tanpaSkAktif > 0);
   const statusBawaan = (a: Aturan) =>
     a.status === 'aktif' ? (
-      <Badge variant="success" dot>
-        Aktif
-      </Badge>
+      <span className="u-aturan-lencana-baris">
+        <Badge variant="success" dot>
+          Aktif
+        </Badge>
+        {a.perlu_lampir_sk ? <LencanaLampirSK /> : null}
+      </span>
     ) : statusTampil(a) === 'diajukan' ? (
       <Badge variant="info" dot>
         Diajukan
@@ -4796,15 +4815,17 @@ export function AturanBawaanPanel({
       <StatusAturanBadge status={statusTampil(a)} />
     );
   return (
-    <section className={cn('u-aturan-bawaan', className)} data-perlu={r.menunggu_sk > 0 || undefined}>
+    <section className={cn('u-aturan-bawaan', className)} data-perlu={r.menunggu_sk > 0 || tanpaSkAktif > 0 || undefined}>
       <button type="button" className="u-aturan-bawaan-kepala" aria-expanded={terbuka} onClick={() => setBuka(!terbuka)}>
         <span className="u-aturan-ikon" data-ukuran="sm" aria-hidden>
           <FileBadge />
         </span>
         <span className="u-aturan-bawaan-judul">
-          <strong>Aturan bawaan (draf, perlu SK)</strong>
+          <strong>Aturan bawaan kampus</strong>
           <span>
-            {r.total} aturan · {r.menunggu_sk} menunggu SK · {diajukan} diajukan · {r.aktif} aktif
+            {r.total} aturan · {r.aktif} aktif{tanpaSkAktif ? ` · ${tanpaSkAktif} belum ada SK` : ''}
+            {r.menunggu_sk ? ` · ${r.menunggu_sk} menunggu SK` : ''}
+            {diajukan ? ` · ${diajukan} diajukan` : ''}
           </span>
         </span>
         <ChevronDown aria-hidden data-buka={terbuka || undefined} />
@@ -4812,8 +4833,8 @@ export function AturanBawaanPanel({
       {terbuka && (
         <>
           <p className="u-aturan-sub">
-            Aturan bawaan disiapkan sistem untuk kebijakan kampus yang umum. Aturan ini belum diperiksa sampai SK-nya dilampirkan dan disetujui. Aturan bawaan tidak bisa dihapus; nonaktifkan atau ubah
-            isinya.
+            Aturan bawaan disiapkan sistem untuk kebijakan kampus yang umum dan sudah aktif (ditegakkan) tanpa menunggu SK. Lampirkan SK dari registri SK sebagai dasar hukumnya; SK-nya ikut
+            terdaftar di SPMI. Aturan bawaan tidak bisa dihapus; nonaktifkan atau ubah isinya.
           </p>
           <ul className="u-aturan-bawaan-daftar">
             {daftar.map((a) => {
@@ -4829,6 +4850,11 @@ export function AturanBawaanPanel({
                   </div>
                   {statusBawaan(a)}
                   <div className="u-aturan-bawaan-aksi">
+                    {a.perlu_lampir_sk && bolehAtur ? (
+                      <Button size="sm" onClick={() => setLampir(a.id)}>
+                        Lampirkan SK
+                      </Button>
+                    ) : null}
                     {tunggu && bolehAtur && onLampirkan ? (
                       <Button size="sm" onClick={() => onLampirkan(a)}>
                         Lampirkan SK & ajukan
@@ -4846,7 +4872,58 @@ export function AturanBawaanPanel({
           </ul>
         </>
       )}
+      {lampir && (
+        <FormLampiranAturan
+          aturanId={lampir}
+          open
+          onOpenChange={(o) => !o && setLampir(null)}
+          onTersimpan={() => {
+            setLampir(null);
+            d.refetch();
+          }}
+        />
+      )}
     </section>
+  );
+}
+
+/** Lencana "Belum ada SK, lampirkan" untuk aturan aktif tanpa SK (aturan bawaan yang aktif otomatis). */
+export function LencanaLampirSK() {
+  return (
+    <Badge variant="warning" dot>
+      Belum ada SK, lampirkan
+    </Badge>
+  );
+}
+
+/**
+ * Pengingat di beranda/antrean (SPMI, Pustikom, aplikasi unit): jumlah aturan bawaan yang aktif tanpa SK dengan tombol
+ * menuju daftar aturan. Diam bila nol atau akun tidak bisa melihat aturan.
+ */
+export function PengingatSkAturan({ unit, kategori, href, onBuka, className }: { unit?: string; kategori?: KategoriAturan; href?: string; onBuka?: () => void; className?: string }) {
+  const d = useDaftarAturan({ tanpa_sk: true, bawaan: true, unit, kategori, per_page: 100 });
+  const n = d.data?.length ?? 0;
+  if (!n) return null;
+  return (
+    <Alert
+      variant="warning"
+      className={className}
+      title={`${n} aturan bawaan aktif belum punya SK`}
+      actions={
+        href ? (
+          <Button size="sm" render={<a href={href} />}>
+            Lampirkan SK
+          </Button>
+        ) : onBuka ? (
+          <Button size="sm" onClick={onBuka}>
+            Lampirkan SK
+          </Button>
+        ) : undefined
+      }
+    >
+      Aturan ini sudah ditegakkan di aplikasi baru. Lampirkan SK dari registri SK sebagai dasar hukumnya: {d.data!.slice(0, 4).map((a) => a.nama).join('; ')}
+      {n > 4 ? `; dan ${n - 4} lainnya` : ''}.
+    </Alert>
   );
 }
 
@@ -4887,7 +4964,7 @@ export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik d
       <div className="u-aturan-modul-kepala">
         <div>
           <h2>{judul}</h2>
-          <p>Syarat, batas waktu, dan batas nilai yang diperiksa SIAKAD di setiap langkah. Aturan berlaku setelah ber-SK dan disetujui.</p>
+          <p>Syarat, batas waktu, dan batas nilai yang diperiksa SIAKAD di setiap langkah. Aturan buatan unit berlaku setelah ber-SK dan disetujui; aturan bawaan kampus sudah aktif dan tinggal dilampiri SK.</p>
         </div>
         {tombolTambah}
       </div>

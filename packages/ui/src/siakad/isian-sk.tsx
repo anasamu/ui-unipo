@@ -199,6 +199,11 @@ export function KartuSK({ sk, aksi, className }: { sk: SKRegistri; aksi?: React.
           <Badge variant={st.variant} size="md">
             {arsip ? 'Dari arsip surat keluar' : st.label}
           </Badge>
+          {!arsip && sk.status === 'terbit' && !sk.diverifikasi_at && (
+            <Badge variant="warning" size="md">
+              Belum diverifikasi
+            </Badge>
+          )}
         </div>
         {sk.perihal && <span className="u-kartu-sk-perihal">{sk.perihal}</span>}
         <dl className="u-kartu-sk-rinci">

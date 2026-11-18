@@ -7,6 +7,7 @@ import { Badge, Button, Spinner } from '../components/actions';
 import { ConfirmDialog, Dialog, Sheet, useToast } from '../components/overlays';
 import { DatePicker } from '../components/calendar';
 import { CariAtauUnggahDokumen } from './cari-dokumen';
+import { KewenanganSK, ProfilYayasan } from './yayasan-sk';
 import { cn } from '../lib/cn';
 import { AjukanPencatatanSK, IsianPenandatangan, KartuSK, STATUS_SK, bodyPenandatangan, type NilaiPenandatangan, type SKRegistri } from './isian-sk';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
@@ -34,6 +35,8 @@ export interface SaringanSK {
   status?: string;
   jenis?: string;
   penerbit?: number | null;
+  /** Antrean verifikasi: SK hasil impor data lama (terbit, belum diverifikasi penerbit). */
+  belum_verifikasi?: boolean;
 }
 
 /** Detail SK registri (GET /v1/sk/{id}): pemakaian, relasi, catatan ganda, hak. */
@@ -45,7 +48,7 @@ export function useSK(id: string | null | undefined) {
 export function useDaftarSK(s: SaringanSK = {}) {
   return useSiakadQuery<SKRegistri[]>(
     ['sk', 'daftar', s],
-    (k, signal) => k.request<SKRegistri[]>({ method: 'GET', path: '/v1/sk', query: { q: s.q || undefined, status: s.status || undefined, jenis: s.jenis || undefined, penerbit: s.penerbit ?? undefined, per_page: 50, arsip: '0' } }, { signal }),
+    (k, signal) => k.request<SKRegistri[]>({ method: 'GET', path: '/v1/sk', query: { q: s.q || undefined, status: s.status || undefined, jenis: s.jenis || undefined, penerbit: s.penerbit ?? undefined, belum_verifikasi: s.belum_verifikasi ? '1' : undefined, per_page: 50, arsip: '0' } }, { signal }),
     { staleTime: 10_000 },
   );
 }
@@ -197,6 +200,19 @@ export function RincianSK({ id, open, onOpenChange, onBuka }: { id: string | nul
             }
           />
           {ubah && <UbahSK sk={sk} open onOpenChange={setUbah} onTersimpan={refetch} />}
+          {sk.boleh.catat && sk.status === 'terbit' && !sk.diverifikasi_at && (
+            <Alert
+              variant="warning"
+              title="SK dari data lama, belum diverifikasi"
+              actions={
+                <Button size="sm" onClick={() => aksi('SK ditandai terverifikasi', `/v1/sk/${sk.id}/verifikasi`, { keputusan: 'terima', catatan: catatan || undefined })}>
+                  <Check /> Tandai terverifikasi
+                </Button>
+              }
+            >
+              Dicatat otomatis oleh sk:rapikan dari data lama. Periksa nomor, tanggal, penandatangan, dan berkasnya (Ubah bila perlu), lalu tandai terverifikasi.
+            </Alert>
+          )}
           {sk.boleh.catat && sk.status === 'draf' && (
             <Alert
               variant="warning"
@@ -303,16 +319,19 @@ export interface KelolaSKProps {
   /** Jenis SK bawaan saat mencatat. */
   jenis?: string;
   className?: string;
+  /** Tombol Kewenangan SK dan Profil Yayasan (tampil untuk pemegang sk.atur). Bawaan true. */
+  tampilPengaturan?: boolean;
 }
 
 /**
  * Registri SK untuk unit penerbit: cari, catat SK baru (penandatangan dari data pejabat), verifikasi ajuan pencatatan
  * dari unit lain, cabut, dan gabungkan catatan ganda. Pasang di menu "Registri SK".
  */
-export function KelolaSK({ penerbitUnitId = null, pengawasan, jenis, className }: KelolaSKProps) {
+export function KelolaSK({ penerbitUnitId = null, pengawasan, jenis, tampilPengaturan = true, className }: KelolaSKProps) {
   const [q, setQ] = React.useState('');
   const [kata, setKata] = React.useState('');
-  const [status, setStatus] = React.useState<'semua' | 'terbit' | 'draf' | 'dicabut'>(pengawasan ? 'semua' : 'semua');
+  const [status, setStatus] = React.useState<'semua' | 'terbit' | 'draf' | 'verifikasi' | 'dicabut'>('semua');
+  const [atur, setAtur] = React.useState<'kewenangan' | 'yayasan' | null>(null);
   const [penerbit, setPenerbit] = React.useState<number | null>(penerbitUnitId);
   const [catat, setCatat] = React.useState(false);
   const [buka, setBuka] = React.useState<string | null>(null);
@@ -320,7 +339,11 @@ export function KelolaSK({ penerbitUnitId = null, pengawasan, jenis, className }
     const t = setTimeout(() => setKata(q), 300);
     return () => clearTimeout(t);
   }, [q]);
-  const daftar = useDaftarSK({ q: kata, status: status === 'semua' ? undefined : status === 'dicabut' ? 'dicabut,diubah' : status, penerbit });
+  const daftar = useDaftarSK({ q: kata, status: status === 'semua' || status === 'verifikasi' ? undefined : status === 'dicabut' ? 'dicabut,diubah' : status, belum_verifikasi: status === 'verifikasi', penerbit });
+  const antreanVerifikasi = useDaftarSK({ belum_verifikasi: true, penerbit });
+  const jumlahVerifikasi = antreanVerifikasi.data?.length ?? 0;
+  const kewenangan = useSiakadQuery<unknown[]>(['sk', 'kewenangan'], (s, signal) => s.request({ method: 'GET', path: '/v1/sk/kewenangan' }, { signal }), { enabled: tampilPengaturan, staleTime: 60_000 });
+  const bolehAtur = !!(kewenangan.meta as { boleh_atur?: boolean } | undefined)?.boleh_atur;
   const unitPenerbit = useSiakadQuery<Array<{ unit_id: number; kode?: string; jenis?: string; induk_id?: number | null; nama: string; boleh_catat: boolean }>>(['sk', 'penerbit'], (s, signal) => s.request({ method: 'GET', path: '/v1/sk/penerbit' }, { signal }), {
     staleTime: 5 * 60_000,
   });
@@ -332,13 +355,14 @@ export function KelolaSK({ penerbitUnitId = null, pengawasan, jenis, className }
     <div className={cn('u-kelola-sk', className)}>
       <div className="u-kelola-sk-alat">
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nomor atau perihal SK" aria-label="Cari SK" />
-        <SegmentedControl<'semua' | 'terbit' | 'draf' | 'dicabut'>
+        <SegmentedControl<'semua' | 'terbit' | 'draf' | 'verifikasi' | 'dicabut'>
           value={status}
           onValueChange={setStatus}
           options={[
             { value: 'semua', label: 'Semua' },
             { value: 'terbit', label: 'Terbit' },
             { value: 'draf', label: menunggu ? `Ajuan (${menunggu})` : 'Ajuan' },
+            { value: 'verifikasi', label: jumlahVerifikasi ? `Belum diverifikasi (${jumlahVerifikasi})` : 'Belum diverifikasi' },
             { value: 'dicabut', label: 'Dicabut/diubah' },
           ]}
           aria-label="Status SK"
@@ -356,6 +380,16 @@ export function KelolaSK({ penerbitUnitId = null, pengawasan, jenis, className }
           placeholder="Semua penerbit"
           aria-label="Unit penerbit"
         />
+        {bolehAtur && (
+          <>
+            <Button variant="outline" onClick={() => setAtur('kewenangan')}>
+              Kewenangan SK
+            </Button>
+            <Button variant="outline" onClick={() => setAtur('yayasan')}>
+              Profil Yayasan
+            </Button>
+          </>
+        )}
         {bolehCatat && (
           <Button onClick={() => setCatat(true)}>
             <Plus /> Catat SK
@@ -403,6 +437,17 @@ export function KelolaSK({ penerbitUnitId = null, pengawasan, jenis, className }
         />
       )}
       <RincianSK id={buka} open={!!buka} onOpenChange={(o) => !o && setBuka(null)} onBuka={setBuka} />
+      {atur && (
+        <Sheet
+          open
+          onOpenChange={(o) => !o && setAtur(null)}
+          size="lg"
+          title={atur === 'kewenangan' ? 'Kewenangan penerbitan SK' : 'Profil Yayasan / Badan Penyelenggara'}
+          description={atur === 'kewenangan' ? 'Penerbit dan penandatangan bawaan saat mencatat SK.' : 'Penerbit dan penandatangan bawaan SK pengangkatan Rektor; identitas dokumen.'}
+        >
+          {atur === 'kewenangan' ? <KewenanganSK /> : <ProfilYayasan />}
+        </Sheet>
+      )}
     </div>
   );
 }
