@@ -1,0 +1,31 @@
+// ================================================================ Kunci periode akademik (siakad/kunci-periode.tsx)
+.u-pilih-periode-akademik {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.u-lencana-periode {
+  width: fit-content;
+  justify-self: start;
+  gap: 0.3rem;
+  white-space: nowrap;
+  svg {
+    width: 0.8rem;
+    height: 0.8rem;
+  }
+}
+.u-opsi-periode-ikon {
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--u-muted-foreground);
+  &[data-keadaan='aktif'] {
+    color: var(--u-success, #16a34a);
+  }
+  &[data-keadaan='dibuka_kembali'] {
+    color: var(--u-warning, #d97706);
+  }
+}
+.u-banner-periode {
+  margin-bottom: 1rem;
+}
