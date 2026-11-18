@@ -1,9 +1,10 @@
 'use client';
 import * as React from 'react';
-import { Database, TriangleAlert } from 'lucide-react';
+import { Database, TriangleAlert, Zap, ZapOff } from 'lucide-react';
 import { Tooltip } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { useOptionalSiakad } from './provider';
+import { useStatusRealtime, type StatusRealtime } from './realtime';
 
 // ================================================================ Kaki sidebar: status API, lingkungan & database, versi
 //
@@ -164,6 +165,14 @@ export function ringkasLingkungan(info: InfoLingkungan | null, aplikasi: Lingkun
   return { nada, pendek, peringatan, rinci };
 }
 
+/** Teks status realtime (WebSocket); null = integrasi tidak aktif/tidak dipakai (indikator disembunyikan). */
+const TEKS_REALTIME: Record<StatusRealtime, string | null> = {
+  mati: null,
+  menyambung: 'Realtime: menyambung ke WebSocket…',
+  tersambung: 'Realtime: tersambung (WebSocket)',
+  cadangan: 'Realtime: WebSocket terputus, memakai long-poll sambil menyambung ulang',
+};
+
 const jam = (d: Date | null) => (d ? d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : null);
 
 export interface StatusSidebarProps {
@@ -210,10 +219,12 @@ export function StatusSidebar({ versi, commit, collapsed, statusApi = true, ling
   const tipVersiApi = st.info ? `SIAKAD API ${st.info.api.versi}${st.info.api.commit ? ` · ${st.info.api.commit}` : ''}` : null;
   const tipApi = [tipStatus, tipVersiApi].filter(Boolean).join(' · ');
   const statusTampil = statusApi ? st.status : 'normal';
+  const rt = useStatusRealtime();
+  const rtTeks = keadaan ? null : TEKS_REALTIME[rt];
 
   if (collapsed) {
     // Peringatan paling atas, lalu status API, lingkungan, versi.
-    const baris = [ling?.peringatan ?? null, statusApi ? tipStatus : null, ...(ling?.rinci ?? []), statusApi ? tipVersiApi : null, versiTeks ? `Versi aplikasi ${versiTeks}` : null, hakTeks].filter(
+    const baris = [ling?.peringatan ?? null, statusApi ? tipStatus : null, rtTeks, ...(ling?.rinci ?? []), statusApi ? tipVersiApi : null, versiTeks ? `Versi aplikasi ${versiTeks}` : null, hakTeks].filter(
       Boolean,
     ) as string[];
     return (
@@ -255,6 +266,13 @@ export function StatusSidebar({ versi, commit, collapsed, statusApi = true, ling
           </Tooltip>
         ) : (
           <span />
+        )}
+        {rtTeks && (
+          <Tooltip content={rtTeks}>
+            <span className="u-ssb-rt" data-status={rt} tabIndex={0} aria-label={rtTeks}>
+              {rt === 'cadangan' ? <ZapOff aria-hidden /> : <Zap aria-hidden />}
+            </span>
+          </Tooltip>
         )}
         {ling && (
           <Tooltip content={<span className="u-ssb-tip">{ling.rinci.map((b, i) => <span key={i}>{b}</span>)}</span>}>

@@ -53,6 +53,7 @@ export * from './berkas-cepat';
 export * from './kerangka-aplikasi';
 export * from './pintasan-menu';
 export * from './status-sidebar';
+export * from './realtime';
 export * from './pmb-maba';
 export * from './lms-belajar';
 export * from './modal-fitur';
