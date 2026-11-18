@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { ChevronsDownUp, ChevronsUpDown, Download, FileImage, FileText, Maximize, Minimize, Minus, Plus, Printer, ScanSearch, UsersRound } from 'lucide-react';
+import { ChevronsDownUp, ChevronsUpDown, Download, FileImage, FileText, Layers, Maximize, Minimize, Minus, Plus, Printer, ScanSearch, UsersRound } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { hueFromString, initials } from '../lib/format';
 import { Button } from './actions';
@@ -79,8 +79,26 @@ export const GAYA_JENIS_BAGAN: Record<string, GayaJenisBagan> = {
 
 const URUT_JENIS = ['universitas', 'rektorat', 'kampus', 'lembaga', 'biro', 'bagian', 'upt', 'unit', 'fakultas', 'prodi'];
 
+/**
+ * Lapisan tambahan yang bisa ditampilkan/disembunyikan dari bilah alat (mis. organisasi mahasiswa di bagan kampus).
+ * Simpul lapisan menempel ke unit bagan lewat `induk_id` (id unit kampus); warna jenisnya digabung ke `gayaJenis`.
+ */
+export interface LapisanBagan {
+  kunci: string;
+  /** Label tombol, mis. "Organisasi mahasiswa". */
+  label: string;
+  data: UnitBagan[];
+  gayaJenis?: Record<string, GayaJenisBagan>;
+  /** Urutan jenis simpul lapisan di antara saudara (ditambahkan di belakang urutJenis bagan). */
+  urutJenis?: string[];
+  /** Tampil sejak awal. Bawaan false. */
+  awal?: boolean;
+}
+
 export interface BaganOrganisasiProps {
   data: UnitBagan[];
+  /** Lapisan opsional dengan sakelar di bilah alat (mis. "Tampilkan organisasi mahasiswa"). Tidak mengubah `data`. */
+  lapisan?: LapisanBagan[];
   /** id unit akar (bagan sub-pohon, mis. satu fakultas). Bawaan: semua akar. */
   akar?: string | null;
   judul?: React.ReactNode;
@@ -664,10 +682,16 @@ function cetak(svg: SVGSVGElement, judul: string) {
 // ---------------------------------------------------------------- komponen
 
 export function BaganOrganisasi({
-  data, akar, judul, judulBerkas, subjudul, rinci: rinciAwal = false, gantiRinci = true, buka = 3, tinggi = 640, gayaJenis = GAYA_JENIS_BAGAN,
-  urutJenis = URUT_JENIS, onPilihUnit, onIsiJabatan, namaBerkas = 'struktur-organisasi', petaMini = true, className,
-  tampilStaf: tampilStafAwal = true, onPilihStaf,
+  data: dataUnit, akar, judul, judulBerkas, subjudul, rinci: rinciAwal = false, gantiRinci = true, buka = 3, tinggi = 640, gayaJenis: gayaUnit = GAYA_JENIS_BAGAN,
+  urutJenis: urutUnit = URUT_JENIS, onPilihUnit, onIsiJabatan, namaBerkas = 'struktur-organisasi', petaMini = true, className,
+  tampilStaf: tampilStafAwal = true, onPilihStaf, lapisan,
 }: BaganOrganisasiProps) {
+  // Lapisan aktif digabung ke data, warna, dan urutan jenis bagan.
+  const [lapisanAktif, setLapisanAktif] = React.useState<Set<string>>(() => new Set((lapisan ?? []).filter((l) => l.awal).map((l) => l.kunci)));
+  const terpakai = React.useMemo(() => (lapisan ?? []).filter((l) => lapisanAktif.has(l.kunci)), [lapisan, lapisanAktif]);
+  const data = React.useMemo(() => (terpakai.length ? [...dataUnit, ...terpakai.flatMap((l) => l.data)] : dataUnit), [dataUnit, terpakai]);
+  const gayaJenis = React.useMemo<Record<string, GayaJenisBagan>>(() => terpakai.reduce((a, l) => ({ ...a, ...(l.gayaJenis ?? {}) }), gayaUnit), [gayaUnit, terpakai]);
+  const urutJenis = React.useMemo(() => (terpakai.length ? [...urutUnit, ...terpakai.flatMap((l) => l.urutJenis ?? [])] : urutUnit), [urutUnit, terpakai]);
   const adaStaf = React.useMemo(() => data.some((u) => (u.staf?.length ?? 0) > 0), [data]);
   const [tampilStaf, setTampilStaf] = React.useState(tampilStafAwal);
   React.useEffect(() => setTampilStaf(tampilStafAwal), [tampilStafAwal]);
@@ -839,6 +863,21 @@ export function BaganOrganisasi({
               <UsersRound />{tampilStaf ? 'Tendik tampil' : 'Tendik disembunyikan'}
             </Button>
           )}
+          {(lapisan ?? []).map((l) => {
+            const on = lapisanAktif.has(l.kunci);
+            return (
+              <Button
+                key={l.kunci}
+                variant={on ? 'soft' : 'outline'}
+                size="sm"
+                aria-pressed={on}
+                title={l.data.length ? undefined : 'Belum ada data'}
+                onClick={() => setLapisanAktif((s) => { const n = new Set(s); if (n.has(l.kunci)) n.delete(l.kunci); else n.add(l.kunci); return n; })}
+              >
+                <Layers />{on ? `${l.label} tampil` : `Tampilkan ${l.label.toLowerCase()}`}
+              </Button>
+            );
+          })}
         </div>
         <div className="u-bagan-alat-grup">
           <Menu

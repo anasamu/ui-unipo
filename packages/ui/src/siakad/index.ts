@@ -84,3 +84,4 @@ export * from './jadwal-bentrok';
 export * from './pengajuan';
 export * from './presensi-kerja';
 export * from './kelola-pejabat';
+export * from './ormawa';
