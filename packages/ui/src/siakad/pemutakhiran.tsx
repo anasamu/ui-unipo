@@ -398,6 +398,33 @@ function DasborPemutakhiran({ pemilik, katalog, bffApi }: { pemilik: PemilikPemu
 
 // ================================================================ Antrean verifikasi
 
+/**
+ * Antrean verifikasi pemutakhiran saja (tanpa dasbor/periode), untuk ditanam di halaman Persetujuan aplikasi unit.
+ * Tidak tampil apa pun bila pengguna tidak berhak memverifikasi.
+ */
+export function AntreanVerifikasiPemutakhiran({ pemilik, bffApi = '/bff/api' }: { pemilik: PemilikPemutakhiran; bffApi?: string }) {
+  const k = useKatalog(pemilik);
+  if (k.error) return <GalatApi error={k.error} onRetry={k.refetch} />;
+  if (!k.data) return <Skeleton height={240} />;
+  if (!k.data.hak.verifikasi) return <Empty bordered icon={<ShieldCheck />} title="Belum ada akses" description={`Antrean ini untuk petugas ${k.data.pemilik_label} yang memverifikasi pemutakhiran data.`} />;
+
+  return <AntreanPemutakhiran pemilik={pemilik} katalog={k.data} bffApi={bffApi} />;
+}
+
+/** Jumlah pengajuan pemutakhiran yang menunggu verifikasi (untuk lencana tab/menu); null bila tidak berhak. */
+export function useJumlahAntreanPemutakhiran(pemilik: PemilikPemutakhiran, aktif = true): number | null {
+  const k = useKatalog(pemilik);
+  const boleh = aktif && !!k.data?.hak.verifikasi;
+  const q = useSiakadQuery<PengajuanPemutakhiran[]>(
+    ['pemutakhiran', pemilik, 'antrean', 'hitung'],
+    (s, signal) => s.request<PengajuanPemutakhiran[]>({ method: 'GET', path: `${P(pemilik)}/pengajuan`, query: { per_page: 1 } }, { signal }),
+    { enabled: boleh },
+  );
+  if (!boleh) return null;
+
+  return (q.meta as { hitung?: Record<string, number> } | undefined)?.hitung?.diajukan ?? 0;
+}
+
 function AntreanPemutakhiran({ pemilik, katalog, bffApi }: { pemilik: PemilikPemutakhiran; katalog: KatalogPemutakhiran; bffApi: string }) {
   const [status, setStatus] = React.useState('diajukan');
   const [q, setQ] = React.useState('');
