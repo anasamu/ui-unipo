@@ -73,6 +73,8 @@ export * from './gaji';
 export * from './keuangan';
 export * from './kebijakan';
 export * from './tugas-akhir';
+export * from './ujian-ta';
+export * from './pemenuhan-aturan';
 export * from './kasir';
 export * from './widget-unit';
 export * from './cari-dokumen';
