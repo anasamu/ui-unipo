@@ -9,7 +9,7 @@ import { ConfirmDialog, Dialog, Sheet, useToast } from '../components/overlays';
 import { DatePicker } from '../components/calendar';
 import { CariAtauUnggahDokumen } from './cari-dokumen';
 import { cn } from '../lib/cn';
-import { AjukanPencatatanSK, KartuSK, STATUS_SK, type SKRegistri } from './isian-sk';
+import { AjukanPencatatanSK, IsianPenandatangan, KartuSK, STATUS_SK, bodyPenandatangan, type NilaiPenandatangan, type SKRegistri } from './isian-sk';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 
 /*
@@ -88,13 +88,12 @@ const tanggalKeIso = (d: Date | null) => (d ? `${d.getFullYear()}-${String(d.get
 export function UbahSK({ sk, open, onOpenChange, onTersimpan }: { sk: DetailSK; open: boolean; onOpenChange: (o: boolean) => void; onTersimpan?: () => void }) {
   const siakad = useSiakad();
   const toast = useToast();
-  const [isi, setIsi] = React.useState({ nomor: sk.nomor, tanggal: sk.tanggal ?? null, perihal: sk.perihal ?? '', pejabat: sk.penandatangan?.pejabat_id ?? null, tempat: sk.tempat ?? '', berkas: null as string | null, ttd: null as string | null });
+  const [isi, setIsi] = React.useState({ nomor: sk.nomor, tanggal: sk.tanggal ?? null, perihal: sk.perihal ?? '', tempat: sk.tempat ?? '', berkas: null as string | null, ttd: null as string | null });
+  const awalTtd: NilaiPenandatangan | null = sk.penandatangan
+    ? { tautan: sk.penandatangan.tautan ?? (sk.penandatangan.pejabat_id ? 'pejabat' : 'teks'), pejabat_id: sk.penandatangan.pejabat_id, jabatan_id: sk.penandatangan.jabatan_id ?? null, unit_id: sk.penandatangan.unit_id ?? null, jabatan: sk.penandatangan.jabatan, nama: sk.penandatangan.nama }
+    : null;
+  const [penandatangan, setPenandatangan] = React.useState<NilaiPenandatangan | null>(awalTtd);
   const [kirim, setKirim] = React.useState(false);
-  const pejabat = useSiakadQuery<Array<{ pejabat_id: number; nama: string; jabatan: string }>>(
-    ['sk', 'penandatangan', sk.penerbit?.unit_id ?? null],
-    (s, signal) => s.request({ method: 'GET', path: '/v1/sk/penandatangan', query: { unit_id: sk.penerbit?.unit_id ?? undefined } }, { signal }),
-    { enabled: open && !!sk.penerbit?.unit_id },
-  );
   const simpan = async () => {
     setKirim(true);
     try {
@@ -103,7 +102,7 @@ export function UbahSK({ sk, open, onOpenChange, onTersimpan }: { sk: DetailSK; 
         path: `/v1/sk/${sk.id}`,
         body: {
           nomor: isi.nomor, tanggal: isi.tanggal, perihal: isi.perihal || null, tempat: isi.tempat || null,
-          ...(isi.pejabat ? { penandatangan_pejabat_id: isi.pejabat } : {}), ...(isi.berkas ? { berkas_id: isi.berkas } : {}), ...(isi.ttd ? { ttd_berkas_id: isi.ttd } : {}),
+          ...(JSON.stringify(penandatangan) !== JSON.stringify(awalTtd) ? bodyPenandatangan(penandatangan) : {}), ...(isi.berkas ? { berkas_id: isi.berkas } : {}), ...(isi.ttd ? { ttd_berkas_id: isi.ttd } : {}),
         },
       });
       invalidateSiakad('sk');
@@ -122,7 +121,7 @@ export function UbahSK({ sk, open, onOpenChange, onTersimpan }: { sk: DetailSK; 
       onOpenChange={onOpenChange}
       size="lg"
       title={`Ubah SK ${sk.nomor}`}
-      description="Hanya unit penerbit. Penandatangan dipilih dari data pejabat; berkas cukup diunggah sekali di sini."
+      description="Hanya unit penerbit. Penandatangan bisa pejabat, jabatan saja, atau teks yang belum tertaut (tautkan ke pejabat di sini kemudian); berkas cukup diunggah sekali."
       footer={
         <>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
@@ -149,14 +148,7 @@ export function UbahSK({ sk, open, onOpenChange, onTersimpan }: { sk: DetailSK; 
         <Field label="Perihal" optional>
           <Input value={isi.perihal} onChange={(e) => setIsi((x) => ({ ...x, perihal: e.target.value }))} />
         </Field>
-        <Field label="Penandatangan" description="Dari data pejabat (Organisasi & pejabat), tidak diketik.">
-          <Select<number>
-            value={isi.pejabat}
-            onValueChange={(v) => setIsi((x) => ({ ...x, pejabat: v }))}
-            options={(pejabat.data ?? []).map((p) => ({ value: p.pejabat_id, label: p.nama, description: p.jabatan }))}
-            placeholder={(pejabat.data ?? []).length ? 'Pilih pejabat' : 'Belum ada pejabat aktif di unit penerbit'}
-          />
-        </Field>
+        <IsianPenandatangan value={penandatangan} onValueChange={setPenandatangan} unitId={sk.penerbit?.unit_id ?? null} />
         <Field label={sk.berkas?.ada ? 'Ganti berkas SK' : 'Berkas SK'} optional description="Satu berkas, disimpan di Berkas unit penerbit; unit lain membacanya dari registri.">
           <CariAtauUnggahDokumen value={isi.berkas} onValueChange={(id) => setIsi((x) => ({ ...x, berkas: id }))} accept=".pdf,.jpg,.jpeg,.png" kategori="sk" placeholder="Cari atau unggah berkas SK" />
         </Field>
