@@ -1,0 +1,143 @@
+// Aturan berversi (siakad/aturan-versi.tsx) dan Aturan karier (siakad/karier-aturan.tsx).
+// Kelas u-bkd-* di bawah disalin apa adanya dari _bkd.scss (komponen aturan berversi generik di branch BKD) agar halaman
+// aturan berversi tampil tanpa modul BKD; setelah branch BKD digabung, kelas yang sama boleh dihapus dari salah satu berkas.
+
+.u-bkd-form,
+.u-bkd-aturan-rincian {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.u-bkd-form {
+  gap: 0.875rem;
+}
+.u-bkd-label {
+  margin: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-semibold);
+}
+.u-bkd-keterangan {
+  margin: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+}
+.u-bkd-kepala {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  > div:first-child {
+    min-width: 0;
+  }
+}
+.u-bkd-kepala-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.u-bkd-judul {
+  margin: 0.125rem 0;
+  font-family: var(--u-font-heading);
+  font-size: var(--u-text-lg);
+  font-weight: var(--u-weight-semibold);
+  overflow-wrap: anywhere;
+}
+.u-bkd-aksi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  .u-bkd-form > &,
+  .u-bkd-periode > & {
+    margin-top: 0;
+  }
+}
+.u-bkd-aturan {
+  display: grid;
+  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+  align-items: start;
+  gap: 1rem;
+  @media (max-width: 56rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.u-bkd-aturan-daftar {
+  display: grid;
+  gap: 0.5rem;
+  button {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-lg);
+    background: var(--u-card);
+    color: var(--u-foreground);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    &[aria-current='true'] {
+      border-color: var(--u-primary);
+      box-shadow: 0 0 0 1px var(--u-primary);
+    }
+    &:hover {
+      background: var(--u-hover);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--u-ring);
+      outline-offset: 2px;
+    }
+    small {
+      color: var(--u-muted-foreground);
+      font-size: var(--u-text-xs);
+    }
+  }
+}
+.u-bkd-aturan-nama {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-semibold);
+}
+.u-bkd-perubahan {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--u-text-sm);
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    padding: 0.375rem 0;
+    border-bottom: 1px solid var(--u-border);
+  }
+  del {
+    color: var(--u-danger-text);
+  }
+  ins {
+    color: var(--u-success-text);
+    text-decoration: none;
+    font-weight: var(--u-weight-semibold);
+  }
+}
+.u-bkd-perubahan-judul {
+  font-weight: var(--u-weight-medium);
+}
+.u-bkd-perubahan-nilai {
+  font-variant-numeric: tabular-nums;
+}
+.u-bkd-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  @media (max-width: 40rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
