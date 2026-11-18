@@ -1,5 +1,10 @@
 # Catatan perubahan
 
+## 1.48.0 (2026-11-18)
+
+- **Garis waktu** (`GarisWaktu`, `unipo-ui/siakad`): gantt sederhana per baris untuk tahapan periode akademik (dan rentang lain). Sumbu bulan otomatis dari tanggal paling awal sampai paling akhir (atau `dari`/`sampai`), batang berwarna per baris (`warna`), batang bergaris untuk libur (`libur`), batang pudar (`redup`), penanda hari ini (`hariIni`, `false` untuk menyembunyikan), judul + keterangan + lencana di kolom kiri, dan `onPilih` (batang jadi tombol). Di wadah sempit judul pindah ke atas batangnya; warna batang ikut tercetak. Dipakai halaman Kalender & periode BAAK.
+- **`FormAturan` prop `tahunId`**: periode awal saat menambah aturan, untuk tombol "Tambah aturan untuk periode ini" dari Kalender & periode. Prop lain tetap.
+
 ## 1.47.0 (2026-11-18)
 
 - **Formulir aturan jadi wizard** (`FormAturan`, `unipo-ui/siakad`): enam langkah dalam dialog lebar dengan Stepper, yaitu Di mana (langkah dikelompokkan per unit, dengan pencarian, keterangan, dan contoh; panel "Aturan yang sudah ada di langkah ini" per jenis dengan kalimat, mode, prioritas, dan SK), Jenis (Syarat, Batas waktu, Batas nilai dengan contoh awam; "Mulai dari contoh" dari `contoh` titik), Ketentuan (penyusun kondisi; rentang tanggal dan "berlaku untuk siapa"; batas nilai bertingkat dengan kalimat ringkasan), Identitas (nama, dasar, cakupan, masa berlaku; kode dan prioritas di bagian Lanjutan), Dasar hukum (SK lewat `IsianSK`: nomor dicari dari arsip surat keluar, tidak diketik bebas), dan Tinjau (kalimat utuh, pilihan Blokir/Peringatan, uji ke contoh mahasiswa/pegawai/pendaftar/akun lewat `/v1/aturan/{id}/uji` dengan menyimpan draf dulu). Kaki tetap Kembali/Lanjut, validasi per langkah, penanda perubahan belum disimpan, dan konfirmasi sebelum menutup. Simpan draf atau **Ajukan untuk disetujui**; tidak ada lagi aktifkan langsung. Mengubah aturan aktif mengirim usulan versi baru dengan `sk` atau `lampiran_id`. Prop baru `langkahAwal`; prop lain tetap.

@@ -8,6 +8,7 @@ export * from './filter-presets';
 export * from './tabel';
 export * from './status-layanan';
 export * from './kalender';
+export * from './garis-waktu';
 export * from './portal';
 export * from './pmb';
 export * from './pmb-publik';
