@@ -8,8 +8,9 @@
 # Versi yang sudah terbit dilewati, jadi push ke main tanpa naik versi tidak menerbitkan apa pun.
 # Tag vX.Y.Z yang di-push manual dan tombol "Run workflow" tetap bisa dipakai (hasilnya sama).
 #
-# Butuh secret NPM_TOKEN (token "Automation"/granular dengan izin publish dari npmjs.com)
-# di Settings → Secrets and variables → Actions.
+# npm: Trusted Publishing (OIDC) — tanpa token dan tanpa OTP. Atur sekali di npmjs.com untuk KEDUA paket
+# (unipo-ui dan unipo-ui-tokens): Settings » Trusted Publisher » GitHub Actions: pemilik anasamu,
+# repo ui-unipo, workflow rilis.yml. Secret NPM_TOKEN (granular, "Bypass 2FA") tetap didukung sebagai cadangan.
 name: Rilis
 
 on:
@@ -26,6 +27,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write # npm Trusted Publishing (OIDC) dan provenance
 
 concurrency:
   group: rilis
@@ -87,12 +89,15 @@ jobs:
       - name: Terbitkan ke npm (tokens lalu ui)
         if: steps.versi.outputs.tokens == '1' || steps.versi.outputs.ui == '1'
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           DT: ${{ steps.versi.outputs.disttag }}
         run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then echo "::error::Secret NPM_TOKEN belum diisi di Settings → Secrets and variables → Actions."; exit 1; fi
-          if [ "${{ steps.versi.outputs.tokens }}" = 1 ]; then npm publish -w unipo-ui-tokens --access public --tag "$DT"; fi
-          if [ "${{ steps.versi.outputs.ui }}" = 1 ]; then npm publish -w unipo-ui --access public --tag "$DT"; fi
+          # Trusted Publishing butuh npm >= 11.5.1.
+          npm install -g npm@11.6.2 >/dev/null
+          if [ -n "$NPM_TOKEN" ]; then echo "Memakai secret NPM_TOKEN."; export NODE_AUTH_TOKEN="$NPM_TOKEN";
+          else echo "Memakai Trusted Publishing (OIDC). Bila gagal 404/403: atur Trusted Publisher di npmjs.com (lihat komentar di atas)."; unset NODE_AUTH_TOKEN; fi
+          if [ "${{ steps.versi.outputs.tokens }}" = 1 ]; then npm publish -w unipo-ui-tokens --access public --provenance --tag "$DT"; fi
+          if [ "${{ steps.versi.outputs.ui }}" = 1 ]; then npm publish -w unipo-ui --access public --provenance --tag "$DT"; fi
 
       - name: Tag dan GitHub Release
         if: steps.versi.outputs.rilis == '1'
