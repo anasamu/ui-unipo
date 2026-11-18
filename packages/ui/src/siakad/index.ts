@@ -100,4 +100,3 @@ export * from './aturan-verifikasi';
 export * from './bkd';
 export * from './bkd-alur';
 export * from './bkd-aturan';
-export * from './aturan-versi';
