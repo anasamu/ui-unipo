@@ -11,6 +11,7 @@ export * from './kalender';
 export * from './garis-waktu';
 export * from './kalender-unduh';
 export * from './status-jadwal';
+export * from './kunci-periode';
 export * from './pilih-semester';
 export * from './portal';
 export * from './pmb';

@@ -4,6 +4,7 @@ import type { ApiResult, Meta, Siakad } from 'unipo-siakad-sdk';
 import { Toaster, TooltipProvider } from '../components/overlays';
 import { requestIdDari } from '../components/galat';
 import { laporPemeliharaan } from './pemeliharaan';
+import { PemberitahuanPeriodeDitutup } from './kunci-periode';
 
 const SiakadContext = React.createContext<Siakad | null>(null);
 
@@ -24,7 +25,10 @@ export function UnipoProvider({ siakad = null, children, withProviders = true }:
   if (!withProviders) return inner;
   return (
     <TooltipProvider>
-      <Toaster>{inner}</Toaster>
+      <Toaster>
+        <PemberitahuanPeriodeDitutup />
+        {inner}
+      </Toaster>
     </TooltipProvider>
   );
 }
@@ -197,6 +201,8 @@ export function pesanGalat(e: unknown, opsi: { kode?: boolean } = {}): string {
   if (err.status === 403) return 'Akun Anda belum punya izin untuk data ini.';
   if (err.status === 404) return 'Data tidak ditemukan.';
   if (err.status === 429) return 'Terlalu banyak permintaan. Coba lagi sebentar lagi.';
+  // Kunci periode: pesan server sudah lengkap ("Periode … sudah ditutup sejak …").
+  if (err.status === 423) return err.message || 'Periode sudah ditutup. Perubahan data periode ini tidak diizinkan.';
   if (err.status && err.status >= 500) {
     // Sertakan kode laporan agar teks ini juga berguna di toast (tempat <KodeLaporan /> tidak bisa dipasang).
     const id = opsi.kode === false ? null : requestIdDari(e);

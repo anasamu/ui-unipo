@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import { laporPeriodeDitutup, type GalatPeriodeDitutup } from './kunci-periode';
 import { BannerPemeliharaan, ModePemeliharaan, type ModePemeliharaanProps } from '../components/pemeliharaan';
 import { Wrench } from 'lucide-react';
 import { invalidateSiakad } from './provider';
@@ -64,6 +65,14 @@ export function fetchPemeliharaan(dasar: typeof fetch = (...a) => globalThis.fet
       }
       const pesan = ((body?.error as Record<string, unknown> | undefined)?.message ?? body?.message) as string | undefined;
       laporPemeliharaan({ message: pesan, until: selesaiDari(r.headers.get('retry-after'), body) });
+    } else if (r.status === 423) {
+      // Kunci periode akademik: toast global (PemberitahuanPeriodeDitutup di UnipoProvider).
+      try {
+        const body = (await r.clone().json()) as { error?: { message?: string; details?: GalatPeriodeDitutup['details'] } };
+        laporPeriodeDitutup({ message: body.error?.message ?? 'Periode sudah ditutup. Perubahan data periode ini tidak diizinkan.', details: body.error?.details });
+      } catch {
+        laporPeriodeDitutup({ message: 'Periode sudah ditutup. Perubahan data periode ini tidak diizinkan.' });
+      }
     } else if (sekarang && r.ok) {
       laporPemeliharaan(null);
     }
