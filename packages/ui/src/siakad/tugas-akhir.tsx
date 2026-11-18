@@ -30,6 +30,7 @@ import { ConfirmDialog, Dialog, Sheet, useToast } from '../components/overlays';
 import { useUnggahBerkas } from './berkas';
 import { GalatApi } from './galat';
 import { PilihEntitas, type SumberEntitas } from './pilih';
+import { PilihDosenBersyarat } from './aturan-fakultas';
 import { invalidateSiakad, pesanGalat, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
 import { LabelProdi, namaRapi } from './prodi';
 
@@ -850,6 +851,9 @@ function FormPutuskan({ p, onSelesai }: { p: PengajuanTa; onSelesai: () => void 
     } catch (err) {
       const f = (err as { errors?: Record<string, string | string[]> }).errors;
       if (f) setGalat(Object.fromEntries(Object.entries(f).map(([k, x]) => [k, Array.isArray(x) ? x.join(' ') : String(x)])));
+      // 409 aturan_dilanggar: pembimbing belum memenuhi aturan (details.isian = pembimbing_1/pembimbing_2).
+      const isian = (err as { details?: { isian?: string } }).details?.isian;
+      if (isian) setGalat({ [isian]: pesanGalat(err) });
       toast.add({ title: 'Keputusan belum tersimpan', description: pesanGalat(err), type: 'error' });
     } finally {
       setKirim(false);
@@ -876,11 +880,12 @@ function FormPutuskan({ p, onSelesai }: { p: PengajuanTa; onSelesai: () => void 
             <Textarea rows={2} maxLength={500} value={judul} onChange={(e) => setJudul(e.target.value)} />
           </Field>
           <div className="u-ta-form-kisi">
+            {/* Pemilih dosen bersyarat: aturan titik ta.pembimbing.tetapkan (universitas + fakultas mahasiswa). */}
             <Field label="Pembimbing 1" required error={galat.pembimbing_1}>
-              <PilihEntitas jenis={SUMBER_DOSEN_TA} value={pb1 || null} onValueChange={(x) => setPb1(x ?? '')} placeholder="Cari nama dosen" />
+              <PilihDosenBersyarat titik="ta.pembimbing.tetapkan" nim={p.nim} peran="pembimbing_1" value={pb1 || null} onValueChange={(x) => setPb1(x ?? '')} placeholder="Cari nama dosen" aria-label="Pembimbing 1" />
             </Field>
             <Field label="Pembimbing 2" optional error={galat.pembimbing_2}>
-              <PilihEntitas jenis={SUMBER_DOSEN_TA} value={pb2 || null} onValueChange={(x) => setPb2(x ?? '')} placeholder="Cari nama dosen" />
+              <PilihDosenBersyarat titik="ta.pembimbing.tetapkan" nim={p.nim} peran="pembimbing_2" value={pb2 || null} onValueChange={(x) => setPb2(x ?? '')} placeholder="Cari nama dosen" aria-label="Pembimbing 2" />
             </Field>
           </div>
         </>
