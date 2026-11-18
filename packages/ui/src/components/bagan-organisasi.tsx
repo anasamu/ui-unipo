@@ -42,6 +42,8 @@ export interface UnitBagan {
   jenis?: string | null;
   /** Hubungan koordinasi ke induk (garis putus, di samping garis utama). */
   koordinasi?: boolean;
+  /** Lencana kecil di pojok kanan atas kartu, mis. kampus tempat unit tersedia ("Kampus II"). */
+  lencana?: string | null;
   aktif?: boolean;
   /** Jabatan terisi dan kosong; yang pertama terisi menjadi pimpinan di kartu ringkas. */
   jabatan?: JabatanBagan[];
@@ -65,6 +67,7 @@ export interface GayaJenisBagan {
 export const GAYA_JENIS_BAGAN: Record<string, GayaJenisBagan> = {
   universitas: { label: 'Universitas', warna: '#244ce6' },
   rektorat: { label: 'Rektorat', warna: '#4f46e5' },
+  kampus: { label: 'Kampus', warna: '#be185d' },
   biro: { label: 'Biro', warna: '#7c3aed' },
   bagian: { label: 'Bagian', warna: '#64748b' },
   lembaga: { label: 'Lembaga', warna: '#d97706' },
@@ -74,7 +77,7 @@ export const GAYA_JENIS_BAGAN: Record<string, GayaJenisBagan> = {
   unit: { label: 'Unit', warna: '#5b7083' },
 };
 
-const URUT_JENIS = ['universitas', 'rektorat', 'lembaga', 'biro', 'bagian', 'upt', 'unit', 'fakultas', 'prodi'];
+const URUT_JENIS = ['universitas', 'rektorat', 'kampus', 'lembaga', 'biro', 'bagian', 'upt', 'unit', 'fakultas', 'prodi'];
 
 export interface BaganOrganisasiProps {
   data: UnitBagan[];
@@ -418,6 +421,7 @@ function Kartu({ s, rinci, palet: p, gaya, ekspor, onToggle, onPilih, onIsi, sta
         <rect x={0} y={0} width={W} height={5} fill={g.warna} clipPath={`url(#${uid}-c)`} />
         <rect x={14} y={14} width={Math.min(W - 28, (g.label.length + (u.koordinasi ? 13 : 0) + (nonaktif ? 11 : 0)) * 6.2 + 16)} height={18} rx={9} fill={g.warna} fillOpacity={ekspor ? 0.12 : 0.16} />
         <text x={22} y={27} fontSize={10.5} fontWeight={600} fill={ekspor ? g.warna : `color-mix(in srgb, ${g.warna} 72%, var(--u-foreground, #171a21))`}>{g.label}{u.koordinasi ? ' · koordinasi' : ''}{nonaktif ? ' · nonaktif' : ''}</text>
+        {u.lencana && <text x={W - 14} y={27} textAnchor="end" fontSize={10} fontWeight={600} fill={p.redup}>{potong(u.lencana, 90, 10, 1)[0]}</text>}
         {judul.map((b, i) => <text key={i} x={14} y={52 + i * 16} fontSize={13} fontWeight={650} fill={p.teks}>{b}</text>)}
         {!rinci ? (
           <>
