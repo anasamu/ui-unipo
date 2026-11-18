@@ -49,6 +49,7 @@ export * from './pengumuman-lintas';
 export * from './bilah-menyamar';
 export * from './berkas-cepat';
 export * from './kerangka-aplikasi';
+export * from './pintasan-menu';
 export * from './status-sidebar';
 export * from './pmb-maba';
 export * from './lms-belajar';

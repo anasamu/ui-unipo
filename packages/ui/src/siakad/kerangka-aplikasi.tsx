@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { Monitor, Moon, Pin, PinOff, Search, Sun } from 'lucide-react';
+import { ExternalLink, Monitor, Moon, Search, Star, Sun } from 'lucide-react';
 import { Button } from '../components/actions';
 import type { AkunPengguna, MenuAkunProps, TemaAkun } from '../components/akun';
 import { LogoAplikasi } from '../components/identity';
@@ -18,6 +18,7 @@ import { TombolNotifikasi, type OpsiNotifikasi } from './notifikasi';
 import { ChatMengambang, TombolPesan } from './obrolan';
 import { PengumumanTampil } from './pengumuman-lintas';
 import { StatusSidebar, type StatusSidebarProps } from './status-sidebar';
+import { BintangPintasan, MAKS_SEMATAN, PenyediaPintasan, TombolPintasan, usePintasanMenu } from './pintasan-menu';
 
 
 export interface KerangkaAplikasiProps {
@@ -82,8 +83,8 @@ export interface KerangkaAplikasiProps {
   /** Tombol tambahan di kanan bilah atas, sebelum notifikasi. */
   aksi?: React.ReactNode;
   /**
-   * Navigasi bawah untuk layar sempit. Bawaan otomatis dari Menu utama: Beranda + menu yang sering dibuka, dilengkapi
-   * menu teratas sidebar sampai 5 item. Isi untuk menimpa; [] = tanpa navigasi bawah.
+   * Navigasi bawah untuk layar sempit. Bawaan: Beranda + menu yang disematkan pengguna (maks. 5 item); bila belum ada
+   * sematan, Beranda + menu teratas sidebar. Isi untuk menimpa; [] = tanpa navigasi bawah.
    */
   navBawah?: ItemNavigasiBawah[];
   /** Kunci aktif navigasi bawah. Bawaan bagian pertama activeKey. */
@@ -102,7 +103,11 @@ export interface KerangkaAplikasiProps {
    * `interval`); ReactNode = kaki sendiri; false = tanpa kaki sidebar.
    */
   statusSidebar?: false | React.ReactElement | Omit<StatusSidebarProps, 'collapsed' | 'versi' | 'commit' | 'statusApi'>;
-  /** Bagian "Pintasan": menu yang paling sering dibuka pengguna ini (disimpan di browser), bisa disematkan. Bawaan true. */
+  /**
+   * Pintasan menu pengguna (disimpan di peramban per aplikasi + pengguna): bintang sematkan di item sidebar (item tetap
+   * di grupnya), tombol bintang "Pintasan" di bilah atas (Disematkan + Sering dibuka), bagian awal pencarian fitur,
+   * navigasi bawah ponsel, dan `PintasanBeranda`. Bawaan true; false mematikan semuanya.
+   */
   pintasan?: boolean;
   /** Kode aplikasi tema (/v1/tema) bila berbeda dari `kode`, mis. "api-portal". */
   temaAplikasi?: string;
@@ -209,8 +214,9 @@ export function KerangkaAplikasi({
       setRailDalam(v);
       simpan(kunciCiut, v ? '1' : '0');
     });
-  const pengguna = useAkunSaya({ foto: false }).data?.akun?.username ?? null;
-  const pin = usePintasanMenu(kode, pengguna, groups, activeKey, pintasan && t.sidebarPintasan, beranda);
+  const akunQ = useAkunSaya({ foto: false });
+  const pengguna = akunQ.data?.akun?.username ?? null;
+  const pin = usePintasanMenu(kode, pengguna, groups, activeKey, pintasan, beranda, !akunQ.loading);
   const [palet, setPalet] = React.useState(false);
 
   const navigasi = React.useCallback(
@@ -240,19 +246,27 @@ export function KerangkaAplikasi({
     `u-sb-aktif-${t.sidebarAktif}`,
     t.sidebarLebar !== 'normal' && `u-sb-${t.sidebarLebar}`,
   );
-  // "Menu utama": Beranda + menu yang sering dibuka, di atas daftar menu. Beranda tidak diulang di bawahnya.
+  // Beranda selalu paling atas sidebar. Menu lain TIDAK pernah dipindah atau disembunyikan oleh pintasan: yang
+  // disematkan tetap di grupnya dan hanya diberi bintang (pintasan ada di tombol bilah atas, Ctrl/⌘K, dan beranda).
   const berandaItem = groups.flatMap((g) => g.items).find((it) => !it.children?.length && (it.href === beranda || it.key === 'beranda'));
-  // Item tingkat atas yang sudah tampil di Menu utama (Beranda, pintasan) tidak diulang di daftar bawah; anak sub menu tetap.
-  const diUtama = new Set([...(berandaItem ? [berandaItem.key] : []), ...pin.items.map((x) => x.key)]);
-  const groupsTanpaBeranda = groups
-    .map((g) => ({ ...g, items: g.items.filter((it) => it.children?.length || !diUtama.has(it.key)) }))
-    .filter((g) => g.items.length > 0);
-  const adaMenuUtama = Boolean(berandaItem) || pin.items.length > 0;
-  const groupsTampil: NavGroup[] =
-    collapsed && adaMenuUtama
-      ? [{ label: 'Menu utama', items: [...(berandaItem ? [berandaItem] : []), ...pin.items.map((it) => ({ ...it, key: `__pin:${it.key}`, badge: '', children: undefined }))] }, ...groupsTanpaBeranda]
-      : groupsTanpaBeranda;
-  const navBawahTampil: ItemNavigasiBawah[] = navBawah ?? navBawahOtomatis(berandaItem, pin.items, groupsTanpaBeranda);
+  const groupsTanpaBeranda = berandaItem
+    ? groups.map((g) => ({ ...g, items: g.items.filter((it) => it.key !== berandaItem.key) })).filter((g) => g.items.length > 0)
+    : groups;
+  const groupsTampil: NavGroup[] = berandaItem ? [{ items: [berandaItem] }, ...groupsTanpaBeranda] : groupsTanpaBeranda;
+  const aksiItem = pin.aktif ? (it: NavItem) => (pin.bisa(it.key) ? <BintangPintasan pin={pin} item={it} className={pin.apakahDisematkan(it.key) ? 'u-nav-aksi-tetap' : undefined} /> : null) : undefined;
+  const menuItem = pin.aktif
+    ? (it: NavItem) => {
+        if (!pin.bisa(it.key)) return undefined;
+        const di = pin.apakahDisematkan(it.key);
+        return [
+          di
+            ? { label: 'Lepas dari Pintasan', icon: <Star />, onSelect: () => pin.lepas(it.key) }
+            : { label: pin.penuh ? `Pintasan penuh (maks. ${MAKS_SEMATAN})` : 'Sematkan ke Pintasan', icon: <Star />, onSelect: () => pin.sematkan(it.key), disabled: pin.penuh },
+          { label: 'Buka di tab baru', icon: <ExternalLink />, onSelect: () => it.href && window.open(it.href, '_blank', 'noopener') },
+        ];
+      }
+    : undefined;
+  const navBawahTampil: ItemNavigasiBawah[] = navBawah ?? navBawahOtomatis(berandaItem, pin.disematkan, groupsTanpaBeranda);
   const cariIkonSaja = t.headerCari === 'ikon';
   const cariEl =
     cari !== false ? (
@@ -315,10 +329,12 @@ export function KerangkaAplikasi({
   const tataMuatTampil: TataMuatHalaman =
     typeof tataMuat === 'function' ? tataMuat(activeKey) : (tataMuat ?? (activeKey && berandaItem && activeKey === berandaItem.key ? 'dasbor' : 'tabel'));
 
+  const nilaiPintasan = React.useMemo(() => ({ pin, activeKey, renderLink }), [pin, activeKey, renderLink]);
+
   const kodePengumuman = pengumuman === false ? null : ((typeof pengumuman === 'object' ? pengumuman.aplikasi : undefined) ?? kode);
 
   return (
-    <>
+    <PenyediaPintasan value={nilaiPintasan}>
     {kodePengumuman && siakad && <PengumumanTampil aplikasi={kodePengumuman} bagian={['atas']} />}
     <AppShell
       className={cn('u-kerangka-aplikasi', className)}
@@ -328,14 +344,9 @@ export function KerangkaAplikasi({
           brand={brand}
           groups={groupsTampil}
           activeKey={activeKey}
-          header={
-            adaMenuUtama || sidebarHeader ? (
-              <>
-                {adaMenuUtama && <PintasanSidebar pin={pin} utama={berandaItem} activeKey={activeKey} renderLink={renderLink} />}
-                {sidebarHeader}
-              </>
-            ) : undefined
-          }
+          header={sidebarHeader}
+          aksiItem={aksiItem}
+          menuItem={menuItem}
           footer={sidebarFooter}
           user={sidebarUser}
           collapsed={collapsed}
@@ -365,6 +376,7 @@ export function KerangkaAplikasi({
           <div className="u-kerangka-aksi">
             {t.headerCari !== 'tengah' && cariEl}
             {aksi}
+            {pintasan && t.sidebarPintasan && <TombolPintasan pin={pin} activeKey={activeKey} renderLink={renderLink} />}
             {notifikasi !== false && <TombolNotifikasi {...opsiNotif} onNavigasi={navigasi} />}
             {pesan !== false && <TombolPesan onBuka={opsiPesan.onBuka} />}
             {berkas !== false && <TombolBerkas {...(typeof berkas === 'object' ? berkas : {})} />}
@@ -392,7 +404,24 @@ export function KerangkaAplikasi({
       </div>
       {muatPindah.startsWith('progres') && <BilahProgres aktif={sesiMuat !== null && adaMuat} tunda={150} />}
       {kodePengumuman && siakad && <PengumumanTampil aplikasi={kodePengumuman} bagian={['lapis']} />}
-      {cari !== false && !opsiCari.onBuka && <PencarianFitur open={palet} onOpenChange={setPalet} items={fitur} placeholder={opsiCari.placeholder ?? 'Cari fitur atau menu'} onPilih={(it) => it.href && navigasi(it.href)} />}
+      {cari !== false && !opsiCari.onBuka && (
+        <PencarianFitur
+          open={palet}
+          onOpenChange={setPalet}
+          items={fitur}
+          placeholder={opsiCari.placeholder ?? 'Cari fitur atau menu'}
+          onPilih={(it) => it.href && navigasi(it.href)}
+          bagianAwal={
+            pin.aktif
+              ? [
+                  { judul: 'Disematkan', keys: pin.disematkan.map((x) => x.key) },
+                  { judul: 'Sering dibuka', keys: pin.sering.map((x) => x.key) },
+                ]
+              : undefined
+          }
+          sematan={pin.aktif ? { apakah: pin.apakahDisematkan, bisa: pin.bisa, penuh: pin.penuh, alihkan: pin.alihkan } : undefined}
+        />
+      )}
       {pesan !== false && opsiPesan.mengambang !== false && <ChatMengambang judul={opsiPesan.judul} navBawah={navBawahTampil.length > 0} className="u-kerangka-ob" />}
       {navBawahTampil.length ? (
         <NavigasiBawah
@@ -413,7 +442,7 @@ export function KerangkaAplikasi({
         />
       ) : null}
     </AppShell>
-    </>
+    </PenyediaPintasan>
   );
 }
 
@@ -425,6 +454,7 @@ export interface TataKerangka {
   sidebarMode: 'penuh' | 'mini' | 'otomatis';
   sidebarPadat: 'rapat' | 'normal' | 'lega';
   sidebarAktif: 'lembut' | 'garis' | 'pil';
+  /** Tombol bintang "Pintasan" di bilah atas (kunci lama `sidebar_pintasan` dipertahankan). Bawaan true. */
   sidebarPintasan: boolean;
   sidebarLebar: 'sempit' | 'normal' | 'lebar';
   headerGaya: 'polos' | 'garis' | 'bayang' | 'blur' | 'utama';
@@ -525,125 +555,16 @@ function simpan(kunci: string, nilai: string) {
   }
 }
 
-// ================================================================ Pintasan (menu yang sering dibuka)
-
-interface DataPintasan {
-  hitung: Record<string, number>;
-  sematan: string[];
-}
-
-export interface PintasanMenu {
-  items: Array<NavItem & { disematkan: boolean }>;
-  sematkan: (key: string) => void;
-  lepas: (key: string) => void;
-  bolehSematkan: (key?: string) => boolean;
-}
-
-function ratakanMenu(groups: NavGroup[]): NavItem[] {
-  const out: NavItem[] = [];
-  for (const g of groups)
-    for (const it of g.items) {
-      if (it.children?.length) out.push(...it.children.map((c) => ({ ...c, icon: c.icon ?? it.icon })));
-      else out.push(it);
-    }
-  return out.filter((x) => x.href && !x.disabled);
-}
-
-/**
- * Menu yang paling sering dibuka pengguna ini di aplikasi ini (hitungan kunjungan di localStorage per aplikasi dan
- * pengguna) ditambah yang disematkan. Maksimal 5; menu yang dibuka kurang dari 2 kali tidak ikut kecuali disematkan.
- */
-export function usePintasanMenu(kode: string, pengguna: string | null, groups: NavGroup[], activeKey: string | undefined, aktif = true, beranda?: string): PintasanMenu {
-  const kunci = `unipo.pintasan.${kode}.${pengguna ?? 'tamu'}`;
-  const [data, setData] = React.useState<DataPintasan>({ hitung: {}, sematan: [] });
-  React.useEffect(() => {
-    try {
-      const v = JSON.parse(baca(kunci) ?? 'null') as DataPintasan | null;
-      setData(v && typeof v === 'object' ? { hitung: v.hitung ?? {}, sematan: Array.isArray(v.sematan) ? v.sematan : [] } : { hitung: {}, sematan: [] });
-    } catch {
-      setData({ hitung: {}, sematan: [] });
-    }
-  }, [kunci]);
-  const ubah = React.useCallback(
-    (fn: (d: DataPintasan) => DataPintasan) =>
-      setData((d) => {
-        const baru = fn(d);
-        simpan(kunci, JSON.stringify(baru));
-        return baru;
-      }),
-    [kunci],
-  );
-  // Beranda selalu ada di atas menu, jadi tidak ikut pintasan.
-  const semua = React.useMemo(() => ratakanMenu(groups).filter((x) => !beranda || x.href !== beranda), [groups, beranda]);
-  React.useEffect(() => {
-    if (!aktif || !activeKey || !semua.some((x) => x.key === activeKey)) return;
-    ubah((d) => ({ ...d, hitung: { ...d.hitung, [activeKey]: (d.hitung[activeKey] ?? 0) + 1 } }));
-  }, [activeKey, aktif, semua, ubah]);
-  const items = React.useMemo(() => {
-    if (!aktif) return [];
-    const byKey = new Map(semua.map((x) => [x.key, x]));
-    const sem = data.sematan.map((k) => byKey.get(k)).filter((x): x is NavItem => Boolean(x));
-    const sering = Object.entries(data.hitung)
-      .filter(([k, n]) => n >= 2 && !data.sematan.includes(k) && byKey.has(k))
-      .sort((a, b) => b[1] - a[1])
-      .map(([k]) => byKey.get(k)!);
-    return [...sem.map((x) => ({ ...x, disematkan: true })), ...sering.map((x) => ({ ...x, disematkan: false }))].slice(0, 5);
-  }, [aktif, semua, data]);
-  return {
-    items,
-    sematkan: (key) => ubah((d) => ({ ...d, sematan: [...d.sematan.filter((k) => k !== key), key].slice(-5) })),
-    lepas: (key) => ubah((d) => ({ hitung: { ...d.hitung, [key]: 0 }, sematan: d.sematan.filter((k) => k !== key) })),
-    bolehSematkan: (key) => Boolean(key) && semua.some((x) => x.key === key) && !data.sematan.includes(key!),
-  };
-}
-
-function PintasanSidebar({ pin, utama, activeKey, renderLink }: { pin: PintasanMenu; utama?: NavItem; activeKey?: string; renderLink?: SidebarProps['renderLink'] }) {
-  const tautan = (it: NavItem) => {
-    const isi = (
-      <>
-        <span className="u-nav-icon">{it.icon}</span>
-        <span className="u-nav-label">{it.labelTeks ?? it.label}</span>
-      </>
-    );
-    const props = { className: 'u-nav-item', 'data-active': it.key === activeKey ? '' : undefined, 'data-depth': 0, 'aria-current': it.key === activeKey ? ('page' as const) : undefined, children: isi };
-    return renderLink ? renderLink(it, { ...props, href: it.href }) : <a {...props} href={it.href} />;
-  };
-  return (
-    <div className="u-pintasan-sb" aria-label="Menu utama">
-      <div className="u-pintasan-sb-judul">
-        <span>Menu utama</span>
-        {pin.bolehSematkan(activeKey) && (
-          <Tooltip content="Sematkan halaman ini ke pintasan">
-            <button type="button" className="u-pintasan-sb-pin" aria-label="Sematkan halaman ini" onClick={() => activeKey && pin.sematkan(activeKey)}>
-              <Pin />
-            </button>
-          </Tooltip>
-        )}
-      </div>
-      {utama && <div className="u-pintasan-sb-item">{tautan(utama)}</div>}
-      {pin.items.map((it) => {
-        return (
-          <div key={it.key} className="u-pintasan-sb-item">
-            {tautan(it)}
-            <Tooltip content={it.disematkan ? 'Lepas dari pintasan' : 'Sembunyikan dari pintasan'}>
-              <button type="button" className="u-pintasan-sb-lepas" aria-label={`${it.disematkan ? 'Lepas' : 'Sembunyikan'} ${typeof it.label === 'string' ? it.label : ''} dari pintasan`} onClick={() => pin.lepas(it.key)}>
-                <PinOff />
-              </button>
-            </Tooltip>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 /** Label pendek untuk navigasi bawah, mis. "Kasir & pembayaran" menjadi "Kasir". */
 function labelPendek(it: NavItem): string {
   const t = (it.labelTeks ?? (typeof it.label === 'string' ? it.label : it.key)).trim();
   return t.length <= 12 ? t : (t.split(/[\s&,/]+/)[0] ?? t);
 }
 
-/** Navigasi bawah otomatis: Beranda, menu yang sering dibuka, lalu menu teratas sidebar; maksimal 5. */
+/**
+ * Navigasi bawah otomatis, maksimal 5: Beranda + menu yang disematkan (stabil, tidak ikut hitungan kunjungan). Bila
+ * belum ada sematan: Beranda + menu teratas sidebar.
+ */
 function navBawahOtomatis(beranda: NavItem | undefined, pin: NavItem[], groups: NavGroup[]): ItemNavigasiBawah[] {
   const out: NavItem[] = [];
   const tambah = (it?: NavItem) => {
@@ -651,10 +572,11 @@ function navBawahOtomatis(beranda: NavItem | undefined, pin: NavItem[], groups: 
   };
   tambah(beranda);
   pin.forEach(tambah);
-  for (const g of groups)
-    for (const it of g.items) {
-      if (it.children?.length) it.children.forEach((c) => tambah({ ...c, icon: c.icon ?? it.icon }));
-      else tambah(it);
-    }
+  if (!pin.length)
+    for (const g of groups)
+      for (const it of g.items) {
+        if (it.children?.length) it.children.forEach((c) => tambah({ ...c, icon: c.icon ?? it.icon }));
+        else tambah(it);
+      }
   return out.map((it) => ({ key: it.key, label: labelPendek(it), icon: it.icon, href: it.href, badge: it.badge }));
 }

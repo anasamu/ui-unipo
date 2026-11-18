@@ -1,6 +1,7 @@
 'use client';
 import * as React from 'react';
 import { Collapsible as BaseCollapsible } from '@base-ui/react/collapsible';
+import { ContextMenu as BaseContextMenu } from '@base-ui/react/context-menu';
 import { ChevronDown, ChevronsUpDown, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
 import { cn, dataFlag } from '../lib/cn';
 import { Button, Kbd } from './actions';
@@ -62,7 +63,68 @@ export interface SidebarProps {
   ingat?: string;
   /** Kaki sidebar yang selalu tampil di bawah (juga saat mode ikon), tidak ikut gulir: status, versi, hak cipta. */
   footerTetap?: React.ReactNode;
+  /**
+   * Kontrol kecil di ujung kanan item menu (mis. bintang sematkan pintasan): tampil saat kursor/fokus di item, atau
+   * selalu bila elemennya ber-`data-tetap`. Tidak tampil saat mode ikon.
+   */
+  aksiItem?: (item: NavItem) => React.ReactNode;
+  /** Isi menu konteks item (klik kanan, Shift+F10, tekan lama). Kosong = menu bawaan peramban. Tidak saat mode ikon. */
+  menuItem?: (item: NavItem) => MenuEntry[] | undefined;
   className?: string;
+}
+
+type AksiNav = Pick<SidebarProps, 'aksiItem' | 'menuItem'>;
+
+/** Baris item + aksi kecil + menu konteks (bila ada). */
+function BarisNav({ item, el, aksiItem, menuItem }: AksiNav & { item: NavItem; el: React.ReactElement }) {
+  const aksi = aksiItem?.(item);
+  const menu = menuItem?.(item);
+  if (!aksi && !menu?.length) return el;
+  const isi = (
+    <>
+      {el}
+      {aksi && <span className="u-nav-aksi">{aksi}</span>}
+    </>
+  );
+  if (!menu?.length)
+    return (
+      <div className="u-nav-baris" data-ada-aksi="">
+        {isi}
+      </div>
+    );
+  return (
+    <BaseContextMenu.Root>
+      <BaseContextMenu.Trigger className="u-nav-baris" data-ada-aksi={aksi ? '' : undefined}>
+        {isi}
+      </BaseContextMenu.Trigger>
+      <BaseContextMenu.Portal>
+        <BaseContextMenu.Positioner className="u-popup-positioner">
+          <BaseContextMenu.Popup className="u-menu">
+            {menu.map((it, i) => {
+              if (it.type === 'separator') return <BaseContextMenu.Separator key={i} className="u-menu-separator" />;
+              if (it.type === 'label') return <div key={i} className="u-menu-label">{it.label}</div>;
+              const inner = (
+                <>
+                  {it.icon}
+                  <span>{it.label}</span>
+                  {it.shortcut && <span className="u-menu-shortcut">{it.shortcut}</span>}
+                </>
+              );
+              return it.href ? (
+                <BaseContextMenu.LinkItem key={i} href={it.href} className="u-menu-item">
+                  {inner}
+                </BaseContextMenu.LinkItem>
+              ) : (
+                <BaseContextMenu.Item key={i} className="u-menu-item" onClick={it.onSelect} disabled={it.disabled} data-variant={it.destructive ? 'destructive' : undefined}>
+                  {inner}
+                </BaseContextMenu.Item>
+              );
+            })}
+          </BaseContextMenu.Popup>
+        </BaseContextMenu.Positioner>
+      </BaseContextMenu.Portal>
+    </BaseContextMenu.Root>
+  );
 }
 
 function bacaIngat(kunci?: string): string | null {
@@ -87,7 +149,7 @@ function containsActive(item: NavItem, key?: string): boolean {
   return item.key === key || Boolean(item.children?.some((c) => containsActive(c, key)));
 }
 
-function NavLink({ item, active, collapsed, renderLink, depth }: { item: NavItem; active: boolean; collapsed?: boolean; renderLink?: SidebarProps['renderLink']; depth: number }) {
+function NavLink({ item, active, collapsed, renderLink, depth, aksiItem, menuItem }: AksiNav & { item: NavItem; active: boolean; collapsed?: boolean; renderLink?: SidebarProps['renderLink']; depth: number }) {
   const content = (
     <>
       {depth === 0 && <span className="u-nav-icon">{item.icon}</span>}
@@ -111,7 +173,7 @@ function NavLink({ item, active, collapsed, renderLink, depth }: { item: NavItem
       {el}
     </Tooltip>
   ) : (
-    el
+    <BarisNav item={item} el={el} aksiItem={aksiItem} menuItem={menuItem} />
   );
 }
 
@@ -122,7 +184,9 @@ function NavTree({
   renderLink,
   open: openProp,
   onOpenChange,
-}: {
+  aksiItem,
+  menuItem,
+}: AksiNav & {
   item: NavItem;
   activeKey?: string;
   collapsed?: boolean;
@@ -134,7 +198,7 @@ function NavTree({
   const [openInner, setOpenInner] = React.useState(() => containsActive(item, activeKey));
   const open = openProp ?? openInner;
   const setOpen = (o: boolean) => (onOpenChange ? onOpenChange(o) : setOpenInner(o));
-  if (!item.children?.length) return <NavLink item={item} active={item.key === activeKey} collapsed={collapsed} renderLink={renderLink} depth={0} />;
+  if (!item.children?.length) return <NavLink item={item} active={item.key === activeKey} collapsed={collapsed} renderLink={renderLink} depth={0} aksiItem={aksiItem} menuItem={menuItem} />;
   const childActive = containsActive(item, activeKey);
   if (collapsed) {
     // Saat rail, sub-menu dibuka sebagai menu melayang.
@@ -162,7 +226,7 @@ function NavTree({
       <BaseCollapsible.Panel className="u-collapsible-panel">
         <div className="u-nav-sub">
           {item.children.map((c) => (
-            <NavLink key={c.key} item={c} active={c.key === activeKey} renderLink={renderLink} depth={1} />
+            <NavLink key={c.key} item={c} active={c.key === activeKey} renderLink={renderLink} depth={1} aksiItem={aksiItem} menuItem={menuItem} />
           ))}
         </div>
       </BaseCollapsible.Panel>
@@ -171,7 +235,7 @@ function NavTree({
 }
 
 /** Sidebar aplikasi dasbor (SIAKAD, Pustikom, LMS, fakultas): grup menu, sub-menu, lencana, profil, mode rail. */
-export function Sidebar({ brand, groups, activeKey, header, footer, user, collapsed, onCollapsedChange, renderLink, accordion = true, ingat, footerTetap, className }: SidebarProps) {
+export function Sidebar({ brand, groups, activeKey, header, footer, user, collapsed, onCollapsedChange, renderLink, accordion = true, ingat, footerTetap, aksiItem, menuItem, className }: SidebarProps) {
   // Mode accordion: simpan satu kunci sub-menu yang terbuka. Awalnya sub-menu yang memuat halaman aktif,
   // dan ikut berpindah saat halaman aktif pindah ke sub-menu lain.
   const induk = (key?: string) => groups.flatMap((g) => g.items).find((it) => it.children?.length && containsActive(it, key))?.key ?? null;
@@ -210,6 +274,8 @@ export function Sidebar({ brand, groups, activeKey, header, footer, user, collap
                 activeKey={activeKey}
                 collapsed={collapsed}
                 renderLink={renderLink}
+                aksiItem={collapsed ? undefined : aksiItem}
+                menuItem={collapsed ? undefined : menuItem}
                 {...(accordion && it.children?.length ? { open: openKey === it.key, onOpenChange: (o: boolean) => setOpenKey(o ? it.key : openKey === it.key ? null : openKey) } : {})}
               />
             ))}
