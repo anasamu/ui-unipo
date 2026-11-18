@@ -246,3 +246,48 @@
     color: var(--u-muted-foreground);
   }
 }
+.u-kur-radar {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  margin: 0;
+  figcaption {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+  }
+}
+.u-kur-radar-grid {
+  fill: none;
+  stroke: var(--u-border);
+}
+.u-kur-radar-isi {
+  fill: color-mix(in oklab, var(--u-primary) 25%, transparent);
+  stroke: var(--u-primary);
+  stroke-width: 2;
+}
+.u-kur-radar-label {
+  fill: var(--u-foreground);
+  font-size: 11px;
+  font-weight: 600;
+}
+.u-kur-penanda {
+  display: grid;
+  gap: 0.75rem;
+}
+// Cetak RPS: hanya pratinjau RPS (simpan sebagai PDF dari dialog cetak peramban).
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .u-kk-cetak,
+  .u-kk-cetak * {
+    visibility: visible;
+  }
+  .u-kk-cetak {
+    position: absolute;
+    inset: 0;
+  }
+  .u-kk-cetak > button {
+    display: none;
+  }
+}

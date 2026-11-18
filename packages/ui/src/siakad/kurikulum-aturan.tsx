@@ -1492,12 +1492,45 @@ interface Ketercapaian {
 export function LaporanKetercapaianCpl({ kurikulumId, angkatanAwal, className }: { kurikulumId: number; angkatanAwal?: number; className?: string }) {
   const [angkatan, setAngkatan] = React.useState<string>(angkatanAwal ? String(angkatanAwal) : '');
   const d = useSiakadQuery<Ketercapaian>(['kurikulum-aturan', 'ketercapaian', kurikulumId, angkatan], q(`${BASIS}/ketercapaian`, { kurikulum_id: kurikulumId, angkatan }));
+  const tren = useSiakadQuery<{ periode: string[]; data: { kode: string; tahun_id: string; persen_tercapai: number | null; rata_rata: number | null }[] }>(['kurikulum-aturan', 'tren', kurikulumId, angkatan], q(`${BASIS}/ketercapaian/tren`, { kurikulum_id: kurikulumId, angkatan }));
+  const s0 = useSiakad();
+  const toast = useToast();
   const tahun = new Date().getFullYear();
+  const ekspor = async () => {
+    try {
+      const r = await s0.request<{ nama_berkas: string; csv: string }>({ method: 'GET', path: `${BASIS}/ketercapaian/ekspor`, query: { kurikulum_id: String(kurikulumId) } });
+      const url = URL.createObjectURL(new Blob([r.data.csv], { type: 'text/csv;charset=utf-8' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = r.data.nama_berkas;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.add({ title: 'Ekspor gagal', description: pesanGalat(e), type: 'error' });
+    }
+  };
   return (
     <div className={cn('u-bkd-form', className)}>
       <div className="u-bkd-aksi">
         <Select options={[{ value: '', label: 'Semua angkatan' }, ...Array.from({ length: 8 }, (_, i) => ({ value: String(tahun - i), label: `Angkatan ${tahun - i}` }))]} value={angkatan} onValueChange={(v) => setAngkatan(String(v ?? ''))} placeholder="Pilih…" />
+        <Button variant="outline" onClick={() => void ekspor()}>Ekspor LED/borang (CSV)</Button>
       </div>
+      {d.data && d.data.cpl.length >= 3 ? <RadarCpl cpl={d.data.cpl.map((c) => ({ kode: c.kode, nilai: c.persen_tercapai, ambang: c.ambang }))} /> : null}
+      {tren.data && tren.data.periode.length ? (
+        <Card>
+          <CardHeader title="Tren ketercapaian antar periode" description="Rekap terjadwal (Penjadwal: Hitung ulang ketercapaian CPL)." />
+          <CardContent>
+            <table className="u-kur-tabel">
+              <thead><tr><th>CPL</th>{tren.data.periode.map((p) => <th key={p}>{p}</th>)}</tr></thead>
+              <tbody>
+                {[...new Set(tren.data.data.map((x) => x.kode))].map((k) => (
+                  <tr key={k}><td>{k}</td>{tren.data!.periode.map((p) => { const x = tren.data!.data.find((y) => y.kode === k && y.tahun_id === p); return <td key={p}>{x?.persen_tercapai != null ? `${angka(x.persen_tercapai)}%` : '-'}</td>; })}</tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      ) : null}
       {!d.data ? (d.error ? <Alert variant="danger">{pesanGalat(d.error)}</Alert> : <Skeleton style={{ height: 200 }} />) : (
         <>
           <p className="u-bkd-keterangan">{d.data.metode} {d.data.aturan ? `Ambang dari ${d.data.aturan.nama} v${d.data.aturan.versi}.` : ''} Pemetaan: {d.data.pemetaan.mk_berkomponen} MK berkomponen, {d.data.pemetaan.cpmk_ke_cpl} CPMK→CPL, {d.data.pemetaan.mk_ke_cpl} MK→CPL.</p>
@@ -1640,6 +1673,7 @@ interface JenisEvaluasi {
   instrumen: IsianKerangka[];
   tahap: { kode: string; judul: string; aksi: string; peran: string[] }[];
   hasil_versi: boolean;
+  objek?: 'kurikulum' | 'rps' | 'mk' | null;
 }
 interface EvaluasiRow {
   id: number;
@@ -1650,7 +1684,10 @@ interface EvaluasiRow {
   periode: string;
   status: 'draf' | 'proses' | 'disahkan' | 'dikembalikan';
   tahap_ke: number;
-  tahap_sekarang: { judul: string; aksi: string; peran: string[] } | null;
+  tahap_sekarang: { judul: string; aksi: string; peran: string[]; wajib_sk?: boolean } | null;
+  objek?: 'kurikulum' | 'rps' | 'mk' | null;
+  objek_id?: number | null;
+  kategori?: 'evaluasi' | 'pengesahan';
   jumlah_tahap: number;
   versi_baru_id: number | null;
   updated_at: string;
@@ -1676,7 +1713,7 @@ function RingkasMasukan({ m }: { m: EvaluasiDetail['masukan'][string] }) {
   return <>{Object.entries(x).filter(([k]) => !['nama', 'tersedia'].includes(k)).map(([k, v]) => `${k.replace(/_/g, ' ')} ${String(v)}`).join(' · ')}</>;
 }
 
-/** Evaluasi & peninjauan kurikulum prodi: jenis, siklus, instrumen, masukan otomatis, dan tahap dari definisi kerangka. */
+/** Evaluasi, peninjauan, dan PENGESAHAN BERJENJANG kurikulum prodi (kurikulum, usulan MK, RPS): jenis, instrumen, masukan otomatis, dan tahap dari definisi kerangka. */
 export function EvaluasiKurikulum({ prodi, mkPilihan = [], className }: { prodi: string; mkPilihan?: { kode_mk: string; nama_mk: string }[]; className?: string }) {
   const def = useSiakadQuery<{ aturan: { nama: string; versi: number } | null; jenis: JenisEvaluasi[]; sumber: Record<string, string> }>(['kurikulum-aturan', 'evaluasi-def', prodi], q(`${BASIS}/evaluasi/definisi`, { prodi }));
   const daftar = useSiakadQuery<EvaluasiRow[]>(['kurikulum-aturan', 'evaluasi', prodi], q(`${BASIS}/evaluasi`, { prodi }));
@@ -1717,11 +1754,23 @@ function PanelMulaiEvaluasi({ prodi, jenis: j, mkPilihan, onOpenChange, onSelesa
   const [mk, setMk] = React.useState<string | null>(null);
   const [periode, setPeriode] = React.useState(j.siklus === 'semester' ? '' : String(new Date().getFullYear()));
   const [tim, setTim] = React.useState('');
+  const [objekId, setObjekId] = React.useState<string>('');
+  const kur = useSiakadQuery<{ id: number; kode: string; nama: string; status: string }[]>(['kurikulum-aturan', 'kurikulum-obe', prodi], q('/v1/kurikulum-obe/kurikulum', { prodi, per_page: 50 }), { enabled: j.objek === 'kurikulum' });
   return (
     <Sheet open onOpenChange={onOpenChange} title={`Mulai ${j.nama}`} description="Masukan otomatis ditarik saat dibuat dan dibekukan saat diajukan." size="md"
-      footer={<><Button variant="ghost" onClick={() => onOpenChange(false)}>Batal</Button><Button disabled={!periode || (j.tingkat === 'mk' && !mk)} onClick={async () => onSelesai((await aksi<EvaluasiDetail>('POST', `${BASIS}/evaluasi`, { jenis: j.kode, kode_prodi: prodi, kode_mk: mk, periode, tim: tim.split(',').map((x) => x.trim()).filter(Boolean) }, 'Evaluasi dimulai.')).id)}><Plus /> Mulai</Button></>}>
+      footer={<><Button variant="ghost" onClick={() => onOpenChange(false)}>Batal</Button><Button disabled={!periode || (j.tingkat === 'mk' && j.objek !== 'rps' && !mk) || ((j.objek === 'kurikulum' || j.objek === 'rps') && !objekId)} onClick={async () => onSelesai((await aksi<EvaluasiDetail>('POST', `${BASIS}/evaluasi`, { jenis: j.kode, kode_prodi: prodi, kode_mk: mk, periode, objek_id: objekId ? Number(objekId) : null, tim: tim.split(',').map((x) => x.trim()).filter(Boolean) }, j.objek ? 'Alur pengesahan dimulai.' : 'Evaluasi dimulai.')).id)}><Plus /> Mulai</Button></>}>
       <div className="u-bkd-form">
-        {j.tingkat === 'mk' ? (
+        {j.objek === 'kurikulum' ? (
+          <Field label="Kurikulum yang disahkan" required description="Kurikulum OBE prodi berstatus draf/diajukan.">
+            <Select options={(kur.data ?? []).filter((k) => ['draf', 'diajukan'].includes(k.status)).map((k) => ({ value: String(k.id), label: `${k.kode} · ${k.nama} (${k.status})` }))} value={objekId || null} onValueChange={(v) => setObjekId(v ? String(v) : '')} placeholder="Pilih…" />
+          </Field>
+        ) : null}
+        {j.objek === 'rps' ? (
+          <Field label="ID RPS" required description="RPS draf dari detail mata kuliah di ruang kerja kurikulum.">
+            <Input inputMode="numeric" value={objekId} onChange={(e) => setObjekId(e.target.value.replace(/\D/g, ''))} />
+          </Field>
+        ) : null}
+        {j.tingkat === 'mk' && j.objek !== 'rps' ? (
           <Field label="Mata kuliah" required>
             <Select options={mkPilihan.map((m) => ({ value: m.kode_mk, label: `${m.kode_mk} · ${m.nama_mk}` }))} value={mk} onValueChange={(v) => setMk(v ? String(v) : null)} placeholder="Pilih…" />
           </Field>
@@ -1744,7 +1793,9 @@ function PanelEvaluasi({ id, onOpenChange }: { id: number; onOpenChange: (o: boo
   const aksi = useAksi();
   const [isian, setIsian] = React.useState<Record<string, string> | null>(null);
   const [catatan, setCatatan] = React.useState('');
+  const [sk, setSk] = React.useState<{ sk_id: string | null; no_sk: string; tanggal_sk: string }>({ sk_id: null, no_sk: '', tanggal_sk: '' });
   const x = d.data;
+  const wajibSk = !!x?.tahap_sekarang?.wajib_sk && x.status !== 'disahkan';
   const nilai = isian ?? x?.isian ?? {};
   const bolehIsi = !!x && x.boleh && x.tahap_sekarang?.aksi === 'isi' && x.status !== 'disahkan';
   const alur: TahapPemeriksa[] = (x?.alur ?? []).map((a, i) => ({ tahap: a.kode, urut: i + 1, judul: a.judul, unit: a.unit, peran: a.peran, status: (a.status === 'dikembalikan' ? 'ditolak' : a.status) as TahapPemeriksa['status'], diproses_oleh: a.oleh, waktu: a.waktu, catatan: a.catatan }));
@@ -1754,7 +1805,7 @@ function PanelEvaluasi({ id, onOpenChange }: { id: number; onOpenChange: (o: boo
         <>
           {bolehIsi ? <Button variant="outline" onClick={() => void aksi('PUT', `${BASIS}/evaluasi/${id}/isian`, { isian: nilai }, 'Instrumen tersimpan.')}>Simpan isian</Button> : null}
           {x.tahap_ke > 0 ? <Button variant="destructive-soft" disabled={catatan.trim().length < 5} onClick={() => void aksi('POST', `${BASIS}/evaluasi/${id}/proses`, { keputusan: 'kembalikan', catatan }, 'Dikembalikan ke penyusun.')}>Kembalikan</Button> : null}
-          <Button onClick={async () => { if (bolehIsi) await aksi('PUT', `${BASIS}/evaluasi/${id}/isian`, { isian: nilai }); await aksi('POST', `${BASIS}/evaluasi/${id}/proses`, { keputusan: 'lanjut', catatan }, x.tahap_ke + 1 >= x.jumlah_tahap ? 'Disahkan.' : 'Diteruskan ke tahap berikutnya.'); setCatatan(''); }}>
+          <Button onClick={async () => { if (bolehIsi) await aksi('PUT', `${BASIS}/evaluasi/${id}/isian`, { isian: nilai }); await aksi('POST', `${BASIS}/evaluasi/${id}/proses`, { keputusan: 'lanjut', catatan, ...(wajibSk ? { sk_id: sk.sk_id, no_sk: sk.no_sk || null, tanggal_sk: sk.tanggal_sk || null } : {}) }, x.tahap_ke + 1 >= x.jumlah_tahap ? 'Disahkan.' : 'Diteruskan ke tahap berikutnya.'); setCatatan(''); }}>
             <Send /> {x.tahap_sekarang?.aksi === 'isi' ? 'Ajukan' : x.tahap_ke + 1 >= x.jumlah_tahap ? 'Sahkan' : 'Setujui & teruskan'}
           </Button>
         </>
@@ -1781,11 +1832,179 @@ function PanelEvaluasi({ id, onOpenChange }: { id: number; onOpenChange: (o: boo
               </div>
             </CardContent>
           </Card>
+          {x.boleh && wajibSk ? (
+            <Card>
+              <CardHeader title="SK penetapan" description="Wajib di tahap ini: pilih SK dari registri SK, atau isi nomor SK." />
+              <CardContent>
+                <div className="u-bkd-form">
+                  <PilihSK value={sk.sk_id} onValueChange={(v: string | null) => setSk({ ...sk, sk_id: v })} jenis="kurikulum" label="SK dari registri" />
+                  <div className="u-bkd-grid-3">
+                    <Field label="Nomor SK" optional><Input value={sk.no_sk} onChange={(e) => setSk({ ...sk, no_sk: e.target.value })} /></Field>
+                    <Field label="Tanggal SK" optional><Input type="date" value={sk.tanggal_sk} onChange={(e) => setSk({ ...sk, tanggal_sk: e.target.value })} /></Field>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+          {x.objek ? <Alert variant="neutral" title={`Objek: ${x.objek === 'kurikulum' ? 'kurikulum' : x.objek === 'rps' ? 'RPS' : 'mata kuliah'} #${x.objek_id ?? x.kode_mk ?? ''}`}>Disahkan di tahap terakhir: {x.objek === 'kurikulum' ? 'status kurikulum menjadi disahkan dengan SK.' : x.objek === 'rps' ? 'RPS disahkan dan menjadi bukti perangkat MK.' : 'usulan tercatat terverifikasi.'}</Alert> : null}
           {x.boleh && x.status !== 'disahkan' && x.tahap_sekarang?.aksi !== 'isi' ? (
             <Field label={`Catatan ${x.tahap_sekarang?.judul ?? ''}`} description="Wajib bila mengembalikan."><Textarea rows={2} value={catatan} onChange={(e) => setCatatan(e.target.value)} /></Field>
           ) : null}
         </div>
       )}
     </Sheet>
+  );
+}
+
+/** Radar ketercapaian CPL (persen mahasiswa mencapai ambang), SVG mengikuti tema (warna token). */
+export function RadarCpl({ cpl, ukuran = 260 }: { cpl: { kode: string; nilai: number | null; ambang?: number | null }[]; ukuran?: number }) {
+  const n = cpl.length;
+  const r = ukuran / 2 - 30;
+  const c = ukuran / 2;
+  const titik = (i: number, v: number) => {
+    const a = (Math.PI * 2 * i) / n - Math.PI / 2;
+    return [c + Math.cos(a) * r * (v / 100), c + Math.sin(a) * r * (v / 100)] as const;
+  };
+  const poli = (vs: number[]) => vs.map((v, i) => titik(i, v).join(',')).join(' ');
+  return (
+    <figure className="u-kur-radar" aria-label="Radar ketercapaian CPL">
+      <svg viewBox={`0 0 ${ukuran} ${ukuran}`} width={ukuran} height={ukuran} role="img">
+        {[25, 50, 75, 100].map((g) => <polygon key={g} points={poli(cpl.map(() => g))} className="u-kur-radar-grid" />)}
+        <polygon points={poli(cpl.map((x) => x.nilai ?? 0))} className="u-kur-radar-isi" />
+        {cpl.map((x, i) => { const [tx, ty] = titik(i, 118); return <text key={x.kode} x={tx} y={ty} textAnchor="middle" dominantBaseline="middle" className="u-kur-radar-label">{x.kode}</text>; })}
+      </svg>
+      <figcaption>Persen mahasiswa mencapai ambang tiap CPL</figcaption>
+    </figure>
+  );
+}
+
+// ------------------------------------------------------------------ penanda asesmen & kelas dari RPS (LMS/CBT)
+export interface PilihanPenanda {
+  aturan: string | null;
+  cpmk: { id: number; kode: string; deskripsi: string }[];
+  sub_cpmk: { id: number; cpmk_id: number; kode: string; deskripsi: string }[];
+  taksonomi: { kode: string; nama: string }[];
+  bentuk: { kode: string; nama: string }[];
+}
+
+/** Penanda kurikulum untuk satu butir asesmen (soal bank/CBT, tugas/kuis LMS): CPMK, sub-CPMK, tingkat kognitif (taksonomi kerangka), bentuk asesmen. */
+export function PenandaKurikulum({ entitas, entitasId, prodi, kodeMk, onSimpan, className }: { entitas: 'lms_bank_soal' | 'cbt_soal' | 'lms_tugas' | 'lms_kuis' | 'lms_kuis_soal'; entitasId: number; prodi: string; kodeMk: string; onSimpan?: () => void; className?: string }) {
+  const pil = useSiakadQuery<PilihanPenanda>(['kurikulum-aturan', 'penanda-pilihan', prodi, kodeMk], q(`${BASIS}/asesmen/pilihan`, { prodi, kode_mk: kodeMk }));
+  const ada = useSiakadQuery<{ tanda: { entitas_id: number; cpmk_id: number | null; sub_cpmk_id: number | null; kognitif: string | null; bentuk: string | null }[] }>(['kurikulum-aturan', 'penanda', entitas, entitasId], q(`${BASIS}/asesmen/tanda`, { entitas, ids: String(entitasId) }));
+  const aksi = useAksi();
+  const awal = ada.data?.tanda[0];
+  const [v, setV] = React.useState<{ cpmk_id: string | null; sub_cpmk_id: string | null; kognitif: string | null; bentuk: string | null } | null>(null);
+  const x = v ?? { cpmk_id: awal?.cpmk_id ? String(awal.cpmk_id) : null, sub_cpmk_id: awal?.sub_cpmk_id ? String(awal.sub_cpmk_id) : null, kognitif: awal?.kognitif ?? null, bentuk: awal?.bentuk ?? null };
+  if (!pil.data) return pil.error ? <Alert variant="danger">{pesanGalat(pil.error)}</Alert> : <Skeleton style={{ height: 80 }} />;
+  if (!pil.data.cpmk.length) return <p className="u-bkd-keterangan">MK ini belum punya CPMK di kurikulum OBE; penanda belum tersedia.</p>;
+  return (
+    <div className={cn('u-kur-penanda', className)}>
+      <div className="u-bkd-grid-3">
+        <Field label="CPMK"><Select options={pil.data.cpmk.map((c) => ({ value: String(c.id), label: `${c.kode} · ${c.deskripsi}` }))} value={x.cpmk_id} onValueChange={(c) => setV({ ...x, cpmk_id: c ? String(c) : null, sub_cpmk_id: null })} placeholder="Pilih…" /></Field>
+        <Field label="Sub-CPMK" optional><Select options={pil.data.sub_cpmk.filter((s) => String(s.cpmk_id) === x.cpmk_id).map((s) => ({ value: String(s.id), label: `${s.kode} · ${s.deskripsi}` }))} value={x.sub_cpmk_id} onValueChange={(c) => setV({ ...x, sub_cpmk_id: c ? String(c) : null })} placeholder="Pilih…" /></Field>
+        <Field label="Tingkat kognitif" optional><Select options={pil.data.taksonomi.map((t) => ({ value: t.kode, label: `${t.kode} ${t.nama}` }))} value={x.kognitif} onValueChange={(c) => setV({ ...x, kognitif: c ? String(c) : null })} placeholder="Pilih…" /></Field>
+        <Field label="Bentuk asesmen" optional><Select options={pil.data.bentuk.map((t) => ({ value: t.kode, label: t.nama }))} value={x.bentuk} onValueChange={(c) => setV({ ...x, bentuk: c ? String(c) : null })} placeholder="Pilih…" /></Field>
+      </div>
+      <Button size="sm" disabled={!x.cpmk_id} onClick={async () => { await aksi('POST', `${BASIS}/asesmen/tanda`, { entitas, entitas_id: entitasId, cpmk_id: Number(x.cpmk_id), sub_cpmk_id: x.sub_cpmk_id ? Number(x.sub_cpmk_id) : null, kognitif: x.kognitif, bentuk: x.bentuk }, 'Penanda kurikulum tersimpan.'); onSimpan?.(); }}>Simpan penanda</Button>
+    </div>
+  );
+}
+
+/** Kisi-kisi ujian CBT dibanding rencana evaluasi RPS (proporsi soal per CPMK, sebaran kognitif, peringatan). */
+export function KisiKisiCbt({ ujianId, className }: { ujianId: number; className?: string }) {
+  const d = useSiakadQuery<{ berlaku: boolean; komponen: string | null; jumlah_soal: number; soal_tanpa_tanda: number; cpmk: { kode: string; target_persen: number | null; poin_persen: number; selisih: number | null }[]; kognitif: Record<string, number>; pesan: string[]; sesuai: boolean }>(['kurikulum-aturan', 'kisi', ujianId], q(`${BASIS}/asesmen/cbt/${ujianId}/kisi`), { staleTime: 0 });
+  if (!d.data) return d.error ? <Alert variant="danger">{pesanGalat(d.error)}</Alert> : <Skeleton style={{ height: 120 }} />;
+  const x = d.data;
+  return (
+    <div className={cn('u-bkd-form', className)}>
+      {x.pesan.length ? <Alert variant="warning" title="Kisi-kisi belum sesuai RPS">{x.pesan.join(' ')}</Alert> : <Alert variant="success">Proporsi soal sesuai rencana asesmen RPS.</Alert>}
+      <table className="u-kur-tabel">
+        <thead><tr><th>CPMK</th><th>Rencana RPS ({x.komponen ?? '-'})</th><th>Poin soal</th><th>Selisih</th></tr></thead>
+        <tbody>{x.cpmk.map((c) => <tr key={c.kode}><td>{c.kode}</td><td>{c.target_persen != null ? `${angka(c.target_persen)}%` : '-'}</td><td>{angka(c.poin_persen)}%</td><td>{c.selisih != null ? angka(c.selisih) : '-'}</td></tr>)}</tbody>
+      </table>
+      <p className="u-bkd-keterangan">{x.jumlah_soal} soal · {x.soal_tanpa_tanda} belum bertanda · kognitif: {Object.entries(x.kognitif).map(([k, n]) => `${k} ${n}`).join(', ') || '-'}</p>
+    </div>
+  );
+}
+
+/** "Siapkan kelas dari RPS": pratinjau lalu bangkitkan topik per pertemuan dan tugas bertanda CPMK di kelas LMS. */
+export function SiapkanKelasDariRps({ kelasId, onSelesai }: { kelasId: number; onSelesai?: () => void }) {
+  const s0 = useSiakad();
+  const aksi = useAksi();
+  const [buka, setBuka] = React.useState(false);
+  const [pra, setPra] = React.useState<{ rps: { versi: number; status: string }; topik_baru: { pertemuan_ke: number; judul: string; deskripsi: string }[]; tugas_baru: { judul: string; cpmk_id: number | null }[]; dilewati_pertemuan: number[] } | null>(null);
+  const [galat, setGalat] = React.useState<string | null>(null);
+  const muat = async () => {
+    setBuka(true);
+    setGalat(null);
+    try {
+      setPra((await s0.request<NonNullable<typeof pra>>({ method: 'POST', path: `${BASIS}/lms/kelas/${kelasId}/dari-rps`, body: {} })).data);
+    } catch (e) {
+      setGalat(pesanGalat(e));
+    }
+  };
+  return (
+    <>
+      <Button variant="outline" onClick={() => void muat()}>Siapkan kelas dari RPS</Button>
+      {buka ? (
+        <Sheet open onOpenChange={setBuka} title="Siapkan kelas dari RPS" description="Topik per pertemuan dan tugas dari rencana evaluasi RPS (bertanda CPMK). Yang sudah ada dilewati." size="lg"
+          footer={<><Button variant="ghost" onClick={() => setBuka(false)}>Batal</Button><Button disabled={!pra || (!pra.topik_baru.length && !pra.tugas_baru.length)} onClick={async () => { await aksi('POST', `${BASIS}/lms/kelas/${kelasId}/dari-rps`, { jalankan: true }, 'Kelas disiapkan dari RPS.'); setBuka(false); onSelesai?.(); }}>Bangkitkan</Button></>}>
+          {galat ? <Alert variant="danger">{galat}</Alert> : !pra ? <Skeleton style={{ height: 160 }} /> : (
+            <div className="u-bkd-form">
+              <p className="u-bkd-keterangan">RPS versi {pra.rps.versi} ({pra.rps.status}) · {pra.topik_baru.length} topik baru · {pra.tugas_baru.length} tugas baru · {pra.dilewati_pertemuan.length} pertemuan sudah ada</p>
+              <ol className="u-kur-tahap" data-aktif="">{pra.topik_baru.map((t) => <li key={t.pertemuan_ke} data-aktif=""><strong>{t.judul}</strong><small>{t.deskripsi}</small></li>)}</ol>
+              {pra.tugas_baru.length ? <p className="u-bkd-keterangan">Tugas: {pra.tugas_baru.map((t) => t.judul).join(', ')}</p> : null}
+            </div>
+          )}
+        </Sheet>
+      ) : null}
+    </>
+  );
+}
+
+// ------------------------------------------------------------------ RPS menurut templat kerangka
+interface PeriksaRps {
+  rps: { id: number; versi: number; status: string; kode_prodi: string; kode_mk: string };
+  kerangka: string | null;
+  templat: DefinisiKerangka['rps'] | null;
+  fakta: Record<string, number>;
+  hasil: { kode: string; terpenuhi: boolean; nilai: number | null; pesan: string }[];
+  lolos: boolean;
+  alur_pengesahan: { jenis: string; tahap: string[]; evaluasi_id: number | null } | null;
+}
+
+/** RPS menurut templat kerangka versi MK: bagian wajib, kolom pertemuan, validasi berparameter, cetak, dan ajukan pengesahan berjenjang. */
+export function RpsMenurutKerangka({ rpsId, onCetak, className }: { rpsId: number; onCetak?: () => void; className?: string }) {
+  const d = useSiakadQuery<PeriksaRps>(['kurikulum-aturan', 'periksa-rps', rpsId], q(`${BASIS}/rps/${rpsId}/periksa`), { staleTime: 0 });
+  const aksi = useAksi();
+  const [evalId, setEvalId] = React.useState<number | null>(null);
+  if (!d.data) return d.error ? <Alert variant="danger">{pesanGalat(d.error)}</Alert> : <Skeleton style={{ height: 160 }} />;
+  const x = d.data;
+  const t = x.templat;
+  return (
+    <div className={cn('u-bkd-form', className)}>
+      <Alert variant={x.lolos ? 'success' : 'warning'} title={x.lolos ? 'RPS memenuhi templat kerangka' : 'RPS belum memenuhi templat kerangka'}>
+        Kerangka {x.kerangka ?? '-'} · {x.hasil.filter((h) => h.terpenuhi).length}/{x.hasil.length} validasi terpenuhi.
+      </Alert>
+      <ul className="u-kur-perangkat-ringkas">
+        {x.hasil.map((h) => <li key={h.kode}><strong>{h.terpenuhi ? '✓' : '✗'} {h.pesan}</strong><small>nilai sekarang: {h.nilai ?? '-'}</small></li>)}
+      </ul>
+      {t ? (
+        <div className="u-kur-ringkas">
+          <Card><CardHeader title="Bagian RPS (templat)" /><CardContent><ol className="u-kur-tahap">{t.bagian.filter((b) => b.aktif).map((b) => <li key={b.kode} data-aktif=""><strong>{b.nama}</strong><small>{b.wajib ? 'wajib' : 'opsional'}</small></li>)}</ol></CardContent></Card>
+          <Card><CardHeader title="Kolom rencana pertemuan" description={`Minimal ${t.pertemuan_min ?? '-'} pertemuan · ${t.menit_per_sks ?? '-'} menit per SKS per minggu`} /><CardContent><p className="u-bkd-keterangan">{t.kolom_pertemuan.map((k) => k.nama).join(' · ')}</p></CardContent></Card>
+        </div>
+      ) : null}
+      <div className="u-bkd-aksi">
+        {onCetak ? <Button variant="outline" onClick={onCetak}>Cetak RPS (PDF)</Button> : null}
+        {x.alur_pengesahan && x.rps.status === 'draf' && !x.alur_pengesahan.evaluasi_id ? (
+          <Button disabled={!x.lolos} onClick={async () => setEvalId((await aksi<EvaluasiDetail>('POST', `${BASIS}/evaluasi`, { jenis: x.alur_pengesahan!.jenis, kode_prodi: x.rps.kode_prodi, periode: String(new Date().getFullYear()), objek_id: x.rps.id }, 'Pengesahan RPS diajukan.')).id)}>
+            <Send /> Ajukan pengesahan ({x.alur_pengesahan.tahap.join(' → ')})
+          </Button>
+        ) : null}
+        {x.alur_pengesahan?.evaluasi_id || evalId ? <Button variant="ghost" onClick={() => setEvalId(x.alur_pengesahan?.evaluasi_id ?? evalId)}>Lihat alur pengesahan</Button> : null}
+      </div>
+      {evalId ? <PanelEvaluasi id={evalId} onOpenChange={(o) => !o && setEvalId(null)} /> : null}
+    </div>
   );
 }
