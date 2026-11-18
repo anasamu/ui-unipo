@@ -439,6 +439,8 @@ export function AjukanPencatatanSK({ open, onOpenChange, nomor: nomorAwal = '', 
   const bolehCatat = daftarPenerbit.find((u) => u.unit_id === penerbit)?.boleh_catat ?? false;
   const unitPenerbit = React.useMemo(() => daftarPenerbit.map((u) => ({ id: u.unit_id, induk_id: u.induk_id ?? null, kode: u.kode, jenis: u.jenis, nama: u.nama })), [daftarPenerbit]);
   const pencatat = React.useMemo(() => new Set(daftarPenerbit.filter((u) => u.boleh_catat).map((u) => u.unit_id)), [daftarPenerbit]);
+  // Lencana "Anda pencatat" hanya bila membedakan (bukan di semua unit, mis. admin).
+  const semuaPencatat = daftarPenerbit.length > 0 && pencatat.size === daftarPenerbit.length;
   React.useEffect(() => {
     if (!siakad || !penerbit || !bolehCatat) {
       setDaftarPejabat([]);
@@ -529,13 +531,13 @@ export function AjukanPencatatanSK({ open, onOpenChange, nomor: nomorAwal = '', 
         ) : null}
         <Field label="Unit penerbit" required description="Rektorat/universitas untuk SK Rektor, fakultas untuk SK Dekan, dan seterusnya.">
           <PilihUnit
-            data={unitPenerbit}
+            dataCadangan={unitPenerbit}
             value={penerbit}
             onValueChange={(v) => {
               setPenerbit(v);
               setPejabat(null);
             }}
-            keterangan={(u) => (pencatat.has(Number(u.id)) ? 'Anda pencatat' : null)}
+            keterangan={semuaPencatat ? undefined : (u) => (pencatat.has(Number(u.id)) ? 'Anda pencatat' : null)}
             placeholder="Pilih unit penerbit"
             aria-label="Unit penerbit"
           />

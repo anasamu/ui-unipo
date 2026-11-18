@@ -354,12 +354,12 @@ export function KelolaSK({ penerbitUnitId = null, pengawasan, jenis, className }
         />
         <PilihUnit
           className="u-kelola-sk-penerbit"
-          data={(unitPenerbit.data ?? []).map((u) => ({ id: u.unit_id, induk_id: u.induk_id ?? null, kode: u.kode, jenis: u.jenis, nama: u.nama }))}
+          dataCadangan={(unitPenerbit.data ?? []).map((u) => ({ id: u.unit_id, induk_id: u.induk_id ?? null, kode: u.kode, jenis: u.jenis, nama: u.nama }))}
           memuat={unitPenerbit.loading}
           boleh={(u) => pengawasan || Number(u.id) === penerbitUnitId || pencatat.has(Number(u.id))}
           alasan="Anda bukan pencatat SK unit ini."
           sembunyikanTerlarang
-          keterangan={(u) => (!pengawasan || !pencatat.has(Number(u.id)) ? null : 'Anda pencatat')}
+          keterangan={pengawasan && pencatat.size < (unitPenerbit.data ?? []).length ? (u) => (pencatat.has(Number(u.id)) ? 'Anda pencatat' : null) : undefined}
           value={penerbit}
           onValueChange={(v) => setPenerbit(v)}
           placeholder="Semua penerbit"
