@@ -163,6 +163,8 @@ export const SUMBER_ENTITAS = {
   unit: {
     nama: 'unit',
     path: '/v1/induk/unit',
+    // Unit nonaktif (mis. unit bawaan yang tidak ada di kampus ini) tidak ditawarkan; nilai lama tetap terbaca lewat `satu`.
+    query: { aktif: 1 },
     kunci: 'id',
     satu: '/v1/induk/unit/{id}',
     judul: (r) => teks(r.nama),
