@@ -14,6 +14,7 @@ import { PanelLangkah, type PanelLangkahStep } from '../components/panel-langkah
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { PilihSK } from './isian-sk';
 import { PilihBerkas } from './pilih-berkas';
+import { AlurPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import { DaftarPerubahanAturan, DaftarVersiAturan, LencanaStatusVersi, PanelBandingAturan, type PerubahanAturan, type VersiAturanRow } from './aturan-versi';
 
 /*
@@ -1624,5 +1625,167 @@ export function StatistikMataKuliah({ prodi, kodeMk, tahun, className }: { prodi
           { key: 'rata', header: 'Rata-rata bobot', shrink: true, cell: (k) => angka(k.rata_bobot) ?? '-' }, { key: 'lulus', header: 'Lulus', shrink: true, cell: (k) => (k.persen_lulus != null ? `${angka(k.persen_lulus)}%` : '-') }]}
         empty={{ title: 'Belum ada kelas di periode ini' }} />
     </div>
+  );
+}
+
+// ------------------------------------------------------------------ evaluasi & peninjauan (dinamis dari kerangka)
+interface JenisEvaluasi {
+  kode: string;
+  nama: string;
+  tingkat: 'mk' | 'prodi';
+  siklus: string;
+  siklus_tahun: number | null;
+  ppepp: string;
+  masukan: string[];
+  instrumen: IsianKerangka[];
+  tahap: { kode: string; judul: string; aksi: string; peran: string[] }[];
+  hasil_versi: boolean;
+}
+interface EvaluasiRow {
+  id: number;
+  jenis: string;
+  nama_jenis: string;
+  ppepp: string | null;
+  kode_mk: string | null;
+  periode: string;
+  status: 'draf' | 'proses' | 'disahkan' | 'dikembalikan';
+  tahap_ke: number;
+  tahap_sekarang: { judul: string; aksi: string; peran: string[] } | null;
+  jumlah_tahap: number;
+  versi_baru_id: number | null;
+  updated_at: string;
+}
+interface EvaluasiDetail extends EvaluasiRow {
+  definisi: JenisEvaluasi | null;
+  isian: Record<string, string>;
+  masukan: Record<string, { nama: string; tersedia: boolean; catatan?: string; [k: string]: unknown }>;
+  alur: { kode: string; judul: string; unit: string; peran: string; status: string; oleh: string | null; waktu: string | null; catatan: string | null }[];
+  boleh: boolean;
+}
+const STATUS_EVALUASI: Record<EvaluasiRow['status'], [string, React.ComponentProps<typeof Badge>['variant']]> = {
+  draf: ['Draf', 'neutral'], proses: ['Diperiksa', 'info'], disahkan: ['Disahkan', 'success'], dikembalikan: ['Dikembalikan', 'warning'],
+};
+const SIKLUS: Record<string, string> = { semester: 'per semester', tahunan: 'tahunan', n_tahun: 'berkala' };
+
+function RingkasMasukan({ m }: { m: EvaluasiDetail['masukan'][string] }) {
+  if (!m.tersedia) return <span className="u-kur-lama">{m.catatan ?? 'Belum tersedia; isi manual di instrumen.'}</span>;
+  const x = m as Record<string, unknown>;
+  if (Array.isArray(x.cpl)) return <>{(x.cpl as { kode: string; persen_tercapai: number | null; tercapai_prodi: boolean | null }[]).map((c) => `${c.kode} ${c.persen_tercapai ?? '-'}%${c.tercapai_prodi === false ? ' (di bawah ambang)' : ''}`).join(' · ')}</>;
+  if (Array.isArray(x.cpmk)) return <>{(x.cpmk as { kode: string; persen_tercapai: number | null }[]).map((c) => `${c.kode} ${c.persen_tercapai ?? '-'}%`).join(' · ')}</>;
+  if (Array.isArray(x.periode)) return <>{(x.periode as { tahun_id: string; persen_lulus: number | null; rata_bobot: number | null }[]).map((p) => `${p.tahun_id}: lulus ${p.persen_lulus ?? '-'}%, rata ${p.rata_bobot ?? '-'}`).join(' · ')}</>;
+  return <>{Object.entries(x).filter(([k]) => !['nama', 'tersedia'].includes(k)).map(([k, v]) => `${k.replace(/_/g, ' ')} ${String(v)}`).join(' · ')}</>;
+}
+
+/** Evaluasi & peninjauan kurikulum prodi: jenis, siklus, instrumen, masukan otomatis, dan tahap dari definisi kerangka. */
+export function EvaluasiKurikulum({ prodi, mkPilihan = [], className }: { prodi: string; mkPilihan?: { kode_mk: string; nama_mk: string }[]; className?: string }) {
+  const def = useSiakadQuery<{ aturan: { nama: string; versi: number } | null; jenis: JenisEvaluasi[]; sumber: Record<string, string> }>(['kurikulum-aturan', 'evaluasi-def', prodi], q(`${BASIS}/evaluasi/definisi`, { prodi }));
+  const daftar = useSiakadQuery<EvaluasiRow[]>(['kurikulum-aturan', 'evaluasi', prodi], q(`${BASIS}/evaluasi`, { prodi }));
+  const [buka, setBuka] = React.useState<number | null>(null);
+  const [baru, setBaru] = React.useState<JenisEvaluasi | null>(null);
+  if (!def.data) return def.error ? <Alert variant="danger">{pesanGalat(def.error)}</Alert> : <Skeleton style={{ height: 200 }} />;
+  return (
+    <div className={cn('u-bkd-form', className)}>
+      <p className="u-bkd-keterangan">Jenis evaluasi, instrumen, masukan, dan tahap pemeriksa mengikuti kerangka {def.data.aturan ? `${def.data.aturan.nama} v${def.data.aturan.versi}` : '-'} (data, bisa diubah di Kerangka tanpa kode).</p>
+      <div className="u-kur-ringkas">
+        {def.data.jenis.map((j) => (
+          <Card key={j.kode}>
+            <CardHeader title={j.nama} description={`${j.tingkat === 'mk' ? 'Per mata kuliah' : 'Prodi'} · ${SIKLUS[j.siklus] ?? j.siklus}${j.siklus_tahun && j.siklus === 'n_tahun' ? ` (${j.siklus_tahun} tahun)` : ''} · PPEPP: ${j.ppepp}`} />
+            <CardContent>
+              <p className="u-bkd-keterangan">Masukan otomatis: {j.masukan.map((m) => def.data!.sumber[m] ?? m).join(', ') || '-'}</p>
+              <p className="u-bkd-keterangan">Tahap: {j.tahap.map((t) => t.judul).join(' → ')}{j.hasil_versi ? ' → draf versi kurikulum baru' : ''}</p>
+              <Button size="sm" onClick={() => setBaru(j)}><Plus /> Mulai</Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <DataTable rows={daftar.data ?? []} rowKey={(r) => String(r.id)} columnToggle={false} densityToggle={false} onRowClick={(r) => setBuka(r.id)}
+        columns={[
+          { key: 'jenis', header: 'Evaluasi', mobile: 'title', cell: (r) => <span className="u-kur-sel"><strong>{r.nama_jenis}</strong><small>{r.kode_mk ? `${r.kode_mk} · ` : ''}periode {r.periode}</small></span> },
+          { key: 'tahap', header: 'Tahap', cell: (r) => (r.status === 'disahkan' ? `Selesai${r.versi_baru_id ? ` · draf versi #${r.versi_baru_id}` : ''}` : `${r.tahap_ke + 1}/${r.jumlah_tahap} ${r.tahap_sekarang?.judul ?? ''}`) },
+          { key: 'status', header: 'Status', shrink: true, mobile: 'badge', cell: (r) => <Badge variant={STATUS_EVALUASI[r.status][1]}>{STATUS_EVALUASI[r.status][0]}</Badge> },
+          { key: 'waktu', header: 'Diperbarui', shrink: true, cell: (r) => tgl(r.updated_at) },
+        ]}
+        empty={{ title: 'Belum ada evaluasi', description: 'Mulai portofolio MK, evaluasi CPL tahunan, atau peninjauan kurikulum.' }} />
+      {baru ? <PanelMulaiEvaluasi prodi={prodi} jenis={baru} mkPilihan={mkPilihan} onOpenChange={(o) => !o && setBaru(null)} onSelesai={(id) => { setBaru(null); setBuka(id); }} /> : null}
+      {buka ? <PanelEvaluasi id={buka} onOpenChange={(o) => !o && setBuka(null)} /> : null}
+    </div>
+  );
+}
+
+function PanelMulaiEvaluasi({ prodi, jenis: j, mkPilihan, onOpenChange, onSelesai }: { prodi: string; jenis: JenisEvaluasi; mkPilihan: { kode_mk: string; nama_mk: string }[]; onOpenChange: (o: boolean) => void; onSelesai: (id: number) => void }) {
+  const aksi = useAksi();
+  const [mk, setMk] = React.useState<string | null>(null);
+  const [periode, setPeriode] = React.useState(j.siklus === 'semester' ? '' : String(new Date().getFullYear()));
+  const [tim, setTim] = React.useState('');
+  return (
+    <Sheet open onOpenChange={onOpenChange} title={`Mulai ${j.nama}`} description="Masukan otomatis ditarik saat dibuat dan dibekukan saat diajukan." size="md"
+      footer={<><Button variant="ghost" onClick={() => onOpenChange(false)}>Batal</Button><Button disabled={!periode || (j.tingkat === 'mk' && !mk)} onClick={async () => onSelesai((await aksi<EvaluasiDetail>('POST', `${BASIS}/evaluasi`, { jenis: j.kode, kode_prodi: prodi, kode_mk: mk, periode, tim: tim.split(',').map((x) => x.trim()).filter(Boolean) }, 'Evaluasi dimulai.')).id)}><Plus /> Mulai</Button></>}>
+      <div className="u-bkd-form">
+        {j.tingkat === 'mk' ? (
+          <Field label="Mata kuliah" required>
+            <Select options={mkPilihan.map((m) => ({ value: m.kode_mk, label: `${m.kode_mk} · ${m.nama_mk}` }))} value={mk} onValueChange={(v) => setMk(v ? String(v) : null)} placeholder="Pilih…" />
+          </Field>
+        ) : null}
+        <Field label={j.siklus === 'semester' ? 'Periode (tahun_id)' : 'Tahun'} required description={j.siklus === 'semester' ? 'Mis. 20251' : 'Mis. 2025'}>
+          <Input inputMode="numeric" value={periode} onChange={(e) => setPeriode(e.target.value.replace(/\D/g, '').slice(0, 5))} />
+        </Field>
+        {j.tahap.some((t) => t.peran.includes('tim_penyusun')) ? (
+          <Field label="Tim penyusun" optional description="Username/NIDN dosen, pisahkan koma. Koordinator MK otomatis.">
+            <Input value={tim} onChange={(e) => setTim(e.target.value)} />
+          </Field>
+        ) : null}
+      </div>
+    </Sheet>
+  );
+}
+
+function PanelEvaluasi({ id, onOpenChange }: { id: number; onOpenChange: (o: boolean) => void }) {
+  const d = useSiakadQuery<EvaluasiDetail>(['kurikulum-aturan', 'evaluasi', 'detail', id], q(`${BASIS}/evaluasi/${id}`), { staleTime: 0 });
+  const aksi = useAksi();
+  const [isian, setIsian] = React.useState<Record<string, string> | null>(null);
+  const [catatan, setCatatan] = React.useState('');
+  const x = d.data;
+  const nilai = isian ?? x?.isian ?? {};
+  const bolehIsi = !!x && x.boleh && x.tahap_sekarang?.aksi === 'isi' && x.status !== 'disahkan';
+  const alur: TahapPemeriksa[] = (x?.alur ?? []).map((a, i) => ({ tahap: a.kode, urut: i + 1, judul: a.judul, unit: a.unit, peran: a.peran, status: (a.status === 'dikembalikan' ? 'ditolak' : a.status) as TahapPemeriksa['status'], diproses_oleh: a.oleh, waktu: a.waktu, catatan: a.catatan }));
+  return (
+    <Sheet open onOpenChange={onOpenChange} title={x ? `${x.nama_jenis}${x.kode_mk ? ` ${x.kode_mk}` : ''} · ${x.periode}` : 'Evaluasi'} description={x ? `PPEPP: ${x.ppepp ?? '-'} · ${STATUS_EVALUASI[x.status][0]}` : undefined} size="xl"
+      footer={x && x.boleh && x.status !== 'disahkan' ? (
+        <>
+          {bolehIsi ? <Button variant="outline" onClick={() => void aksi('PUT', `${BASIS}/evaluasi/${id}/isian`, { isian: nilai }, 'Instrumen tersimpan.')}>Simpan isian</Button> : null}
+          {x.tahap_ke > 0 ? <Button variant="destructive-soft" disabled={catatan.trim().length < 5} onClick={() => void aksi('POST', `${BASIS}/evaluasi/${id}/proses`, { keputusan: 'kembalikan', catatan }, 'Dikembalikan ke penyusun.')}>Kembalikan</Button> : null}
+          <Button onClick={async () => { if (bolehIsi) await aksi('PUT', `${BASIS}/evaluasi/${id}/isian`, { isian: nilai }); await aksi('POST', `${BASIS}/evaluasi/${id}/proses`, { keputusan: 'lanjut', catatan }, x.tahap_ke + 1 >= x.jumlah_tahap ? 'Disahkan.' : 'Diteruskan ke tahap berikutnya.'); setCatatan(''); }}>
+            <Send /> {x.tahap_sekarang?.aksi === 'isi' ? 'Ajukan' : x.tahap_ke + 1 >= x.jumlah_tahap ? 'Sahkan' : 'Setujui & teruskan'}
+          </Button>
+        </>
+      ) : undefined}>
+      {!x ? <Skeleton style={{ height: 200 }} /> : (
+        <div className="u-bkd-form">
+          <AlurPemeriksa pemeriksa={alur} judul="Alur penilaian & pengesahan" />
+          {x.versi_baru_id ? <Alert variant="success" title="Rekomendasi menjadi draf versi kurikulum baru">Draf versi aturan #{x.versi_baru_id} dibuat dari peninjauan ini; lanjutkan di Aturan kurikulum.</Alert> : null}
+          <Card>
+            <CardHeader title="Masukan otomatis" description="Ditarik dari asesmen & ketercapaian, EDOM, tracer study; sumber yang belum tersedia diisi manual." />
+            <CardContent>
+              <DescriptionList items={Object.entries(x.masukan).map(([k, m]) => ({ label: m.nama ?? k, value: <RingkasMasukan m={m} /> }))} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader title="Instrumen" />
+            <CardContent>
+              <div className="u-bkd-form">
+                {(x.definisi?.instrumen ?? []).map((i) => (
+                  <Field key={i.kode} label={i.nama} required={i.wajib}>
+                    <Textarea rows={3} disabled={!bolehIsi} value={nilai[i.kode] ?? ''} onChange={(e) => setIsian({ ...nilai, [i.kode]: e.target.value })} />
+                  </Field>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          {x.boleh && x.status !== 'disahkan' && x.tahap_sekarang?.aksi !== 'isi' ? (
+            <Field label={`Catatan ${x.tahap_sekarang?.judul ?? ''}`} description="Wajib bila mengembalikan."><Textarea rows={2} value={catatan} onChange={(e) => setCatatan(e.target.value)} /></Field>
+          ) : null}
+        </div>
+      )}
+    </Sheet>
   );
 }
