@@ -1,0 +1,145 @@
+@use '../mixins' as *;
+
+// ================================================================ Status jadwal (Kalender & periode)
+.u-status-jadwal {
+  display: grid;
+  gap: 0.5rem;
+}
+.u-status-jadwal-ringkas {
+  display: flex;
+  flex-wrap: wrap;
+}
+.u-status-jadwal-butir {
+  --nada: var(--u-muted-foreground);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid color-mix(in oklab, var(--nada) 35%, var(--u-border));
+  border-radius: calc(var(--u-radius) + 2px);
+  background: color-mix(in oklab, var(--nada) 8%, var(--u-card));
+  font-size: var(--u-text-sm);
+  &[data-keadaan='buka'] {
+    --nada: var(--u-success, #16a34a);
+  }
+  &[data-keadaan='akan'] {
+    --nada: var(--u-info, #2563eb);
+  }
+  &[data-keadaan='tutup'] {
+    --nada: var(--u-danger, #dc2626);
+  }
+}
+.u-status-jadwal-ikon {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: 0.0625rem;
+  color: var(--nada);
+}
+.u-status-jadwal-teks {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+  small {
+    color: var(--u-muted-foreground);
+  }
+}
+.u-status-jadwal-pesan {
+  color: color-mix(in oklab, var(--nada) 75%, var(--u-foreground));
+  font-weight: var(--u-weight-medium);
+}
+
+// ================================================================ Unduh kalender
+.u-unduh-kal {
+  display: grid;
+  gap: 1rem;
+}
+.u-unduh-kal-alat {
+  display: grid;
+  gap: 0.75rem;
+}
+.u-unduh-kal-varian {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+  gap: 0.5rem;
+  button {
+    display: grid;
+    gap: 0.125rem;
+    padding: 0.625rem 0.75rem;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius);
+    background: var(--u-card);
+    cursor: pointer;
+    span {
+      font-size: 0.75rem;
+      color: var(--u-muted-foreground);
+    }
+    &[aria-checked='true'] {
+      border-color: var(--u-primary);
+      box-shadow: 0 0 0 1px var(--u-primary);
+      background: color-mix(in oklab, var(--u-primary) 6%, var(--u-card));
+    }
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  }
+}
+.u-unduh-kal-baris {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem 1rem;
+}
+.u-unduh-kal-pilih {
+  display: grid;
+  gap: 0.25rem;
+  font-size: var(--u-text-sm);
+  span {
+    font-weight: var(--u-weight-medium);
+  }
+  select {
+    min-height: 2.25rem;
+    padding: 0 0.625rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius);
+    background: var(--u-card);
+    color: var(--u-foreground);
+    font: inherit;
+  }
+}
+.u-unduh-kal-cek {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.25rem;
+  font-size: var(--u-text-sm);
+}
+.u-unduh-kal-pratinjau {
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  border-radius: calc(var(--u-radius) + 4px);
+  background: repeating-conic-gradient(color-mix(in oklab, var(--u-muted) 70%, transparent) 0% 25%, transparent 0% 50%) 0 0 / 18px 18px;
+  overflow: auto;
+  max-height: 70vh;
+  svg {
+    box-shadow: 0 6px 24px rgb(15 23 42 / 0.18);
+    border-radius: 4px;
+    background: #fff;
+  }
+}
+.u-unduh-kal-aksi {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.u-unduh-kal-galat {
+  margin: 0;
+  color: var(--u-danger, #dc2626);
+  font-size: var(--u-text-sm);
+}

@@ -2044,6 +2044,8 @@ export interface FormAturanProps {
   onTersimpan?: (a: DetailAturan & { tulis_tembus?: TulisTembusAturan }) => void;
   /** Langkah pertama yang dibuka (0 = titik … 5 = tinjau). Bawaan: 0 saat tambah, 2 saat ubah. */
   langkahAwal?: number;
+  /** Periode awal saat menambah (mis. "Tambah aturan untuk periode ini" dari Kalender & periode). */
+  tahunId?: string;
 }
 
 const LANGKAH: Array<{ judul: string; ket: string; kunci: string[] }> = [
@@ -2070,7 +2072,7 @@ const langkahGalat = (k: string) => {
  * uji ke contoh subjek, simpan draf atau aktifkan). Aturan tanpa SK tetap draf. Mengubah aturan aktif menaikkan versi
  * dan wajib memakai SK baru atau SK yang sudah dilampirkan.
  */
-export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, open, onOpenChange, trigger, onTersimpan, langkahAwal }: FormAturanProps) {
+export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, open, onOpenChange, trigger, onTersimpan, langkahAwal, tahunId: tahunAwal }: FormAturanProps) {
   const katalog = useKatalogAturan();
   const saya = useAturanSaya();
   const siakad = useSiakad();
@@ -2088,13 +2090,14 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
   const awal = React.useMemo(() => {
     const x = isiDari(aturan, titikAwal);
     if (!aturan && kategoriAwal) x.kategori = kategoriAwal;
+    if (!aturan && tahunAwal) x.tahun_id = tahunAwal;
     const ta = katalog.data?.titik.find((y) => y.kode === x.titik);
     if (!aturan && ta) {
       if (!x.kategori || !ta.kategori.includes(x.kategori as KategoriAturan)) x.kategori = ta.kategori.find(bolehKategori) ?? '';
       if (!x.jenis) x.jenis = ta.jenis[0] ?? '';
     }
     return x;
-  }, [aturan, titikAwal, kategoriAwal, katalog.data, bolehKategori]);
+  }, [aturan, titikAwal, kategoriAwal, tahunAwal, katalog.data, bolehKategori]);
   const [isi, setIsi] = React.useState<IsiAturan>(awal);
   const [simpanan, setSimpanan] = React.useState<IsiAturan>(awal);
   const [galat, setGalat] = React.useState<Record<string, string>>({});

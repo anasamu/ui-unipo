@@ -1,0 +1,158 @@
+@use '../mixins' as *;
+
+// ================================================================ Garis waktu (gantt sederhana)
+.u-garis-waktu {
+  container-type: inline-size;
+  display: grid;
+  gap: 0.25rem;
+  font-size: var(--u-text-sm);
+}
+.u-garis-waktu-kepala,
+.u-garis-waktu-baris {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.25rem 1rem;
+  align-items: center;
+}
+@container (min-width: 640px) {
+  .u-garis-waktu-kepala,
+  .u-garis-waktu-baris {
+    grid-template-columns: 14rem minmax(0, 1fr);
+  }
+}
+.u-garis-waktu-kepala {
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid var(--u-border);
+  color: var(--u-muted-foreground);
+  font-size: 0.75rem;
+  font-weight: var(--u-weight-medium);
+  > .u-garis-waktu-label {
+    display: none;
+  }
+}
+@container (min-width: 640px) {
+  .u-garis-waktu-kepala > .u-garis-waktu-label {
+    display: block;
+  }
+}
+.u-garis-waktu-sumbu {
+  position: relative;
+  height: 1.25rem;
+}
+.u-garis-waktu-bulan {
+  position: absolute;
+  top: 0;
+  padding-left: 0.375rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  border-left: 1px solid var(--u-border);
+  font-variant-numeric: tabular-nums;
+}
+.u-garis-waktu-badan {
+  display: grid;
+}
+.u-garis-waktu-baris {
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed color-mix(in oklab, var(--u-border) 70%, transparent);
+  &:last-child {
+    border-bottom: 0;
+  }
+  &[data-redup] .u-garis-waktu-batang {
+    opacity: 0.45;
+  }
+}
+.u-garis-waktu-label {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+}
+.u-garis-waktu-judul {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-weight: var(--u-weight-medium);
+  color: var(--u-foreground);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.u-garis-waktu-ket {
+  color: var(--u-muted-foreground);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.u-garis-waktu-jalur {
+  position: relative;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--u-muted) 55%, transparent);
+}
+.u-garis-waktu-garis {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: color-mix(in oklab, var(--u-border) 70%, transparent);
+}
+.u-garis-waktu-kini {
+  position: absolute;
+  top: -0.25rem;
+  bottom: -0.25rem;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--u-danger, #dc2626);
+  z-index: 2;
+}
+.u-garis-waktu-batang {
+  position: absolute;
+  top: 0.1875rem;
+  bottom: 0.1875rem;
+  min-width: 0.375rem;
+  border: 0;
+  padding: 0;
+  border-radius: 999px;
+  background: var(--warna);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--warna) 70%, black);
+  z-index: 1;
+  &[data-libur] {
+    background: repeating-linear-gradient(135deg, var(--warna) 0 4px, color-mix(in oklab, var(--warna) 40%, var(--u-card)) 4px 8px);
+  }
+}
+button.u-garis-waktu-batang {
+  cursor: pointer;
+  &:hover {
+    filter: brightness(1.08);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--u-ring, var(--u-primary));
+    outline-offset: 2px;
+  }
+}
+.u-garis-waktu-legenda {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  justify-content: flex-end;
+  color: var(--u-muted-foreground);
+  font-size: 0.75rem;
+}
+.u-garis-waktu-kini-tanda {
+  width: 2px;
+  height: 0.875rem;
+  background: var(--u-danger, #dc2626);
+}
+.u-garis-waktu-kosong {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--u-muted-foreground);
+  border: 1px dashed var(--u-border);
+  border-radius: var(--u-radius);
+}
+@media print {
+  .u-garis-waktu-batang {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
