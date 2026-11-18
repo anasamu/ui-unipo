@@ -1380,3 +1380,165 @@ button.u-step-marker {
   flex-basis: 100%;
   margin-top: 0;
 }
+// Tombol "Buat tiket" di samping kode laporan dan di toast galat (panel Laporkan ke Pustikom).
+.u-kode-laporan-lapor {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 1.5rem;
+  padding: 0 0.5rem;
+  border: 1px solid color-mix(in oklab, currentColor 30%, transparent);
+  border-radius: calc(var(--u-radius) - 4px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--u-text-xs);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  svg {
+    width: 0.8125rem;
+    height: 0.8125rem;
+  }
+  &:hover {
+    background: color-mix(in oklab, currentColor 10%, transparent);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--u-ring);
+    outline-offset: 1px;
+  }
+}
+.u-toast-lapor {
+  margin-top: 0.5rem;
+  color: var(--u-foreground);
+}
+
+// ---------------------------------------------------------------- Panel Laporkan ke Pustikom (siakad/lapor-galat)
+.u-lapor-galat-judul {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  svg {
+    width: 1.125rem;
+    height: 1.125rem;
+    color: var(--u-danger);
+  }
+}
+.u-lapor-galat {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.u-lapor-galat-info {
+  padding: 0.75rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius);
+  background: var(--u-muted);
+  font-size: var(--u-text-sm);
+}
+.u-lapor-galat-kode {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  code {
+    font-family: var(--u-font-mono);
+    word-break: break-all;
+  }
+}
+.u-lapor-galat-url {
+  font-family: var(--u-font-mono);
+  font-size: var(--u-text-xs);
+  word-break: break-all;
+}
+.u-lapor-galat-catatan {
+  margin: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  line-height: 1.5;
+}
+.u-lapor-galat-tolak {
+  display: block;
+  margin-top: 0.375rem;
+  color: var(--u-danger);
+  font-size: var(--u-text-xs);
+}
+.u-lapor-galat-kembali {
+  align-self: flex-start;
+}
+.u-lapor-galat-selesai {
+  align-items: center;
+  padding: 1.5rem 0.5rem;
+  text-align: center;
+  h3 {
+    margin: 0;
+    font-size: var(--u-text-lg);
+    font-weight: 600;
+  }
+  p {
+    margin: 0;
+    max-width: 26rem;
+  }
+}
+.u-lapor-galat-ikon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--u-success) 15%, transparent);
+  color: var(--u-success);
+  svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+.u-lapor-galat-nomor {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  code {
+    padding: 0.25rem 0.625rem;
+    border-radius: var(--u-radius);
+    background: var(--u-muted);
+    font-family: var(--u-font-mono);
+    font-size: var(--u-text-lg);
+    font-weight: 600;
+  }
+}
+.u-lapor-galat-daftar {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius);
+  li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.125rem 0.75rem;
+    align-items: center;
+    padding: 0.625rem 0.75rem;
+    & + li {
+      border-top: 1px solid var(--u-border);
+    }
+    &[data-sorot] {
+      background: color-mix(in oklab, var(--u-primary) 8%, transparent);
+    }
+    .u-badge {
+      grid-row: 1 / span 2;
+      grid-column: 2;
+    }
+  }
+}
+.u-lapor-galat-daftar-judul {
+  font-size: var(--u-text-sm);
+  font-weight: 500;
+}
+.u-lapor-galat-daftar-meta {
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  code {
+    font-family: var(--u-font-mono);
+  }
+}

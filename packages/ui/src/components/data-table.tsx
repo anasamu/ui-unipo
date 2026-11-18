@@ -1,6 +1,7 @@
 'use client';
 import * as React from 'react';
 import { AlertTriangle, Columns3, Download, MoreHorizontal, Rows3, SearchX } from 'lucide-react';
+import { KodeLaporan } from './galat';
 import { cn, dataFlag } from '../lib/cn';
 import { Button, Skeleton } from './actions';
 import { Checkbox } from './forms';
@@ -388,7 +389,12 @@ export function DataTable<T>(props: DataTableProps<T>) {
       <Empty
         icon={<AlertTriangle />}
         title="Data tidak bisa dimuat"
-        description={error instanceof Error ? error.message : typeof error === 'string' ? error : 'Periksa koneksi, lalu coba lagi.'}
+        description={
+          <>
+            {error instanceof Error ? error.message : typeof error === 'string' ? error : 'Periksa koneksi, lalu coba lagi.'}
+            <KodeLaporan error={error} />
+          </>
+        }
         actions={
           onRetry && (
             <Button variant="outline" size="sm" onClick={onRetry}>

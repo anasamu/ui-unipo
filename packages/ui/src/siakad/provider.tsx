@@ -4,6 +4,7 @@ import type { ApiResult, Meta, Siakad } from 'unipo-siakad-sdk';
 import { Toaster, TooltipProvider } from '../components/overlays';
 import { requestIdDari } from '../components/galat';
 import { laporPemeliharaan } from './pemeliharaan';
+import { LaporGalat } from './lapor-galat';
 
 const SiakadContext = React.createContext<Siakad | null>(null);
 
@@ -16,11 +17,21 @@ export interface UnipoProviderProps {
   children: React.ReactNode;
   /** Pasang Toaster + TooltipProvider (bawaan true). */
   withProviders?: boolean;
+  /**
+   * Pasang panel "Laporkan ke Pustikom" untuk tombol Buat tiket di kode laporan galat (bawaan true bila `siakad` ada).
+   * Matikan untuk SDK tanpa sesi pengguna yang tidak bersarang di provider lain.
+   */
+  laporGalat?: boolean;
 }
 
 /** Penyedia konteks UNIPO: instans SDK untuk komponen terhubung, toast, dan tooltip. */
-export function UnipoProvider({ siakad = null, children, withProviders = true }: UnipoProviderProps) {
-  const inner = <SiakadContext.Provider value={siakad}>{children}</SiakadContext.Provider>;
+export function UnipoProvider({ siakad = null, children, withProviders = true, laporGalat = true }: UnipoProviderProps) {
+  const inner = (
+    <SiakadContext.Provider value={siakad}>
+      {children}
+      {siakad && laporGalat && <LaporGalat siakad={siakad} />}
+    </SiakadContext.Provider>
+  );
   if (!withProviders) return inner;
   return (
     <TooltipProvider>
