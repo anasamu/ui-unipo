@@ -1023,7 +1023,7 @@ export function LampiranAturanBiaya({ aturan: a }: { aturan: DetailAturanBiaya }
 export function FormLampiranBiaya({ aturanId, trigger, open, onOpenChange }: { aturanId: string; trigger?: React.ReactElement; open?: boolean; onOpenChange?: (o: boolean) => void }) {
   const siakad = useSiakad();
   const toast = useToast();
-  const kosong = { berkas_id: '', jenis: 'sk', nomor: '', tanggal: '', perihal: '' };
+  const kosong = { berkas_id: '', jenis: 'sk', nomor: '', tanggal: '', perihal: '', sk_id: '' };
   const [isi, setIsi] = React.useState(kosong);
   const [galat, setGalat] = React.useState<Record<string, string>>({});
   const [inner, setInner] = React.useState(false);
@@ -1054,7 +1054,8 @@ export function FormLampiranBiaya({ aturanId, trigger, open, onOpenChange }: { a
       labelSimpan="Lampirkan"
       onSimpan={async () => {
         const g: Record<string, string> = {};
-        if (!isi.berkas_id) g.berkas_id = 'Unggah atau pilih berkas.';
+        // SK dari registri sudah berberkas di sana (tidak diunggah ulang).
+        if (!isi.berkas_id && !isi.sk_id) g.berkas_id = 'Unggah atau pilih berkas.';
         if (isi.jenis === 'sk' && !isi.nomor.trim()) g.nomor = 'Nomor SK wajib diisi.';
         setGalat(g);
         if (Object.keys(g).length) return 'Periksa isian yang ditandai.';
@@ -1062,7 +1063,7 @@ export function FormLampiranBiaya({ aturanId, trigger, open, onOpenChange }: { a
           await siakad.request({
             method: 'POST',
             path: `/v1/biaya/aturan/${aturanId}/lampiran`,
-            body: { berkas_id: isi.berkas_id, jenis: isi.jenis, nomor: isi.nomor.trim() || null, tanggal: isi.tanggal || null, perihal: isi.perihal.trim() || null },
+            body: isi.jenis === 'sk' && isi.sk_id ? { sk_id: isi.sk_id, jenis: 'sk', berkas_id: isi.berkas_id || undefined } : { berkas_id: isi.berkas_id, jenis: isi.jenis, nomor: isi.nomor.trim() || null, tanggal: isi.tanggal || null, perihal: isi.perihal.trim() || null },
           });
         } catch (e) {
           const f = (e as { fields?: Record<string, unknown> }).fields;
@@ -1105,6 +1106,7 @@ export function FormLampiranBiaya({ aturanId, trigger, open, onOpenChange }: { a
               value={isi.nomor || null}
               onValueChange={(nomor, sk) => {
                 set('nomor', nomor ?? '');
+                set('sk_id', sk?.id ?? '');
                 if (sk?.tanggal && !isi.tanggal) set('tanggal', sk.tanggal);
                 if (sk?.perihal && !isi.perihal) set('perihal', sk.perihal);
               }}

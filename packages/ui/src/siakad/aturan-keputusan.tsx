@@ -405,7 +405,7 @@ export function AktifkanDaruratAturan({
       onSimpan={async () => {
         const g: Record<string, string> = {};
         if (alasan.trim().length < 10) g.alasan = 'Tulis alasan darurat, minimal 10 karakter.';
-        if (cara === 'sk' && !(sk?.nomor && sk.tanggal && sk.berkas_id)) g.sk = 'Lengkapi nomor, tanggal, dan berkas SK.';
+        if (cara === 'sk' && !sk?.sk_id && !(sk?.nomor && sk.tanggal && sk.berkas_id)) g.sk = 'Pilih SK dari registri SK, atau lengkapi nomor, tanggal, dan berkas SK.';
         if (cara === 'lampiran' && !dokumen) g.dokumen = 'Pilih SK yang sudah dilampirkan.';
         setGalat(g);
         if (Object.keys(g).length) return 'Periksa isian yang ditandai.';
@@ -413,7 +413,7 @@ export function AktifkanDaruratAturan({
           await siakad.request({
             method: 'POST',
             path: `/v1/aturan/${a.id}/darurat`,
-            body: { alasan: alasan.trim(), ...(cara === 'sk' ? { sk: { berkas_id: sk!.berkas_id, nomor: sk!.nomor, tanggal: sk!.tanggal, perihal: sk!.perihal ?? null } } : { lampiran_id: dokumen }) },
+            body: { alasan: alasan.trim(), ...(cara === 'sk' ? { sk: sk!.sk_id ? { sk_id: sk!.sk_id } : { berkas_id: sk!.berkas_id, nomor: sk!.nomor, tanggal: sk!.tanggal, perihal: sk!.perihal ?? null } } : { lampiran_id: dokumen }) },
           });
         } catch (e) {
           if (belumAda(e)) return 'Server SIAKAD ini belum mendukung jalur darurat.';
@@ -436,7 +436,7 @@ export function AktifkanDaruratAturan({
             aria-label="Jenis dasar"
             value={cara}
             onValueChange={setCara}
-            options={[{ value: 'sk', label: 'SK baru dari arsip' }, ...(skAda.length ? [{ value: 'lampiran' as const, label: 'SK yang sudah dilampirkan' }] : [])]}
+            options={[{ value: 'sk', label: 'SK dari registri' }, ...(skAda.length ? [{ value: 'lampiran' as const, label: 'SK yang sudah dilampirkan' }] : [])]}
           />
         </Field>
         {cara === 'sk' ? (
@@ -542,7 +542,7 @@ export function AjukanPengecualianAturan({ aturan: a, subjek: subjekTetap, pesan
         const g: Record<string, string> = {};
         if (!isi.subjek) g.subjek = `Pilih ${jenisSubjek.label.toLowerCase()}.`;
         if (isi.alasan.trim().length < 10) g.alasan = 'Tulis alasan, minimal 10 karakter.';
-        if (isi.cara === 'sk' && !(isi.sk?.nomor && isi.sk.tanggal && isi.sk.berkas_id)) g.sk = 'Lengkapi nomor, tanggal, dan berkas SK.';
+        if (isi.cara === 'sk' && !isi.sk?.sk_id && !(isi.sk?.nomor && isi.sk.tanggal && isi.sk.berkas_id)) g.sk = 'Pilih SK dari registri SK, atau lengkapi nomor, tanggal, dan berkas SK.';
         if (isi.cara !== 'sk' && !isi.dokumen) g.dokumen = 'Unggah atau pilih dokumennya.';
         if (isi.cara === 'dokumen_kebijakan' && !isi.nomor.trim()) g.nomor = 'Nomor dokumen kebijakan wajib diisi.';
         setGalat(g);
@@ -557,7 +557,7 @@ export function AjukanPengecualianAturan({ aturan: a, subjek: subjekTetap, pesan
               alasan: isi.alasan.trim(),
               dok_jenis: isi.cara,
               ...(isi.cara === 'sk'
-                ? { berkas_id: isi.sk!.berkas_id, dok_nomor: isi.sk!.nomor, dok_tanggal: isi.sk!.tanggal }
+                ? isi.sk!.sk_id ? { sk_id: isi.sk!.sk_id } : { berkas_id: isi.sk!.berkas_id, dok_nomor: isi.sk!.nomor, dok_tanggal: isi.sk!.tanggal }
                 : { berkas_id: isi.dokumen, dok_nomor: isi.nomor.trim() || null, dok_tanggal: isi.tanggal || null }),
               berlaku_sampai: isi.sampai || null,
               tahun_id: isi.tahun || null,

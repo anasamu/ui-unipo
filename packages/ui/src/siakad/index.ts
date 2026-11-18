@@ -76,6 +76,7 @@ export * from './widget-unit';
 export * from './cari-dokumen';
 export * from './prodi';
 export * from './isian-sk';
+export * from './registri-sk';
 export * from './jadwal-bentrok';
 export * from './pengajuan';
 export * from './presensi-kerja';

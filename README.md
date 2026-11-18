@@ -59,6 +59,7 @@ Widget kecil per fitur yang mengambil data sendiri lewat `unipo-siakad-sdk` (bun
 | Pustikom & SSO | `DaftarAplikasi`, `KartuAplikasi`, `DetailAplikasi`, `FormAplikasi`, `WizardAplikasi`, `SecretSekali`, `PilihScope`, `LogApi`, `RingkasanLogApi`, `LogAktivitas`, `KeamananPengguna` (`SsoAdminProvider` + `createSsoAdmin` untuk API admin SSO lewat BFF) | `docs/screenshots/aplikasi--*.png`, `log--*.png` |
 | LMS | `RingkasanLms`, `DaftarKelasLms`, `KartuKelas`, `TugasMendatang`, `KuisTerbuka`, `AgendaLms`, `ProgresKelas` | `docs/screenshots/lms--*.png` |
 | CBT | `DaftarUjianSaya`, `LembarUjian`, `SoalCbt`, `NavigasiSoal`, `TimerUjian`, `HasilUjian` | `docs/screenshots/cbt--*.png` |
+| Registri SK tunggal (`/v1/sk`) | `PilihSK` (bawaan semua form yang butuh SK: cari, cek nomor ganda, ajukan pencatatan), `KartuSK`, `KelolaSK`/`DaftarSK` (halaman Registri SK penerbit/pengawas), `RincianSK`, `UbahSK`, `RiwayatSK`, `useSK`, `useCariSK`; `IsianSK`/`PilihNomorSK` lama tetap kompatibel dan kini mencari di registri. Simpan `sk_id`, jangan menyalin nomor/berkas. | docs/SK.md di siakad_unipo |
 
 ## Fitur API (`unipo-ui/katalog`)
 
