@@ -86,7 +86,7 @@ export function tahapAktif(pemeriksa: TahapPemeriksa[] | null | undefined): Taha
 export function labelPemeriksa(pemeriksa: TahapPemeriksa[] | null | undefined): { teks: string; varian: BadgeVariant; status: StatusTahapPemeriksa } | null {
   const daftar = pemeriksa ?? [];
   const tolak = daftar.find((t) => t.status === 'ditolak');
-  if (tolak) return { teks: `Ditolak ${namaUnit(tolak)}`, varian: 'danger', status: 'ditolak' };
+  if (tolak) return { teks: `${tolak.tahap === 'hak_akses' ? 'Hak akses dicabut' : 'Ditolak'} ${namaUnit(tolak)}`, varian: 'danger', status: 'ditolak' };
   const aktif = tahapAktif(daftar);
   if (aktif) return { teks: `${aktif.tahap === 'hak_akses' ? 'Hak akses: menunggu' : 'Menunggu'} ${namaUnit(aktif)}`, varian: 'warning', status: 'sedang' };
   if (daftar.some((t) => t.batal)) return { teks: 'Dibatalkan', varian: 'neutral', status: 'dilewati' };
@@ -170,7 +170,7 @@ export function AlurPemeriksa({
       {judul !== null && <p className="u-alur-pemeriksa-kepala">{judul}</p>}
       <ol>
         {daftar.map((t, i) => {
-          const [label, varian] = LABEL[t.status] ?? [t.status, 'neutral' as BadgeVariant];
+          const [label, varian] = t.tahap === 'hak_akses' && t.status === 'ditolak' ? ['Dicabut', 'danger' as BadgeVariant] : (LABEL[t.status] ?? [t.status, 'neutral' as BadgeVariant]);
           return (
             <li key={t.tahap} className="u-alur-pemeriksa-tahap" data-status={t.status}>
               <TitikTahap t={t} />
@@ -188,7 +188,7 @@ export function AlurPemeriksa({
                 </p>
                 {(t.diproses_oleh || t.waktu) && (t.status === 'selesai' || t.status === 'ditolak' || t.status === 'dilewati') && (
                   <p className="u-alur-pemeriksa-petugas">
-                    {t.status === 'ditolak' ? 'Ditolak oleh' : t.status === 'dilewati' ? 'Oleh' : 'Diproses oleh'} <b>{t.diproses_oleh ?? '-'}</b>
+                    {t.status === 'ditolak' ? (t.tahap === 'hak_akses' ? 'Dicabut oleh' : 'Ditolak oleh') : t.status === 'dilewati' ? 'Oleh' : 'Diproses oleh'} <b>{t.diproses_oleh ?? '-'}</b>
                     {t.waktu ? ` · ${waktu(t.waktu)}` : ''}
                   </p>
                 )}
@@ -203,8 +203,8 @@ export function AlurPemeriksa({
 }
 
 /** Katalog alur pemeriksa satu jenis (GET /v1/pemeriksa/alur/{jenis}). */
-export function useAlurPemeriksa(jenis: string | null | undefined) {
-  return useSiakadQuery<AlurPemeriksaJenis>(['pemeriksa-alur', jenis ?? ''], (s, signal) => s.request<AlurPemeriksaJenis>({ method: 'GET', path: `/v1/pemeriksa/alur/${encodeURIComponent(jenis ?? '')}` }, { signal }), {
+export function useAlurPemeriksa(jenis: string | null | undefined, konteks?: Record<string, string>) {
+  return useSiakadQuery<AlurPemeriksaJenis>(['pemeriksa-alur', jenis ?? '', JSON.stringify(konteks ?? {})], (s, signal) => s.request<AlurPemeriksaJenis>({ method: 'GET', path: `/v1/pemeriksa/alur/${encodeURIComponent(jenis ?? '')}`, query: konteks }, { signal }), {
     enabled: Boolean(jenis),
     staleTime: 3_600_000,
   });
@@ -216,16 +216,19 @@ export function useAlurPemeriksa(jenis: string | null | undefined) {
  */
 export function PratinjauPemeriksa({
   jenis,
+  konteks,
   tahap,
   judul = 'Usulan ini akan diperiksa oleh',
   className,
 }: {
   jenis?: string;
+  /** Konteks yang menentukan jalur, mis. { alur: 'berjenjang', penetapan: 'internal' } untuk usulan karier SDM. */
+  konteks?: Record<string, string>;
   tahap?: AlurPemeriksaJenis['tahap'];
   judul?: React.ReactNode;
   className?: string;
 }) {
-  const q = useAlurPemeriksa(tahap ? null : jenis);
+  const q = useAlurPemeriksa(tahap ? null : jenis, konteks);
   const daftar = tahap ?? q.data?.tahap;
   if (!daftar) return q.loading ? <Skeleton className={className} style={{ height: 64 }} /> : null;
   if (!daftar.length) return null;

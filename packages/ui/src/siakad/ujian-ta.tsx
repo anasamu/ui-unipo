@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { AlurPemeriksa, type TahapPemeriksa } from './pemeriksa';
+import { AlurPemeriksa, LabelPemeriksa, tahapAktif, teksAlurPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import {
   CalendarClock,
   CalendarDays,
@@ -195,6 +195,17 @@ const WARNA_STATUS: Record<string, 'neutral' | 'info' | 'warning' | 'success' | 
   dibatalkan: 'danger',
 };
 
+/** Petugas terakhir yang memproses (dari `pemeriksa`), untuk keterangan kecil di daftar petugas. */
+function PetugasPemeriksa({ pemeriksa }: { pemeriksa?: TahapPemeriksa[] | null }) {
+  const t = [...(pemeriksa ?? [])].reverse().find((x) => x.diproses_oleh && (x.status === 'selesai' || x.status === 'ditolak'));
+  if (!t) return null;
+  return (
+    <small className="u-ta-redup" style={{ display: 'block' }} title={teksAlurPemeriksa(pemeriksa)}>
+      {t.status === 'ditolak' ? 'Ditolak' : 'Diproses'} {t.diproses_oleh}
+    </small>
+  );
+}
+
 export function LencanaStatusUjianTa({ u }: { u: Pick<UjianTa, 'status' | 'status_label'> }) {
   return (
     <Badge variant={WARNA_STATUS[u.status] ?? 'neutral'} dot>
@@ -292,7 +303,7 @@ interface BuktiSaya {
   pemenuhan: { cara: string; label?: string; petunjuk?: string | null; format?: string[]; maks_mb?: number; isian?: Array<{ kode: string; label: string; tipe: string; wajib: boolean }>; ceklis?: string[] };
   unit_validasi: string;
   status: string;
-  bukti: { id: string; status_label: string; alasan: string | null; berlaku_sampai: string | null } | null;
+  bukti: { id: string; status_label: string; alasan: string | null; berlaku_sampai: string | null; pemeriksa?: TahapPemeriksa[] } | null;
 }
 
 /** Dialog kirim bukti syarat (unggah berkas, isian, ceklis) untuk satu aturan. */
@@ -354,6 +365,7 @@ export function KirimBuktiSyarat({ aturanId, open, onOpenChange }: { aturanId: s
               {b.bukti.alasan}
             </Alert>
           )}
+          {b.bukti?.pemeriksa?.length ? <AlurPemeriksa pemeriksa={b.bukti.pemeriksa} ringkas judul="Pemeriksa bukti terakhir" /> : null}
           {m?.petunjuk && <p className="u-ta-redup">{m.petunjuk}</p>}
           {perluBerkas && (
             <Field label="Berkas" required description={`Format ${(m?.format ?? ['pdf']).join(', ')}, paling besar ${m?.maks_mb ?? 5} MB.`}>
@@ -420,6 +432,8 @@ export interface CekPlagiasi {
   lewat_sla: boolean;
   diajukan_at: string;
   pengecualian?: string | null;
+  /** Alur pemeriksa (docs/PEMERIKSA.md SIAKAD): pembimbing (bila diwajibkan) lalu unit pemeriksa. */
+  pemeriksa?: TahapPemeriksa[];
 }
 
 /** Layanan cek plagiasi untuk mahasiswa: kebijakan dari aturan, unggah naskah, status, laporan hasil. */
@@ -451,7 +465,19 @@ export function CekPlagiasiSaya({ jenisAwal }: { jenisAwal?: string }) {
   };
   const kolom: DataColumn<CekPlagiasi>[] = [
     { key: 'jenis_label', header: 'Naskah', cell: (r) => `${r.jenis_label} · cek ke-${r.percobaan_ke}` },
-    { key: 'status', header: 'Status', cell: (r) => <Badge variant={r.status === 'selesai' ? (r.memenuhi === false ? 'danger' : 'success') : r.status === 'perlu_revisi' ? 'warning' : 'neutral'}>{r.status_label}</Badge> },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (r) =>
+        tahapAktif(r.pemeriksa) || r.status === 'ditolak_pembimbing' ? (
+          <LabelPemeriksa pemeriksa={r.pemeriksa} />
+        ) : (
+          <>
+            <Badge variant={r.status === 'selesai' ? (r.memenuhi === false ? 'danger' : 'success') : r.status === 'perlu_revisi' ? 'warning' : 'neutral'}>{r.status_label}</Badge>
+            <PetugasPemeriksa pemeriksa={r.pemeriksa} />
+          </>
+        ),
+    },
     { key: 'skor', header: 'Similarity', cell: (r) => (r.skor == null ? '-' : `${r.skor}%${r.batas != null ? ` (batas ${r.batas}%)` : ''}`) },
     { key: 'catatan', header: 'Catatan pemeriksa', cell: (r) => r.catatan ?? '-' },
     {
@@ -1599,7 +1625,16 @@ export function AntreanPlagiasi() {
     { key: 'jenis_label', header: 'Naskah', cell: (r) => `${r.jenis_label} (cek ke-${r.percobaan_ke}${r.berbayar ? ', berbayar' : ''})` },
     { key: 'judul', header: 'Judul', cell: (r) => <span className="u-ujta-judul-sel">{r.judul}</span> },
     { key: 'sla_tenggat', header: 'Tenggat', cell: (r) => <span data-lewat={r.lewat_sla ? '' : undefined}>{tglPendek(r.sla_tenggat)}</span> },
-    { key: 'status', header: 'Status', cell: (r) => <Badge variant={r.lewat_sla ? 'danger' : r.status === 'selesai' ? 'success' : 'neutral'}>{r.status_label}{r.skor != null ? ` ${r.skor}%` : ''}</Badge> },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (r) => (
+        <>
+          <Badge variant={r.lewat_sla ? 'danger' : r.status === 'selesai' ? 'success' : 'neutral'}>{r.status_label}{r.skor != null ? ` ${r.skor}%` : ''}</Badge>
+          <PetugasPemeriksa pemeriksa={r.pemeriksa} />
+        </>
+      ),
+    },
     {
       key: 'aksi',
       header: '',
@@ -1719,6 +1754,7 @@ interface BuktiAntrean {
   berkas: { nama: string | null } | null;
   dikirim_at: string;
   aturan: { nama: string } | null;
+  pemeriksa?: TahapPemeriksa[];
 }
 
 /**
@@ -1800,7 +1836,17 @@ export function AntreanBuktiSyarat({ unit: unitAwal }: { unit?: string } = {}) {
                 '-'
               ),
           },
-          { key: 'status', header: 'Status', shrink: true, cell: (b) => <Badge variant={b.status === 'diterima' ? 'success' : b.status === 'ditolak' ? 'danger' : 'warning'}>{b.status_label}</Badge> },
+          {
+            key: 'status',
+            header: 'Status',
+            shrink: true,
+            cell: (b) => (
+              <>
+                <Badge variant={b.status === 'diterima' ? 'success' : b.status === 'ditolak' ? 'danger' : 'warning'}>{b.status_label}</Badge>
+                <PetugasPemeriksa pemeriksa={b.pemeriksa} />
+              </>
+            ),
+          },
           {
             key: 'aksi',
             header: '',
