@@ -372,11 +372,6 @@
       background: #fff;
     }
   }
-  .u-tkp-pin {
-    height: 6px;
-    width: 55%;
-    background: var(--u-secondary);
-  }
   i[data-aktif] {
     background: color-mix(in oklab, var(--u-primary) 35%, transparent);
     [data-aktif='garis'] & {
@@ -449,6 +444,9 @@
   }
   .u-tkp-cari + .u-tkp-ikon {
     margin-inline-start: 0;
+  }
+  .u-tkp-ikon[data-pin] {
+    background: var(--u-warning);
   }
 }
 .u-tkp-isi {
