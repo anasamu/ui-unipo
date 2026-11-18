@@ -115,6 +115,8 @@ export interface CakupanAturan {
   kelas?: string[];
   angkatan_min?: string;
   angkatan_max?: string;
+  /** Kampus (m_kampus.idkp / induk_kampus): aturan khusus kampus pengembangan. Kosong = semua kampus (aturan universitas). */
+  kampus?: string[];
   /** Titik bersubjek pegawai: kode unit SDM (berlaku untuk unit itu dan turunannya). */
   unit?: string[];
   jenis_pegawai?: Array<'dosen' | 'tendik'>;
@@ -851,6 +853,7 @@ export function ringkasCakupan(c: CakupanAturan | null | undefined, namaProdi?: 
   if (c.fakultas?.length) bag.push(`Fakultas ${c.fakultas.join(', ')}`);
   if (c.jenjang?.length) bag.push(c.jenjang.map((j) => JENJANG_ATURAN.find((x) => x.value === j)?.label ?? j).join('/'));
   if (c.kelas?.length) bag.push(`Kelas ${c.kelas.join(', ')}`);
+  if (c.kampus?.length) bag.push(`Kampus ${c.kampus.join(', ')}`);
   if (c.angkatan_min && c.angkatan_max) bag.push(`Angkatan ${formatTahun(c.angkatan_min)} s.d. ${formatTahun(c.angkatan_max)}`);
   else if (c.angkatan_min) bag.push(`Angkatan ${formatTahun(c.angkatan_min)} ke atas`);
   else if (c.angkatan_max) bag.push(`Angkatan sampai ${formatTahun(c.angkatan_max)}`);
@@ -1661,6 +1664,7 @@ interface IsiAturan {
   fakultas: string[];
   jenjang: string[];
   kelas: string[];
+  kampus: string[];
   angkatan_min: string;
   angkatan_max: string;
   unit: string[];
@@ -1747,6 +1751,7 @@ function isiDari(a: Partial<Aturan> | null | undefined, titikAwal?: string): Isi
     fakultas: a?.cakupan?.fakultas ?? [],
     jenjang: a?.cakupan?.jenjang ?? [],
     kelas: a?.cakupan?.kelas ?? [],
+    kampus: a?.cakupan?.kampus ?? [],
     angkatan_min: a?.cakupan?.angkatan_min ?? '',
     angkatan_max: a?.cakupan?.angkatan_max ?? '',
     unit: a?.cakupan?.unit ?? [],
@@ -1815,6 +1820,7 @@ function bodyAturan(x: IsiAturan, katalog: KatalogAturan | undefined, ubah: bool
   if (x.fakultas.length) cakupan.fakultas = x.fakultas;
   if (x.jenjang.length) cakupan.jenjang = x.jenjang;
   if (x.kelas.length) cakupan.kelas = x.kelas;
+  if (x.kampus.length) cakupan.kampus = x.kampus;
   if (x.angkatan_min) cakupan.angkatan_min = x.angkatan_min;
   if (x.angkatan_max) cakupan.angkatan_max = x.angkatan_max;
   if (x.unit.length) cakupan.unit = x.unit;
@@ -2094,7 +2100,7 @@ const LANGKAH: Array<{ judul: string; ket: string; kunci: string[] }> = [
   {
     judul: 'Identitas',
     ket: 'Nama dan cakupan',
-    kunci: ['nama', 'kode', 'prioritas', 'angkatan_min', 'angkatan_max', 'berlaku_mulai', 'berlaku_selesai', 'tahun_id', 'prodi', 'fakultas', 'jenjang', 'kelas', 'unit'],
+    kunci: ['nama', 'kode', 'prioritas', 'angkatan_min', 'angkatan_max', 'berlaku_mulai', 'berlaku_selesai', 'tahun_id', 'prodi', 'fakultas', 'jenjang', 'kelas', 'kampus', 'unit'],
   },
   { judul: 'Dasar hukum', ket: 'SK aturan', kunci: ['sk', 'lampiran'] },
   { judul: 'Tinjau', ket: 'Mode, uji, simpan', kunci: ['pesan', 'mode', 'catatan'] },
@@ -2719,6 +2725,9 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
             </Field>
           </>
         ) : null}
+        <Field label="Kampus" optional className="u-form-lebar" description="Kode kampus (mis. 02 untuk kampus pengembangan). Kosong = semua kampus: kampus pengembangan mengikuti aturan universitas kecuali ada aturan khusus kampusnya." error={galat.kampus || undefined}>
+          <IsianDaftar id="aturan-kampus" value={isi.kampus} onValueChange={(v) => set('kampus', v)} />
+        </Field>
       </BagianForm>
       <BagianForm judul="Masa berlaku" keterangan="Kosongkan bila berlaku selama aturan aktif." ikon={<CalendarRange />}>
         <Field label="Periode" optional description="Kosong = semua periode." error={galat.tahun_id || undefined}>
