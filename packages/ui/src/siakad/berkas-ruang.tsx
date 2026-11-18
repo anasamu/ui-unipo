@@ -8,6 +8,7 @@ import { Dialog } from '../components/overlays';
 import { formatDate } from '../lib/format';
 import type { BerkasManajer, FolderBerkas } from './manajer-berkas';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { PilihUnit, useUnitArsip } from './pilih-unit';
 
 // ================================================================ Tipe (sama dengan /v1/berkas)
 
@@ -292,6 +293,8 @@ export function DialogBagikanBerkas({ sasaran, tutup }: { sasaran: SasaranBagi |
   const siakad = useSiakad();
   // Daftar semua unit hanya diambil saat dialog bagikan dibuka.
   const unitQ = useUnitBerkas(true, Boolean(sasaran));
+  // Ruang unit = arsip_unit aktif; nilai yang dikirim tetap KODE unit (dipetakan dari ID pohon unit arsip).
+  const unitArsip = useUnitArsip({ enabled: Boolean(sasaran) });
   const [jenis, setJenis] = React.useState<'pengguna' | 'unit' | 'tautan'>('pengguna');
   const [ke, setKe] = React.useState('');
   const [izin, setIzin] = React.useState<'lihat' | 'ubah'>('lihat');
@@ -381,7 +384,9 @@ export function DialogBagikanBerkas({ sasaran, tutup }: { sasaran: SasaranBagi |
   };
 
   const nama = sasaran ? (sasaran.jenis === 'berkas' ? sasaran.b.nama : sasaran.nama) : '';
-  const unitOpsi = (unitQ.data?.semua ?? unitQ.data?.unit ?? []).map((u) => ({ value: u.kode, label: u.singkatan ? `${u.singkatan} · ${u.nama}` : u.nama }));
+  // Cadangan bila /v1/arsip/unit tidak bisa dibaca: daftar datar dari /v1/berkas/unit dengan kode sebagai ID.
+  const unitCadangan = React.useMemo(() => (unitQ.data?.semua ?? unitQ.data?.unit ?? []).map((u) => ({ id: u.kode, kode: u.kode, nama: u.nama, singkatan: u.singkatan, jenis: u.jenis })), [unitQ.data]);
+  const idUnitKe = ke ? (unitArsip.data?.find((u) => u.kode === ke)?.id ?? ke) : null;
 
   return (
     <Dialog
@@ -436,7 +441,15 @@ export function DialogBagikanBerkas({ sasaran, tutup }: { sasaran: SasaranBagi |
             <label className="u-label" htmlFor="u-mb-bagi-unit">
               Unit penerima
             </label>
-            <Select<string> id="u-mb-bagi-unit" aria-label="Unit penerima" value={ke || null} onValueChange={(v) => setKe(v ?? '')} options={unitOpsi} placeholder="Pilih unit" />
+            <PilihUnit
+              id="u-mb-bagi-unit"
+              aria-label="Unit penerima"
+              sumber="arsip"
+              dataCadangan={unitCadangan}
+              value={idUnitKe}
+              onValueChange={(_, u) => setKe(u?.kode ?? '')}
+              placeholder="Pilih unit"
+            />
             <p className="u-field-description">Semua anggota unit itu bisa membukanya.</p>
           </>
         )}

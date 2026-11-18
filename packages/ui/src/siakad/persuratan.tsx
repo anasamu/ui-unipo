@@ -21,7 +21,7 @@ import { GalatApi } from './galat';
 import { useTemplatDokumen, type PengaturanDokumen, type TemplatEfektif } from './dokumen-terbit';
 import { useUnggahBerkas } from './berkas';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
-import { DaftarTujuan, bersihTujuan, tujuanLengkap, useUnitArsipSaya, type SuratKeluar, type TujuanSuratInput, type UnitArsip } from './surat';
+import { DaftarTujuan, PilihUnitArsipSaya, bersihTujuan, tujuanLengkap, useUnitArsipSaya, type SuratKeluar, type TujuanSuratInput, type UnitArsip } from './surat';
 import { PilihEntitas } from './pilih';
 import {
   ISIAN_DARI_DATA,
@@ -232,7 +232,7 @@ export function PengaturanPenomoran({ unitId, className }: PengaturanPenomoranPr
     <div className={['u-psr', className].filter(Boolean).join(' ')}>
       <div className="u-psr-alat">
         {!unitId && bolehAtur.length > 1 && (
-          <Select<number> aria-label="Unit" value={uid} onValueChange={(v) => setPilih(v)} options={bolehAtur.map((u) => ({ value: u.id, label: u.nama }))} />
+          <PilihUnitArsipSaya aria-label="Unit" unit={bolehAtur} kosongkan={false} value={uid} onValueChange={(v) => setPilih(v)} />
         )}
         <Button onClick={() => setSunting('baru')} disabled={!uid}>
           <Plus />
@@ -723,7 +723,7 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, gal
     <div className="u-psr-panel">
       {!unitId && !surat && unitSaya.length > 1 && (
         <Field label="Unit pengirim">
-          <Select<number> value={uid} onValueChange={(v) => ubah({ unitId: v, templatId: null })} options={unitSaya.map((u) => ({ value: u.id, label: u.nama }))} />
+          <PilihUnitArsipSaya unit={unitSaya} kosongkan={false} value={uid} onValueChange={(v) => ubah({ unitId: v, templatId: null })} />
         </Field>
       )}
       <section className="u-psr-templat">
@@ -1017,7 +1017,7 @@ export function CatatArsipSurat({ unitId, arahAwal = 'masuk', onSelesai, onBatal
       />
       {!unitId && unitBoleh.length > 1 && (
         <Field label="Unit arsip">
-          <Select<number> value={uid} onValueChange={(v) => setUid(v)} options={unitBoleh.map((u) => ({ value: u.id, label: u.nama }))} />
+          <PilihUnitArsipSaya unit={unitBoleh} kosongkan={false} value={uid} onValueChange={(v) => setUid(v)} />
         </Field>
       )}
 
