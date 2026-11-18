@@ -486,15 +486,15 @@ function AntreanPemutakhiran({ pemilik, katalog, bffApi }: { pemilik: PemilikPem
                 { value: 'semua', label: 'Semua' },
               ]}
             />
-            <Cluster gap={2}>
+            <div className="u-pmk-saring">
               <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Cari nama atau username" className="u-pmk-cari" />
               {katalog.referensi.fakultas.length > 1 && (katalog.hak.global || (katalog.hak.lingkup?.fakultas.length ?? 0) > 1) ? (
-                <Pilihan options={katalog.referensi.fakultas.map((f) => ({ value: f.kode, label: f.nama }))} value={fak} onValueChange={(v) => { setFak(v); setPage(1); }} placeholder="Semua fakultas" tampilan="cari" />
+                <Pilihan options={katalog.referensi.fakultas.map((f) => ({ value: f.kode, label: f.nama }))} value={fak} onValueChange={(v) => { setFak(v); setPage(1); }} placeholder="Semua fakultas" tampilan="daftar" />
               ) : null}
-              <Pilihan options={bagianOpsi} value={bagian} onValueChange={(v) => { setBagian(v); setPage(1); }} placeholder="Semua bagian" />
+              <Pilihan options={bagianOpsi} value={bagian} onValueChange={(v) => { setBagian(v); setPage(1); }} placeholder="Semua bagian" tampilan="daftar" />
               <IsianTanggal value={dari} onValueChange={(v) => { setDari(v || null); setPage(1); }} />
               <IsianTanggal value={sampai} onValueChange={(v) => { setSampai(v || null); setPage(1); }} />
-            </Cluster>
+            </div>
           </Stack>
         }
         empty={{ icon: <Inbox />, title: status === 'diajukan' ? 'Antrean kosong' : 'Tidak ada pengajuan', description: status === 'diajukan' ? 'Semua pengajuan sudah diputus.' : 'Coba ubah saringan.' }}
@@ -794,6 +794,16 @@ function FormPeriode({ pemilik, katalog, awal, onTutup }: { pemilik: PemilikPemu
   const [angkatanEkstra, setAngkatanEkstra] = React.useState<string[]>(jenisAwal !== 'angkatan' ? (c?.angkatan.map(String) ?? []) : []);
   const [isian, setIsian] = React.useState<Record<string, { mode: ModeIsianPemutakhiran; bukti: boolean }>>(awal?.isian ?? {});
   const [galat, setGalat] = React.useState<Record<string, string>>({});
+  // "Perubahan belum disimpan" hanya setelah ada isian yang diubah (periode baru selalu dianggap berubah).
+  const [dirty, setDirty] = React.useState(false);
+  const pertama = React.useRef(true);
+  React.useEffect(() => {
+    if (pertama.current) {
+      pertama.current = false;
+      return;
+    }
+    setDirty(true);
+  }, [judul, ket, aktif, mulai, selesai, peran, jenis, nilai, angkatanEkstra, isian]);
   const adaMhs = peran.includes('mahasiswa');
   const adaPegawai = peran.includes('dosen') || peran.includes('tendik');
   const lingkup = katalog.hak.lingkup;
@@ -828,7 +838,7 @@ function FormPeriode({ pemilik, katalog, awal, onTutup }: { pemilik: PemilikPemu
       title={awal ? 'Ubah periode pemutakhiran' : 'Periode pemutakhiran baru'}
       description="Atur siapa yang diminta memperbarui data, kapan, dan isian mana yang langsung tersimpan atau diverifikasi petugas."
       labelSimpan={awal ? 'Simpan perubahan' : 'Buat periode'}
-      berubah
+      berubah={!awal || dirty}
       onSimpan={async () => {
         const cakupan = { fakultas: [] as string[], prodi: [] as string[], unit: [] as number[], angkatan: angkatanEkstra.map(Number) };
         if (jenis === 'fakultas') cakupan.fakultas = nilai;
