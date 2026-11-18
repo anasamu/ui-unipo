@@ -1,0 +1,268 @@
+@use '../mixins' as *;
+
+// Aturan fakultas (syarat dosen PA, pembimbing, penguji): pemilih dosen bersyarat, halaman Aturan fakultas, Coba.
+
+// ================================================================ Pemilih dosen bersyarat
+.u-dosen-syarat {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.u-dosen-syarat-ikon {
+  width: 1rem;
+  height: 1rem;
+  &[data-nada='ok'] {
+    color: var(--u-success);
+  }
+  &[data-nada='tolak'] {
+    color: var(--u-danger);
+  }
+}
+.u-dosen-syarat-ringkas {
+  margin: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+}
+
+// ================================================================ Penyusun kondisi: data dosen kosong
+.u-kondisi-bila-kosong {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  > :last-child {
+    min-width: 14rem;
+  }
+}
+
+// ================================================================ Lencana SK
+.u-lencana-sk {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid color-mix(in oklab, var(--u-warning) 45%, transparent);
+  border-radius: var(--u-radius-full);
+  background: var(--u-warning-soft);
+  color: var(--u-warning-text);
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-medium);
+  cursor: pointer;
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  &:hover {
+    border-color: var(--u-warning);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--u-ring);
+    outline-offset: 2px;
+  }
+}
+
+// ================================================================ Halaman Aturan fakultas
+.u-aturan-fak-panduan {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card);
+  ol {
+    display: grid;
+    gap: 0.375rem;
+    margin: 0;
+    padding-left: 1.25rem;
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
+    line-height: var(--u-leading-relaxed);
+  }
+  strong {
+    color: var(--u-foreground);
+    font-weight: var(--u-weight-semibold);
+  }
+}
+.u-aturan-fak-titik-daftar {
+  display: grid;
+  gap: 1.25rem;
+}
+.u-aturan-fak-titik {
+  display: grid;
+  gap: 0.625rem;
+  > header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    h3 {
+      flex: 1 1 16rem;
+      margin: 0;
+      font-family: var(--u-font-heading);
+      font-size: var(--u-text-base);
+      font-weight: var(--u-weight-semibold);
+    }
+  }
+}
+.u-aturan-fak-univ-label {
+  margin: 0.25rem 0 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-medium);
+}
+.u-aturan-fak-daftar {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+  background: var(--u-card);
+  list-style: none;
+}
+.u-aturan-fak-kartu {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 0.875rem;
+  & + & {
+    border-top: 1px solid var(--u-border);
+  }
+  &[data-status='nonaktif'] .u-aturan-fak-isi {
+    opacity: 0.7;
+  }
+  &[data-universitas] {
+    background: var(--u-muted);
+  }
+  @container (max-width: 40rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.u-aturan-fak-isi {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  strong {
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-semibold);
+  }
+  span {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
+    line-height: var(--u-leading-snug);
+  }
+  &:hover strong {
+    color: var(--u-primary);
+  }
+  &:focus-visible {
+    border-radius: var(--u-radius-sm);
+    outline: 2px solid var(--u-ring);
+    outline-offset: 2px;
+  }
+}
+.u-aturan-fak-lencana {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.375rem;
+}
+.u-aturan-fak-aksi {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.u-aturan-fak {
+  container-type: inline-size;
+}
+.u-aturan-fak-lingkup {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.u-aturan-fak-dampak,
+.u-aturan-fak-alur,
+.u-aturan-coba,
+.u-aturan-coba-hasil {
+  display: grid;
+  gap: 0.75rem;
+}
+.u-aturan-fak-tabel-gulir {
+  overflow-x: auto;
+}
+.u-aturan-fak-tabel {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--u-text-sm);
+  th,
+  td {
+    padding: 0.5rem 0.625rem;
+    border-bottom: 1px solid var(--u-border);
+    text-align: left;
+    white-space: nowrap;
+  }
+  th {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+    font-weight: var(--u-weight-medium);
+  }
+  td:not(:first-child),
+  th:not(:first-child) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  td[data-nada='tolak'] {
+    color: var(--u-danger-text);
+    font-weight: var(--u-weight-semibold);
+  }
+  td[data-nada='peringatan'] {
+    color: var(--u-warning-text);
+    font-weight: var(--u-weight-semibold);
+  }
+}
+.u-aturan-fak-kurang {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+  list-style: none;
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.375rem 1rem;
+    padding: 0.5rem 0.75rem;
+    font-size: var(--u-text-sm);
+    & + li {
+      border-top: 1px solid var(--u-border);
+    }
+    em {
+      color: var(--u-muted-foreground);
+      font-family: var(--u-font-mono);
+      font-size: var(--u-text-xs);
+      font-style: normal;
+    }
+    > span:last-child {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+    }
+  }
+}
+.u-aturan-coba-sumber {
+  display: grid;
+  gap: 0.375rem;
+}
