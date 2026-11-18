@@ -435,8 +435,8 @@ function DaftarPengajuan({ jenis, nim }: { jenis: JenisPengajuanMahasiswa; nim: 
                   </small>
                 </span>
                 <span className="u-pengajuan-lencana">
-                  <LencanaStatusPengajuan status={r.status} />
-                  {r.status !== 'disetujui' && r.status !== 'selesai' && r.status !== 'diterima' && <LabelPemeriksa pemeriksa={r.pemeriksa} />}
+                  {/* Tahap berjalan/ditolak: lencana pemeriksa ("Menunggu BAAK") menggantikan status umum. */}
+                  {r.pemeriksa?.some((t) => t.status === 'sedang' || t.status === 'ditolak') ? <LabelPemeriksa pemeriksa={r.pemeriksa} /> : <LencanaStatusPengajuan status={r.status} />}
                 </span>
               </button>
             </li>
