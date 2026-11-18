@@ -138,6 +138,11 @@ export interface TabItem<V extends string = string> {
   count?: number;
   disabled?: boolean;
   content?: React.ReactNode;
+  /**
+   * Nama kelompok (hanya mode vertikal): tab berurutan dengan kelompok sama diberi judul kelompok di atasnya, dan di
+   * layar sempit menjadi grup di pilihan tarik-turun. Mis. "Karier", "Pendidikan & kompetensi".
+   */
+  group?: string;
 }
 export interface TabsProps<V extends string> {
   items: TabItem<V>[];
@@ -174,16 +179,23 @@ export function Tabs<V extends string>({ items, value, defaultValue, onValueChan
   );
   const daftar = (
     <BaseTabs.List className="u-tabs-list" data-variant={vertikal ? 'side' : variant} aria-label={rest['aria-label']}>
-      {items.map((t) => (
-        <BaseTabs.Tab key={t.value} value={t.value} disabled={t.disabled} className="u-tab">
+      {items.map((t, i) => (
+        <React.Fragment key={t.value}>
+        {vertikal && t.group && t.group !== items[i - 1]?.group ? (
+          <span className="u-tabs-grup" role="presentation">
+            {t.group}
+          </span>
+        ) : null}
+        <BaseTabs.Tab value={t.value} disabled={t.disabled} className="u-tab">
           {t.icon}
           <span className="u-tab-label">{t.label}</span>
           {t.count != null && (
-            <span className="u-badge" data-variant="neutral">
+            <span className="u-badge" data-variant="neutral" data-kosong={t.count === 0 ? '' : undefined}>
               {t.count}
             </span>
           )}
         </BaseTabs.Tab>
+        </React.Fragment>
       ))}
       <BaseTabs.Indicator className="u-tabs-indicator" />
     </BaseTabs.List>
@@ -203,7 +215,7 @@ export function Tabs<V extends string>({ items, value, defaultValue, onValueChan
             <Select<string>
               className="u-tabs-pilih"
               aria-label={rest['aria-label'] ?? 'Pilih bagian'}
-              options={items.map((t) => ({ value: t.value, label: t.label, disabled: t.disabled, icon: t.icon }))}
+              options={items.map((t) => ({ value: t.value, label: t.label, disabled: t.disabled, icon: t.icon, group: t.group }))}
               value={aktif ?? null}
               onValueChange={(v) => v && ganti(v as V)}
             />
