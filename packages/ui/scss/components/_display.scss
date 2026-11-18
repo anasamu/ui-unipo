@@ -1534,6 +1534,12 @@ button.u-step-marker {
 .u-lapor-galat-daftar-judul {
   font-size: var(--u-text-sm);
   font-weight: 500;
+  color: inherit;
+  text-decoration: none;
+  &:is(a):hover {
+    color: var(--u-primary);
+    text-decoration: underline;
+  }
 }
 .u-lapor-galat-daftar-meta {
   color: var(--u-muted-foreground);

@@ -36,6 +36,8 @@ export interface TautanAkun {
   gaji: string;
   /** Halaman baca pedoman & peraturan universitas (SPMI /pedoman/baca). */
   pedoman: string;
+  /** Tiket helpdesk milik pengguna (Profil » Tiket saya); rincian di `${tiket}/{id}`. */
+  tiket: string;
   keluar: string;
 }
 export const PROFIL_URL = 'https://profile.unipo.ac.id';
@@ -62,6 +64,7 @@ export function tautanAkun(profilUrl: string = saudara('profile') ?? PROFIL_URL,
     keamanan: `${s}/akun`,
     gaji: `${p}/gaji`,
     pedoman: `${(saudara('spmi') ?? SPMI_URL).replace(/\/+$/, '')}/pedoman/baca`,
+    tiket: `${p}/tiket`,
     keluar: `${s}/logout`,
     ...ganti,
   };
