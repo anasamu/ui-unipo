@@ -1,7 +1,7 @@
 'use client';
 import * as React from 'react';
 import {
-  CalendarClock, CheckCheck, ClipboardCheck, Download, FilePlus2, Pencil, Plus, Printer, RefreshCw, Send, Trash2, Undo2, UserCheck, UsersRound,
+  CalendarClock, CheckCheck, Copy, Link2, ClipboardCheck, Download, FilePlus2, Pencil, Plus, Printer, RefreshCw, Send, Trash2, Undo2, UserCheck, UsersRound,
 } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Badge, Button, Skeleton } from '../components/actions';
@@ -127,6 +127,7 @@ export interface LaporanBkdData {
     dekan_at: string | null;
     dekan_catatan: string | null;
     aturan_id: number;
+    asesor_luar?: Record<string, { id: number; nama: string; nidn: string | null; pt_asal: string | null; email: string | null; hp: string | null } | null>;
     jadwal: Record<'rencana_selesai' | 'kirim_selesai' | 'penilaian_selesai' | 'penetapan_selesai' | 'mulai' | 'selesai', string | null>;
   };
   hasil: HasilBkd;
@@ -145,6 +146,7 @@ export interface LaporanBkdData {
     tetapkan: boolean;
     atur_asesor: boolean;
     tindak_lanjut: boolean;
+    tautan_asesor?: number[];
   };
   aturan?: { id: number; nama: string; versi: number; dasar_hukum: string | null; bidang: { kode: string; nama: string }[]; kategori: KategoriBkd[]; batas: { min_total: number | null; maks_total: number | null }; asesor: { jumlah: number }; tahap: { kaprodi: boolean; dekan: boolean } };
   periksa?: { blokir: { kode: string; pesan: string; item_id?: number }[]; peringatan: { kode: string; pesan: string; item_id?: number }[] };
@@ -388,7 +390,7 @@ export function LaporanBkd({ id, ringkas = false, className }: { id: number | st
   const [kegiatan, setKegiatan] = React.useState<LaporanBkdData['item'][number] | 'baru' | null>(null);
   const [bidangBaru, setBidangBaru] = React.useState<string | null>(null);
   const [hapus, setHapus] = React.useState<LaporanBkdData['item'][number] | null>(null);
-  const [panel, setPanel] = React.useState<'kirim' | 'nilai' | 'ketahui' | 'kembalikan' | 'asesor' | 'tetapkan' | 'tindak' | 'impor' | null>(null);
+  const [panel, setPanel] = React.useState<'kirim' | 'nilai' | 'ketahui' | 'kembalikan' | 'asesor' | 'tetapkan' | 'tindak' | 'impor' | 'tautan' | null>(null);
   const [sibuk, setSibuk] = React.useState(false);
   // Kunci periode akademik (BAAK): semester yang ditutup hanya bisa dilihat kecuali dibuka kembali untuk fitur bkd.
   const kunci = usePeriodeTerkunci(lap.data?.periode.tahun_id ?? null, { fitur: 'bkd', prodi: lap.data?.pegawai.kode_prodi ?? null });
@@ -478,6 +480,11 @@ export function LaporanBkd({ id, ringkas = false, className }: { id: number | st
                 <UsersRound /> Atur asesor
               </Button>
             ) : null}
+            {b.tautan_asesor?.length ? (
+              <Button variant="outline" onClick={() => setPanel('tautan')}>
+                <Link2 /> Tautan asesor eksternal
+              </Button>
+            ) : null}
             {b.tindak_lanjut ? (
               <Button variant="outline" onClick={() => setPanel('tindak')}>
                 <Pencil /> Tindak lanjut
@@ -510,8 +517,8 @@ export function LaporanBkd({ id, ringkas = false, className }: { id: number | st
             <AlurPemeriksa pemeriksa={L.pemeriksa} judul="Alur pemeriksaan" />
             <DescriptionList
               items={[
-                { label: 'Asesor 1', value: nama(L.penilai1) },
-                ...(L.aturan?.asesor.jumlah === 2 ? [{ label: 'Asesor 2', value: nama(L.penilai2) }] : []),
+                { label: 'Asesor 1', value: L.bkd.asesor_luar?.[1] ? `${L.bkd.asesor_luar[1].nama} (eksternal, ${L.bkd.asesor_luar[1].pt_asal ?? 'PT lain'})` : nama(L.penilai1) },
+                ...(L.aturan?.asesor.jumlah === 2 ? [{ label: 'Asesor 2', value: L.bkd.asesor_luar?.[2] ? `${L.bkd.asesor_luar[2].nama} (eksternal, ${L.bkd.asesor_luar[2].pt_asal ?? 'PT lain'})` : nama(L.penilai2) }] : []),
               ]}
             />
           </CardContent>
@@ -568,6 +575,7 @@ export function LaporanBkd({ id, ringkas = false, className }: { id: number | st
       {panel === 'nilai' ? <PanelPenilaianBkd laporan={L} onOpenChange={(o) => !o && setPanel(null)} /> : null}
       {panel === 'ketahui' || panel === 'kembalikan' || panel === 'tetapkan' || panel === 'tindak' ? <PanelKeputusanBkd laporan={L} jenis={panel} onOpenChange={(o) => !o && setPanel(null)} /> : null}
       {panel === 'asesor' ? <PanelAturAsesorBkd laporan={L} onOpenChange={(o) => !o && setPanel(null)} /> : null}
+      {panel === 'tautan' ? <PanelTautanAsesorBkd laporan={L} onOpenChange={(o) => !o && setPanel(null)} /> : null}
     </div>
   );
 }
@@ -1120,7 +1128,13 @@ function PanelKeputusanBkd({ laporan: L, jenis, onOpenChange }: { laporan: Lapor
 
 interface AsesorBkdRow {
   id: number;
-  pegawai_id: number;
+  pegawai_id: number | null;
+  eksternal?: boolean;
+  nama?: string | null;
+  nomor_sertifikat?: string | null;
+  email?: string | null;
+  hp?: string | null;
+  berkas_id?: string | null;
   nama_lengkap: string;
   nidn: string | null;
   nira: string | null;
@@ -1140,13 +1154,18 @@ interface AsesorBkdRow {
 function PanelAturAsesorBkd({ laporan: L, onOpenChange }: { laporan: LaporanBkdData; onOpenChange: (o: boolean) => void }) {
   const aksi = useAksiBkd();
   const daftar = useSiakadQuery<AsesorBkdRow[]>(['bkd', 'asesor', L.periode_id], q(`/v1/sdm/bkd/asesor?periode_id=${L.periode_id}`));
-  const [a1, setA1] = React.useState<string | null>(L.penilai1_id ? String(L.penilai1_id) : null);
-  const [a2, setA2] = React.useState<string | null>(L.penilai2_id ? String(L.penilai2_id) : null);
+  const luar = L.bkd.asesor_luar ?? {};
+  const awal = (ke: 1 | 2) => (luar[ke] ? `luar:${luar[ke]!.id}` : (ke === 1 ? L.penilai1_id : L.penilai2_id) ? String(ke === 1 ? L.penilai1_id : L.penilai2_id) : null);
+  const [a1, setA1] = React.useState<string | null>(awal(1));
+  const [a2, setA2] = React.useState<string | null>(awal(2));
+  const slot = (ke: 1 | 2, v: string | null) =>
+    v?.startsWith('luar:') ? { [`asesor${ke}_luar_id`]: Number(v.slice(5)) } : { [`penilai${ke}_id`]: v ? Number(v) : null, [`asesor${ke}_luar_id`]: null };
   const [sibuk, setSibuk] = React.useState(false);
   const opsi = (daftar.data ?? [])
     .filter((x) => x.berlaku && x.pegawai_id !== L.pegawai_id)
     .map((x) => ({
-      value: String(x.pegawai_id),
+      value: x.eksternal ? `luar:${x.id}` : String(x.pegawai_id),
+      group: x.eksternal ? 'Asesor eksternal (menilai lewat tautan)' : 'Asesor internal',
       label: `${x.nama_lengkap} · ${x.asal === 'luar' ? x.pt_asal ?? 'PT lain' : x.nama_prodi ?? x.prodi_pegawai ?? '-'} · beban ${x.beban}${(x.kode_prodi ?? x.prodi_pegawai) === L.pegawai.kode_prodi && x.asal === 'internal' ? ' · satu prodi' : ''}`,
     }));
   const dua = (L.aturan?.asesor.jumlah ?? 2) === 2;
@@ -1166,7 +1185,7 @@ function PanelAturAsesorBkd({ laporan: L, onOpenChange }: { laporan: LaporanBkdD
             onClick={async () => {
               setSibuk(true);
               try {
-                await aksi('POST', `/v1/sdm/bkd/laporan/${L.id}/asesor`, { penilai1_id: a1 ? Number(a1) : null, ...(dua ? { penilai2_id: a2 ? Number(a2) : null } : {}) }, 'Asesor disimpan.');
+                await aksi('POST', `/v1/sdm/bkd/laporan/${L.id}/asesor`, { ...slot(1, a1), ...(dua ? slot(2, a2) : {}) }, 'Asesor disimpan.');
                 onOpenChange(false);
               } finally {
                 setSibuk(false);
@@ -1188,6 +1207,84 @@ function PanelAturAsesorBkd({ laporan: L, onOpenChange }: { laporan: LaporanBkdD
             <Select options={opsi.filter((o) => o.value !== a1)} value={a2} onValueChange={setA2} placeholder="Pilih asesor…" />
           </Field>
         ) : null}
+      </div>
+    </Sheet>
+  );
+}
+
+/** Biro SDM membuat tautan penilaian bertoken untuk asesor eksternal (berbatas waktu, token tampil sekali). */
+function PanelTautanAsesorBkd({ laporan: L, onOpenChange }: { laporan: LaporanBkdData; onOpenChange: (o: boolean) => void }) {
+  const aksi = useAksiBkd();
+  const toast = useToast();
+  const slot = L.bisa.tautan_asesor ?? [];
+  const [ke, setKe] = React.useState<string>(String(slot[0] ?? 1));
+  const [hari, setHari] = React.useState('14');
+  const [hasil, setHasil] = React.useState<{ tautan: string | null; token: string; kedaluwarsa_at: string } | null>(null);
+  const [sibuk, setSibuk] = React.useState(false);
+  const a = L.bkd.asesor_luar?.[ke];
+  const tautan = hasil ? hasil.tautan ?? `${typeof window !== 'undefined' ? window.location.origin : ''}/nilai-bkd/${hasil.token}` : '';
+  return (
+    <Sheet
+      open
+      onOpenChange={onOpenChange}
+      title="Tautan penilaian asesor eksternal"
+      description={`${L.pegawai.nama} · ${L.periode.nama}`}
+      footer={
+        <>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Tutup
+          </Button>
+          {!hasil ? (
+            <Button
+              loading={sibuk}
+              onClick={async () => {
+                setSibuk(true);
+                try {
+                  setHasil(await aksi('POST', `/v1/sdm/bkd/laporan/${L.id}/tautan-asesor`, { asesor_ke: Number(ke), hari: Number(hari) || 14 }));
+                } finally {
+                  setSibuk(false);
+                }
+              }}
+            >
+              <Link2 /> Buat tautan
+            </Button>
+          ) : null}
+        </>
+      }
+    >
+      <div className="u-bkd-form">
+        <Alert variant="neutral">
+          Asesor eksternal menilai tanpa akun SIAKAD lewat tautan ini. Tautan berlaku terbatas, hanya untuk laporan ini, dan tautan lama slot yang sama otomatis dicabut. Kirim lewat email/WA resmi.
+        </Alert>
+        {slot.length > 1 ? (
+          <Field label="Asesor">
+            <SegmentedControl options={slot.map((x) => ({ value: String(x), label: `Asesor ${x}` }))} value={ke} onValueChange={(v) => { setKe(v); setHasil(null); }} />
+          </Field>
+        ) : null}
+        {a ? <DescriptionList items={[{ label: 'Asesor', value: a.nama }, { label: 'PT asal', value: a.pt_asal ?? '-' }, { label: 'Kontak', value: [a.email, a.hp].filter(Boolean).join(' · ') || '-' }]} /> : null}
+        {!hasil ? (
+          <Field label="Berlaku (hari)" description="1 sampai 30 hari.">
+            <Input inputMode="numeric" value={hari} onChange={(e) => setHari(e.target.value)} />
+          </Field>
+        ) : (
+          <>
+            <Alert variant="success" title={`Tautan dibuat, berlaku sampai ${tglPendek(hasil.kedaluwarsa_at)}`}>
+              Salin sekarang; tautan tidak ditampilkan lagi. Buat tautan baru bila hilang.
+            </Alert>
+            <div className="u-bkd-tambah-kode">
+              <Input readOnly value={tautan} aria-label="Tautan penilaian" onFocus={(e) => e.currentTarget.select()} />
+              <Button
+                variant="outline"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(tautan);
+                  toast.add({ title: 'Tautan disalin', type: 'success' });
+                }}
+              >
+                <Copy /> Salin
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </Sheet>
   );
@@ -1277,6 +1374,7 @@ interface RekapPeriodeBkd {
   per_prodi: { kode_prodi: string; nama_prodi: string; nama_fakultas: string | null; jumlah: number; mengisi: number; ditetapkan: number; memenuhi: number; tidak_memenuhi: number }[];
   per_fakultas: { nama_fakultas: string; jumlah: number; mengisi: number; ditetapkan: number; memenuhi: number; tidak_memenuhi: number }[];
   dosen: RekapDosen[];
+  kewajiban_khusus?: { pegawai_id: number; nama_lengkap: string; nidn: string | null; kode_prodi: string | null; jabatan: string; kewajiban: string; jumlah: number; minimal: number; semester_ditetapkan: number; semester_dievaluasi: number; status: 'terpenuhi' | 'belum_terpenuhi' | 'belum_lengkap'; mode: string }[];
 }
 
 /**
@@ -1404,6 +1502,31 @@ export function RekapBkd({ periodeId: awal, sdm = false, className }: { periodeI
           />
         </CardContent>
       </Card>
+      {sdm && d?.kewajiban_khusus?.length ? (
+        <Card>
+          <CardHeader title="Kewajiban khusus 3 tahunan" description={`Profesor dan lektor kepala: kegiatan wajib yang diterima asesor pada laporan yang ditetapkan, ${d.kewajiban_khusus[0]!.semester_dievaluasi} periode BKD terakhir. Per semester tetap peringatan.`} />
+          <CardContent>
+            <DataTable
+              rows={d.kewajiban_khusus}
+              rowKey={(x) => `${x.pegawai_id}-${x.kewajiban}`}
+              columnToggle={false}
+              densityToggle={false}
+              exportCsv={`kewajiban-khusus-bkd-${id}`}
+              columns={[
+                { key: 'nama', header: 'Dosen', mobile: 'title', cell: (x) => <span className="u-bkd-sel"><strong>{x.nama_lengkap}</strong><small>{[x.nidn, x.jabatan].filter(Boolean).join(' · ')}</small></span>, value: (x) => x.nama_lengkap },
+                { key: 'kewajiban', header: 'Kewajiban' },
+                { key: 'jumlah', header: 'Kegiatan diterima', align: 'end', shrink: true, cell: (x) => `${x.jumlah} / ${x.minimal}` },
+                { key: 'semester', header: 'Semester ditetapkan', align: 'end', shrink: true, cell: (x) => `${x.semester_ditetapkan} / ${x.semester_dievaluasi}` },
+                {
+                  key: 'status', header: 'Status', shrink: true, mobile: 'badge',
+                  cell: (x) => <Badge variant={x.status === 'terpenuhi' ? 'success' : x.status === 'belum_lengkap' ? 'neutral' : 'warning'} dot>{x.status === 'terpenuhi' ? 'Terpenuhi' : x.status === 'belum_lengkap' ? 'Data belum lengkap' : 'Belum terpenuhi'}</Badge>,
+                  value: (x) => x.status,
+                },
+              ]}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
       <PanelLaporanBkd id={buka} onOpenChange={(o) => !o && setBuka(null)} />
     </div>
   );
@@ -1666,7 +1789,9 @@ export function PanelPeriodeBkd({ periode: p, onOpenChange }: { periode: Periode
 /** Daftar asesor BKD terdaftar dan bebannya pada periode; tambah/ubah di panel samping. */
 export function KelolaAsesorBkd({ periodeId, className }: { periodeId?: number | null; className?: string }) {
   const daftar = useSiakadQuery<AsesorBkdRow[]>(['bkd', 'asesor', periodeId ?? null], q(`/v1/sdm/bkd/asesor${periodeId ? `?periode_id=${periodeId}` : ''}`));
-  const [form, setForm] = React.useState<AsesorBkdRow | 'baru' | null>(null);
+  const [form, setFormDosen] = React.useState<AsesorBkdRow | 'baru' | null>(null);
+  const [formLuar, setFormLuar] = React.useState<AsesorBkdRow | 'baru' | null>(null);
+  const setForm = (x: AsesorBkdRow | 'baru' | null) => (x !== null && x !== 'baru' && x.eksternal ? setFormLuar(x) : setFormDosen(x));
   const aksi = useAksiBkd();
   const [hapus, setHapus] = React.useState<AsesorBkdRow | null>(null);
   return (
@@ -1674,7 +1799,7 @@ export function KelolaAsesorBkd({ periodeId, className }: { periodeId?: number |
       <DataTable<AsesorBkdRow>
         columns={[
           { key: 'nama', header: 'Asesor', mobile: 'title', cell: (x) => <span className="u-bkd-sel"><strong>{x.nama_lengkap}</strong><small>{[x.nidn, x.nira ? `NIRA ${x.nira}` : null].filter(Boolean).join(' · ')}</small></span>, value: (x) => x.nama_lengkap },
-          { key: 'asal', header: 'Asal', cell: (x) => (x.asal === 'luar' ? x.pt_asal ?? 'PT lain' : x.nama_prodi ?? x.prodi_pegawai ?? '-'), value: (x) => (x.asal === 'luar' ? x.pt_asal ?? '' : x.nama_prodi ?? '') },
+          { key: 'asal', header: 'Asal', cell: (x) => (x.eksternal ? <span className="u-bkd-sel"><span>{x.pt_asal ?? 'PT lain'}</span><small>Eksternal, menilai lewat tautan</small></span> : x.asal === 'luar' ? x.pt_asal ?? 'PT lain' : x.nama_prodi ?? x.prodi_pegawai ?? '-'), value: (x) => (x.asal === 'luar' ? x.pt_asal ?? '' : x.nama_prodi ?? '') },
           { key: 'bidang_ilmu', header: 'Bidang ilmu', defaultHidden: true },
           { key: 'berlaku_sampai', header: 'Berlaku sampai', shrink: true, cell: (x) => tglPendek(x.berlaku_sampai) },
           { key: 'beban', header: 'Beban', align: 'end', shrink: true, cell: (x) => `${x.beban}${x.kuota ? ` / ${x.kuota}` : ''}` },
@@ -1691,14 +1816,20 @@ export function KelolaAsesorBkd({ periodeId, className }: { periodeId?: number |
           { label: 'Hapus', destructive: true, onSelect: () => setHapus(x) },
         ]}
         actions={
-          <Button size="sm" onClick={() => setForm('baru')}>
-            <Plus /> Daftarkan asesor
-          </Button>
+          <>
+            <Button size="sm" variant="outline" onClick={() => setFormLuar('baru')}>
+              <Plus /> Asesor eksternal
+            </Button>
+            <Button size="sm" onClick={() => setForm('baru')}>
+              <Plus /> Daftarkan asesor dosen
+            </Button>
+          </>
         }
         exportCsv="asesor-bkd"
         empty={{ icon: <UsersRound />, title: 'Belum ada asesor terdaftar', description: 'Daftarkan dosen bersertifikat asesor BKD (internal atau dari PT lain).' }}
       />
       {form ? <PanelAsesorBkd asesor={form === 'baru' ? null : form} onOpenChange={(o) => !o && setForm(null)} /> : null}
+      {formLuar ? <PanelAsesorLuarBkd asesor={formLuar === 'baru' ? null : formLuar} onOpenChange={(o) => !o && setFormLuar(null)} /> : null}
       <ConfirmDialog
         open={!!hapus}
         onOpenChange={(o) => !o && setHapus(null)}
@@ -1794,6 +1925,124 @@ function PanelAsesorBkd({ asesor: a, onOpenChange }: { asesor: AsesorBkdRow | nu
         </label>
       </FormGrid>
     </Sheet>
+  );
+}
+
+/**
+ * Asesor eksternal (PT lain) tanpa menjadi pegawai: identitas, sertifikat asesor, kontak. Menilai lewat tautan bertoken
+ * yang dibuat Biro SDM per laporan (tidak butuh akun SIAKAD).
+ */
+export function PanelAsesorLuarBkd({ asesor: a, onOpenChange }: { asesor: AsesorBkdRow | null; onOpenChange: (o: boolean) => void }) {
+  const aksi = useAksiBkd();
+  const [step, setStep] = React.useState(0);
+  const [n, setN] = React.useState({
+    nama: a?.nama ?? a?.nama_lengkap ?? '', nidn: a?.nidn ?? '', pt_asal: a?.pt_asal ?? '', bidang_ilmu: a?.bidang_ilmu ?? '', nira: a?.nira ?? '',
+    nomor_sertifikat: a?.nomor_sertifikat ?? '', berlaku_sampai: a?.berlaku_sampai ?? '', berkas_id: a?.berkas_id ?? (null as string | null), email: a?.email ?? '', hp: a?.hp ?? '',
+    aktif: a ? !!a.aktif : true,
+  });
+  const set = (k: keyof typeof n) => (e: { target: { value: string } }) => setN({ ...n, [k]: e.target.value });
+  return (
+    <PanelLangkah
+      open
+      onOpenChange={onOpenChange}
+      title={a ? 'Ubah asesor eksternal' : 'Asesor eksternal'}
+      description="Asesor BKD dari perguruan tinggi lain; tidak dicatat sebagai pegawai UNIPO."
+      mode={a ? 'ubah' : 'buat'}
+      step={step}
+      onStepChange={setStep}
+      finishLabel="Simpan asesor"
+      footerNote="Kolom bertanda * wajib"
+      steps={[
+        {
+          id: 'identitas',
+          title: 'Identitas',
+          validate: () => (!n.nama.trim() ? 'Isi nama asesor.' : !n.pt_asal.trim() ? 'Isi perguruan tinggi asal.' : null),
+          content: (
+            <FormGrid>
+              <Field label="Nama lengkap dan gelar" required style={{ gridColumn: '1 / -1' }}>
+                <Input value={n.nama} onChange={set('nama')} />
+              </Field>
+              <Field label="NIDN/NIDK" optional>
+                <Input value={n.nidn} onChange={set('nidn')} />
+              </Field>
+              <Field label="Perguruan tinggi asal" required>
+                <Input value={n.pt_asal} onChange={set('pt_asal')} />
+              </Field>
+              <Field label="Bidang ilmu" optional style={{ gridColumn: '1 / -1' }}>
+                <Input value={n.bidang_ilmu} onChange={set('bidang_ilmu')} />
+              </Field>
+            </FormGrid>
+          ),
+        },
+        {
+          id: 'sertifikat',
+          title: 'Sertifikat asesor',
+          validate: () => (!n.nira.trim() && !n.nomor_sertifikat.trim() ? 'Isi NIRA atau nomor sertifikat asesor.' : null),
+          content: (
+            <div className="u-bkd-form">
+              <FormGrid>
+                <Field label="NIRA (nomor registrasi asesor)">
+                  <Input value={n.nira} onChange={set('nira')} />
+                </Field>
+                <Field label="Nomor sertifikat asesor">
+                  <Input value={n.nomor_sertifikat} onChange={set('nomor_sertifikat')} />
+                </Field>
+                <Field label="Berlaku sampai" optional>
+                  <IsianTanggal value={n.berlaku_sampai} onValueChange={(v) => setN({ ...n, berlaku_sampai: v ?? '' })} />
+                </Field>
+              </FormGrid>
+              <Field label="Berkas sertifikat" optional description="PDF/gambar sertifikat asesor BKD.">
+                <PilihBerkas value={n.berkas_id} kategori="dokumen" modul="sdm_bkd_asesor" keterangan="Sertifikat asesor BKD" onValueChange={(id) => setN({ ...n, berkas_id: id })} />
+              </Field>
+            </div>
+          ),
+        },
+        {
+          id: 'kontak',
+          title: 'Kontak',
+          description: 'Dipakai Biro SDM untuk mengirim tautan penilaian.',
+          validate: () => (!n.email.trim() && !n.hp.trim() ? 'Isi email atau nomor HP.' : null),
+          content: (
+            <FormGrid>
+              <Field label="Email">
+                <Input type="email" value={n.email} onChange={set('email')} />
+              </Field>
+              <Field label="Nomor HP/WA">
+                <Input value={n.hp} onChange={set('hp')} />
+              </Field>
+              <label className="u-bkd-setuju">
+                <Checkbox checked={n.aktif} onCheckedChange={(v) => setN({ ...n, aktif: v === true })} /> Aktif menilai
+              </label>
+            </FormGrid>
+          ),
+        },
+        {
+          id: 'ringkasan',
+          title: 'Ringkasan',
+          content: (
+            <WizardReview
+              sections={[
+                { title: 'Identitas', items: [{ label: 'Nama', value: n.nama }, { label: 'NIDN', value: n.nidn }, { label: 'PT asal', value: n.pt_asal }, { label: 'Bidang', value: n.bidang_ilmu }], onEdit: () => setStep(0) },
+                { title: 'Sertifikat', items: [{ label: 'NIRA', value: n.nira }, { label: 'Nomor sertifikat', value: n.nomor_sertifikat }, { label: 'Berlaku sampai', value: n.berlaku_sampai ? tglPendek(n.berlaku_sampai) : null }, { label: 'Berkas', value: n.berkas_id ? 'Terlampir' : null }], onEdit: () => setStep(1) },
+                { title: 'Kontak', items: [{ label: 'Email', value: n.email }, { label: 'HP', value: n.hp }], onEdit: () => setStep(2) },
+              ]}
+            />
+          ),
+        },
+      ]}
+      onFinish={async () => {
+        const body = {
+          eksternal: true, nama: n.nama.trim(), nidn: n.nidn.trim() || null, pt_asal: n.pt_asal.trim(), bidang_ilmu: n.bidang_ilmu.trim() || null, nira: n.nira.trim() || null,
+          nomor_sertifikat: n.nomor_sertifikat.trim() || null, berlaku_sampai: n.berlaku_sampai || null, berkas_id: n.berkas_id, email: n.email.trim() || null, hp: n.hp.trim() || null, aktif: n.aktif,
+        };
+        try {
+          await aksi(a ? 'PUT' : 'POST', a ? `/v1/sdm/bkd/asesor/${a.id}` : '/v1/sdm/bkd/asesor', body, 'Asesor eksternal disimpan.');
+          return null;
+        } catch (e) {
+          return pesanGalat(e);
+        }
+      }}
+    />
   );
 }
 

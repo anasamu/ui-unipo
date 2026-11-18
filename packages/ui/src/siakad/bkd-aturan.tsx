@@ -37,7 +37,15 @@ interface IsiAturanBkd {
   asesor: { jumlah: 1 | 2; gabung: 'keduanya' | 'salah_satu' | 'asesor1'; larang_diri: boolean; larang_satu_prodi: boolean; wajib_terdaftar: boolean };
   tahap: { kaprodi: boolean; dekan: boolean };
   tenggat: Record<'rencana_hari' | 'kirim_hari' | 'penilaian_hari' | 'penetapan_hari', number | null>;
+  pedoman?: { judul: string | null; url: string | null };
 }
+
+/** Isian ekuivalen SKS yang masih kosong: kategori ber-rumus yang angkanya belum ditetapkan SDM dari pedoman. */
+export function kategoriPerluDiisi(k: KategoriBkd): boolean {
+  return k.aktif && (k.rumus.jenis === 'manual' || (k.rumus.jenis === 'per_volume' && k.rumus.faktor == null) || (k.rumus.jenis === 'tetap' && k.rumus.nilai == null));
+}
+
+const PerluDiisi = () => <Badge variant="warning">Perlu diisi SDM dari pedoman</Badge>;
 
 type Perubahan = PerubahanAturan;
 
@@ -104,7 +112,15 @@ function RincianAturanBkd({ id, onPilih }: { id: number; onPilih: (id: number | 
   const isi = a.isi;
   const kolomKategori: DataColumn<KategoriBkd>[] = [
     { key: 'nama', header: 'Kategori', mobile: 'title', cell: (k) => <span className="u-bkd-sel"><strong>{k.nama}</strong><small>{isi.bidang.find((b) => b.kode === k.bidang)?.nama}</small></span> },
-    { key: 'rumus', header: 'Ekuivalen SKS', cell: (k) => `${RUMUS[k.rumus.jenis]}${k.rumus.faktor != null ? ` · faktor ${k.rumus.faktor}` : ''}${k.rumus.nilai != null ? ` · ${sksBkd(k.rumus.nilai)}` : ''}${k.rumus.maks != null ? ` · maks ${sksBkd(k.rumus.maks)}` : ''}` },
+    {
+      key: 'rumus', header: 'Ekuivalen SKS',
+      cell: (k) => (
+        <span className="u-bkd-sel">
+          <span>{`${RUMUS[k.rumus.jenis]}${k.rumus.faktor != null ? ` · faktor ${k.rumus.faktor}` : ''}${k.rumus.nilai != null ? ` · ${sksBkd(k.rumus.nilai)}` : ''}${k.rumus.maks != null ? ` · maks ${sksBkd(k.rumus.maks)}` : ''}`}</span>
+          {kategoriPerluDiisi(k) ? <small><PerluDiisi /> Selama kosong, dosen mengisi SKS sendiri.</small> : null}
+        </span>
+      ),
+    },
     { key: 'sumber', header: 'Sumber data', shrink: true, cell: (k) => (k.sumber === 'manual' ? 'Diisi dosen' : k.sumber) },
     { key: 'bukti', header: 'Bukti', cell: (k) => (k.bukti.wajib ? (k.bukti.otomatis ? 'Otomatis dari sumber' : k.bukti.jenis.join(', ') || 'Wajib') : 'Tidak wajib') },
     { key: 'aktif', header: 'Status', shrink: true, mobile: 'badge', cell: (k) => <Badge variant={k.aktif ? 'success' : 'neutral'}>{k.aktif ? 'Aktif' : 'Nonaktif'}</Badge> },
@@ -129,8 +145,29 @@ function RincianAturanBkd({ id, onPilih }: { id: number; onPilih: (id: number | 
               { label: 'SK penetapan', value: a.sk ? `${a.sk.nomor}${a.sk.tanggal ? `, ${tgl(a.sk.tanggal)}` : ''}` : <span className="u-bkd-keterangan">Belum dilampirkan</span> },
               { label: 'Berlaku mulai', value: a.berlaku_mulai_nama ?? a.berlaku_mulai ?? 'Bawaan periode baru' },
               { label: 'Dipakai periode', value: a.periode.length ? a.periode.map((p) => p.nama).join(', ') : 'Belum ada' },
+              {
+                label: 'Pedoman',
+                value: isi.pedoman?.url ? (
+                  <a href={isi.pedoman.url} target="_blank" rel="noreferrer">
+                    {isi.pedoman.judul ?? 'Buka dokumen pedoman'}
+                  </a>
+                ) : (
+                  <span className="u-bkd-keterangan">{isi.pedoman?.judul ?? '-'} (tautan dokumen belum diisi)</span>
+                ),
+              },
             ]}
           />
+          {(() => {
+            const kosong = isi.kategori.filter(kategoriPerluDiisi).length;
+            const ekvKosong = a.jabatan_tugas_tambahan.filter((j) => isi.tugas_tambahan.ekuivalen[j.kode] == null && j.setara_sks == null).length;
+            const kombKosong = isi.kombinasi.filter((c) => c.min == null).length;
+            return kosong + ekvKosong + kombKosong > 0 ? (
+              <Alert variant="warning" title="Ada isian yang perlu diisi SDM dari pedoman">
+                {[kosong ? `${kosong} kategori kegiatan belum punya ekuivalen SKS` : null, ekvKosong ? `${ekvKosong} jabatan tugas tambahan belum punya ekuivalen SKS` : null, kombKosong ? `${kombKosong} kombinasi bidang belum punya angka minimal (tetap nonaktif)` : null].filter(Boolean).join('; ')}.
+                {' '}Selama kosong, dosen mengisi SKS sendiri dan asesor menilai kewajarannya.
+              </Alert>
+            ) : null;
+          })()}
           <div className="u-bkd-aksi">
             {a.status === 'draf' ? (
               <Button onClick={() => setPanel('ubah')}>
@@ -251,7 +288,7 @@ function RincianAturanBkd({ id, onPilih }: { id: number; onPilih: (id: number | 
                 columns={[
                   { key: 'nama', header: 'Jabatan', mobile: 'title' },
                   { key: 'kode', header: 'Kode', shrink: true },
-                  { key: 'ekv', header: 'Ekuivalen di aturan ini', align: 'end', cell: (j) => (isi.tugas_tambahan.ekuivalen[j.kode] != null ? sksBkd(isi.tugas_tambahan.ekuivalen[j.kode]) : '-') },
+                  { key: 'ekv', header: 'Ekuivalen di aturan ini', align: 'end', cell: (j) => (isi.tugas_tambahan.ekuivalen[j.kode] != null ? sksBkd(isi.tugas_tambahan.ekuivalen[j.kode]) : j.setara_sks == null ? <PerluDiisi /> : '-') },
                   { key: 'setara_sks', header: 'Data master SDM', align: 'end', cell: (j) => (j.setara_sks != null ? sksBkd(j.setara_sks) : 'belum diisi') },
                 ]}
                 empty={{ title: 'Belum ada jabatan tugas tambahan di data master SDM' }}
@@ -304,6 +341,7 @@ function PanelUbahAturanBkd({ aturan: a, onOpenChange }: { aturan: AturanBkdDeta
   const [step, setStep] = React.useState(0);
   const [isi, setIsi] = React.useState<IsiAturanBkd>(() => JSON.parse(JSON.stringify(a.isi)) as IsiAturanBkd);
   const [id, setId] = React.useState({ nama: a.nama, dasar_hukum: a.dasar_hukum ?? '', berlaku_mulai: a.berlaku_mulai, catatan_perubahan: a.catatan_perubahan ?? '', sk_id: a.sk?.id ?? null as string | null });
+  const pd = isi.pedoman ?? { judul: null, url: null };
   const ubahBidang = (i: number, x: Partial<IsiAturanBkd['bidang'][number]>) => setIsi({ ...isi, bidang: isi.bidang.map((b, j) => (j === i ? { ...b, ...x } : b)) });
   const ubahKat = (i: number, x: Partial<KategoriBkd>) => setIsi({ ...isi, kategori: isi.kategori.map((b, j) => (j === i ? { ...b, ...x } : b)) });
   const ubahRumus = (i: number, x: Partial<RumusBkd>) => ubahKat(i, { rumus: { ...isi.kategori[i]!.rumus, ...x } });
@@ -336,6 +374,12 @@ function PanelUbahAturanBkd({ aturan: a, onOpenChange }: { aturan: AturanBkdDeta
               <PilihSK value={id.sk_id} onValueChange={(v: string | null) => setId({ ...id, sk_id: v })} jenis="aturan" label="SK Rektor penetapan aturan BKD kampus" description="Dirujuk dari registri SK; tidak perlu mengunggah ulang." />
               <Field label="Berlaku mulai semester" optional description="Bawaan untuk periode baru mulai semester ini.">
                 <PilihTahunAkademik value={id.berlaku_mulai} onValueChange={(v) => setId({ ...id, berlaku_mulai: v })} />
+              </Field>
+              <Field label="Judul pedoman" optional>
+                <Input value={pd.judul ?? ''} onChange={(e) => setIsi({ ...isi, pedoman: { ...pd, judul: e.target.value || null } })} placeholder="mis. Pedoman Operasional BKD 2021" />
+              </Field>
+              <Field label="Tautan dokumen pedoman" optional description="Ditampilkan sebagai rujukan di Aturan BKD.">
+                <Input value={pd.url ?? ''} onChange={(e) => setIsi({ ...isi, pedoman: { ...pd, url: e.target.value || null } })} placeholder="https://…" />
               </Field>
               <Field label="Catatan perubahan" optional>
                 <Textarea rows={2} value={id.catatan_perubahan} onChange={(e) => setId({ ...id, catatan_perubahan: e.target.value })} />
@@ -410,7 +454,7 @@ function PanelUbahAturanBkd({ aturan: a, onOpenChange }: { aturan: AturanBkdDeta
                     </Field>
                     {k.rumus.jenis === 'per_sks' || k.rumus.jenis === 'per_volume' ? (
                       <Field label={k.rumus.jenis === 'per_sks' ? 'Faktor' : 'SKS per satuan'}>
-                        <Input inputMode="decimal" value={t(k.rumus.faktor)} onChange={(e) => ubahRumus(i, { faktor: angkaAtauNull(e.target.value) })} />
+                        <Input inputMode="decimal" value={t(k.rumus.faktor)} onChange={(e) => ubahRumus(i, { faktor: angkaAtauNull(e.target.value) })} aria-invalid={k.rumus.jenis === 'per_volume' && k.rumus.faktor == null ? true : undefined} />
                       </Field>
                     ) : k.rumus.jenis === 'tetap' ? (
                       <Field label="Nilai SKS">
@@ -463,7 +507,7 @@ function PanelUbahAturanBkd({ aturan: a, onOpenChange }: { aturan: AturanBkdDeta
                       <Input value={c.nama} onChange={(e) => setIsi({ ...isi, kombinasi: isi.kombinasi.map((x, j) => (j === i ? { ...x, nama: e.target.value } : x)) })} />
                     </Field>
                     <Field label="Minimal (SKS)">
-                      <Input inputMode="decimal" value={t(c.min)} onChange={(e) => setIsi({ ...isi, kombinasi: isi.kombinasi.map((x, j) => (j === i ? { ...x, min: angkaAtauNull(e.target.value) } : x)) })} />
+                      <Input inputMode="decimal" value={t(c.min)} onChange={(e) => { const min = angkaAtauNull(e.target.value); setIsi({ ...isi, kombinasi: isi.kombinasi.map((x, j) => (j === i ? { ...x, min, aktif: min == null ? false : x.aktif } : x)) }); }} />
                     </Field>
                     <Field label="Berlaku untuk">
                       <Select options={[{ value: 'semua', label: 'Semua dosen' }, { value: 'tugas_tambahan', label: 'Dosen bertugas tambahan' }, { value: 'tanpa_tugas_tambahan', label: 'Tanpa tugas tambahan' }]} value={c.berlaku} onValueChange={(v) => setIsi({ ...isi, kombinasi: isi.kombinasi.map((x, j) => (j === i ? { ...x, berlaku: (v ?? 'semua') as typeof c.berlaku } : x)) })} />
@@ -476,7 +520,8 @@ function PanelUbahAturanBkd({ aturan: a, onOpenChange }: { aturan: AturanBkdDeta
                       </label>
                     ))}
                     <label className="u-bkd-setuju">
-                      <Checkbox checked={c.aktif} onCheckedChange={(v) => setIsi({ ...isi, kombinasi: isi.kombinasi.map((x, j) => (j === i ? { ...x, aktif: v === true } : x)) })} /> Aktif
+                      <Checkbox checked={c.aktif && c.min != null} disabled={c.min == null || !c.bidang.length} onCheckedChange={(v) => setIsi({ ...isi, kombinasi: isi.kombinasi.map((x, j) => (j === i ? { ...x, aktif: v === true } : x)) })} /> Aktif
+                      {c.min == null ? <small className="u-bkd-keterangan">Isi angka minimal dari pedoman untuk mengaktifkan.</small> : null}
                     </label>
                   </div>
                 </fieldset>
