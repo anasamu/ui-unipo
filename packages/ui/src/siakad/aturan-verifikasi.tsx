@@ -5,7 +5,7 @@ import { cn } from '../lib/cn';
 import { formatDate } from '../lib/format';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Empty } from '../components/display';
-import { Switch } from '../components/forms';
+import { SegmentedControl, Switch } from '../components/forms';
 import { Select } from '../components/select';
 import { ConfirmDialog, useToast } from '../components/overlays';
 import { Cluster, Stack, Text } from '../components/tata-letak';
@@ -25,7 +25,7 @@ export interface NilaiAturanVerifikasi {
   pemeriksa: PemeriksaAturanVerifikasi;
 }
 export interface IsianAturanVerifikasi extends NilaiAturanVerifikasi {
-  /** "sasaran:kode", kunci simpan. */
+  /** "peran:kode", kunci simpan. */
   kunci: string;
   kode: string;
   label: string;
@@ -45,6 +45,9 @@ export interface BagianAturanVerifikasi {
 export interface AturanVerifikasiDataRespons {
   pemilik: PemilikPemutakhiran;
   pemilik_label: string;
+  /** Peran yang sedang ditampilkan (dosen, tendik, mahasiswa). */
+  peran: string;
+  peran_opsi: Array<{ value: string; label: string; diatur: number }>;
   bagian: BagianAturanVerifikasi[];
   boleh_ubah: boolean;
   terakhir: { diubah_oleh: string; updated_at: string } | null;
@@ -52,6 +55,11 @@ export interface AturanVerifikasiDataRespons {
 
 const MODE_LABEL: Record<ModeAturanVerifikasi, string> = { langsung: 'Langsung tersimpan', verifikasi: 'Diverifikasi', ajukan: 'Lewat pengajuan', baca: 'Hanya baca' };
 const PERAN_LABEL: Record<string, string> = { dosen: 'Dosen', tendik: 'Tendik', mahasiswa: 'Mahasiswa' };
+
+/** "a", "a dan b", "a, b, dan c". */
+function daftarKata(x: string[]): string {
+  return x.length <= 2 ? x.join(' dan ') : `${x.slice(0, -1).join(', ')}, dan ${x[x.length - 1]}`;
+}
 
 function ringkasBawaan(i: IsianAturanVerifikasi, unit: string): string {
   const b = i.bawaan;
@@ -81,7 +89,10 @@ export function AturanVerifikasiData({ pemilik, deskripsi, className }: AturanVe
   const siakad = useSiakad();
   const toast = useToast();
   const path = `/v1/profil/pemutakhiran/${pemilik}/aturan`;
-  const q = useSiakadQuery<AturanVerifikasiDataRespons>(['pemutakhiran', pemilik, 'aturan'], (s, signal) => s.request<AturanVerifikasiDataRespons>({ method: 'GET', path }, { signal }));
+  const [peran, setPeran] = React.useState<string | null>(null);
+  const q = useSiakadQuery<AturanVerifikasiDataRespons>(['pemutakhiran', pemilik, 'aturan', peran], (s, signal) =>
+    s.request<AturanVerifikasiDataRespons>({ method: 'GET', path, query: peran ? { peran } : undefined }, { signal }),
+  );
   const [ubah, setUbah] = React.useState<Record<string, NilaiAturanVerifikasi>>({});
   const [galat, setGalat] = React.useState<Record<string, string>>({});
   const [simpan, setSimpan] = React.useState(false);
@@ -90,6 +101,8 @@ export function AturanVerifikasiData({ pemilik, deskripsi, className }: AturanVe
   if (q.error) return <GalatApi error={q.error} onRetry={q.refetch} className={className} />;
   if (!q.data) return <Skeleton height={320} className={className} />;
   const d = q.data;
+  const peranAktif = d.peran;
+  const labelPeran = d.peran_opsi.find((o) => o.value === peranAktif)?.label ?? peranAktif;
   const unit = d.pemilik_label;
   const boleh = d.boleh_ubah;
   const nilai = (i: IsianAturanVerifikasi): NilaiAturanVerifikasi => ubah[i.kunci] ?? { mode: i.mode, bukti: i.bukti, wajib: i.wajib, pemeriksa: i.pemeriksa };
@@ -115,7 +128,7 @@ export function AturanVerifikasiData({ pemilik, deskripsi, className }: AturanVe
     setSimpan(true);
     setGalat({});
     try {
-      await siakad.request({ method: 'POST', path, body: { aturan: ubah } });
+      await siakad.request({ method: 'POST', path, body: { aturan: ubah, peran: peranAktif } });
       toast.add({ title: 'Aturan verifikasi disimpan', description: `${jumlahUbah} isian diperbarui. Berlaku untuk perubahan data berikutnya di aplikasi Profil.`, type: 'success' });
       setUbah({});
       invalidateSiakad('pemutakhiran');
@@ -137,14 +150,14 @@ export function AturanVerifikasiData({ pemilik, deskripsi, className }: AturanVe
               `Menentukan cara setiap isian diperbarui dari aplikasi Profil di luar periode pemutakhiran: langsung tersimpan, diverifikasi ${unit}, lewat pengajuan dengan alasan, atau hanya baca. Periode pemutakhiran baru memakai aturan ini sebagai nilai awal dan tetap bisa menimpanya.`}
           </Text>
           <Text size="xs" tone="muted">
-            {jumlahDiatur ? `${jumlahDiatur} isian berbeda dari bawaan.` : 'Semua isian memakai bawaan.'}
+            {jumlahDiatur ? `${labelPeran}: ${jumlahDiatur} isian berbeda dari bawaan.` : `${labelPeran}: semua isian memakai bawaan.`}
             {d.terakhir ? ` Terakhir diubah ${d.terakhir.diubah_oleh} pada ${formatDate(d.terakhir.updated_at, 'medium')}.` : ''}
           </Text>
         </Stack>
         {boleh ? (
           <Cluster gap={2}>
-            <Button variant="outline" onClick={() => setKembali(true)} disabled={jumlahDiatur === 0 && jumlahUbah === 0}>
-              <RotateCcw /> Kembalikan ke bawaan
+            <Button variant="outline" onClick={() => setKembali(true)} disabled={jumlahDiatur === 0}>
+              <RotateCcw /> Kembalikan {d.peran_opsi.length > 1 ? labelPeran.toLowerCase() : ''} ke bawaan
             </Button>
             <Button onClick={() => void kirim()} loading={simpan} disabled={jumlahUbah === 0}>
               <Save /> {jumlahUbah ? `Simpan ${jumlahUbah} perubahan` : 'Simpan aturan'}
@@ -152,6 +165,19 @@ export function AturanVerifikasiData({ pemilik, deskripsi, className }: AturanVe
           </Cluster>
         ) : null}
       </Cluster>
+      {d.peran_opsi.length > 1 ? (
+        <Cluster gap={3}>
+          <SegmentedControl
+            value={peranAktif}
+            onValueChange={(v) => setPeran(v)}
+            options={d.peran_opsi.map((o) => ({ value: o.value, label: o.diatur ? `${o.label} (${o.diatur})` : o.label }))}
+            aria-label="Aturan untuk"
+          />
+          <Text size="xs" tone="muted">
+            Aturan diatur terpisah untuk {daftarKata(d.peran_opsi.map((o) => o.label.toLowerCase()))}.{jumlahUbah ? ` ${jumlahUbah} perubahan belum disimpan.` : ''}
+          </Text>
+        </Cluster>
+      ) : null}
       {!boleh ? <Alert variant="info">Aturan berlaku untuk seluruh universitas. Anda bisa melihatnya; yang mengubah hanya petugas {unit} pusat.</Alert> : null}
       {d.bagian.length === 0 ? <Empty bordered icon={<ShieldCheck />} title="Tidak ada isian" description={`Belum ada isian pemutakhiran milik ${unit}.`} /> : null}
       {d.bagian.map((b) => (
@@ -160,7 +186,7 @@ export function AturanVerifikasiData({ pemilik, deskripsi, className }: AturanVe
             <div>
               <strong>{b.label}</strong>
               <small>
-                {b.sasaran === 'mahasiswa' ? 'Mahasiswa' : 'Dosen dan tendik'} · {b.keterangan}
+                {labelPeran} · {b.keterangan}
               </small>
             </div>
           </header>
@@ -221,13 +247,13 @@ export function AturanVerifikasiData({ pemilik, deskripsi, className }: AturanVe
       <ConfirmDialog
         open={kembali}
         onOpenChange={setKembali}
-        title="Kembalikan semua aturan ke bawaan?"
-        description={`Semua isian ${unit} kembali ke aturan bawaan sistem. Periode pemutakhiran yang sudah dibuat tidak berubah.`}
+        title={d.peran_opsi.length > 1 ? `Kembalikan aturan ${labelPeran.toLowerCase()} ke bawaan?` : 'Kembalikan semua aturan ke bawaan?'}
+        description={`Semua isian ${unit} untuk ${labelPeran.toLowerCase()} kembali ke aturan bawaan sistem. Aturan peran lain dan periode pemutakhiran yang sudah dibuat tidak berubah.`}
         confirmLabel="Kembalikan ke bawaan"
         onConfirm={async () => {
           try {
-            await siakad.request({ method: 'POST', path: `${path}/kembalikan`, body: {} });
-            setUbah({});
+            await siakad.request({ method: 'POST', path: `${path}/kembalikan`, body: { peran: peranAktif } });
+            setUbah((x) => Object.fromEntries(Object.entries(x).filter(([k]) => !k.startsWith(`${peranAktif}:`))));
             toast.add({ title: 'Aturan dikembalikan ke bawaan', type: 'success' });
             invalidateSiakad('pemutakhiran');
           } catch (e) {
