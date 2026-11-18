@@ -60,6 +60,7 @@ import { NavigasiSoal, SoalCbt, TimerUjian, type JawabanCbt, type SoalCbtData } 
 import { SampulKelas, sisaTenggat, type KelasLms } from './lms';
 import { KalenderAkademik } from './kalender';
 import type { CalendarEvent } from '../components/schedule';
+import { PenandaKurikulum, SiapkanKelasDariRps } from './kurikulum-aturan';
 
 /*
  * Komponen belajar LMS (/v1/lms) untuk mahasiswa e-learning: isi kelas per pertemuan, materi (bacaan, berkas, video,
@@ -2821,8 +2822,8 @@ export function InfoKelasLms({ kelasId, className }: { kelasId: number; classNam
 }
 
 // ================================================================ Halaman kelas bertab
-export type TabKelasLms = 'materi' | 'tugas' | 'kuis' | 'forum' | 'presensi' | 'nilai' | 'peserta' | 'info';
-export const TAB_KELAS_LMS: TabKelasLms[] = ['materi', 'tugas', 'kuis', 'forum', 'presensi', 'nilai', 'peserta', 'info'];
+export type TabKelasLms = 'materi' | 'tugas' | 'kuis' | 'forum' | 'presensi' | 'nilai' | 'peserta' | 'info' | 'kurikulum';
+export const TAB_KELAS_LMS: TabKelasLms[] = ['materi', 'tugas', 'kuis', 'forum', 'presensi', 'nilai', 'peserta', 'info', 'kurikulum'];
 
 /** Halaman kelas lengkap: kepala kelas + tab Materi, Tugas, Kuis, Forum, Presensi, Nilai, Peserta, Info. */
 export function HalamanKelasLms({ kelasId, tab = 'materi', onTabChange, className }: { kelasId: number; tab?: TabKelasLms; onTabChange?: (t: TabKelasLms) => void; className?: string }) {
@@ -2843,6 +2844,10 @@ export function HalamanKelasLms({ kelasId, tab = 'materi', onTabChange, classNam
     { value: 'nilai', label: 'Nilai', icon: <GraduationCap />, content: <NilaiKelasSayaLms kelasId={kelasId} /> },
     { value: 'peserta', label: 'Peserta', icon: <Users />, content: <PesertaKelasLms kelasId={kelasId} /> },
     { value: 'info', label: 'Info', icon: <Info />, content: <InfoKelasLms kelasId={kelasId} /> },
+    // Kurikulum (pengajar/pengelola): siapkan kelas dari RPS, penanda CPMK/tingkat kognitif tugas & kuis (aturan kurikulum).
+    ...(k.data && ['pengajar', 'asisten', 'pengelola'].includes(String(k.data.peran ?? '')) && k.data.kode_prodi && k.data.kode_mk
+      ? [{ value: 'kurikulum' as const, label: 'Kurikulum', icon: <GraduationCap />, content: <KurikulumKelasLms kelasId={kelasId} prodi={String(k.data.kode_prodi)} kodeMk={String(k.data.kode_mk)} /> }]
+      : []),
   ];
   return (
     <div className={cn('u-lmsb-kelas', className)}>
@@ -3295,6 +3300,30 @@ export function KalenderLms({ onBuka, className }: { onBuka?: (href: string) => 
           else pindahKe(rute, e.href);
         }}
       />
+    </div>
+  );
+}
+
+/** Tab Kurikulum kelas LMS (pengajar): siapkan kelas dari RPS, penanda CPMK & tingkat kognitif tiap tugas dan kuis. */
+function KurikulumKelasLms({ kelasId, prodi, kodeMk }: { kelasId: number; prodi: string; kodeMk: string }) {
+  const tugas = useTugasKelas(kelasId);
+  const kuis = useKuisKelas(kelasId);
+  return (
+    <div className="u-kur-penanda">
+      <p className="u-bkd-keterangan">Nilai tugas/kuis yang bertanda CPMK ikut dihitung ke ketercapaian CPMK/CPL mata kuliah ini.</p>
+      <div><SiapkanKelasDariRps kelasId={kelasId} onSelesai={segarkan} /></div>
+      {(tugas.data ?? []).map((t) => (
+        <details key={`t${t.id}`} className="u-lmsb-penanda">
+          <summary>Tugas: {t.judul}</summary>
+          <PenandaKurikulum entitas="lms_tugas" entitasId={Number(t.id)} prodi={prodi} kodeMk={kodeMk} />
+        </details>
+      ))}
+      {(kuis.data ?? []).map((q) => (
+        <details key={`k${q.id}`} className="u-lmsb-penanda">
+          <summary>Kuis: {q.judul}</summary>
+          <PenandaKurikulum entitas="lms_kuis" entitasId={Number(q.id)} prodi={prodi} kodeMk={kodeMk} />
+        </details>
+      ))}
     </div>
   );
 }

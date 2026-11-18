@@ -42,6 +42,7 @@ import { PilihEntitas } from './pilih';
 import { PilihBerkas } from './pilih-berkas';
 import { PilihNomorSK } from './isian-sk';
 import { PilihTahunAkademik } from './cari';
+import { RpsMenurutKerangka } from './kurikulum-aturan';
 import {
   CapaianCplKurikulum,
   JENIS_MK,
@@ -1782,7 +1783,7 @@ let kunciBaris = 0;
 export function EditorRps({ rpsId, bolehSahkan, className }: { rpsId: number | string; bolehSahkan?: boolean; className?: string }) {
   const q = useRps(rpsId);
   const r = q.data;
-  const [tab, setTab] = React.useState<'identitas' | 'pertemuan' | 'evaluasi' | 'pratinjau'>('pertemuan');
+  const [tab, setTab] = React.useState<'identitas' | 'pertemuan' | 'evaluasi' | 'pratinjau' | 'kerangka'>('pertemuan');
   const [sahkan, setSahkan] = React.useState(false);
   const [hapus, setHapus] = React.useState(false);
   const { kirim, sibuk, galat } = useKirim();
@@ -1820,12 +1821,19 @@ export function EditorRps({ rpsId, bolehSahkan, className }: { rpsId: number | s
           { value: 'evaluasi', label: 'Rencana evaluasi', count: r.evaluasi.length },
           { value: 'identitas', label: 'Identitas & pustaka' },
           { value: 'pratinjau', label: 'Pratinjau' },
+          { value: 'kerangka', label: 'Templat & pengesahan' },
         ]}
       />
       {tab === 'identitas' && <IdentitasRps r={r} />}
       {tab === 'pertemuan' && <EditorPertemuan r={r} />}
       {tab === 'evaluasi' && <EditorEvaluasi r={r} />}
-      {tab === 'pratinjau' && <RpsMataKuliah rpsId={r.id} />}
+      {tab === 'pratinjau' && (
+        <div className="u-kk-cetak">
+          <Button size="sm" variant="outline" onClick={() => window.print()}>Cetak RPS (PDF)</Button>
+          <RpsMataKuliah rpsId={r.id} />
+        </div>
+      )}
+      {tab === 'kerangka' && <RpsMenurutKerangka rpsId={Number(r.id)} onCetak={() => { setTab('pratinjau'); setTimeout(() => window.print(), 400); }} />}
       <ConfirmDialog
         open={sahkan}
         onOpenChange={setSahkan}
