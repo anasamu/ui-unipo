@@ -17,6 +17,7 @@ import { TombolBerkas, type TombolBerkasProps } from './berkas-cepat';
 import { TombolNotifikasi, type OpsiNotifikasi } from './notifikasi';
 import { ChatMengambang, TombolPesan } from './obrolan';
 import { PengumumanTampil } from './pengumuman-lintas';
+import { StatusSidebar, type StatusSidebarProps } from './status-sidebar';
 
 
 export interface KerangkaAplikasiProps {
@@ -89,8 +90,18 @@ export interface KerangkaAplikasiProps {
   navBawahAktif?: string;
   /** Versi aplikasi di kaki sidebar, mis. dari package.json lewat `define` Vite (`__VERSI__`). */
   versi?: string;
-  /** Status layanan API di kaki sidebar (GET /v1/health, tiap 60 detik saat tab terlihat). Bawaan true. */
+  /** Commit pendek build aplikasi di kaki sidebar, mis. `__COMMIT__` dari `define` Vite. */
+  commit?: string;
+  /**
+   * Status API dan lencana lingkungan/database di kaki sidebar (GET /v1/health/lingkungan, tiap 60 detik saat tab
+   * terlihat; SIAKAD lama: GET /v1/health). Bawaan true.
+   */
   statusApi?: boolean;
+  /**
+   * Kaki sidebar bawaan (`StatusSidebar`): objek = timpa sebagian prop (mis. `lingkunganAplikasi`, `hakCipta`,
+   * `interval`); ReactNode = kaki sendiri; false = tanpa kaki sidebar.
+   */
+  statusSidebar?: false | React.ReactElement | Omit<StatusSidebarProps, 'collapsed' | 'versi' | 'commit' | 'statusApi'>;
   /** Bagian "Pintasan": menu yang paling sering dibuka pengguna ini (disimpan di browser), bisa disematkan. Bawaan true. */
   pintasan?: boolean;
   /** Kode aplikasi tema (/v1/tema) bila berbeda dari `kode`, mis. "api-portal". */
@@ -170,7 +181,9 @@ export function KerangkaAplikasi({
   navBawah,
   navBawahAktif,
   versi,
+  commit,
   statusApi = true,
+  statusSidebar,
   pintasan = true,
   temaAplikasi,
   temaLingkup,
@@ -329,7 +342,13 @@ export function KerangkaAplikasi({
           onCollapsedChange={setCollapsed}
           renderLink={renderLink}
           ingat={`unipo.sidebar.buka.${kode}`}
-          footerTetap={<KakiSidebar versi={versi} statusApi={statusApi} collapsed={collapsed} />}
+          footerTetap={
+            statusSidebar === false ? undefined : React.isValidElement(statusSidebar) ? (
+              statusSidebar
+            ) : (
+              <StatusSidebar {...(statusSidebar ?? {})} versi={versi} commit={commit} statusApi={statusApi} collapsed={collapsed} />
+            )
+          }
           className={sidebarKelas}
         />
       }
@@ -614,73 +633,6 @@ function PintasanSidebar({ pin, utama, activeKey, renderLink }: { pin: PintasanM
           </div>
         );
       })}
-    </div>
-  );
-}
-
-// ================================================================ Kaki sidebar: status API, versi, hak cipta
-
-type StatusApi = 'memeriksa' | 'normal' | 'lambat' | 'gangguan';
-
-/** Kesehatan API SIAKAD: GET /v1/health tiap `interval` ms saat tab terlihat. Jawaban 4xx tetap berarti server hidup. */
-export function useStatusApi(aktif = true, interval = 60_000): { status: StatusApi; ms: number | null } {
-  const siakad = useOptionalSiakad();
-  const [st, setSt] = React.useState<{ status: StatusApi; ms: number | null }>({ status: 'memeriksa', ms: null });
-  React.useEffect(() => {
-    if (!aktif || !siakad) return;
-    let batal = false;
-    const cek = async () => {
-      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
-      const t0 = performance.now();
-      try {
-        await siakad.request({ method: 'GET', path: '/v1/health', public: true }, { maxRetries: 0, timeout: 15_000 });
-        const ms = Math.round(performance.now() - t0);
-        if (!batal) setSt({ status: ms > 2500 ? 'lambat' : 'normal', ms });
-      } catch (e) {
-        const ms = Math.round(performance.now() - t0);
-        const kode = Number((e as { status?: number })?.status);
-        if (!batal) setSt(kode && kode < 500 ? { status: ms > 2500 ? 'lambat' : 'normal', ms } : { status: 'gangguan', ms: null });
-      }
-    };
-    void cek();
-    const t = setInterval(() => void cek(), interval);
-    return () => {
-      batal = true;
-      clearInterval(t);
-    };
-  }, [aktif, siakad, interval]);
-  return st;
-}
-
-const LABEL_STATUS: Record<StatusApi, string> = { memeriksa: 'Memeriksa API', normal: 'API normal', lambat: 'API lambat', gangguan: 'API gangguan' };
-/** Teks singkat kaki sidebar: "API 42 ms", "API gangguan", atau "API …" saat memeriksa. */
-const teksStatus = (st: { status: StatusApi; ms: number | null }) => (st.status === 'gangguan' ? 'API gangguan' : st.ms != null ? `API ${st.ms} ms` : 'API …');
-
-function KakiSidebar({ versi, statusApi, collapsed }: { versi?: string; statusApi: boolean; collapsed?: boolean }) {
-  const st = useStatusApi(statusApi);
-  const tahun = new Date().getFullYear();
-  const hak = `© ${tahun} Universitas Pohuwato`;
-  const label = st.ms != null && st.status !== 'gangguan' ? `${LABEL_STATUS[st.status]} · ${st.ms} ms` : LABEL_STATUS[st.status];
-  if (collapsed)
-    return (
-      <Tooltip content={[statusApi ? label : null, versi ? `Versi ${versi}` : null, hak].filter(Boolean).join(' · ')} side="right">
-        <span className="u-kaki-sb" data-ringkas="" tabIndex={0} aria-label={[statusApi ? label : null, versi ? `versi ${versi}` : null, hak].filter(Boolean).join(', ')}>
-          <span className="u-kaki-sb-titik" data-status={statusApi ? st.status : 'normal'} />
-        </span>
-      </Tooltip>
-    );
-  return (
-    <div className="u-kaki-sb">
-      <div className="u-kaki-sb-baris">
-        {statusApi && (
-          <span className="u-kaki-sb-status" title={label}>
-            <span className="u-kaki-sb-titik" data-status={st.status} />
-            {teksStatus(st)}
-          </span>
-        )}
-        {versi && <span className="u-kaki-sb-versi">v{versi.replace(/^v/, '')}</span>}
-      </div>
-      <small>{hak}</small>
     </div>
   );
 }
