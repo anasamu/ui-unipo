@@ -11,6 +11,7 @@ import { cn } from '../lib/cn';
 import { formatDate } from '../lib/format';
 import { CariAtauUnggahDokumen } from './cari-dokumen';
 import { pesanGalat, useOptionalSiakad } from './provider';
+import { PilihUnit } from './pilih-unit';
 
 /*
  * Registri SK tunggal (SIAKAD /v1/sk, docs/SK.md). Satu SK dicatat satu kali oleh unit penerbitnya (mis. Rektorat untuk
@@ -379,6 +380,7 @@ interface PenerbitSK {
   kode: string;
   jenis: string;
   nama: string;
+  induk_id?: number | null;
   boleh_catat: boolean;
 }
 interface PenandatanganSK {
@@ -435,6 +437,8 @@ export function AjukanPencatatanSK({ open, onOpenChange, nomor: nomorAwal = '', 
       .catch(() => setDaftarPenerbit([]));
   }, [siakad, open, penerbitUnitId, jenis]);
   const bolehCatat = daftarPenerbit.find((u) => u.unit_id === penerbit)?.boleh_catat ?? false;
+  const unitPenerbit = React.useMemo(() => daftarPenerbit.map((u) => ({ id: u.unit_id, induk_id: u.induk_id ?? null, kode: u.kode, jenis: u.jenis, nama: u.nama })), [daftarPenerbit]);
+  const pencatat = React.useMemo(() => new Set(daftarPenerbit.filter((u) => u.boleh_catat).map((u) => u.unit_id)), [daftarPenerbit]);
   React.useEffect(() => {
     if (!siakad || !penerbit || !bolehCatat) {
       setDaftarPejabat([]);
@@ -524,14 +528,16 @@ export function AjukanPencatatanSK({ open, onOpenChange, nomor: nomorAwal = '', 
           </Alert>
         ) : null}
         <Field label="Unit penerbit" required description="Rektorat/universitas untuk SK Rektor, fakultas untuk SK Dekan, dan seterusnya.">
-          <Select<number>
+          <PilihUnit
+            data={unitPenerbit}
             value={penerbit}
             onValueChange={(v) => {
               setPenerbit(v);
               setPejabat(null);
             }}
-            options={daftarPenerbit.map((u) => ({ value: u.unit_id, label: u.nama, description: u.boleh_catat ? 'Anda pencatat SK unit ini' : undefined }))}
+            keterangan={(u) => (pencatat.has(Number(u.id)) ? 'Anda pencatat' : null)}
             placeholder="Pilih unit penerbit"
+            aria-label="Unit penerbit"
           />
         </Field>
         <div className="u-ajukan-sk-dua">

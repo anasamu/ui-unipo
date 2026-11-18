@@ -37,6 +37,7 @@ import { PilihTahunAkademik } from './cari';
 import { GalatApi } from './galat';
 import { PilihSK, type SKRegistri } from './isian-sk';
 import { PilihEntitas, type SumberEntitas } from './pilih';
+import { PilihUnit } from './pilih-unit';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 
 /*
@@ -406,8 +407,9 @@ export function FormPanitia({ panitia, unitId, jenisUnit, trigger, open, onOpenC
   };
   const draf = !panitia || panitia.status === 'draf';
   const units = ref.data?.unit_kelola ?? [];
+  const [jenisPilih, setJenisPilih] = React.useState<string | null>(null);
   const unitTerpilih = units.find((u) => String(u.id) === isi.unit_id);
-  const jenisUnitAktif = unitTerpilih?.jenis ?? panitia?.unit.jenis ?? jenisUnit;
+  const jenisUnitAktif = (isi.unit_id ? (jenisPilih ?? unitTerpilih?.jenis) : null) ?? panitia?.unit.jenis ?? jenisUnit;
   const jenisOpsi: SelectOption<string>[] = (ref.data?.jenis ?? [])
     .filter((j) => !jenisUnitAktif || !j.jenis_unit.length || j.jenis_unit.includes(jenisUnitAktif))
     .map((j) => ({ value: String(j.id), label: j.nama, description: j.keterangan ?? undefined }));
@@ -457,13 +459,17 @@ export function FormPanitia({ panitia, unitId, jenisUnit, trigger, open, onOpenC
       <BagianForm judul="Panitia" kolom={2}>
         {!unitId && (
           <Field label="Unit pembentuk" required error={galat.unit_id || undefined} description="Unit yang menerbitkan SK. Peran berlingkup unit berlaku di unit ini.">
-            <Pilihan
-              options={units.map((u) => ({ value: String(u.id), label: u.nama, description: u.jenis }))}
+            <PilihUnit
+              akar={units.map((u) => u.id)}
+              dataCadangan={units}
               value={isi.unit_id || null}
-              tampilan="cari"
               disabled={!draf}
               placeholder="Pilih unit"
-              onValueChange={(v) => setIsi((x) => ({ ...x, unit_id: v ?? '', jenis_id: '' }))}
+              invalid={Boolean(galat.unit_id)}
+              onValueChange={(v, u) => {
+                setJenisPilih(u?.jenis ?? null);
+                setIsi((x) => ({ ...x, unit_id: v == null ? '' : String(v), jenis_id: '' }));
+              }}
             />
           </Field>
         )}

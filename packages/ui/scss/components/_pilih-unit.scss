@@ -1,0 +1,595 @@
+@use '../mixins' as *;
+
+// ================================================================ Pemilih unit organisasi (PilihUnit) + ikon/lencana jenis unit
+// Warna jenis sama dengan bagan organisasi (GAYA_JENIS_BAGAN) lewat --u-unit-warna; dicampur dengan latar/teks supaya
+// terbaca di mode terang dan gelap.
+
+.u-unit-ikon {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: calc(var(--u-radius) - 1px);
+  background: color-mix(in oklab, var(--u-unit-warna, #5b7083) 13%, var(--u-background));
+  color: color-mix(in oklab, var(--u-unit-warna, #5b7083) 82%, var(--u-foreground));
+  svg {
+    width: 0.9375rem;
+    height: 0.9375rem;
+  }
+  &[data-size='sm'] {
+    width: 1.375rem;
+    height: 1.375rem;
+    border-radius: calc(var(--u-radius) - 3px);
+    svg {
+      width: 0.8125rem;
+      height: 0.8125rem;
+    }
+  }
+}
+.u-unit-lencana {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.4375rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--u-unit-warna, #5b7083) 28%, transparent);
+  background: color-mix(in oklab, var(--u-unit-warna, #5b7083) 10%, var(--u-background));
+  color: color-mix(in oklab, var(--u-unit-warna, #5b7083) 80%, var(--u-foreground));
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.125rem;
+  white-space: nowrap;
+}
+.u-nama-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  > span:last-child {
+    @include truncate;
+  }
+}
+.u-nama-unit-jalur {
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+}
+
+// ---------------------------------------------------------------- pemicu
+.u-pilih-unit {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+.u-pilih-unit-pemicu[data-dengan-hapus] > .u-select-value,
+.u-pilih-unit-pemicu[data-dengan-hapus] > .u-pilih-unit-chip-daftar {
+  margin-inline-end: 1.75rem;
+}
+.u-pilih-unit-nilai {
+  gap: 0.5rem;
+}
+.u-pilih-unit-nilai-teks {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.u-pilih-unit-nilai-nama {
+  @include truncate;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.u-pilih-unit-nilai-jalur {
+  @include truncate;
+  flex: 1 100 auto;
+  min-width: 2rem;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+}
+.u-pilih-unit-nilai-peringatan {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--u-warning);
+  font-size: var(--u-text-xs);
+  font-weight: 600;
+  svg {
+    width: 0.8125rem;
+    height: 0.8125rem;
+    align-self: center;
+  }
+}
+.u-pilih-unit-hapus {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 2rem;
+  translate: 0 -50%;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 0;
+  border-radius: calc(var(--u-radius) - 3px);
+  background: transparent;
+  color: var(--u-muted-foreground);
+  cursor: pointer;
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  &:hover {
+    background: var(--u-hover);
+    color: var(--u-foreground);
+  }
+  &:focus-visible {
+    @include focus-ring(0px);
+  }
+}
+.u-pilih-unit[data-banyak] {
+  .u-pilih-unit-pemicu {
+    height: auto;
+    min-height: 2.25rem;
+    padding-block: 0.25rem;
+    &[data-size='sm'] {
+      min-height: 2rem;
+    }
+  }
+  .u-pilih-unit-hapus {
+    inset-block-start: 1.125rem;
+  }
+}
+.u-pilih-unit-chip-daftar {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.u-pilih-unit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.125rem 0.125rem 0.125rem 0.1875rem;
+  border: 1px solid var(--u-border);
+  border-radius: calc(var(--u-radius) - 2px);
+  background: var(--u-muted);
+  font-size: var(--u-text-sm);
+  line-height: 1.25rem;
+  &[data-peringatan] {
+    border-color: color-mix(in oklab, var(--u-warning) 55%, transparent);
+  }
+}
+.u-pilih-unit-chip-teks {
+  @include truncate;
+  min-width: 0;
+}
+.u-pilih-unit-chip-jalur {
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+}
+.u-pilih-unit-chip-hapus {
+  display: grid;
+  place-items: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 3px;
+  color: var(--u-muted-foreground);
+  cursor: pointer;
+  svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+  &:hover {
+    background: var(--u-hover);
+    color: var(--u-foreground);
+  }
+}
+
+// ---------------------------------------------------------------- popup
+.u-pilih-unit-popup {
+  @include popup-surface;
+  @include popup-motion;
+  display: flex;
+  flex-direction: column;
+  width: min(max(var(--anchor-width), 30rem), calc(100vw - 1.5rem));
+  max-height: min(var(--available-height), 28rem);
+  overflow: hidden;
+  outline: 0;
+  container-type: inline-size;
+}
+.u-pilih-unit-cari {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.5rem 0 0.75rem;
+  border-bottom: 1px solid var(--u-border);
+  color: var(--u-muted-foreground);
+  > svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+  }
+  input {
+    flex: 1;
+    min-width: 0;
+    height: 2.75rem;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--u-foreground);
+    font: inherit;
+    &::placeholder {
+      color: var(--u-muted-foreground);
+    }
+  }
+}
+.u-pilih-unit-ikon-tombol {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: calc(var(--u-radius) - 3px);
+  background: transparent;
+  color: var(--u-muted-foreground);
+  cursor: pointer;
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  &:hover {
+    background: var(--u-hover);
+    color: var(--u-foreground);
+  }
+}
+.u-pilih-unit-bilah {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.75rem;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+}
+.u-pilih-unit-teks-tombol {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  border: 0;
+  border-radius: calc(var(--u-radius) - 3px);
+  background: transparent;
+  color: var(--u-muted-foreground);
+  font: inherit;
+  font-size: var(--u-text-xs);
+  cursor: pointer;
+  svg {
+    width: 0.8125rem;
+    height: 0.8125rem;
+  }
+  &:hover {
+    background: var(--u-hover);
+    color: var(--u-foreground);
+  }
+  &:focus-visible {
+    @include focus-ring(0px);
+  }
+}
+.u-pilih-unit-daftar {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 0.25rem 0.375rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 0.25rem;
+}
+.u-pilih-unit-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 1.25rem 0.75rem;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  text-align: center;
+}
+
+// ---------------------------------------------------------------- baris pohon
+.u-pilih-unit-baris {
+  --u-pu-langkah: 1.25rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.375rem;
+  border-radius: calc(var(--u-radius) - 2px);
+  color: var(--u-foreground);
+  cursor: pointer;
+  user-select: none;
+  &[data-aktif] {
+    background: var(--u-hover);
+  }
+  &[data-dipilih] {
+    background: color-mix(in oklab, var(--u-primary) 9%, transparent);
+    .u-pilih-unit-nama {
+      font-weight: 600;
+    }
+  }
+  &[data-dipilih][data-aktif] {
+    background: color-mix(in oklab, var(--u-primary) 14%, transparent);
+  }
+  &[data-akar] .u-pilih-unit-nama {
+    font-weight: 600;
+  }
+  // Induk sebagai jalur saja (jenis di luar saringan): tidak bisa dipilih, tetap terbaca.
+  &[data-konteks] {
+    cursor: default;
+    .u-pilih-unit-nama {
+      color: var(--u-muted-foreground);
+    }
+    .u-unit-ikon {
+      opacity: 0.7;
+    }
+  }
+  // Tidak boleh dipilih: redup, alasan di title dan kaki popup.
+  &[data-terlarang] {
+    cursor: not-allowed;
+    > :not(.u-pilih-unit-garis):not(.u-pilih-unit-lipat):not(.u-pilih-unit-info) {
+      opacity: 0.5;
+    }
+  }
+}
+.u-pilih-unit-garis {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-self: stretch;
+  margin-block: -0.25rem;
+  > span {
+    position: relative;
+    width: var(--u-pu-langkah);
+  }
+  // Garis vertikal leluhur yang masih punya saudara di bawahnya.
+  > span[data-lanjut]::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: calc(var(--u-pu-langkah) / 2 + 0.25rem);
+    border-inline-start: 1px solid var(--u-border);
+  }
+  // Siku ke unit ini: garis turun dari induk lalu belok ke kanan.
+  > span[data-siku]::before {
+    content: '';
+    position: absolute;
+    inset-block: 0 50%;
+    inset-inline-start: calc(var(--u-pu-langkah) / 2 + 0.25rem);
+    inset-inline-end: -0.25rem;
+    border-inline-start: 1px solid var(--u-border);
+    border-block-end: 1px solid var(--u-border);
+    border-end-start-radius: 0.375rem;
+  }
+  > span[data-siku]:not([data-terakhir])::after {
+    content: '';
+    position: absolute;
+    inset-block: 50% 0;
+    inset-inline-start: calc(var(--u-pu-langkah) / 2 + 0.25rem);
+    border-inline-start: 1px solid var(--u-border);
+  }
+}
+.u-pilih-unit-lipat {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-inline-start: -0.25rem;
+  border-radius: calc(var(--u-radius) - 4px);
+  color: var(--u-muted-foreground);
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    transition: transform var(--u-duration-fast) var(--u-ease-out);
+  }
+  &[data-terbuka] svg {
+    transform: rotate(90deg);
+  }
+  &:not([data-daun]):hover {
+    background: var(--u-muted);
+    color: var(--u-foreground);
+  }
+  &[data-daun]::before {
+    content: '';
+    width: 0.25rem;
+    height: 0.25rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--u-muted-foreground) 45%, transparent);
+  }
+}
+.u-pilih-unit-centang {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid var(--u-input);
+  border-radius: 4px;
+  background: var(--u-background);
+  color: var(--u-primary-foreground);
+  svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+  &[data-dipilih] {
+    border-color: var(--u-primary);
+    background: var(--u-primary);
+  }
+}
+.u-pilih-unit-teks {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.u-pilih-unit-nama {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: var(--u-text-sm);
+  mark {
+    padding: 0;
+    border-radius: 2px;
+    background: color-mix(in oklab, var(--u-warning) 30%, transparent);
+    color: inherit;
+  }
+}
+.u-pilih-unit-meta {
+  @include truncate;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  mark {
+    padding: 0;
+    background: color-mix(in oklab, var(--u-warning) 30%, transparent);
+    color: inherit;
+  }
+}
+.u-pilih-unit-jalur {
+  color: var(--u-foreground);
+  opacity: 0.75;
+}
+.u-pilih-unit-jumlah {
+  flex: none;
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  background: var(--u-muted);
+  color: var(--u-muted-foreground);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.125rem;
+}
+.u-pilih-unit-titik {
+  flex: none;
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 999px;
+  background: var(--u-primary);
+}
+.u-pilih-unit-ket {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 10rem;
+  padding: 0 0.4375rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--u-success) 13%, transparent);
+  color: color-mix(in oklab, var(--u-success) 75%, var(--u-foreground));
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  &[data-nada='peringatan'] {
+    background: color-mix(in oklab, var(--u-warning) 16%, transparent);
+    color: color-mix(in oklab, var(--u-warning) 70%, var(--u-foreground));
+  }
+}
+.u-pilih-unit-info {
+  flex: none;
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--u-muted-foreground);
+}
+.u-pilih-unit-tanda {
+  flex: none;
+  display: grid;
+  width: 1rem;
+  color: var(--u-primary);
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+// Popup sempit (ponsel): lencana jenis disembunyikan (ikon berwarna sudah menandai jenis), langkah pohon dipersempit.
+@container (max-width: 25rem) {
+  .u-pilih-unit-lencana {
+    display: none;
+  }
+  .u-pilih-unit-baris {
+    --u-pu-langkah: 1rem;
+  }
+  .u-pilih-unit-ket {
+    max-width: 6.5rem;
+  }
+}
+
+// ---------------------------------------------------------------- kaki
+.u-pilih-unit-kaki {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0.375rem 0.5rem 0.375rem 0.75rem;
+  border-top: 1px solid var(--u-border);
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+}
+.u-pilih-unit-kaki-pesan {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  color: var(--u-foreground);
+  svg {
+    flex: none;
+    width: 0.875rem;
+    height: 0.875rem;
+    color: var(--u-warning);
+  }
+}
+.u-pilih-unit-kaki-aksi {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-inline-start: auto;
+}
+.u-pilih-unit-selesai {
+  padding: 0.25rem 0.75rem;
+  border: 0;
+  border-radius: calc(var(--u-radius) - 2px);
+  background: var(--u-primary);
+  color: var(--u-primary-foreground);
+  font: inherit;
+  font-size: var(--u-text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  &:hover {
+    filter: brightness(1.08);
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+@media (max-width: 40rem) {
+  .u-pilih-unit-cari input {
+    font-size: 1rem; // cegah zoom otomatis iOS
+  }
+  .u-pilih-unit-baris {
+    min-height: 3rem;
+  }
+}

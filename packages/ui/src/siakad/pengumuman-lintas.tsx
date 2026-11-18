@@ -11,7 +11,7 @@ import { Combobox, Select } from '../components/select';
 import { ADEGAN, Ilustrasi } from '../ikon/ilustrasi';
 import { cn } from '../lib/cn';
 import { GalatApi } from './galat';
-import { PilihEntitas } from './pilih';
+import { PilihUnit, useUnitOrganisasi } from './pilih-unit';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakad, useSiakadQuery } from './provider';
 
 // ================================================================ Pengumuman lintas aplikasi (/v1/notif/pita)
@@ -852,7 +852,7 @@ function PilihVisual({ f }: { f: StateForm }) {
 function IsiFormPengumuman({ f }: { f: StateForm }) {
   const { hak, d, ubah, setD, galat, perkiraan } = f;
   const peranQ = useSiakadQuery<Array<{ kode: string; nama: string; aktif?: boolean }>>(['rbac-peran-pilih'], (s, signal) => s.request({ method: 'GET', path: '/v1/rbac/peran' }, { signal, maxRetries: 0 }), { staleTime: 600_000 });
-  const [unitBaru, setUnitBaru] = React.useState<string | number | null>(null);
+  const unitData = useUnitOrganisasi();
   const unitTerbatas = hak.data && !hak.data.semua;
   const akun = hak.data?.peran_akun?.map((p) => ({ value: p.kode, label: p.nama })) ?? PERAN_AKUN;
   const peranOpsi = [
@@ -979,26 +979,15 @@ function IsiFormPengumuman({ f }: { f: StateForm }) {
           description={unitTerbatas ? `Anda hanya bisa menyasar unit Anda: ${(hak.data?.unit ?? []).map((u) => u.nama).join(', ')} (dan unit di bawahnya).` : 'Kosong = semua unit. Unit mencakup unit di bawahnya (fakultas → prodi).'}
           error={galat.unit}
         >
-          <div className="u-pgm-unit">
-            {(d.unit ?? []).map((u) => (
-              <span key={u} className="u-pgm-chip">
-                {u}
-                <button type="button" aria-label={`Hapus ${u}`} onClick={() => ubah('unit', (d.unit ?? []).filter((x) => x !== u).length ? (d.unit ?? []).filter((x) => x !== u) : null)}>
-                  <X />
-                </button>
-              </span>
-            ))}
-            <PilihEntitas
-              jenis="unit"
-              value={unitBaru}
-              onValueChange={(v) => {
-                setUnitBaru(null);
-                if (v == null) return;
-                ubah('unit', [...new Set([...(d.unit ?? []), String(v)])]);
-              }}
-              placeholder="Tambah unit"
-            />
-          </div>
+          <PilihUnit
+            multiple
+            value={(d.unit ?? []).map((x) => String(unitData.data?.find((u) => u.kode === x || String(u.id) === x)?.id ?? x))}
+            onValueChange={(_, units) => ubah('unit', units.length ? units.map((u) => u.kode || String(u.id)) : null)}
+            akar={unitTerbatas ? (hak.data?.unit ?? []).map((u) => u.id) : null}
+            placeholder="Semua unit"
+            aria-label="Unit sasaran"
+            invalid={Boolean(galat.unit)}
+          />
         </Field>
         <Field label="Peran" description="Jenis akun (mahasiswa, dosen, tendik, alumni, pendaftar PMB) atau peran RBAC. Beberapa pilihan = salah satu cocok. Kosong = semua." error={galat.peran} className="u-form-lebar">
           <PilihanBanyak options={peranOpsi} value={d.peran ?? []} onValueChange={(v) => ubah('peran', v.length ? v : null)} placeholder="Semua peran" aria-label="Peran sasaran" />

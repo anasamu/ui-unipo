@@ -11,6 +11,7 @@ import { CariAtauUnggahDokumen } from './cari-dokumen';
 import { cn } from '../lib/cn';
 import { AjukanPencatatanSK, KartuSK, STATUS_SK, type SKRegistri } from './isian-sk';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { PilihUnit } from './pilih-unit';
 
 /*
  * Halaman registri SK tunggal (SIAKAD /v1/sk, docs/SK.md) untuk unit penerbit dan pengawas:
@@ -329,9 +330,10 @@ export function KelolaSK({ penerbitUnitId = null, pengawasan, jenis, className }
     return () => clearTimeout(t);
   }, [q]);
   const daftar = useDaftarSK({ q: kata, status: status === 'semua' ? undefined : status === 'dicabut' ? 'dicabut,diubah' : status, penerbit });
-  const unitPenerbit = useSiakadQuery<Array<{ unit_id: number; nama: string; boleh_catat: boolean }>>(['sk', 'penerbit'], (s, signal) => s.request({ method: 'GET', path: '/v1/sk/penerbit' }, { signal }), {
+  const unitPenerbit = useSiakadQuery<Array<{ unit_id: number; kode?: string; jenis?: string; induk_id?: number | null; nama: string; boleh_catat: boolean }>>(['sk', 'penerbit'], (s, signal) => s.request({ method: 'GET', path: '/v1/sk/penerbit' }, { signal }), {
     staleTime: 5 * 60_000,
   });
+  const pencatat = React.useMemo(() => new Set((unitPenerbit.data ?? []).filter((u) => u.boleh_catat).map((u) => u.unit_id)), [unitPenerbit.data]);
   const unitCatat = (daftar.meta as { unit_catat?: number[] | null } | undefined)?.unit_catat;
   const bolehCatat = unitCatat === null || (Array.isArray(unitCatat) && unitCatat.length > 0);
   const menunggu = (daftar.data ?? []).filter((s) => s.status === 'draf').length;
@@ -350,18 +352,19 @@ export function KelolaSK({ penerbitUnitId = null, pengawasan, jenis, className }
           ]}
           aria-label="Status SK"
         />
-        <Select<number>
+        <PilihUnit
+          className="u-kelola-sk-penerbit"
+          data={(unitPenerbit.data ?? []).map((u) => ({ id: u.unit_id, induk_id: u.induk_id ?? null, kode: u.kode, jenis: u.jenis, nama: u.nama }))}
+          memuat={unitPenerbit.loading}
+          boleh={(u) => pengawasan || Number(u.id) === penerbitUnitId || pencatat.has(Number(u.id))}
+          alasan="Anda bukan pencatat SK unit ini."
+          sembunyikanTerlarang
+          keterangan={(u) => (!pengawasan || !pencatat.has(Number(u.id)) ? null : 'Anda pencatat')}
           value={penerbit}
-          onValueChange={setPenerbit}
+          onValueChange={(v) => setPenerbit(v)}
           placeholder="Semua penerbit"
           aria-label="Unit penerbit"
-          options={[...(unitPenerbit.data ?? []).filter((u) => pengawasan || u.boleh_catat || u.unit_id === penerbitUnitId).map((u) => ({ value: u.unit_id, label: u.nama }))]}
         />
-        {penerbit !== null && (
-          <Button variant="ghost" size="sm" onClick={() => setPenerbit(null)}>
-            Semua penerbit
-          </Button>
-        )}
         {bolehCatat && (
           <Button onClick={() => setCatat(true)}>
             <Plus /> Catat SK
