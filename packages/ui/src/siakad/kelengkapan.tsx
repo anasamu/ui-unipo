@@ -95,6 +95,7 @@ export interface Wilayah {
   kode: string;
   nama: string;
   kabupaten?: string;
+  provinsi?: string;
 }
 
 export interface PilihKecamatanProps {
@@ -102,7 +103,8 @@ export interface PilihKecamatanProps {
   value?: string | null;
   /** Teks awal untuk nilai yang sudah ada, mis. "Kec. Marisa, Kab. Pohuwato". */
   labelAwal?: string | null;
-  onValueChange?: (kode: string | null, label: string | null) => void;
+  /** Argumen ketiga: kecamatan terpilih lengkap (kabupaten/kota dan provinsi) untuk isian turunan. */
+  onValueChange?: (kode: string | null, label: string | null, wilayah?: Wilayah | null) => void;
   id?: string;
   disabled?: boolean;
   className?: string;
@@ -136,7 +138,7 @@ export function PilihKecamatan({ value, labelAwal, onValueChange, id, disabled, 
       renderItem={(w) => <OptionContent title={w.nama} meta={w.kabupaten} />}
       onValueChange={(w) => {
         setWil(w);
-        onValueChange?.(w?.kode ?? null, w ? `${w.nama}${w.kabupaten ? `, ${w.kabupaten}` : ''}` : null);
+        onValueChange?.(w?.kode ?? null, w ? `${w.nama}${w.kabupaten ? `, ${w.kabupaten}` : ''}` : null, w);
       }}
     />
   );

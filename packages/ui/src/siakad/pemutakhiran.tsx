@@ -32,6 +32,7 @@ import { StatCard, StatGrid } from '../components/charts';
 import { Cluster, PageHeader, Stack, Text } from '../components/tata-letak';
 import { GalatApi } from './galat';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { AturanVerifikasiData } from './aturan-verifikasi';
 
 // ================================================================ Tipe /v1/profil/pemutakhiran/{pemilik}
 
@@ -41,11 +42,13 @@ export type ModeIsianPemutakhiran = 'langsung' | 'verifikasi';
 export interface IsianKatalogPemutakhiran {
   kode: string;
   label: string;
-  bawaan: 'langsung' | 'ajukan';
+  /** Aturan bawaan yang berlaku (bawaan kode atau aturan verifikasi unit, lihat AturanVerifikasiData). */
+  bawaan: 'langsung' | 'verifikasi' | 'ajukan' | 'baca';
   bukti: boolean;
   rahasia: boolean;
   peran: string[] | null;
   wajib: boolean;
+  pemeriksa?: 'pusat' | 'unit';
 }
 export interface BagianKatalogPemutakhiran {
   sasaran: 'pegawai' | 'mahasiswa';
@@ -151,6 +154,7 @@ const STATUS_ISIAN: Record<string, { label: string; variant: 'warning' | 'succes
   dibatalkan: { label: 'Dibatalkan', variant: 'neutral' },
 };
 const PERAN_LABEL: Record<string, string> = { dosen: 'Dosen', tendik: 'Tendik', mahasiswa: 'Mahasiswa' };
+const BAWAAN_LABEL: Record<string, string> = { langsung: 'langsung', verifikasi: 'diverifikasi', ajukan: 'pengajuan', baca: 'hanya baca' };
 const P = (pemilik: string) => `/v1/profil/pemutakhiran/${pemilik}`;
 
 /** Status periode untuk lencana. */
@@ -191,6 +195,8 @@ export interface HalamanPemutakhiranProps {
   deskripsi?: React.ReactNode;
   /** Awalan BFF untuk unduhan CSV/bukti (bawaan "/bff/api"). */
   bffApi?: string;
+  /** Tampilkan tab "Aturan verifikasi" (AturanVerifikasiData) bagi unit yang tidak punya halaman pengaturan sendiri. */
+  tabAturan?: boolean;
   className?: string;
 }
 
@@ -199,7 +205,7 @@ export interface HalamanPemutakhiranProps {
  * keuangan): dasbor progres, antrean verifikasi pengajuan berkelompok, dan pengaturan periode. Tab mengikuti izin
  * <pemilik>.pemutakhiran.kelola / .verifikasi dari GET /v1/profil/pemutakhiran/{pemilik}/katalog.
  */
-export function HalamanPemutakhiran({ pemilik, judul, deskripsi, bffApi = '/bff/api', className }: HalamanPemutakhiranProps) {
+export function HalamanPemutakhiran({ pemilik, judul, deskripsi, bffApi = '/bff/api', tabAturan = false, className }: HalamanPemutakhiranProps) {
   const k = useKatalog(pemilik);
   const [tab, setTab] = React.useState<string | null>(null);
   const antrean = useSiakadQuery<PengajuanPemutakhiran[]>(
@@ -215,6 +221,7 @@ export function HalamanPemutakhiran({ pemilik, judul, deskripsi, bffApi = '/bff/
     ...(hak.kelola ? [{ value: 'dasbor', label: 'Dasbor progres', icon: <Users />, content: <DasborPemutakhiran pemilik={pemilik} katalog={k.data} bffApi={bffApi} /> }] : []),
     ...(hak.verifikasi ? [{ value: 'antrean', label: 'Antrean verifikasi', icon: <Inbox />, count: menunggu || undefined, content: <AntreanPemutakhiran pemilik={pemilik} katalog={k.data} bffApi={bffApi} /> }] : []),
     ...(hak.kelola ? [{ value: 'periode', label: 'Periode & isian', icon: <Settings2 />, content: <PeriodeDaftar pemilik={pemilik} katalog={k.data} /> }] : []),
+    ...(hak.kelola && tabAturan ? [{ value: 'aturan', label: 'Aturan verifikasi', icon: <ShieldCheck />, content: <AturanVerifikasiData pemilik={pemilik} /> }] : []),
   ];
   return (
     <Stack gap={6} className={cn('u-pmk', className)}>
@@ -711,7 +718,7 @@ function PeriodeDaftar({ pemilik, katalog }: { pemilik: PemilikPemutakhiran; kat
     <Stack gap={4}>
       <Cluster justify="between">
         <Text size="sm" tone="muted">
-          Isian yang tidak dibuka tetap memakai aturan bawaan (kontak dan alamat tersimpan langsung, data induk lewat pengajuan).
+          Isian yang tidak dibuka tetap memakai aturan verifikasi bawaan unit (di luar periode); periode menimpanya untuk isian yang dibuka.
         </Text>
         <Button onClick={() => setUbah('baru')}>
           <Plus /> Periode baru
@@ -986,7 +993,8 @@ function FormPeriode({ pemilik, katalog, awal, onTutup }: { pemilik: PemilikPemu
                       <div className="u-pmk-atur-label">
                         <span>{i.label}</span>
                         <small>
-                          Bawaan: {i.bawaan === 'langsung' ? 'langsung' : 'pengajuan'}
+                          Bawaan: {BAWAAN_LABEL[i.bawaan] ?? i.bawaan}
+                          {i.bukti && i.bawaan !== 'langsung' ? ' + bukti' : ''}
                           {i.rahasia ? ' · rahasia' : ''}
                           {i.peran ? ` · ${i.peran.map((x) => PERAN_LABEL[x] ?? x).join('/')}` : ''}
                         </small>
