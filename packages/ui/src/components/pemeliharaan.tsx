@@ -4,6 +4,7 @@ import { CalendarClock, RefreshCw, Wrench, X } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { formatDate, formatTime } from '../lib/format';
 import { Button } from './actions';
+import { Ilustrasi } from '../ikon/ilustrasi';
 
 const keDate = (d: Date | string | number | null | undefined) => (d == null || d === '' ? null : d instanceof Date ? d : new Date(typeof d === 'string' ? d.replace(' ', 'T') : d));
 
@@ -70,9 +71,13 @@ export function ModePemeliharaan({ title = 'Sedang ada pemeliharaan', message = 
     <main className={cn('u-pemeliharaan', className)} data-variant={variant} role="status" aria-live="polite">
       <div className="u-pemeliharaan-kartu">
         {logo && <div className="u-pemeliharaan-logo">{logo}</div>}
-        <span className="u-pemeliharaan-ikon" aria-hidden>
-          <Wrench />
-        </span>
+        {variant === 'page' ? (
+          <Ilustrasi nama="pemeliharaan" lebar="min(18rem, 70vw)" className="u-pemeliharaan-ilustrasi" />
+        ) : (
+          <span className="u-pemeliharaan-ikon" aria-hidden>
+            <Wrench />
+          </span>
+        )}
         <h1>{title}</h1>
         <p>{message}</p>
         {selesai && (
@@ -148,5 +153,70 @@ export function BannerPemeliharaan({ start, end, message, showHoursBefore = 48, 
         </Button>
       )}
     </div>
+  );
+}
+
+export interface HalamanPemeliharaanProps {
+  /** Logo aplikasi di atas. */
+  logo?: React.ReactNode;
+  title?: React.ReactNode;
+  message?: React.ReactNode;
+  /** Perkiraan selesai (ISO, Date); kosong = tidak ditampilkan. */
+  until?: Date | string | null;
+  /** Kontak bantuan. Bawaan "Butuh bantuan? Hubungi Pustikom UNIPO." */
+  kontak?: React.ReactNode;
+  /** Tombol coba lagi. Bawaan memuat ulang halaman. */
+  onRetry?: () => void | Promise<void>;
+  /** Kunci adegan <Ilustrasi> (bawaan "pemeliharaan"). */
+  ilustrasi?: string;
+  className?: string;
+}
+
+/**
+ * Halaman pemeliharaan layar penuh untuk aplikasi bawaan UNIPO: ilustrasi, "Aplikasi sedang dalam pemeliharaan",
+ * perkiraan selesai (bila diketahui), kontak Pustikom, dan tombol coba lagi. Dipakai HalamanMasuk saat konfigurasi
+ * aplikasi belum lengkap (tanpa menyebut detail teknis), dan bisa dipakai langsung.
+ */
+export function HalamanPemeliharaan({
+  logo,
+  title = 'Aplikasi sedang dalam pemeliharaan',
+  message = 'Kami sedang menyiapkan aplikasi ini agar bisa dipakai dengan baik. Data Anda tetap aman. Silakan coba lagi beberapa saat lagi.',
+  until,
+  kontak = 'Butuh bantuan? Hubungi Pustikom UNIPO.',
+  onRetry,
+  ilustrasi = 'pemeliharaan',
+  className,
+}: HalamanPemeliharaanProps) {
+  const kini = useKini(15_000);
+  const selesai = keDate(until);
+  const [sibuk, setSibuk] = React.useState(false);
+  const coba = async () => {
+    setSibuk(true);
+    try {
+      if (onRetry) await onRetry();
+      else window.location.reload();
+    } finally {
+      setSibuk(false);
+    }
+  };
+  return (
+    <main className={cn('u-halaman-pemeliharaan', className)} role="status" aria-live="polite">
+      <div className="u-halaman-pemeliharaan-isi">
+        {logo && <div className="u-halaman-pemeliharaan-logo">{logo}</div>}
+        <Ilustrasi nama={ilustrasi} lebar="min(20rem, 78vw)" />
+        <h1>{title}</h1>
+        <p>{message}</p>
+        {selesai && (
+          <p className="u-pemeliharaan-waktu">
+            <CalendarClock aria-hidden />
+            Perkiraan selesai {formatDate(selesai, 'medium') === formatDate(kini, 'medium') ? '' : `${formatDate(selesai, 'medium')} `}pukul {formatTime(selesai)} ({sisaWaktu(selesai, kini)})
+          </p>
+        )}
+        <Button variant="outline" onClick={() => void coba()} loading={sibuk}>
+          <RefreshCw /> Coba lagi
+        </Button>
+        {kontak && <p className="u-halaman-pemeliharaan-kontak">{kontak}</p>}
+      </div>
+    </main>
   );
 }

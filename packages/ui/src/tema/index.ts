@@ -380,6 +380,11 @@ export interface DataTemaAplikasi<Tata extends Record<string, unknown> = Record<
   diubah_oleh: string | null;
   diubah_pada: string | null;
   tersedia: boolean;
+  /**
+   * Alamat tampil gambar yang dirujuk `tata` dengan nilai `berkas:<uuid>` (hanya berkas publik), mis. gambar halaman
+   * masuk. Server SIAKAD baru; versi lama tidak mengirimnya.
+   */
+  berkas?: Record<string, string>;
 }
 
 /** id <style> tempat tema aplikasi dipasang, dan kunci localStorage bawaan. */

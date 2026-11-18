@@ -43,6 +43,8 @@ export interface HalamanMasukAplikasiProps {
 /**
  * Halaman masuk baku aplikasi UNIPO yang memakai SSO lewat BFF: logo, judul, deskripsi, pesan galat/keluar/konfigurasi
  * kurang, tombol "Masuk dengan SSO UNIPO", catatan akun, dan panel sisi berisi fitur atau ilustrasi. Satu kolom di ponsel.
+ *
+ * @deprecated Pakai `HalamanMasuk` (diatur dari pengaturan tema; konfigurasi belum lengkap → halaman pemeliharaan).
  */
 export function HalamanMasukAplikasi({
   logo,

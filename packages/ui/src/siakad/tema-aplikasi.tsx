@@ -7,6 +7,8 @@ import { Field, Input, SegmentedControl, Switch, Textarea } from '../components/
 import { Select } from '../components/select';
 import { ConfirmDialog, useToast } from '../components/overlays';
 import { GalatApi } from './galat';
+import { PengaturanHalamanMasuk } from './pengaturan-masuk';
+import type { TataMasuk } from './halaman-masuk';
 import { invalidateSiakad, useOptionalSiakad, useSiakad, useSiakadQuery } from './provider';
 import { KUNCI_TATA_KERANGKA, tataKerangka, type TataKerangka } from './kerangka-aplikasi';
 import { animasikanMasuk, BilahProgres, MuatHalaman, PILIHAN_MUAT_AWAL, PILIHAN_MUAT_PINDAH } from '../components/muat-halaman';
@@ -106,6 +108,10 @@ export interface PengaturanTemaProps<T extends Tata = Tata> {
   denganMode?: boolean;
   /** Bagian pengaturan Sidebar dan Header KerangkaAplikasi (disimpan di `tata`). Bawaan true. */
   denganKerangka?: boolean;
+  /** Bagian Halaman masuk (HalamanMasuk, disimpan di `tata`: masuk, masuk_slide, masuk_poin). Bawaan true. */
+  denganMasuk?: boolean;
+  /** Bawaan halaman masuk khusus aplikasi (sama dengan prop `bawaan` HalamanMasuk), untuk pratinjau. */
+  bawaanMasuk?: Partial<TataMasuk>;
   onTersimpan?: (data: DataTemaAplikasi<T>) => void;
   className?: string;
 }
@@ -123,7 +129,7 @@ interface Draf<T extends Tata> {
  *
  *   <PengaturanTema aplikasi="pmb" />
  */
-export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama, tataTambahan, pratinjau, kunciCache, denganMode = true, denganKerangka = true, onTersimpan, className }: PengaturanTemaProps<T>) {
+export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama, tataTambahan, pratinjau, kunciCache, denganMode = true, denganKerangka = true, denganMasuk = true, bawaanMasuk, onTersimpan, className }: PengaturanTemaProps<T>) {
   const siakad = useSiakad();
   const toast = useToast();
   const q = useTemaAplikasi<T>(aplikasi, lingkup);
@@ -155,10 +161,14 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
     return () => pasangTemaAplikasi({}, { id: 'unipo-tema-pratinjau' });
   }, [seluruh, berlaku, q.data]);
 
-  const cssPratinjau = React.useMemo(() => {
-    const css = buatTema({ ...berlaku, muatFont: false });
-    return css.replace(':root,\n.u-theme {', `#${idPratinjau} {`).replace(".dark,\n[data-theme='dark'] {", `.dark #${idPratinjau},\n[data-theme='dark'] #${idPratinjau} {`);
-  }, [berlaku, idPratinjau]);
+  const cssUntuk = React.useCallback(
+    (sel: string) => {
+      const css = buatTema({ ...berlaku, muatFont: false });
+      return css.replace(':root,\n.u-theme {', `${sel} {`).replace(".dark,\n[data-theme='dark'] {", `.dark ${sel},\n[data-theme='dark'] ${sel} {`);
+    },
+    [berlaku],
+  );
+  const cssPratinjau = React.useMemo(() => cssUntuk(`#${idPratinjau}`), [cssUntuk, idPratinjau]);
 
   if (q.error) return <GalatApi error={q.error} onRetry={q.refetch} title="Tema tidak dapat dimuat" />;
   if (!q.data || !draf) return <div className="u-tema-muat"><Spinner aria-label="Memuat tema" /></div>;
@@ -177,16 +187,17 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
   const berubah = JSON.stringify({ t: draf.tema, x: draf.tata }) !== asli;
   const dariWarisan = (k: keyof OpsiTema) => !(k in draf.tema) && warisan?.tema && k in warisan.tema;
 
-  const simpan = async () => {
+  const simpan = async (tataGanti?: Partial<T>, lempar = false) => {
     setMenyimpan(true);
     try {
-      const r = await siakad.request<DataTemaAplikasi<T>>({ method: 'POST', path: pathTema(aplikasi), query: queryLingkup(lingkup), body: { tema: draf.tema, tata: draf.tata, catatan: draf.catatan || undefined } });
+      const r = await siakad.request<DataTemaAplikasi<T>>({ method: 'POST', path: pathTema(aplikasi), query: queryLingkup(lingkup), body: { tema: draf.tema, tata: tataGanti ?? draf.tata, catatan: draf.catatan || undefined } });
       pasangTemaAplikasi(r.data.tema, { kunciCache: kunciCache ?? `${aplikasi}.tema.css` });
       invalidateSiakad('tema');
       setSeluruh(false);
       toast.add({ title: 'Tema disimpan', description: `Versi ${r.data.versi} langsung berlaku untuk semua pengunjung.`, type: 'success' });
       onTersimpan?.(r.data);
     } catch (e) {
+      if (lempar) throw e;
       toast.add({ title: 'Tema belum tersimpan', description: e instanceof Error ? e.message : 'Coba lagi beberapa saat.', type: 'error' });
     } finally {
       setMenyimpan(false);
@@ -306,6 +317,26 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
               )}
             </Card>
             {denganKerangka && <PengaturanKerangka tata={tataBerlaku as Record<string, unknown>} ubah={(k, v) => ubahTata({ [k]: v } as Partial<T>)} />}
+            {denganMasuk && (
+              <PengaturanHalamanMasuk
+                aplikasi={aplikasi}
+                lingkup={lingkup}
+                nama={typeof nama === 'string' ? nama : undefined}
+                tata={tataBerlaku as Record<string, unknown>}
+                berkas={q.data.berkas}
+                bawaan={bawaanMasuk}
+                boleh={boleh}
+                cssTema={Object.keys(berlaku).length ? cssUntuk('.u-atur-masuk-tema') : undefined}
+                onSimpan={(p) => {
+                  const tata = { ...draf.tata } as Record<string, unknown>;
+                  for (const [k, v] of Object.entries(p)) {
+                    if (v === undefined) delete tata[k];
+                    else tata[k] = v;
+                  }
+                  return simpan(tata as Partial<T>, true);
+                }}
+              />
+            )}
             {tataTambahan && <Card className="u-tema-kartu">{tataTambahan(tataBerlaku, ubahTata)}</Card>}
           </fieldset>
 
