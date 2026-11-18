@@ -160,7 +160,7 @@ const geser = (iso: string, hari: number) => {
 const kunciUnit = (u: UnitPejabat) => String(u.id);
 const indukUnit = (u: UnitPejabat) => u.induk_id;
 const labelUnit = (u: UnitPejabat) => u.nama;
-const metaUnit = (u: UnitPejabat) => [u.jenis, u.kode].filter(Boolean).join(' · ');
+const metaUnit = (u: UnitPejabat) => (u.jenis === 'kelompok' ? 'pengelompokan, tidak bisa dipilih' : [u.jenis, u.kode].filter(Boolean).join(' · '));
 
 function Tanggal({ nilai, ganti, min, placeholder = 'Pilih tanggal' }: { nilai: string; ganti: (v: string) => void; min?: string; placeholder?: string }) {
   return <DatePicker value={nilai ? parseISODate(nilai) : null} onValueChange={(d) => ganti(d ? toISODate(d) : '')} min={min ? parseISODate(min) ?? undefined : undefined} placeholder={placeholder} className="u-kp-penuh" />;
@@ -343,9 +343,17 @@ export function KelolaPejabat({
           {pesan && <Alert variant="danger">{pesan}</Alert>}
 
           <Bagian judul="Jabatan">
-            <Field label="Unit" required error={galat.unit_id}>
+            <Field label="Unit" required error={galat.unit_id || undefined}>
               <PilihInduk<UnitPejabat> rows={unitPilihan} getKey={kunciUnit} getParent={indukUnit} getLabel={labelUnit} getMeta={metaUnit} value={f.unit_id ? String(f.unit_id) : null}
-                onValueChange={(k) => setF((x) => ({ ...x, unit_id: k ? Number(k) : null, jabatan_id: null }))} placeholder="Pilih unit…" className="u-kp-penuh" />
+                onValueChange={(k, row) => {
+                  // Pengelompokan (Rektorat) dan yayasan tidak punya jabatan sendiri.
+                  if (row && (row.jenis === 'kelompok' || row.jenis === 'yayasan')) {
+                    setGalat((g) => ({ ...g, unit_id: row.jenis === 'yayasan' ? 'Pengurus yayasan dicatat di Profil Yayasan, bukan sebagai pejabat.' : `${row.nama} adalah pengelompokan tanpa jabatan sendiri. Pilih unit anggotanya (mis. Universitas untuk Rektor, unit WR untuk Wakil Rektor).` }));
+                    return;
+                  }
+                  setGalat((g) => ({ ...g, unit_id: '' }));
+                  setF((x) => ({ ...x, unit_id: k ? Number(k) : null, jabatan_id: null }));
+                }} placeholder="Pilih unit…" className="u-kp-penuh" />
             </Field>
             <Field label="Jabatan" required error={galat.jabatan_id} description={adaTerkunci ? 'Jabatan pimpinan yang terkunci ditetapkan oleh Rektorat/Pustikom. Gunakan Usulkan.' : 'Hanya jabatan yang berlaku untuk jenis unit ini.'}>
               <Select<string> value={f.jabatan_id ? String(f.jabatan_id) : null} onValueChange={(v) => ubah('jabatan_id', v ? Number(v) : null)} options={opsiJabatan} disabled={!f.unit_id}

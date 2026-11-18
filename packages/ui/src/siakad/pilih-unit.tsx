@@ -38,8 +38,11 @@ export interface UnitOrganisasi {
 
 /** Ikon per jenis unit, sama dengan Pustikom » Organisasi & pejabat. */
 export const IKON_JENIS_UNIT: Record<string, React.ReactNode> = {
+  yayasan: <Landmark />,
   universitas: <Landmark />,
+  kelompok: <Layers />,
   rektorat: <Flag />,
+  kampus: <School />,
   biro: <Building />,
   fakultas: <School />,
   prodi: <GraduationCap />,
@@ -203,6 +206,11 @@ interface PilihUnitDasar {
   alasan?: string | ((u: UnitOrganisasi) => string);
   /** Unit yang tidak bisa dipilih: daftar ID, atau `{ [id]: alasan }`. */
   nonaktifkan?: readonly IdUnit[] | Readonly<Record<string, string>>;
+  /**
+   * Unit pengelompokan (jenis `kelompok`, mis. Rektorat = Rektor + Wakil Rektor) boleh dipilih. Bawaan false: tampil
+   * redup dengan alasan "pengelompokan", karena tidak punya pejabat/lingkup sendiri.
+   */
+  bolehKelompok?: boolean;
   /** Sembunyikan unit yang tidak boleh dipilih (bawaan: tampil redup dengan alasan). Induk unit yang boleh tetap tampil. */
   sembunyikanTerlarang?: boolean;
   /** Keterangan kecil per unit (lencana), mis. `(u) => pencatat.has(u.id) ? 'Anda pencatat SK' : null`. */
@@ -301,7 +309,7 @@ const idUnik = () => `u-pu-${Math.random().toString(36).slice(2, 9)}`;
  */
 export function PilihUnit(props: PilihUnitProps) {
   const {
-    data: dataLuar, sumber: sumberUnit = 'induk', dataCadangan, jenis, akar, kecuali, boleh, alasan: alasanProp, nonaktifkan, sembunyikanTerlarang, keterangan, kampus, semua, buka, placeholder, placeholderCari,
+    data: dataLuar, sumber: sumberUnit = 'induk', dataCadangan, jenis, akar, kecuali, boleh, alasan: alasanProp, nonaktifkan, sembunyikanTerlarang, bolehKelompok, keterangan, kampus, semua, buka, placeholder, placeholderCari,
     disabled, kosongkan = true, invalid, required, name, id, size, className, memuat, teksKosong,
   } = props;
   const banyak = props.multiple === true;
@@ -405,6 +413,7 @@ export function PilihUnit(props: PilihUnitProps) {
       if (larangKecuali?.has(k)) al = String(u.id) === String(kecuali) ? 'Unit yang sedang diubah.' : 'Turunan unit yang sedang diubah.';
       else if (k in nonaktifkanPeta) al = nonaktifkanPeta[k] || alasanBawaan(u);
       else if (boleh && !boleh(u)) al = alasanBawaan(u);
+      else if (u.jenis === 'kelompok' && !bolehKelompok) al = 'Pengelompokan (tanpa jabatan sendiri): pilih unit anggotanya.';
       daftar.push({ u, key: k, nama: namaUnitRapi(u.nama), konteks: Boolean(jenisSet && !jenisSet.has(u.jenis ?? '')), alasan: al, nonaktif: !aktifUnit(u) });
     }
     // Buang unit konteks (dan yang terlarang bila disembunyikan) yang tidak punya turunan terpilihkan.
@@ -422,7 +431,7 @@ export function PilihUnit(props: PilihUnitProps) {
     const ns = susunPohon(akhir, { getKey: (b) => b.key, getParent: (b) => (b.u.induk_id == null ? null : String(b.u.induk_id)) });
     return { nodes: ns, butir: new Map(akhir.map((b) => [b.key, b])) };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sumber, peta, semua, kampus, nilaiSet, akarKey, kecuali, jenisKey, nonaktifkanKey, boleh, alasanProp, sembunyikanTerlarang]);
+  }, [sumber, peta, semua, kampus, nilaiSet, akarKey, kecuali, jenisKey, nonaktifkanKey, boleh, alasanProp, sembunyikanTerlarang, bolehKelompok]);
 
   const nodeByKey = React.useMemo(() => new Map(nodes.map((n) => [n.key, n])), [nodes]);
   const bisaDipilih = (b: Butir) => !b.konteks && !b.alasan;

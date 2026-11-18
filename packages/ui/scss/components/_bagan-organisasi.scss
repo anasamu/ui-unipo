@@ -191,3 +191,70 @@
     color: var(--u-muted-foreground);
   }
 }
+
+// Legenda di sudut kanvas (bisa disembunyikan lewat tombol Keterangan).
+.u-bagan-legenda-sudut {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 2;
+  display: flex;
+  flex-flow: row wrap;
+  gap: 0.25rem 0.875rem;
+  max-width: min(34rem, calc(100% - 1.5rem));
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md, 0.5rem);
+  background: color-mix(in srgb, var(--u-card, #fff) 94%, transparent);
+  box-shadow: 0 4px 12px rgb(15 23 42 / 0.06);
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
+  pointer-events: none;
+  b {
+    flex-basis: 100%;
+    color: var(--u-foreground);
+    font-weight: 600;
+  }
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    white-space: nowrap;
+  }
+  i {
+    display: inline-block;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 0.1875rem;
+  }
+  svg {
+    flex: none;
+    color: var(--u-muted-foreground);
+  }
+  @media (max-width: 640px) {
+    display: none;
+  }
+}
+.u-bagan-garis {
+  cursor: help;
+  &:hover .u-bagan-garis-vis {
+    stroke: var(--u-primary, #244ce6);
+    stroke-width: 2.5;
+  }
+}
+.u-bagan-resmi .u-bagan-kanvas {
+  background-image: none;
+}
+.u-bagan-tip {
+  position: absolute;
+  z-index: 3;
+  max-width: 18rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: var(--u-radius-sm, 0.375rem);
+  background: var(--u-foreground, #171a21);
+  color: var(--u-background, #fff);
+  font-size: var(--u-text-xs);
+  line-height: 1.35;
+  pointer-events: none;
+  white-space: nowrap;
+}
