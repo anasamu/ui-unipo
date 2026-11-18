@@ -54,6 +54,7 @@ import type { SelectOption } from '../components/select';
 import { useAkunSaya } from './akun';
 import { PilihTahunAkademik } from './cari';
 import { GalatApi } from './galat';
+import { PilihUnit, useUnitSdm } from './pilih-unit';
 import { PilihEntitas } from './pilih';
 import { PilihBerkas } from './pilih-berkas';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
@@ -1650,11 +1651,7 @@ interface IsiAturan {
 
 /** Isian cakupan untuk titik bersubjek pegawai (sdm.*): jenis, kategori, status kepegawaian, dan unit SDM. */
 function CakupanPegawai({ isi, set, galat }: { isi: IsiAturan; set: <K extends keyof IsiAturan>(k: K, v: IsiAturan[K]) => void; galat: Record<string, string> }) {
-  const unit = useSiakadQuery<Array<{ kode: string; nama: string; jenis?: string }>>(
-    ['aturan', 'unit-sdm'],
-    (s, signal) => s.request<Array<{ kode: string; nama: string; jenis?: string }>>({ method: 'GET', path: '/v1/sdm/master/unit', query: { aktif: '1' } }, { signal }),
-    { staleTime: 600_000 },
-  );
+  const unit = useUnitSdm();
   const opsi = (o: Record<string, string>) => Object.entries(o).map(([value, label]) => ({ value, label }));
   return (
     <>
@@ -1680,12 +1677,14 @@ function CakupanPegawai({ isi, set, galat }: { isi: IsiAturan; set: <K extends k
         />
       </Field>
       <Field label="Unit kerja" optional description="Berlaku untuk unit itu dan unit di bawahnya." error={galat['cakupan.unit'] || undefined}>
-        <PilihanBanyak
+        <PilihUnit
           id="aturan-unit"
-          options={(unit.data ?? []).map((u) => ({ value: u.kode, label: u.nama, description: u.jenis }))}
-          value={isi.unit}
-          onValueChange={(v) => set('unit', v)}
-          placeholder={isi.unit.length ? 'Tambah unit' : 'Semua unit'}
+          multiple
+          sumber="sdm"
+          value={isi.unit.map((k) => String(unit.data?.find((u) => u.kode === k)?.id ?? k))}
+          onValueChange={(_, units) => set('unit', units.map((u) => u.kode || String(u.id)))}
+          placeholder="Semua unit"
+          aria-label="Unit kerja"
         />
       </Field>
     </>

@@ -31,6 +31,7 @@ import { Peta, PilihLokasiPeta, jarakPeta, usePosisi, type AreaPeta, type Penand
 import { useUrlBerkas } from './berkas';
 import { GalatApi } from './galat';
 import { PilihEntitas } from './pilih';
+import { PilihUnit } from './pilih-unit';
 import { PilihBerkas } from './pilih-berkas';
 import { idPerangkatPresensi } from './presensi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
@@ -1048,7 +1049,7 @@ export function PetaKehadiran({ tinggi = 420, className }: { tinggi?: number; cl
       <div className="u-presensi-alat">
         <div className="u-presensi-kerja-rentang">
           <IsianTanggal value={tanggal ?? d?.tanggal ?? null} onValueChange={(v) => setTanggal(v || null)} placeholder="Tanggal" />
-          <PilihEntitas jenis="unit" value={unit} onValueChange={(v) => setUnit(v == null ? null : String(v))} placeholder="Semua unit" />
+          <PilihUnit sumber="sdm" semua value={unit} onValueChange={(v) => setUnit(v == null ? null : String(v))} placeholder="Semua unit" aria-label="Saring unit kerja" />
         </div>
         <label className="u-presensi-kerja-saklar">
           <Switch size="sm" checked={ditolak} onCheckedChange={setDitolak} /> Tampilkan yang ditolak
@@ -1191,7 +1192,7 @@ export function FormAreaPresensi({ open, onOpenChange, area, areaLain, onSimpan 
           </Field>
         </div>
         <Field label="Unit" optional description="Kosong = berlaku untuk semua unit. Petugas unit hanya bisa membuat area untuk unitnya.">
-          <PilihEntitas jenis="unit" value={f.unit_id} onValueChange={(v) => set('unit_id', v == null ? null : String(v))} />
+          <PilihUnit sumber="sdm" value={f.unit_id} onValueChange={(v) => set('unit_id', v == null ? null : String(v))} />
         </Field>
         <Field label="Lokasi" required error={galat.titik}>
           <PilihLokasiPeta
@@ -1661,7 +1662,7 @@ export function FormPenugasanPresensi({ open, onOpenChange, penugasan, onSimpan 
         )}
         {f.sasaran === 'unit' && (
           <Field label="Unit" required error={galat.unit_id} description="Termasuk unit di bawahnya.">
-            <PilihEntitas jenis="unit" value={f.unit_id} onValueChange={(v) => set('unit_id', v == null ? null : String(v))} />
+            <PilihUnit sumber="sdm" value={f.unit_id} onValueChange={(v) => set('unit_id', v == null ? null : String(v))} />
           </Field>
         )}
         {f.sasaran === 'pegawai' && (
