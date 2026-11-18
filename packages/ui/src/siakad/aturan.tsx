@@ -55,6 +55,7 @@ import type { SelectOption } from '../components/select';
 import { useAkunSaya } from './akun';
 import { PilihTahunAkademik } from './cari';
 import { GalatApi } from './galat';
+import { AlurPemeriksa, LabelPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import { PilihUnit, useUnitSdm } from './pilih-unit';
 import { PilihEntitas } from './pilih';
 import { PilihBerkas } from './pilih-berkas';
@@ -256,6 +257,8 @@ export interface UsulanAturan {
   catatan_putusan?: string | null;
   telaah?: TelaahAturan[];
   jumlah_telaah?: number;
+  /** Alur pemeriksa (docs/PEMERIKSA.md SIAKAD): pejabat penyetuju lalu telaah SPMI (berjalan bersamaan). */
+  pemeriksa?: TahapPemeriksa[];
 }
 /** Satu langkah alur persetujuan aturan (diajukan, disetujui, dikembalikan, ditelaah). SIAKAD terbaru. */
 export interface LangkahPersetujuanAturan {
@@ -1001,6 +1004,7 @@ export function KartuAturan({ aturan: a, katalog, onBuka, className }: KartuAtur
           {a.bawaan && <Badge variant="info">Bawaan</Badge>}
           <StatusAturanBadge status={statusTampil(a)} dihapus={Boolean(a.dihapus_at)} />
           {a.status === 'aktif' && a.usulan?.status === 'diajukan' && <Badge variant="info">Versi baru diajukan</Badge>}
+          {a.usulan?.status === 'diajukan' && a.usulan.pemeriksa?.length ? <LabelPemeriksa pemeriksa={a.usulan.pemeriksa} /> : null}
         </div>
       </div>
       {ketentuan && <p className="u-aturan-kartu-isi">{ketentuan}</p>}
@@ -4486,6 +4490,7 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
           {a.penyetuju && !a.penyetuju.orang?.length ? ' Belum ada pejabat penyetuju yang tercatat; hubungi admin.' : ''}
         </Alert>
       )}
+      {usulan?.pemeriksa?.length && usulan.status !== 'draf' ? <AlurPemeriksa pemeriksa={usulan.pemeriksa} judul="Siapa yang memeriksa usulan ini" /> : null}
       {a.darurat && (
         <Alert variant="danger" icon={<Siren />} title={a.darurat_info?.label ?? 'Aktif lewat jalur darurat'}>
           Aturan sudah diperiksa, tetapi masih menunggu pengesahan susulan penyetuju.

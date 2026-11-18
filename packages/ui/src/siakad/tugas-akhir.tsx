@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import { AlurPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import {
   BookOpenCheck,
   CircleCheck,
@@ -116,6 +117,8 @@ export interface PengajuanTa {
   metode?: string | null;
   berkas?: BerkasPengajuanTa[];
   validasi?: ValidasiTa[];
+  /** Alur pemeriksa (docs/PEMERIKSA.md SIAKAD): dosen PA (bila dipakai) lalu program studi, dengan nama petugas. */
+  pemeriksa?: TahapPemeriksa[];
   riwayat?: Array<{ aksi: string; oleh: string | null; catatan: string | null; created_at: string | null }>;
   pengaturan?: PengaturanTa;
   hak?: { ubah: boolean; ajukan: boolean; batal: boolean; putuskan: boolean; kelola: boolean };
@@ -530,6 +533,8 @@ function BerkasPengajuan({ pengajuan, daftar, bolehUbah }: { pengajuan: Pengajua
 
 // ================================================================ Validasi dan riwayat
 function LangkahValidasi({ pengajuan }: { pengajuan: PengajuanTa }) {
+  // Tampilan seragam alur pemeriksa bila API sudah mengirim `pemeriksa`; selain itu langkah ta_validasi apa adanya.
+  if (pengajuan.pemeriksa?.length && pengajuan.status !== 'draf') return <AlurPemeriksa pemeriksa={pengajuan.pemeriksa} judul={null} />;
   const v = pengajuan.validasi ?? [];
   if (!v.length) return <p className="u-ta-redup">Langkah validasi dibuat saat pengajuan dikirim.</p>;
   return (
