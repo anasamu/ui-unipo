@@ -1,5 +1,15 @@
 # Catatan perubahan
 
+## 1.49.0 (belum dirilis)
+
+- **Registri SK tunggal** (`unipo-ui/siakad`; butuh SIAKAD dengan `/v1/sk`, docs/SK.md di siakad_unipo): satu SK dicatat sekali oleh unit penerbit, semua form merujuknya (`sk_id`), tidak mengetik ulang nomor/penetap dan tidak mengunggah ulang berkas.
+  - `PilihSK`: combobox cari registri (nomor dinormalisasi atau perihal; surat keluar arsip berjenis SK ikut ditawarkan), kartu SK terpilih (nomor, tanggal, perihal, penerbit, penandatangan, tempat, status, Lihat berkas), "Belum ada? Ajukan pencatatan SK" dengan pemeriksaan ganda: nomor yang sama dengan tulisan berbeda langsung memilih SK yang sudah tercatat.
+  - `AjukanPencatatanSK`: catat (pemegang `sk.catat` di unit penerbit; penandatangan dipilih dari data pejabat) atau ajukan pencatatan (draf, diverifikasi penerbit); penerbit bawaan universitas untuk SK kalender, aturan, pengangkatan, kurikulum.
+  - `KartuSK`, `KelolaSK`/`DaftarSK` (halaman Registri SK: cari, saring status/penerbit, catat, rincian), `RincianSK` (dipakai di mana, riwayat, catatan ganda + gabung, verifikasi terima/tolak, cabut), `UbahSK` (penerbit: tanggal, perihal, penandatangan, tempat, berkas, gambar tanda tangan), `RiwayatSK` (rantai mengubah/mencabut), hook `useSK`, `useDaftarSK`, `useCariSK`, `usePeriksaSK`, `useBukaBerkasSK`, `bodySK`, `STATUS_SK`.
+  - `IsianSK` dan `PilihNomorSK` kini mencari di registri (kompatibel mundur; prop lama tetap). SK dari registri: nilai membawa `sk_id` + `sk`, tanggal/berkas tidak diisi ulang (tampil `KartuSK`); nomor baru diperiksa ganda lebih dulu lalu diajukan pencatatannya oleh server. `useCariSKArsip` menjadi alias `useCariSK`.
+  - Dipakai bawaan: lampiran SK aturan (`FormLampiranAturan` memakai `PilihSK`; SK registri tidak butuh berkas lagi), usulan/darurat/pengecualian aturan (`sk_id`), SK panitia (`FormSkPanitia` memakai `PilihSK`; penetap dari registri), lampiran SK aturan biaya.
+- BFF aplikasi perlu meneruskan `/v1/sk` (tambahkan ke jalur kerangka).
+
 ## 1.48.0 (2026-11-18)
 
 - **Garis waktu** (`GarisWaktu`, `unipo-ui/siakad`): gantt sederhana per baris untuk tahapan periode akademik (dan rentang lain). Sumbu bulan otomatis dari tanggal paling awal sampai paling akhir (atau `dari`/`sampai`), batang berwarna per baris (`warna`), batang bergaris untuk libur (`libur`), batang pudar (`redup`), penanda hari ini (`hariIni`, `false` untuk menyembunyikan), judul + keterangan + lencana di kolom kiri, dan `onPilih` (batang jadi tombol). Di wadah sempit judul pindah ke atas batangnya; warna batang ikut tercetak. Dipakai halaman Kalender & periode BAAK.

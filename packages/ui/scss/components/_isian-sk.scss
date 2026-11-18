@@ -15,3 +15,176 @@
     align-items: start;
   }
 }
+
+// PilihSK, KartuSK, AjukanPencatatanSK, KelolaSK, RiwayatSK (siakad/isian-sk.tsx, siakad/registri-sk.tsx): registri SK tunggal.
+.u-pilih-sk {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.u-pilih-sk-saran {
+  display: block;
+  margin-top: 0.375rem;
+  color: var(--u-info);
+  font-size: 0.8125rem;
+}
+.u-kartu-sk {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+  background: var(--u-background);
+  min-width: 0;
+  &[data-status='dicabut'],
+  &[data-status='ditolak'] {
+    opacity: 0.75;
+  }
+}
+.u-kartu-sk-ikon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--u-radius-md);
+  background: var(--u-primary-soft);
+  color: var(--u-primary-soft-foreground);
+  svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+.u-kartu-sk-isi {
+  display: grid;
+  flex: 1;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.u-kartu-sk-judul {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  strong {
+    overflow-wrap: anywhere;
+  }
+}
+.u-kartu-sk-perihal {
+  color: var(--u-foreground);
+  font-size: 0.875rem;
+}
+.u-kartu-sk-rinci {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.25rem 1rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  dt {
+    color: var(--u-muted-foreground);
+  }
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+.u-kartu-sk-catatan {
+  color: var(--u-muted-foreground);
+  font-size: 0.8125rem;
+}
+.u-kartu-sk-aksi {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.375rem;
+}
+@media (max-width: 40rem) {
+  .u-kartu-sk {
+    flex-wrap: wrap;
+  }
+  .u-kartu-sk-aksi {
+    flex-direction: row;
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+.u-ajukan-sk {
+  display: grid;
+  gap: 1rem;
+  container-type: inline-size;
+}
+.u-ajukan-sk-dua {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+@container (min-width: 34rem) {
+  .u-ajukan-sk-dua {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+.u-kelola-sk {
+  display: grid;
+  gap: 1rem;
+}
+.u-kelola-sk-alat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  > .u-input,
+  > input {
+    flex: 1 1 14rem;
+  }
+}
+.u-kelola-sk-daftar,
+.u-rincian-sk {
+  display: grid;
+  gap: 0.75rem;
+}
+.u-sk-subjudul {
+  margin: 0.5rem 0 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.u-sk-kosong {
+  margin: 0;
+  color: var(--u-muted-foreground);
+  font-size: 0.875rem;
+}
+.u-sk-pakai,
+.u-riwayat-sk {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+  > li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    > svg {
+      flex: none;
+      width: 1rem;
+      height: 1rem;
+      color: var(--u-muted-foreground);
+    }
+    > span {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+}
+.u-sk-tautan {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--u-primary);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
