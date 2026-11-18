@@ -814,3 +814,14 @@
     flex: 1 1 12rem;
   }
 }
+
+// Aplikasi dengan preflight Tailwind (svg display:block) tetap menampilkan ikon sebaris.
+.u-bkd-bukti,
+.u-bkd-baris-meta {
+  > span,
+  > a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+}

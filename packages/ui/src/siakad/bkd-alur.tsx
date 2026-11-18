@@ -226,7 +226,7 @@ export const usePeriodeBkd = () => useSiakadQuery<PeriodeBkd[]>(['bkd', 'periode
 export function RuangBkdDosen({ className }: { className?: string }) {
   const saya = useBkdSaya();
   const [pilih, setPilih] = React.useState<number | null>(null);
-  const [susun, setSusun] = React.useState(false);
+  const [susun, setSusun] = React.useState<number | null>(null);
   if (saya.loading && !saya.data) return <Skeleton style={{ height: 320 }} />;
   if (saya.error) return <Alert variant="danger" title="BKD belum bisa dimuat">{pesanGalat(saya.error)}</Alert>;
   const d = saya.data;
@@ -255,7 +255,7 @@ export function RuangBkdDosen({ className }: { className?: string }) {
                   {p.nama_tahun ?? p.tahun_id} · aturan {p.aturan_nama ?? '-'} v{p.aturan_versi ?? '-'} · rencana sampai {tglPendek(p.rencana_selesai)} · kirim sampai {tglPendek(p.kirim_selesai ?? p.batas_pengisian)}
                 </p>
               </div>
-              <Button onClick={() => setSusun(true)} disabled={!!d.dibebaskan}>
+              <Button onClick={() => setSusun(p.id)} disabled={!!d.dibebaskan}>
                 <FilePlus2 /> Susun rencana BKD
               </Button>
             </div>
@@ -284,15 +284,15 @@ export function RuangBkdDosen({ className }: { className?: string }) {
       ) : d.periode.length === 0 ? (
         <Empty bordered icon={<ClipboardCheck />} title="Belum ada periode BKD yang dibuka" description="Biro SDM membuka periode BKD per semester. Anda akan diberi tahu saat periode dibuka." />
       ) : null}
-      {susun ? <PanelSusunRencanaBkd periode={d.periode} onOpenChange={setSusun} onSelesai={(id) => setPilih(id)} /> : null}
+      {susun !== null ? <PanelSusunRencanaBkd periode={d.periode} awal={susun} onOpenChange={(o) => !o && setSusun(null)} onSelesai={(id) => setPilih(id)} /> : null}
     </div>
   );
 }
 
 /** Wizard mulai laporan: pilih semester, pilih data yang diimpor dari SIAKAD, ringkasan. */
-export function PanelSusunRencanaBkd({ periode, pegawaiId, onOpenChange, onSelesai }: { periode: PeriodeBkd[]; pegawaiId?: number; onOpenChange: (o: boolean) => void; onSelesai?: (id: number) => void }) {
+export function PanelSusunRencanaBkd({ periode, awal, pegawaiId, onOpenChange, onSelesai }: { periode: PeriodeBkd[]; awal?: number | null; pegawaiId?: number; onOpenChange: (o: boolean) => void; onSelesai?: (id: number) => void }) {
   const aksi = useAksiBkd();
-  const [pid, setPid] = React.useState<string | null>(periode.length === 1 ? String(periode[0]!.id) : null);
+  const [pid, setPid] = React.useState<string | null>(awal ? String(awal) : periode.length === 1 ? String(periode[0]!.id) : null);
   const [sumber, setSumber] = React.useState<string[]>(SUMBER_IMPOR.map((x) => x.value));
   const [step, setStep] = React.useState(0);
   const p = periode.find((x) => String(x.id) === pid) ?? null;
