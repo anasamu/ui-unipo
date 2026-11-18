@@ -10,7 +10,7 @@ export const meta: DemoMeta = {
   order: 5,
   badge: 'baru',
   description:
-    'Pengganti kolom "Nomor SK" yang diketik manual. Ketik sebagian nomor atau perihal untuk memilih SK yang sudah tercatat di arsip surat keluar (dan sumber aplikasi Anda, mis. nomor SK penugasan sebelumnya). Bila belum ada, pakai nomor baru lalu unggah pindaian SK; berkasnya tersimpan di /v1/berkas dan bisa dilampirkan ke baris data Anda.',
+    'Kompatibel mundur dengan form lama. Kini mencari di registri SK tunggal (/v1/sk); SK yang dipilih dari registri membawa sk_id dan tidak meminta tanggal/berkas lagi. Nomor baru diperiksa ganda lebih dulu (tulisan berbeda dari SK yang sudah tercatat langsung disarankan), lalu diajukan pencatatannya oleh server. Untuk form baru pakai PilihSK.',
   importLine: "import { IsianSK, PilihNomorSK } from 'unipo-ui/siakad';",
   demos: { Lengkap: 'Nomor, tanggal, dan berkas SK', Nomor: 'Nomor SK saja' },
   props: [
@@ -21,8 +21,8 @@ export const meta: DemoMeta = {
     ['tanggal / berkas', 'boolean', 'Tampilkan tanggal SK dan unggah/pilih berkas SK. Bawaan true.'],
   ],
   notes: [
-    'Simpan berkas_id sebagai lampiran baris yang memakai SK itu, mis. POST /v1/rbac/penugasan/{id}/berkas { berkas_id, jenis: "sk" }.',
-    'Dipakai di Pustikom (Beri peran ke pengguna) dan lampiran SK aturan dinamis.',
+    'Kirim bodySK(nilai): { sk_id } bila SK dari registri, selain itu { nomor, tanggal, berkas_id } (server mencari/mengajukan di registri).',
+    'Jangan melampirkan berkas SK ke setiap baris; berkasnya ada di registri dan dibaca lewat /v1/sk/{id}/berkas.',
   ],
 };
 

@@ -57,7 +57,7 @@ import { GalatApi } from './galat';
 import { PilihEntitas } from './pilih';
 import { PilihBerkas } from './pilih-berkas';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
-import { IsianSK, PilihNomorSK, type NilaiSK } from './isian-sk';
+import { IsianSK, PilihSK, type NilaiSK } from './isian-sk';
 import { LinimasaPengajuan } from './pengajuan';
 import { KelolaTitikAturan } from './aturan-titik';
 import {
@@ -1736,7 +1736,8 @@ function isiDari(a: Partial<Aturan> | null | undefined, titikAwal?: string): Isi
 }
 
 /** SK lengkap untuk dilampirkan: nomor dari arsip, tanggal, dan berkas. */
-const skLengkap = (sk: NilaiSK | null | undefined): sk is NilaiSK & { berkas_id: string; tanggal: string } => Boolean(sk?.nomor && sk.tanggal && sk.berkas_id);
+/** SK dari registri (sk_id) sudah lengkap di sana; nomor baru butuh tanggal dan berkas untuk diajukan ke registri. */
+const skLengkap = (sk: NilaiSK | null | undefined): sk is NilaiSK & { berkas_id: string; tanggal: string } => Boolean(sk?.sk_id || (sk?.nomor && sk.tanggal && sk.berkas_id));
 
 /** Validasi sisi peramban yang sama dengan AturanService::validasi + Katalog::parameter/cakupan. */
 export function periksaIsianAturan(x: IsiAturan, katalog: KatalogAturan | undefined): Record<string, string> {
@@ -2208,7 +2209,7 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
       const body = bodyAturan(isi, katalog.data, ubah);
       if (aktif) {
         // Versi baru aturan aktif membawa dasar SK-nya (nama kolom mengikuti docs/ATURAN.md SIAKAD).
-        if (skBaruLengkap) body.sk = { berkas_id: isi.sk!.berkas_id, nomor: isi.sk!.nomor, tanggal: isi.sk!.tanggal, perihal: isi.sk!.perihal ?? null };
+        if (skBaruLengkap) body.sk = isi.sk!.sk_id ? { sk_id: isi.sk!.sk_id } : { berkas_id: isi.sk!.berkas_id, nomor: isi.sk!.nomor, tanggal: isi.sk!.tanggal, perihal: isi.sk!.perihal ?? null };
         else if (skLamaDipakai) body.lampiran_id = isi.skLama;
         if (cara === 'aktif') body.ajukan = true;
       }
@@ -2248,7 +2249,7 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
         await siakad.request({
           method: 'POST',
           path: `/v1/aturan/${r.id}/lampiran`,
-          body: { berkas_id: isi.sk!.berkas_id, jenis: 'sk', nomor: isi.sk!.nomor, tanggal: isi.sk!.tanggal, perihal: isi.sk!.perihal ?? `Penetapan ${isi.nama.trim()}` },
+          body: isi.sk!.sk_id ? { sk_id: isi.sk!.sk_id, jenis: 'sk' } : { berkas_id: isi.sk!.berkas_id, jenis: 'sk', nomor: isi.sk!.nomor, tanggal: isi.sk!.tanggal, perihal: isi.sk!.perihal ?? `Penetapan ${isi.nama.trim()}` },
         });
       }
       if (cara === 'aktif' && !aktif) {
@@ -3277,7 +3278,7 @@ export function FormLampiranAturan({
 }) {
   const siakad = useSiakad();
   const toast = useToast();
-  const kosong = { berkas_id: '', jenis: 'sk', nomor: '', tanggal: '', perihal: '' };
+  const kosong = { berkas_id: '', jenis: 'sk', nomor: '', tanggal: '', perihal: '', sk_id: '' };
   const [isi, setIsi] = React.useState(kosong);
   const [galat, setGalat] = React.useState<Record<string, string>>({});
   const [inner, setInner] = React.useState(false);
@@ -3308,16 +3309,16 @@ export function FormLampiranAturan({
       labelSimpan="Lampirkan"
       onSimpan={async () => {
         const g: Record<string, string> = {};
-        if (!isi.berkas_id) g.berkas_id = 'Unggah atau pilih berkas.';
-        if (isi.jenis === 'sk' && !isi.nomor.trim()) g.nomor = 'Nomor SK wajib diisi.';
-        if (isi.jenis === 'sk' && !isi.tanggal) g.tanggal = 'Tanggal SK wajib diisi.';
+        // SK dipilih dari registri SK tunggal (berkasnya dari registri, tidak diunggah ulang); lampiran lain diunggah.
+        if (isi.jenis === 'sk' && !isi.sk_id) g.sk_id = 'Pilih SK dari registri, atau ajukan pencatatannya bila belum ada.';
+        if (isi.jenis !== 'sk' && !isi.berkas_id) g.berkas_id = 'Unggah atau pilih berkas.';
         setGalat(g);
         if (Object.keys(g).length) return 'Periksa isian yang ditandai.';
         try {
           await siakad.request({
             method: 'POST',
             path: `/v1/aturan/${aturanId}/lampiran`,
-            body: { berkas_id: isi.berkas_id, jenis: isi.jenis, nomor: isi.nomor.trim() || null, tanggal: isi.tanggal || null, perihal: isi.perihal.trim() || null },
+            body: isi.jenis === 'sk' ? { sk_id: isi.sk_id, jenis: 'sk' } : { berkas_id: isi.berkas_id, jenis: isi.jenis, nomor: isi.nomor.trim() || null, tanggal: isi.tanggal || null, perihal: isi.perihal.trim() || null },
           });
         } catch (e) {
           const f = (e as { fields?: Record<string, unknown> }).fields;
@@ -3345,29 +3346,33 @@ export function FormLampiranAturan({
             onValueChange={(v) => v && set('jenis', v)}
           />
         </Field>
-        <Field label="Berkas" required className="u-form-lebar" error={galat.berkas_id || undefined}>
-          <PilihBerkas value={isi.berkas_id || null} onValueChange={(v) => set('berkas_id', v ?? '')} accept=".pdf,.jpg,.jpeg,.png" invalid={Boolean(galat.berkas_id)} />
-        </Field>
-        <Field label="Nomor" required={isi.jenis === 'sk'} optional={isi.jenis !== 'sk'} error={galat.nomor || undefined}>
-          {isi.jenis === 'sk' ? (
-            <PilihNomorSK
-              value={isi.nomor || null}
-              onValueChange={(nomor, sk) => {
-                set('nomor', nomor ?? '');
-                if (sk?.tanggal && !isi.tanggal) set('tanggal', sk.tanggal);
-                if (sk?.perihal && !isi.perihal) set('perihal', sk.perihal);
-              }}
-            />
-          ) : (
-            <Input value={isi.nomor} maxLength={100} placeholder="mis. 123/UNIPO/SK/XII/2026" onChange={(e) => set('nomor', e.target.value)} />
-          )}
-        </Field>
-        <Field label="Tanggal" required={isi.jenis === 'sk'} optional={isi.jenis !== 'sk'} error={galat.tanggal || undefined}>
-          <IsianTanggal value={isi.tanggal || null} onValueChange={(v) => set('tanggal', v)} />
-        </Field>
-        <Field label="Perihal" optional className="u-form-lebar">
-          <Input value={isi.perihal} maxLength={255} placeholder="mis. Penetapan aturan yang dilampirkan" onChange={(e) => set('perihal', e.target.value)} />
-        </Field>
+        {isi.jenis === 'sk' ? (
+          <PilihSK
+            className="u-form-lebar"
+            value={isi.sk_id || null}
+            onValueChange={(id) => set('sk_id', id ?? '')}
+            jenis="aturan"
+            catatSekarang={{ label: 'Catat SK aturan sekarang', isian: { jenis: 'aturan' } }}
+            label="SK dari registri"
+            required
+            error={galat.sk_id || galat.nomor || undefined}
+          />
+        ) : (
+          <>
+            <Field label="Berkas" required className="u-form-lebar" error={galat.berkas_id || undefined}>
+              <PilihBerkas value={isi.berkas_id || null} onValueChange={(v) => set('berkas_id', v ?? '')} accept=".pdf,.jpg,.jpeg,.png" invalid={Boolean(galat.berkas_id)} />
+            </Field>
+            <Field label="Nomor" optional error={galat.nomor || undefined}>
+              <Input value={isi.nomor} maxLength={100} placeholder="mis. 123/UNIPO/SK/XII/2026" onChange={(e) => set('nomor', e.target.value)} />
+            </Field>
+            <Field label="Tanggal" optional error={galat.tanggal || undefined}>
+              <IsianTanggal value={isi.tanggal || null} onValueChange={(v) => set('tanggal', v)} />
+            </Field>
+            <Field label="Perihal" optional className="u-form-lebar">
+              <Input value={isi.perihal} maxLength={255} placeholder="mis. Penetapan aturan yang dilampirkan" onChange={(e) => set('perihal', e.target.value)} />
+            </Field>
+          </>
+        )}
       </BagianForm>
     </PanelForm>
   );

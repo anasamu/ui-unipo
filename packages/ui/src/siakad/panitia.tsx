@@ -35,7 +35,7 @@ import { ConfirmDialog, Dialog, Menu, useToast, type MenuEntry } from '../compon
 import type { SelectOption } from '../components/select';
 import { PilihTahunAkademik } from './cari';
 import { GalatApi } from './galat';
-import { IsianSK, type NilaiSK } from './isian-sk';
+import { PilihSK, type SKRegistri } from './isian-sk';
 import { PilihEntitas, type SumberEntitas } from './pilih';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 
@@ -129,6 +129,8 @@ export interface Panitia {
   tanggal_sk: string | null;
   penetap_sk: string | null;
   ada_sk: boolean;
+  /** SK di registri SK tunggal yang dirujuk panitia ini (docs/SK.md). */
+  sk_registri?: SKRegistri | null;
   mulai: string;
   selesai: string;
   sisa_hari: number;
@@ -540,23 +542,24 @@ export function TabelJabatanPanitia({ jabatan, jumlah }: { jabatan: JabatanPanit
 }
 
 // ================================================================ SK
-/** Lampirkan SK panitia (POST /v1/panitia/{id}/sk): nomor dari arsip atau baru, tanggal, berkas dari storage. */
+/**
+ * SK panitia (POST /v1/panitia/{id}/sk): dipilih dari registri SK tunggal (sk_id). Nomor, tanggal, penetap, dan berkas
+ * diambil dari registri; tidak diunggah ulang. SK yang belum tercatat diajukan pencatatannya ke unit penerbit.
+ */
 export function FormSkPanitia({ panitia, trigger, open, onOpenChange }: { panitia: DetailPanitia; trigger?: React.ReactElement; open?: boolean; onOpenChange?: (o: boolean) => void }) {
   const siakad = useSiakad();
   const toast = useToast();
-  const awal = React.useMemo<NilaiSK | null>(() => (panitia.nomor_sk || panitia.sk ? { nomor: panitia.nomor_sk ?? '', tanggal: panitia.tanggal_sk, berkas_id: panitia.sk?.berkas_id ?? null } : null), [panitia]);
-  const [sk, setSk] = React.useState<NilaiSK | null>(awal);
-  const [penetap, setPenetap] = React.useState(panitia.penetap_sk ?? '');
+  const awal = panitia.sk_registri?.id ?? null;
+  const [skId, setSkId] = React.useState<string | null>(awal);
   const [galat, setGalat] = React.useState<Record<string, string>>({});
   const [inner, setInner] = React.useState(false);
   const isOpen = open ?? inner;
   React.useEffect(() => {
     if (isOpen) {
-      setSk(awal);
-      setPenetap(panitia.penetap_sk ?? '');
+      setSkId(awal);
       setGalat({});
     }
-  }, [isOpen, awal, panitia.penetap_sk]);
+  }, [isOpen, awal]);
   return (
     <PanelForm
       open={isOpen}
@@ -567,17 +570,16 @@ export function FormSkPanitia({ panitia, trigger, open, onOpenChange }: { paniti
       trigger={trigger}
       tampilan="dialog"
       title="SK panitia"
-      description="Berkas SK disimpan di storage kampus dan dibuka Pustikom saat memeriksa pengajuan hak akses."
-      berubah={JSON.stringify(sk) !== JSON.stringify(awal) || penetap !== (panitia.penetap_sk ?? '')}
+      description="Pilih SK pembentukan panitia dari registri SK. Pustikom membuka berkasnya dari registri saat memeriksa pengajuan hak akses."
+      berubah={skId !== awal}
       labelSimpan="Simpan SK"
       onSimpan={async () => {
-        const g: Record<string, string> = {};
-        if (!sk?.nomor?.trim()) g.nomor_sk = 'Nomor SK wajib diisi.';
-        if (!sk?.berkas_id) g.berkas_id = 'Unggah atau pilih berkas SK.';
-        setGalat(g);
-        if (Object.keys(g).length) return Object.values(g).join(' ');
+        if (!skId) {
+          setGalat({ sk_id: 'Pilih SK dari registri, atau ajukan pencatatannya bila belum ada.' });
+          return 'Pilih SK panitia.';
+        }
         try {
-          await siakad.request({ method: 'POST', path: `/v1/panitia/${panitia.id}/sk`, body: { berkas_id: sk!.berkas_id, nomor_sk: sk!.nomor.trim(), tanggal_sk: sk!.tanggal || null, penetap_sk: penetap.trim() || null } });
+          await siakad.request({ method: 'POST', path: `/v1/panitia/${panitia.id}/sk`, body: { sk_id: skId } });
         } catch (e) {
           return galatIsian(e, setGalat);
         }
@@ -585,10 +587,7 @@ export function FormSkPanitia({ panitia, trigger, open, onOpenChange }: { paniti
         toast.add({ title: 'SK dilampirkan', type: 'success' });
       }}
     >
-      <IsianSK value={sk} onValueChange={setSk} required error={galat.nomor_sk || galat.berkas_id || undefined} />
-      <Field label="Penetap SK" optional description="mis. Rektor, Dekan FIK.">
-        <Input value={penetap} maxLength={150} onChange={(e) => setPenetap(e.target.value)} />
-      </Field>
+      <PilihSK value={skId} sk={panitia.sk_registri ?? null} onValueChange={(id) => setSkId(id)} jenis="panitia" penerbitUnitId={panitia.unit?.id ?? null} perihal={`Pembentukan ${panitia.nama}`} label="SK panitia" required catatSekarang={{ label: 'Catat SK panitia sekarang', isian: { jenis: 'panitia', penerbitUnitId: panitia.unit?.id ?? null, perihal: `Pembentukan ${panitia.nama}` } }} error={galat.sk_id || galat.nomor_sk || galat.berkas_id || undefined} />
     </PanelForm>
   );
 }
