@@ -274,9 +274,10 @@
   display: grid;
   gap: 0.75rem;
 }
-// Cetak RPS: hanya pratinjau RPS (simpan sebagai PDF dari dialog cetak peramban).
+// Cetak RPS: hanya pratinjau RPS (simpan sebagai PDF dari dialog cetak peramban). Dibatasi ke halaman yang memuat
+// pratinjau RPS supaya cetak lain (kwitansi, laporan) tidak ikut tersembunyi.
 @media print {
-  body * {
+  body:has(.u-kk-cetak) * {
     visibility: hidden;
   }
   .u-kk-cetak,

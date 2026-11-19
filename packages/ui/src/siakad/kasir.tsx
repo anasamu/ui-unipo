@@ -38,6 +38,7 @@ import { GalatApi } from './galat';
 import { PilihEntitas, type SumberEntitas } from './pilih';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import type { KeuanganMahasiswaData } from './profil-modul';
+import { KwitansiResmi, type KwitansiResmiData } from './kwitansi';
 
 // Kasir modern (keuangan, fakultas, PMB), riwayat pembayaran mahasiswa, buku kas unit, dan jurnal umum.
 // Endpoint: /v1/keuangan (tagihan, transaksi, kasir, kwitansi), /v1/pmb/admin/tagihan, /v1/keu/kas, /v1/keu/jurnal.
@@ -342,7 +343,10 @@ export function SesiKasir({ className }: { className?: string }) {
 }
 
 // ================================================================ Kwitansi
-/** Kwitansi digital satu transaksi (GET /v1/keuangan/transaksi/{id}/kwitansi) dengan terbilang dan QR verifikasi. */
+/**
+ * Kwitansi digital satu transaksi (GET /v1/keuangan/transaksi/{id}/kwitansi) dengan terbilang dan QR verifikasi. Bila API
+ * mengirim data kwitansi resmi (penerbit, nomor bukti berawalan unit), tampil sebagai KwitansiResmi (Bukti Kas Masuk).
+ */
 export function KwitansiPembayaran({
   transaksiId,
   data,
@@ -354,11 +358,14 @@ export function KwitansiPembayaran({
   /** Alamat dasar verifikasi untuk QR, mis. https://siakad.unipo.ac.id. */ urlVerifikasi?: string;
   className?: string;
 }) {
-  const q = useSiakadQuery<KwitansiKeuangan>(['keuangan', 'kwitansi', transaksiId], (s, signal) => s.request({ method: 'GET', path: `/v1/keuangan/transaksi/${transaksiId}/kwitansi` }, { signal }), {
+  const q = useSiakadQuery<KwitansiKeuangan>(['kwitansi-resmi', '/v1/keuangan/transaksi', transaksiId], (s, signal) => s.request({ method: 'GET', path: `/v1/keuangan/transaksi/${transaksiId}/kwitansi` }, { signal }), {
     enabled: !data && Boolean(transaksiId),
   });
   const k = data ?? q.data;
   const ref = React.useRef<HTMLDivElement>(null);
+  // Kwitansi resmi (Bukti Kas Masuk, siakad/kwitansi.tsx) bila API sudah mengirim bagian penerbit.
+  if (k && (k as unknown as KwitansiResmiData).penerbit && (k as unknown as KwitansiResmiData).nomor_bukti)
+    return <KwitansiResmi data={k as unknown as KwitansiResmiData} urlVerifikasi={urlVerifikasi} className={className} />;
   if (q.error) return <GalatApi error={q.error} onRetry={q.refetch} />;
   if (!k) return <Spinner />;
   const url = k.url_verifikasi ? `${urlVerifikasi ?? (typeof location !== 'undefined' ? location.origin : '')}${k.url_verifikasi}` : null;
