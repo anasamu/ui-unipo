@@ -72,6 +72,9 @@
   position: relative;
   display: inline-grid;
   place-items: center;
+  // Satu sel setinggi kotak: tanpa ini persen tinggi gambar dihitung dari baris "auto" sehingga logo tinggi
+  // (mis. 80x200) melebar ke bawah lalu terpotong.
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   flex: none;
   overflow: hidden;
   background: var(--u-logo-pelat);
@@ -150,6 +153,7 @@
   position: relative;
   display: inline-grid;
   place-items: center;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   flex: none;
   width: var(--u-kl-ukuran);
   height: var(--u-kl-ukuran);
