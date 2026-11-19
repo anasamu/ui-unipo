@@ -1724,9 +1724,12 @@ export function PratinjauTemplatLaporanKasir({ isi, kolom, unit, baris, periode,
           </div>
         )}
       </div>
-      <small className="u-ksu-kertas-ket">
-        {isi.kertas} {isi.orientasi} · data rekaan
-      </small>
+      {!alir && (
+        <small className="u-ksu-kertas-ket">
+          {isi.kertas} {isi.orientasi}
+          {baris ? '' : ' · data rekaan'}
+        </small>
+      )}
     </div>
   );
 }
