@@ -633,6 +633,28 @@
   font-weight: 800;
   font-size: 1.125rem;
 }
+img.u-ksu-kop-logo {
+  border: 0;
+  border-radius: 0;
+  object-fit: contain;
+}
+.u-ksu-kertas[data-alir] {
+  overflow: visible;
+  min-height: 0;
+  width: 100%;
+  max-width: 62rem;
+  margin-inline: auto;
+  &[data-orientasi='potret'] {
+    max-width: 46rem;
+  }
+}
+@media print {
+  .u-ksu-kertas[data-alir] {
+    max-width: none;
+    box-shadow: none;
+    padding: 0;
+  }
+}
 .u-ksu-kertas-judul {
   display: grid;
   justify-items: center;

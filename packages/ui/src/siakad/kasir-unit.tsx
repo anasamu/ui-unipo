@@ -1574,11 +1574,21 @@ export interface PratinjauTemplatLaporanKasirProps {
   unit?: string;
   /** Baris data; kosong = data rekaan. */
   baris?: Array<Record<string, string | number>>;
+  /** Teks periode di bawah judul (bawaan contoh). */
+  periode?: React.ReactNode;
+  /** Nama instansi di kop (bawaan UNIVERSITAS POHUWATO). */
+  instansi?: string;
+  /** Alamat di kop. */
+  alamat?: string;
+  /** Logo (URL/data URI) di kop; bawaan huruf U. */
+  logo?: string | null;
+  /** Lembar mengalir (laporan sungguhan untuk dicetak): tanpa rasio kertas tetap dan tanpa perkecilan. */
+  alir?: boolean;
   className?: string;
 }
 
 /** Pratinjau lembar laporan kasir menurut templat: kop, judul, tabel berkelompok + subtotal/total, catatan, penanda tangan. */
-export function PratinjauTemplatLaporanKasir({ isi, kolom, unit, baris, className }: PratinjauTemplatLaporanKasirProps) {
+export function PratinjauTemplatLaporanKasir({ isi, kolom, unit, baris, periode, instansi, alamat, logo, alir, className }: PratinjauTemplatLaporanKasirProps) {
   // Lembar selebar kertas sungguhan (lanskap 46rem, potret 34rem), diperkecil agar muat di wadah sempit (ponsel).
   const wadah = React.useRef<HTMLDivElement>(null);
   const [skala, setSkala] = React.useState(1);
@@ -1622,23 +1632,27 @@ export function PratinjauTemplatLaporanKasir({ isi, kolom, unit, baris, classNam
   let no = 0;
   return (
     <div className={cn('u-ksu-kertas-wadah', className)} ref={wadah}>
-      <div className="u-ksu-kertas" style={{ aspectRatio: rasio, zoom: skala } as React.CSSProperties} data-orientasi={isi.orientasi}>
+      <div className="u-ksu-kertas" style={(alir ? {} : { aspectRatio: rasio, zoom: skala }) as React.CSSProperties} data-orientasi={isi.orientasi} data-alir={alir ? '' : undefined}>
         {isi.kop && (
           <header className="u-ksu-kop">
-            <span className="u-ksu-kop-logo" aria-hidden>
-              U
-            </span>
+            {logo ? (
+              <img className="u-ksu-kop-logo" src={logo} alt="" aria-hidden />
+            ) : (
+              <span className="u-ksu-kop-logo" aria-hidden>
+                U
+              </span>
+            )}
             <span>
-              <b>UNIVERSITAS POHUWATO</b>
+              <b>{(instansi ?? 'Universitas Pohuwato').toUpperCase()}</b>
               <small>{unit ?? 'Unit penerbit'}</small>
-              <small>Jl. Trans Sulawesi, Marisa, Pohuwato, Gorontalo</small>
+              <small>{alamat ?? 'Jl. Trans Sulawesi, Marisa, Pohuwato, Gorontalo'}</small>
             </span>
           </header>
         )}
         <div className="u-ksu-kertas-judul">
           <b>{isi.judul || 'Laporan kasir'}</b>
           {isi.subjudul ? <small>{isi.subjudul}</small> : null}
-          <small>Periode 17–19 November 2026</small>
+          <small>{periode ?? 'Periode 17–19 November 2026'}</small>
         </div>
         {kol.length ? (
           <table className="u-ksu-kertas-tabel">
