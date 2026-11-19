@@ -4,6 +4,7 @@ import {
   AppWindow,
   CalendarRange,
   CircleCheck,
+  ClipboardList,
   Copy,
   Download,
   FileBadge,
@@ -29,7 +30,7 @@ import { Badge, Button, Skeleton } from '../components/actions';
 import { DataTable, type DataColumn } from '../components/data-table';
 import { Alert, Card, CardContent, DescriptionList, Empty, Tabs } from '../components/display';
 import { Checkbox, Field, Input, InputGroup, Textarea } from '../components/forms';
-import { BagianForm, IsianTanggal, PanelForm, Pilihan } from '../components/formulir';
+import { BagianForm, IsianTanggal, PanelForm, Pilihan, PilihanBanyak } from '../components/formulir';
 import { StatistikRingkas, type ItemStatistik } from '../components/laporan';
 import { ConfirmDialog, Dialog, Menu, useToast, type MenuEntry } from '../components/overlays';
 import type { SelectOption } from '../components/select';
@@ -74,6 +75,24 @@ export interface JabatanPanitia {
   urut: number;
   peran: PeranPanitia[];
   aplikasi: AplikasiPanitia[];
+  /** Tugas kepanitiaan jabatan/seksi ini (menu Tugas kepanitiaan dan aksi modul pemilik data). */
+  tugas?: TugasPanitia[];
+}
+/** Tugas kepanitiaan (GET /v1/panitia/jenis/tugas, katalog Data/tugas.php di SIAKAD). */
+export interface TugasPanitia {
+  kode: string;
+  nama: string;
+  keterangan: string | null;
+  /** aplikasi => alamat halaman tugas, mis. { fakultas: '/dashboard/ujian' }. */
+  tautan: Record<string, string>;
+  jenis?: string[];
+}
+/** Penugasan panitia yang sedang aktif (GET /v1/panitia/tugas-saya). */
+export interface PenugasanPanitia {
+  panitia: { id: string; nama: string; jenis: string; jenis_nama: string; unit: { id: number; nama: string; singkatan: string | null }; nomor_sk: string | null; mulai: string; selesai: string; sisa_hari: number };
+  jabatan: { id: number; kode: string; nama: string };
+  uraian: string | null;
+  tugas: TugasPanitia[];
 }
 export interface JenisPanitia {
   id: number;
@@ -239,6 +258,16 @@ export function useRingkasanAksesPanitia(opsi?: { enabled?: boolean }) {
 export function useJenisPanitia(semua = false) {
   return useSiakadQuery<JenisPanitia[]>(['panitia', 'jenis', semua], (s, signal) => s.request<JenisPanitia[]>({ method: 'GET', path: '/v1/panitia/jenis', query: bersih({ semua }) }, { signal }));
 }
+/** Penugasan panitia aktif akun ini; kosong = menu "Tugas kepanitiaan" disembunyikan. */
+export function useTugasPanitiaSaya(opsi?: { enabled?: boolean; jenis?: string }) {
+  return useSiakadQuery<PenugasanPanitia[]>(['panitia', 'tugas-saya', opsi?.jenis ?? ''], (s, signal) => s.request<PenugasanPanitia[]>({ method: 'GET', path: '/v1/panitia/tugas-saya', query: bersih({ jenis: opsi?.jenis }) }, { signal }), {
+    staleTime: 60_000,
+    enabled: opsi?.enabled,
+  });
+}
+export function useKatalogTugasPanitia(jenis?: string, opsi?: { enabled?: boolean }) {
+  return useSiakadQuery<TugasPanitia[]>(['panitia', 'jenis', 'tugas', jenis ?? ''], (s, signal) => s.request<TugasPanitia[]>({ method: 'GET', path: '/v1/panitia/jenis/tugas', query: bersih({ jenis }) }, { signal }), { staleTime: 5 * 60_000, ...opsi });
+}
 export function usePeranPilihanPanitia(opsi?: { enabled?: boolean }) {
   return useSiakadQuery<PeranPanitia[]>(['panitia', 'jenis', 'peran'], (s, signal) => s.request<PeranPanitia[]>({ method: 'GET', path: '/v1/panitia/jenis/peran' }, { signal }), { staleTime: 5 * 60_000, ...opsi });
 }
@@ -371,25 +400,30 @@ export interface FormPanitiaProps {
   open?: boolean;
   onOpenChange?: (o: boolean) => void;
   onTersimpan?: (p: DetailPanitia) => void;
+  /** Isian awal saat membentuk baru, mis. dari acara wisuda: nama, masa berlaku sampai hari acara. */
+  isiAwal?: Partial<Pick<IsiPanitia, 'nama' | 'mulai' | 'selesai' | 'tahun_id' | 'penetap_sk' | 'keterangan'>>;
+  /** Pilih otomatis jenis panitia berkode ini (mis. "wisuda") saat membentuk baru. */
+  jenisKode?: string;
 }
 
 /** Bentuk/ubah panitia (POST /v1/panitia, /v1/panitia/{id}) dengan pratinjau jabatan, peran, dan aplikasinya. */
-export function FormPanitia({ panitia, unitId, jenisUnit, trigger, open, onOpenChange, onTersimpan }: FormPanitiaProps) {
+export function FormPanitia({ panitia, unitId, jenisUnit, trigger, open, onOpenChange, onTersimpan, isiAwal, jenisKode }: FormPanitiaProps) {
   const siakad = useSiakad();
   const toast = useToast();
   const ref = useReferensiPanitia(jenisUnit);
+  const jenisAwal = !panitia && jenisKode ? ref.data?.jenis.find((j) => j.kode === jenisKode) : undefined;
   const awal = React.useMemo<IsiPanitia>(
     () => ({
-      jenis_id: panitia ? String(panitia.jenis.id) : '',
+      ...({ nama: '', tahun_id: '', mulai: '', selesai: '', penetap_sk: '', keterangan: '' } as IsiPanitia),
+      ...(panitia ? {} : isiAwal),
+      jenis_id: panitia ? String(panitia.jenis.id) : jenisAwal ? String(jenisAwal.id) : '',
       unit_id: panitia ? String(panitia.unit.id) : unitId ? String(unitId) : '',
-      nama: panitia?.nama ?? '',
-      tahun_id: panitia?.tahun_id ?? '',
-      mulai: panitia?.mulai ?? '',
-      selesai: panitia?.selesai ?? '',
-      penetap_sk: panitia?.penetap_sk ?? '',
-      keterangan: panitia?.keterangan ?? '',
+      ...(panitia
+        ? { nama: panitia.nama, tahun_id: panitia.tahun_id ?? '', mulai: panitia.mulai, selesai: panitia.selesai, penetap_sk: panitia.penetap_sk ?? '', keterangan: panitia.keterangan ?? '' }
+        : {}),
     }),
-    [panitia, unitId],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [panitia, unitId, jenisAwal?.id, JSON.stringify(isiAwal ?? {})],
   );
   const [isi, setIsi] = React.useState(awal);
   const [galat, setGalat] = React.useState<Record<string, string>>({});
@@ -512,6 +546,7 @@ export function TabelJabatanPanitia({ jabatan, jumlah }: { jabatan: JabatanPanit
         <tr>
           <th>Jabatan</th>
           <th>Peran yang diajukan</th>
+          <th>Tugas</th>
           <th>Aplikasi</th>
         </tr>
       </thead>
@@ -535,6 +570,19 @@ export function TabelJabatanPanitia({ jabatan, jumlah }: { jabatan: JabatanPanit
                 </span>
               ) : (
                 <span className="u-panitia-redup">Tanpa hak akses tambahan</span>
+              )}
+            </td>
+            <td>
+              {j.tugas?.length ? (
+                <span className="u-panitia-peran">
+                  {j.tugas.map((t) => (
+                    <span key={t.kode} className="u-panitia-chip" data-nada="tugas" title={t.keterangan ?? undefined}>
+                      <ClipboardList aria-hidden /> {t.nama}
+                    </span>
+                  ))}
+                </span>
+              ) : (
+                <span className="u-panitia-redup">—</span>
               )}
             </td>
             <td>
@@ -1573,6 +1621,7 @@ interface IsiJabatan {
   wajib: boolean;
   maks: string;
   peran: string[];
+  tugas: string[];
 }
 
 /** Tambah/ubah jenis panitia (POST /v1/panitia/jenis): jenis unit, SK, batas masa, jabatan dan perannya. */
@@ -1582,6 +1631,7 @@ export function FormJenisPanitia({ jenis, trigger, open, onOpenChange }: { jenis
   const [inner, setInner] = React.useState(false);
   const isOpen = open ?? inner;
   const peran = usePeranPilihanPanitia({ enabled: isOpen });
+  const katalogTugas = useKatalogTugasPanitia(undefined, { enabled: isOpen });
   const kunci = React.useRef(1);
   const awal = React.useMemo(
     () => ({
@@ -1595,7 +1645,7 @@ export function FormJenisPanitia({ jenis, trigger, open, onOpenChange }: { jenis
       jabatan: (jenis?.jabatan ?? [
         { id: 0, kode: 'ketua', nama: 'Ketua', wajib: true, maks: 1, peran: [] as PeranPanitia[] },
         { id: 0, kode: 'anggota', nama: 'Anggota', wajib: false, maks: null, peran: [] as PeranPanitia[] },
-      ]).map((j) => ({ kunci: 0, id: j.id || undefined, kode: j.kode, nama: j.nama, wajib: j.wajib, maks: j.maks != null ? String(j.maks) : '', peran: j.peran.map((p) => p.kode) })),
+      ] as JabatanPanitia[]).map((j) => ({ kunci: 0, id: j.id || undefined, kode: j.kode, nama: j.nama, wajib: j.wajib, maks: j.maks != null ? String(j.maks) : '', peran: j.peran.map((p) => p.kode), tugas: (j.tugas ?? []).map((t) => t.kode) })),
     }),
     [jenis],
   );
@@ -1631,7 +1681,7 @@ export function FormJenisPanitia({ jenis, trigger, open, onOpenChange }: { jenis
           wajib_sk: isi.wajib_sk,
           masa_maks_hari: isi.masa_maks_hari ? Number(isi.masa_maks_hari) : null,
           aktif: isi.aktif,
-          jabatan: isi.jabatan.map((j) => ({ id: j.id, kode: j.kode.trim(), nama: j.nama.trim(), wajib: j.wajib, maks: j.maks ? Number(j.maks) : null, peran: j.peran })),
+          jabatan: isi.jabatan.map((j) => ({ id: j.id, kode: j.kode.trim(), nama: j.nama.trim(), wajib: j.wajib, maks: j.maks ? Number(j.maks) : null, peran: j.peran, tugas: j.tugas })),
         };
         try {
           await siakad.request({ method: 'POST', path: jenis ? `/v1/panitia/jenis/${jenis.id}` : '/v1/panitia/jenis', body });
@@ -1678,7 +1728,7 @@ export function FormJenisPanitia({ jenis, trigger, open, onOpenChange }: { jenis
         </div>
       </BagianForm>
       <BagianForm judul="Jabatan dan peran" kolom={1} keterangan="Peran admin (hak akses, masuk sebagai, persetujuan panitia) tidak bisa diberikan lewat panitia." aksi={
-        <Button variant="outline" size="sm" onClick={() => setIsi((x) => ({ ...x, jabatan: [...x.jabatan, { kunci: kunci.current++, id: undefined, kode: '', nama: '', wajib: false, maks: '', peran: [] }] }))}>
+        <Button variant="outline" size="sm" onClick={() => setIsi((x) => ({ ...x, jabatan: [...x.jabatan, { kunci: kunci.current++, id: undefined, kode: '', nama: '', wajib: false, maks: '', peran: [], tugas: [] }] }))}>
           <Plus /> Jabatan
         </Button>
       }>
@@ -1723,6 +1773,20 @@ export function FormJenisPanitia({ jenis, trigger, open, onOpenChange }: { jenis
                 />
               </div>
             </Field>
+            {(() => {
+              const opsiTugas = (katalogTugas.data ?? []).filter((t) => !isi.kode || !t.jenis?.length || t.jenis.includes(isi.kode) || j.tugas.includes(t.kode));
+              if (!opsiTugas.length && !j.tugas.length) return null;
+              return (
+                <Field label="Tugas kepanitiaan" optional error={galat[`jabatan.${i}.tugas`] || undefined} description="Menentukan menu Tugas kepanitiaan dan aksi yang boleh, mis. seksi registrasi: pindai kehadiran dan toga.">
+                  <PilihanBanyak
+                    options={opsiTugas.map((t) => ({ value: t.kode, label: t.nama, description: t.keterangan ?? undefined }))}
+                    value={j.tugas}
+                    placeholder="Pilih…"
+                    onValueChange={(v) => ubahJabatan(j.kunci, { tugas: v })}
+                  />
+                </Field>
+              );
+            })()}
           </div>
         ))}
       </BagianForm>
