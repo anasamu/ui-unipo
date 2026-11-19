@@ -43,12 +43,13 @@ import {
   Wallet,
   X,
   XCircle,
+  Receipt,
 } from 'lucide-react';
 import { formatBytes, formatRelative, formatRupiah } from '../lib/format';
 import { Badge, Button, Skeleton, type BadgeVariant } from '../components/actions';
 import { Alert, Card, CardContent, CardHeader, DescriptionList, Empty, Progress, Stepper, Table, TableContainer } from '../components/display';
 import { Field, Input } from '../components/forms';
-import { ConfirmDialog, Dialog, useToast } from '../components/overlays';
+import { ConfirmDialog, Dialog, Sheet, useToast } from '../components/overlays';
 import { DatePicker, toISODate } from '../components/calendar';
 import { StatCard } from '../components/charts';
 import { CentangSukses } from '../components/animasi';
@@ -57,6 +58,7 @@ import { idPerangkatCbt, LembarUjian } from './cbt';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { LabelProdi } from './prodi';
 import { WizardPendaftaranPmb } from './pmb';
+import { KwitansiResmi, RincianPembayaran } from './kwitansi';
 import {
   TautanPmb,
   hurufJudul,
@@ -1239,6 +1241,7 @@ export function KartuTagihanPmb({ pendaftaranId, t, metode }: { pendaftaranId: s
   const online = bisaBayar && metode.length > 0;
   const trx = useTransaksiPmb(pendaftaranId, t.id, online);
   const [bukti, setBukti] = React.useState(false);
+  const [kwitansi, setKwitansi] = React.useState(false);
   const segarkan = () => {
     trx.refetch();
     segarkanPendaftarPmb();
@@ -1260,7 +1263,24 @@ export function KartuTagihanPmb({ pendaftaranId, t, metode }: { pendaftaranId: s
       />
       <CardContent>
         <Stack gap={5}>
-          {t.status === 'lunas' && <Alert variant="success">Lunas pada {waktu(t.lunas_at)}. Terima kasih.</Alert>}
+          {t.status === 'lunas' && (
+            <Alert variant="success" title={`Lunas pada ${waktu(t.lunas_at)}. Terima kasih.`}>
+              <Button size="sm" variant="outline" onClick={() => setKwitansi(true)}>
+                <Receipt aria-hidden /> Lihat & cetak kwitansi
+              </Button>
+            </Alert>
+          )}
+          <RincianPembayaran
+            varian="lengkap"
+            judul="Rincian pembayaran"
+            rincian={[{ uraian: t.keterangan ?? (t.jenis === 'formulir' ? 'Biaya pendaftaran' : t.jenis === 'daftar_ulang' ? 'Biaya daftar ulang' : 'Tagihan'), nominal: t.nominal, potongan: t.potongan, subtotal: t.total }]}
+            ringkasan={{
+              dibayar: t.status === 'lunas' ? t.total : (t.pembayaran ?? []).filter((b) => b.status === 'diterima').reduce((a, b) => a + b.jumlah, 0),
+            }}
+            riwayat={(t.pembayaran ?? []).filter((b) => b.status === 'diterima').map((b) => ({ tanggal: b.dibayar_at ?? b.created_at, nomor: b.referensi ?? null, metode: SUMBER_BAYAR[b.sumber] ?? b.sumber, jumlah: b.jumlah }))}
+            kanal={t.nomor_va ? `${t.kanal ? t.kanal.toUpperCase() + ' ' : ''}VA ${t.nomor_va}` : t.kanal}
+            jatuhTempo={bisaBayar ? t.kedaluwarsa_at : null}
+          />
           {t.status === 'menunggu_konfirmasi' && <Alert variant="info">Bukti pembayaran sudah dikirim dan sedang diperiksa petugas keuangan (biasanya 1×24 jam kerja).</Alert>}
           {online && (trx.data ? <TransaksiAktif pendaftaranId={pendaftaranId} tagihan={t.id} trx={trx.data} onSegarkan={segarkan} /> : !trx.loading && <PilihMetodeBayar pendaftaranId={pendaftaranId} tagihan={t.id} metode={metode} onSelesai={segarkan} />)}
           {bisaBayar && !trx.data && (
@@ -1311,6 +1331,11 @@ export function KartuTagihanPmb({ pendaftaranId, t, metode }: { pendaftaranId: s
         </Stack>
       </CardContent>
       {bisaBayar && <UnggahBukti open={bukti} onOpenChange={setBukti} pendaftaranId={pendaftaranId} tagihan={t} onSelesai={segarkan} />}
+      {t.status === 'lunas' && (
+        <Sheet open={kwitansi} onOpenChange={setKwitansi} size="xl" title={`Kwitansi ${t.nomor}`} description="Bukti Kas Masuk resmi Panitia PMB dengan QR verifikasi keaslian.">
+          {kwitansi && <KwitansiResmi sumber={{ jenis: 'pmb-saya', pendaftaran: pendaftaranId, id: t.id }} catatCetak={false} />}
+        </Sheet>
+      )}
     </Card>
   );
 }
