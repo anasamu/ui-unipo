@@ -118,3 +118,4 @@ export * from './pedoman-kelola';
 export * from './syarat-keuangan';
 export * from './akreditasi-kelengkapan';
 export * from './beasiswa';
+export * from './beasiswa-bauk';

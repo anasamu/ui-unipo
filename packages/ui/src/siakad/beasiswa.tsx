@@ -43,6 +43,7 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
 import { PilihProdi, PilihTahunAkademik } from './cari';
 import { PilihBerkas } from './pilih-berkas';
 import { AlurPemeriksa, LabelPemeriksa, type TahapPemeriksa } from './pemeriksa';
+import { BAWAAN_KIP_PENCAIRAN, IsianAturanPencairan, KartuDepositBeasiswa, ringkasAturanPencairan, type AturanPencairan } from './beasiswa-bauk';
 
 /*
  * Beasiswa (SIAKAD /v1/beasiswa, docs/KEMAHASISWAAN.md "Beasiswa"). Keputusan Anas 2026-11-19: beasiswa dikelola BAAK,
@@ -144,6 +145,8 @@ export interface ProgramBeasiswa {
   prodi_sasaran?: { kode_prodi: string; nama: string }[] | null;
   publikasi?: { id: number; jenis: string; judul: string; status: string; konten_id: number | null; diterbitkan_oleh: string | null; diterbitkan_at: string | null }[];
   riwayat?: RiwayatBeasiswa[];
+  /** Aturan pencairan tahap 2 BAUK (bawaan bila belum disimpan). */
+  pencairan?: AturanPencairan | null;
 }
 export interface RiwayatBeasiswa {
   id: number;
@@ -561,6 +564,9 @@ export function PanelProgramBeasiswa({ peran, program, onOpenChange, onSelesai }
   const opsiIndikator: SelectOption<string>[] = ind.map((i) => ({ value: i.kode, label: i.judul, description: i.keterangan }));
   const totalBobot = Object.values(d.bobot).reduce((a, v) => a + (Number(v) || 0), 0);
   const body = bodyDari(d);
+  const [pc, setPc] = React.useState<AturanPencairan | null>(program?.pencairan?.tersimpan ? program.pencairan : null);
+  const pcBawaan: AturanPencairan = d.jenis === 'kip_kuliah' ? BAWAAN_KIP_PENCAIRAN : program?.pencairan ?? { ...BAWAAN_KIP_PENCAIRAN, mode: 'ke_mahasiswa', komponen: [{ kode: 'bantuan', label: 'Bantuan', nominal: null, tujuan: 'mahasiswa' }] };
+  const pcNyata = pc ?? pcBawaan;
   const steps = [
     {
       id: 'identitas',
@@ -838,6 +844,13 @@ export function PanelProgramBeasiswa({ peran, program, onOpenChange, onSelesai }
       ),
     },
     {
+      id: 'pencairan',
+      title: 'Pencairan',
+      description: 'Cara dana disalurkan BAUK: ke mahasiswa, ke tagihan, atau campuran; komponen dana, sisa, pagu, persetujuan. BAUK bisa menyesuaikan nanti.',
+      validate: () => (pcNyata.komponen.some((k) => !k.label.trim()) ? 'Isi nama setiap komponen dana.' : null),
+      content: <IsianAturanPencairan value={pcNyata} onChange={setPc} jenis={d.jenis} />,
+    },
+    {
       id: 'ringkasan',
       title: 'Ringkasan',
       description: 'Periksa sebelum menyimpan. Program baru tersimpan sebagai draf.',
@@ -850,6 +863,7 @@ export function PanelProgramBeasiswa({ peran, program, onOpenChange, onSelesai }
             { title: 'Syarat', onEdit: () => setStep(3), items: d.syarat.length ? d.syarat.map((s, i) => ({ label: `${i + 1}`, value: labelSyaratDraft(s, ind) })) : [{ label: 'Syarat', value: 'Hanya status aktif (bawaan)' }] },
             { title: 'Formulir', onEdit: () => setStep(4), items: [{ label: 'Berkas', value: body.berkas.map((b) => `${b.nama}${b.wajib ? '' : ' (opsional)'}`).join(', ') || '-' }, { label: 'Isian', value: body.isian.map((i) => i.label).join(', ') || '-' }] },
             { title: 'Seleksi', onEdit: () => setStep(5), items: [{ label: 'Bobot', value: Object.entries(body.bobot).map(([k, v]) => `${peran.kriteria.find((x) => x.kode === k)?.judul.split(' (')[0] ?? k} ${v}`).join(', ') }, { label: 'Wawancara', value: d.wawancara ? 'Ya' : 'Tidak' }, { label: 'Rekomendasi fakultas', value: d.tahap_fakultas ? 'Ya, sebelum verifikasi BAAK' : 'Tidak' }, { label: 'Evaluasi', value: d.ipk_evaluasi ? `IPK ≥ ${d.ipk_evaluasi}, ${d.tindakan === 'cabut' ? 'langsung cabut' : 'peringatan dulu'}` : 'Tanpa batas IPK' }] },
+            { title: 'Pencairan', onEdit: () => setStep(6), items: [{ label: 'Aturan', value: `${ringkasAturanPencairan(pcNyata)}${pc ? '' : ' (bawaan)'}` }] },
           ]}
         />
       ),
@@ -870,8 +884,8 @@ export function PanelProgramBeasiswa({ peran, program, onOpenChange, onSelesai }
       onFinish={async () => {
         try {
           const r = ubah
-            ? await aksi<ProgramBeasiswa>(`${BASIS}/program/${program!.id}`, terkunci ? { pengumuman_tanggal: body.pengumuman_tanggal, evaluasi: body.evaluasi } : body, 'Program disimpan.')
-            : await aksi<ProgramBeasiswa>(`${BASIS}/program`, body, 'Program dibuat sebagai draf.');
+            ? await aksi<ProgramBeasiswa>(`${BASIS}/program/${program!.id}`, terkunci ? { pengumuman_tanggal: body.pengumuman_tanggal, evaluasi: body.evaluasi, ...(pc ? { pencairan: pc } : {}) } : { ...body, ...(pc ? { pencairan: pc } : {}) }, 'Program disimpan.')
+            : await aksi<ProgramBeasiswa>(`${BASIS}/program`, { ...body, ...(pc ? { pencairan: pc } : {}) }, 'Program dibuat sebagai draf.');
           onSelesai?.(r.id);
           return null;
         } catch (e) {
@@ -1769,6 +1783,7 @@ export function BeasiswaSaya({ className }: { className?: string }) {
   if (!data.berlaku) return <Empty bordered icon={<HandCoins />} title="Beasiswa untuk mahasiswa" description="Halaman ini menampilkan program beasiswa dan pendaftaran untuk akun mahasiswa." />;
   return (
     <div className={cn('u-bsw u-bsw-saya', className)}>
+      <KartuDepositBeasiswa />
       {data.pendaftaran.length > 0 && (
         <section className="u-bsw-form">
           <h2 className="u-bsw-h">Pendaftaran saya</h2>
