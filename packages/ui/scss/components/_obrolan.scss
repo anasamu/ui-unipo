@@ -1554,6 +1554,9 @@
   right: 1.5rem;
   bottom: var(--ob-bawah, 1.5rem);
   z-index: 45;
+  // Naik di atas bilah aksi tetap di bawah layar (BilahSimpan / [data-u-bilah-bawah]); lihat _formulir.scss.
+  translate: 0 calc(-1 * var(--u-fab-angkat, 0px));
+  transition: translate var(--u-duration-base) var(--u-ease-out);
   display: flex;
   flex-direction: column;
   align-items: flex-end;

@@ -8,6 +8,7 @@ import { Field, Textarea } from '../components/forms';
 import { Pilihan } from '../components/formulir';
 import { Dialog, useToast } from '../components/overlays';
 import type { SelectOption } from '../components/select';
+import { rapikanNamaUnit } from './aturan-kelompok';
 import { GalatApi } from './galat';
 import { PilihEntitas } from './pilih';
 import { invalidateSiakad, useSiakad, useSiakadQuery } from './provider';
@@ -543,7 +544,7 @@ export function KelolaAturanFakultas({ kodeFakultas, judul = 'Aturan fakultas', 
         <div>
           <h2>{judul}</h2>
           <p>
-            Syarat dosen PA, pembimbing, dan penguji di {d.fakultas.nama.toLowerCase().replace(/(^|\s)\S/g, (x) => x.toUpperCase())}. Aturan ini hanya berlaku untuk mahasiswa dan prodi fakultas ini,
+            Syarat dosen PA, pembimbing, dan penguji di {rapikanNamaUnit(d.fakultas.nama)}. Aturan ini hanya berlaku untuk mahasiswa dan prodi fakultas ini,
             diperiksa bersama aturan universitas: semua harus terpenuhi.
           </p>
         </div>

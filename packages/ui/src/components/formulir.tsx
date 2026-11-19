@@ -258,6 +258,50 @@ export function GridForm({ kolom = 2, children, className }: { kolom?: 1 | 2 | 3
   );
 }
 
+// ================================================================ Bilah simpan
+export interface BilahSimpanProps extends Omit<React.ComponentProps<'div'>, 'children'> {
+  /** Tampilkan bilah (biasanya: ada perubahan yang belum disimpan). */
+  tampil: boolean;
+  /** Pesan di kiri bilah. */
+  pesan?: React.ReactNode;
+  onBatal?: () => void;
+  onSimpan: () => void;
+  labelBatal?: React.ReactNode;
+  labelSimpan?: React.ReactNode;
+  /** Sedang menyimpan: tombol Simpan memuat, Batalkan nonaktif. */
+  memuat?: boolean;
+  /** Simpan nonaktif (mis. isian wajib kosong). */
+  nonaktif?: boolean;
+  /** Aksi tambahan sebelum tombol Batalkan. */
+  aksi?: React.ReactNode;
+}
+
+/**
+ * Bilah simpan menempel di bawah layar untuk halaman pengaturan yang disunting di tempat: "Ada perubahan yang belum
+ * disimpan" + Batalkan/Simpan. Selama tampil, tombol mengambang (obrolan, tanya jawab) otomatis naik sehingga tidak
+ * menutupi tombol Simpan (atribut `data-u-bilah-bawah`; pola sama bisa dipasang di bilah aksi tetap lain).
+ *
+ *   <BilahSimpan tampil={berubah} onBatal={reset} onSimpan={() => simpan.mutate()} memuat={simpan.isPending} labelSimpan="Simpan profil" />
+ */
+export function BilahSimpan({ tampil, pesan = 'Ada perubahan yang belum disimpan.', onBatal, onSimpan, labelBatal = 'Batalkan', labelSimpan = 'Simpan', memuat, nonaktif, aksi, className, ...props }: BilahSimpanProps) {
+  if (!tampil) return null;
+  return (
+    <div className={cn('u-bilah-simpan', className)} role="region" aria-label="Simpan perubahan" data-u-bilah-bawah="" {...props}>
+      <span className="u-bilah-simpan-pesan" role="status">
+        {pesan}
+      </span>
+      {aksi}
+      {onBatal && (
+        <Button variant="outline" onClick={onBatal} disabled={memuat}>
+          {labelBatal}
+        </Button>
+      )}
+      <Button loading={memuat} disabled={nonaktif} onClick={onSimpan}>
+        {labelSimpan}
+      </Button>
+    </div>
+  );
+}
 // ================================================================ Panel formulir
 export interface PanelFormProps {
   open?: boolean;

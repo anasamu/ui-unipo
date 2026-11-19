@@ -85,6 +85,8 @@
 @media (max-width: 767px) {
   .u-kerangka-isi[data-nav-bawah] {
     padding-bottom: 5.5rem;
+    // Bilah simpan (BilahSimpan) menempel di atas navigasi bawah ponsel, bukan di belakangnya.
+    --u-bilah-bawah-nav: 4.25rem;
   }
 }
 @media (max-width: 639px) {
