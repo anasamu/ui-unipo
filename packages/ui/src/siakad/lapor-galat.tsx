@@ -1,8 +1,9 @@
 'use client';
 import * as React from 'react';
 import type { Siakad } from 'unipo-siakad-sdk';
-import { ArrowLeft, Bug, CircleCheck, ListChecks, Send } from 'lucide-react';
+import { ArrowLeft, Bug, CircleCheck, ExternalLink, ListChecks, Send } from 'lucide-react';
 import { Badge, Button, Skeleton, type BadgeVariant } from '../components/actions';
+import { tautanAkun } from '../components/akun';
 import { Dropzone, FileList } from '../components/calendar';
 import { CopyButton } from '../components/code';
 import { Alert, DescriptionList, Empty } from '../components/display';
@@ -14,8 +15,15 @@ import { formatDate, formatTime } from '../lib/format';
 /*
  * Panel samping "Laporkan ke Pustikom" untuk kode laporan (request_id) di kartu/toast galat. Dipasang otomatis oleh
  * <UnipoProvider siakad>. Mengirim ke SIAKAD /v1/helpdesk/galat (docs/HELPDESK.md "Laporan bug dari kode galat"):
- * satu kode per pengguna = satu tiket; laporan ulang menambah keterangan ke tiket yang sama.
+ * satu kode per pengguna = satu tiket; laporan ulang menambah keterangan ke tiket yang sama. Percakapan lengkap, balas,
+ * tutup, dan penilaian ada di aplikasi Profil » Tiket saya (`tautanAkun().tiket`, rincian `/tiket/{id}`).
  */
+
+/** Alamat Tiket saya di aplikasi Profil (aplikasi saudara di domain yang sama, atau profile.unipo.ac.id); dengan id = rinciannya. */
+export function urlTiketSaya(id?: number | string | null): string {
+  const dasar = tautanAkun().tiket;
+  return id != null && id !== '' ? `${dasar}/${encodeURIComponent(String(id))}` : dasar;
+}
 
 type StatusTiket = 'baru' | 'diproses' | 'menunggu_pelapor' | 'selesai' | 'ditutup' | 'ditolak';
 interface TiketRingkas {
@@ -124,7 +132,9 @@ function TiketSaya({ siakad, kembali, sorot }: { siakad: Siakad; kembali: () => 
         <ul className="u-lapor-galat-daftar">
           {data.map((t) => (
             <li key={t.id} data-sorot={t.nomor === sorot ? '' : undefined}>
-              <span className="u-lapor-galat-daftar-judul">{t.judul}</span>
+              <a className="u-lapor-galat-daftar-judul" href={urlTiketSaya(t.id)} target="_blank" rel="noopener noreferrer">
+                {t.judul}
+              </a>
               <span className="u-lapor-galat-daftar-meta">
                 <code>{t.nomor}</code> · {formatDate(t.created_at, 'medium')} {formatTime(t.created_at)}
               </span>
@@ -134,6 +144,9 @@ function TiketSaya({ siakad, kembali, sorot }: { siakad: Siakad; kembali: () => 
         </ul>
       )}
       <p className="u-lapor-galat-catatan">Anda mendapat notifikasi saat Pustikom menanggapi atau mengubah status tiket.</p>
+      <Button variant="outline" size="sm" render={<a href={urlTiketSaya()} target="_blank" rel="noopener noreferrer" />}>
+        <ExternalLink /> Semua tiket di Profil
+      </Button>
     </div>
   );
 }
@@ -252,7 +265,7 @@ export function LaporGalat({ siakad }: { siakad: Siakad }) {
     );
     kaki = (
       <>
-        <Button variant="outline" onClick={() => setTampil('saya')}>
+        <Button variant="outline" render={<a href={urlTiketSaya(hasil.tiket.id)} target="_blank" rel="noopener noreferrer" />}>
           <ListChecks /> Lihat tiket saya
         </Button>
         <Button onClick={tutup}>Selesai</Button>
