@@ -20,7 +20,8 @@ import { invalidateSiakad, useOptionalSiakad, useSiakadQuery } from './provider'
 // ================================================================ Tipe
 export type VarianKwitansi = 'klasik' | 'modern' | 'minimal' | 'a5' | 'arsip' | 'thermal80' | 'thermal58';
 export type JenisPenerbitKwitansi = 'keuangan' | 'baak' | 'pmb' | 'fakultas' | 'unit';
-export type StatusBayarKwitansi = 'LUNAS' | 'BELUM' | 'BATAL';
+/** DIMUKA = pembayaran di muka (deposit menunggu tagihan periode sasaran terbit). */
+export type StatusBayarKwitansi = 'LUNAS' | 'BELUM' | 'BATAL' | 'DIMUKA';
 
 /** Daftar varian dengan nama dan kegunaan, untuk pemilih varian. */
 export const VARIAN_KWITANSI: ReadonlyArray<{ value: VarianKwitansi; label: string; keterangan: string; kertas: string }> = [
@@ -146,11 +147,12 @@ export function statusBayarKwitansi(d: Pick<KwitansiResmiData, 'status' | 'statu
   const s = String(d.status_bayar ?? '').toUpperCase();
   if (s === 'BATAL') return 'BATAL';
   if (s === 'LUNAS') return 'LUNAS';
+  if (s === 'DIMUKA' || s === 'DI MUKA') return 'DIMUKA';
   if (s.startsWith('BELUM')) return 'BELUM';
   return (d.sisa ?? 0) > 0.001 ? 'BELUM' : 'LUNAS';
 }
 
-const LABEL_STATUS: Record<StatusBayarKwitansi, string> = { LUNAS: 'Lunas', BELUM: 'Belum', BATAL: 'Batal' };
+const LABEL_STATUS: Record<StatusBayarKwitansi, string> = { LUNAS: 'Lunas', BELUM: 'Belum', BATAL: 'Batal', DIMUKA: 'Di muka' };
 
 function urlQr(d: KwitansiResmiData, dasar?: string): string | null {
   const u = d.url_verifikasi_resmi ?? d.url_verifikasi ?? null;

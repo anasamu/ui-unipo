@@ -120,6 +120,10 @@ export interface JenisBiayaKasir {
   tagih_otomatis: boolean;
   batasi_prodi: boolean;
   potongan_kasir: boolean;
+  /** Boleh dibayar di muka (deposit menunggu periode). */
+  bayar_dimuka?: boolean;
+  /** Paling cepat N hari sebelum jendela penerimaan dibuka; null = kapan saja sebelum dibuka. */
+  dimuka_hari?: number | null;
   urutan: number;
   aktif: boolean;
   keterangan: string | null;
@@ -410,6 +414,8 @@ interface IsianJenis {
   tagih_otomatis: boolean;
   batasi_prodi: boolean;
   potongan_kasir: boolean;
+  bayar_dimuka: boolean;
+  dimuka_hari: string;
   urutan: string;
   aktif: boolean;
   keterangan: string;
@@ -498,8 +504,14 @@ function FormJenis({ awal, onOpenChange, saya, unitId, daftar }: { awal: IsianJe
                 <Sakelar nilai={v.tagih_otomatis} ubah={(c) => set({ tagih_otomatis: c })} label="Tagih otomatis" ket="Bila tagihan belum ada, kasir membuat tagihan dari tarif saat menerima pembayaran." />
                 <Sakelar nilai={v.batasi_prodi} ubah={(c) => set({ batasi_prodi: c })} label="Batasi prodi unit" ket="Hanya mahasiswa prodi di bawah unit penerbit yang bisa membayar." />
                 <Sakelar nilai={v.potongan_kasir} ubah={(c) => set({ potongan_kasir: c })} label="Kasir boleh memberi potongan" ket="Potongan mengurangi nominal tagihan dan tercatat di kwitansi." />
+                <Sakelar nilai={v.bayar_dimuka} ubah={(c) => set({ bayar_dimuka: c })} label="Boleh dibayar di muka" ket="Mahasiswa boleh membayar sebelum periode dibuka; uang disimpan sebagai deposit dan otomatis melunasi tagihan saat terbit. Tanpa saklar ini pembayaran di luar jadwal ditolak." />
                 <Sakelar nilai={v.aktif} ubah={(c) => set({ aktif: c })} label="Aktif" ket="Jenis biaya nonaktif tidak tampil di kasir." />
               </div>
+              {v.bayar_dimuka && (
+                <Field label="Paling cepat (hari sebelum dibuka)" optional description="Kosong = kapan saja sebelum jendela penerimaan dibuka. Mis. 30 = mulai 30 hari sebelum masa pembayaran.">
+                  <Input inputMode="numeric" value={v.dimuka_hari} maxLength={3} onChange={(e) => set({ dimuka_hari: angka(e.target.value) })} placeholder="Kapan saja" />
+                </Field>
+              )}
             </div>
           ),
         },
@@ -520,6 +532,7 @@ function FormJenis({ awal, onOpenChange, saya, unitId, daftar }: { awal: IsianJe
                     { label: 'Tagih otomatis', value: v.tagih_otomatis ? 'Ya' : 'Tidak' },
                     { label: 'Batasi prodi', value: v.batasi_prodi ? 'Ya' : 'Tidak' },
                     { label: 'Potongan kasir', value: v.potongan_kasir ? 'Boleh' : 'Tidak' },
+                    { label: 'Bayar di muka', value: v.bayar_dimuka ? (v.dimuka_hari ? `Boleh, paling cepat ${v.dimuka_hari} hari sebelum dibuka` : 'Boleh, kapan saja sebelum dibuka') : 'Tidak' },
                     { label: 'Status', value: v.aktif ? 'Aktif' : 'Nonaktif' },
                   ],
                 },
@@ -543,6 +556,8 @@ function FormJenis({ awal, onOpenChange, saya, unitId, daftar }: { awal: IsianJe
               tagih_otomatis: v.tagih_otomatis,
               batasi_prodi: v.batasi_prodi,
               potongan_kasir: v.potongan_kasir,
+              bayar_dimuka: v.bayar_dimuka,
+              dimuka_hari: v.bayar_dimuka && v.dimuka_hari ? Number(v.dimuka_hari) : null,
               urutan: Number(v.urutan || 100),
               aktif: v.aktif,
               keterangan: v.keterangan,
@@ -598,6 +613,8 @@ function TabJenis({ saya, unitId }: { saya: KasirKelolaSaya; unitId?: number }) 
     tagih_otomatis: j.tagih_otomatis,
     batasi_prodi: j.batasi_prodi,
     potongan_kasir: j.potongan_kasir,
+    bayar_dimuka: !!j.bayar_dimuka,
+    dimuka_hari: j.dimuka_hari ? String(j.dimuka_hari) : '',
     urutan: String(j.urutan),
     aktif: j.aktif,
     keterangan: j.keterangan ?? '',
@@ -620,7 +637,7 @@ function TabJenis({ saya, unitId }: { saya: KasirKelolaSaya; unitId?: number }) 
           </span>
         }
         actions={
-          <Button onClick={() => setForm({ baru: true, kode_biaya: '', nama: '', unit: unitAwal(saya, unitId), kategori: null, perlakuan: 'sewaktu', nominal_bawaan: '', tagih_otomatis: false, batasi_prodi: false, potongan_kasir: false, urutan: '100', aktif: true, keterangan: '' })}>
+          <Button onClick={() => setForm({ baru: true, kode_biaya: '', nama: '', unit: unitAwal(saya, unitId), kategori: null, perlakuan: 'sewaktu', nominal_bawaan: '', tagih_otomatis: false, batasi_prodi: false, potongan_kasir: false, bayar_dimuka: false, dimuka_hari: '', urutan: '100', aktif: true, keterangan: '' })}>
             <Plus /> Tambah jenis biaya
           </Button>
         }
