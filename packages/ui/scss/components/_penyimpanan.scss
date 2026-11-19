@@ -455,3 +455,15 @@
     outline-offset: 2px;
   }
 }
+.u-berkas-cepat-kuota {
+  margin: 0.5rem 0.75rem 0;
+}
+// Pesan penolakan unggah (kuota, jenis, ukuran) bisa panjang: tampil utuh di bawah nama berkas.
+.u-berkas-cepat-unggah > div[data-galat] {
+  flex-wrap: wrap;
+  small {
+    flex: 1 1 100%;
+    white-space: normal;
+    line-height: 1.4;
+  }
+}

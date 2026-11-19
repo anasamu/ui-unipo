@@ -169,7 +169,7 @@ const MB = 1048576;
 // ---------------------------------------------------------------- data
 
 export function usePenyimpananSaya(enabled = true) {
-  return useSiakadQuery<RincianPenyimpanan>(['penyimpanan', 'saya'], (s, signal) => s.request<RincianPenyimpanan>({ method: 'GET', path: '/v1/penyimpanan/saya' }, { signal }), { enabled, staleTime: 15_000 });
+  return useSiakadQuery<RincianPenyimpanan>(['penyimpanan', 'saya'], (s, signal) => s.request<RincianPenyimpanan>({ method: 'GET', path: '/v1/berkas/penyimpanan/saya' }, { signal }), { enabled, staleTime: 15_000 });
 }
 
 /** Segarkan semua data penyimpanan dan batas unggah setelah perubahan. */
@@ -398,7 +398,7 @@ export function FormMintaKuota({ open, onOpenChange, unitKelolaan = [], unitAwal
     if (alasan.trim().length < 5) return setGalat('Tuliskan alasan (minimal 5 huruf).');
     setKirim(true);
     try {
-      const r = await siakad.request<PermintaanKuota>({ method: 'POST', path: '/v1/penyimpanan/permintaan', body: { lingkup, unit: lingkup === 'unit' ? unit : undefined, tambah_byte: tambah, alasan } });
+      const r = await siakad.request<PermintaanKuota>({ method: 'POST', path: '/v1/berkas/penyimpanan/permintaan', body: { lingkup, unit: lingkup === 'unit' ? unit : undefined, tambah_byte: tambah, alasan } });
       segarkanPenyimpanan();
       onTerkirim?.(r.data);
       onOpenChange(false);
@@ -467,7 +467,7 @@ export function PanelPenyimpananPengguna({ username, onOpenChange }: PanelPenyim
   const siakad = useSiakad();
   const q = useSiakadQuery<RincianPenyimpanan>(
     ['penyimpanan', 'pengguna', username],
-    (s, signal) => s.request<RincianPenyimpanan>({ method: 'GET', path: `/v1/penyimpanan/pengguna/${encodeURIComponent(username ?? '')}` }, { signal }),
+    (s, signal) => s.request<RincianPenyimpanan>({ method: 'GET', path: `/v1/berkas/penyimpanan/pengguna/${encodeURIComponent(username ?? '')}` }, { signal }),
     { enabled: !!username, staleTime: 0 },
   );
   const [ubah, setUbah] = React.useState(false);
@@ -483,7 +483,7 @@ export function PanelPenyimpananPengguna({ username, onOpenChange }: PanelPenyim
     setSimpan(true);
     setGalat(null);
     try {
-      await siakad.request({ method: 'POST', path: '/v1/penyimpanan/kebijakan', body: { lingkup: 'pengguna', kunci: username, kuota_byte: hapus ? null : kuota } });
+      await siakad.request({ method: 'POST', path: '/v1/berkas/penyimpanan/kebijakan', body: { lingkup: 'pengguna', kunci: username, kuota_byte: hapus ? null : kuota } });
       segarkanPenyimpanan();
       setUbah(false);
     } catch (e) {
@@ -542,7 +542,7 @@ export function PanelPenyimpananPengguna({ username, onOpenChange }: PanelPenyim
                       description={`${d.sampah_jumlah} berkas (${formatBytes(d.sampah_byte)}) dihapus permanen dari penyimpanan dan tidak bisa dipulihkan. Lakukan hanya atas permintaan pengguna; tindakan ini tercatat di log.`}
                       confirmLabel="Hapus permanen"
                       onConfirm={async () => {
-                        await siakad.request({ method: 'POST', path: `/v1/penyimpanan/pengguna/${encodeURIComponent(d.username)}/sampah/kosongkan` });
+                        await siakad.request({ method: 'POST', path: `/v1/berkas/penyimpanan/pengguna/${encodeURIComponent(d.username)}/sampah/kosongkan` });
                         segarkanPenyimpanan();
                       }}
                     />
@@ -570,12 +570,12 @@ export interface PanelPenyimpananUnitProps {
 export function PanelPenyimpananUnit({ kode, onOpenChange, onPengguna }: PanelPenyimpananUnitProps) {
   const q = useSiakadQuery<RincianUnitPenyimpanan>(
     ['penyimpanan', 'unit', kode],
-    (s, signal) => s.request<RincianUnitPenyimpanan>({ method: 'GET', path: `/v1/penyimpanan/unit/${encodeURIComponent(kode ?? '')}` }, { signal }),
+    (s, signal) => s.request<RincianUnitPenyimpanan>({ method: 'GET', path: `/v1/berkas/penyimpanan/unit/${encodeURIComponent(kode ?? '')}` }, { signal }),
     { enabled: !!kode, staleTime: 0 },
   );
   const anggota = useSiakadQuery<Array<{ username: string; nama: string | null; terpakai_byte: number; kuota_byte: number | null; persen: number | null }>>(
     ['penyimpanan', 'unit-anggota', kode],
-    (s, signal) => s.request({ method: 'GET', path: '/v1/penyimpanan/pengguna', query: { unit: kode ?? '', per_page: 10 } }, { signal }),
+    (s, signal) => s.request({ method: 'GET', path: '/v1/berkas/penyimpanan/pengguna', query: { unit: kode ?? '', per_page: 10 } }, { signal }),
     { enabled: !!kode, staleTime: 0 },
   );
   const [bagi, setBagi] = React.useState(false);
@@ -722,7 +722,7 @@ export interface BagiKuotaUnitProps {
  */
 export function BagiKuotaUnit({ kode, open, onOpenChange, onSaved }: BagiKuotaUnitProps) {
   const siakad = useSiakad();
-  const q = useSiakadQuery<RincianUnitPenyimpanan>(['penyimpanan', 'unit', kode], (s, signal) => s.request<RincianUnitPenyimpanan>({ method: 'GET', path: `/v1/penyimpanan/unit/${encodeURIComponent(kode)}` }, { signal }), { enabled: open, staleTime: 0 });
+  const q = useSiakadQuery<RincianUnitPenyimpanan>(['penyimpanan', 'unit', kode], (s, signal) => s.request<RincianUnitPenyimpanan>({ method: 'GET', path: `/v1/berkas/penyimpanan/unit/${encodeURIComponent(kode)}` }, { signal }), { enabled: open, staleTime: 0 });
   const d = q.data;
   const [kolam, setKolam] = React.useState<number>(0);
   const [bolehLebih, setBolehLebih] = React.useState(false);
@@ -802,7 +802,7 @@ export function BagiKuotaUnit({ kode, open, onOpenChange, onSaved }: BagiKuotaUn
         pengguna: peng.map((p) => ({ username: p.username, kuota_byte: p.kuota_byte })),
       };
       if (d?.pustikom) Object.assign(body, { kolam_byte: kolam || null, boleh_lebih: bolehLebih });
-      const r = await siakad.request<RincianUnitPenyimpanan>({ method: 'POST', path: `/v1/penyimpanan/unit/${encodeURIComponent(kode)}/bagi`, body });
+      const r = await siakad.request<RincianUnitPenyimpanan>({ method: 'POST', path: `/v1/berkas/penyimpanan/unit/${encodeURIComponent(kode)}/bagi`, body });
       segarkanPenyimpanan();
       onSaved?.(r.data);
     } catch (e) {
@@ -1050,7 +1050,7 @@ export interface KuotaBerkasProps {
 export function KuotaBerkas({ kuota, unit, className }: KuotaBerkasProps) {
   const [saya, setSaya] = React.useState(false);
   const [panelUnit, setPanelUnit] = React.useState<string | null>(null);
-  const unitQ = useSiakadQuery<{ unit: RingkasUnitPenyimpanan[] }>(['penyimpanan', 'unit-kelola'], (s, signal) => s.request({ method: 'GET', path: '/v1/penyimpanan/unit' }, { signal }), { enabled: !!unit, staleTime: 60_000 });
+  const unitQ = useSiakadQuery<{ unit: RingkasUnitPenyimpanan[] }>(['penyimpanan', 'unit-kelola'], (s, signal) => s.request({ method: 'GET', path: '/v1/berkas/penyimpanan/unit' }, { signal }), { enabled: !!unit, staleTime: 60_000 });
   if (!kuota) return null;
   const kelolaUnit = unit ? unitQ.data?.unit.some((u) => u.kode === unit) : false;
   const kolam = kuota.kolam[kuota.kolam.length - 1];

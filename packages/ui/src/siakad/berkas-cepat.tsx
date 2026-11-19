@@ -6,7 +6,8 @@ import { Empty } from '../components/display';
 import { Dialog, Popover } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { formatBytes } from '../lib/format';
-import { unggahKeBerkas, type BerkasTerunggah, type InfoBerkas, type OpsiUnggahBerkas } from './berkas';
+import { periksaUnggahan, unggahKeBerkas, type BerkasTerunggah, type InfoBerkas, type OpsiUnggahBerkas } from './berkas';
+import { MeterKuota } from '../components/alokasi';
 import { DriveBerkas } from './drive-berkas';
 import { useDibagikanBerkas, type BagiBerkas } from './berkas-ruang';
 import { invalidateSiakad, useOptionalSiakad } from './provider';
@@ -59,17 +60,18 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
   const saya = useAkunSaya({ foto: false }).data?.akun?.username ?? null;
   const bagi = useDibagikanBerkas('masuk', buka && tab === 'dibagikan' && tersedia);
 
+  // Info dimuat ulang tiap panel dibuka supaya bar kuota (aturan penyimpanan) selalu terbaru.
   React.useEffect(() => {
     if (!siakad) return;
     let batal = false;
     siakad
-      .request<InfoBerkas>({ method: 'GET', path: '/v1/berkas/info' }, { maxRetries: 0 })
+      .request<InfoBerkas>({ method: 'GET', path: '/v1/berkas/info', query: unit ? { unit } : undefined }, { maxRetries: 0 })
       .then((r) => !batal && setInfo(r.data))
       .catch((e) => !batal && diam(e) && setTersedia(false));
     return () => {
       batal = true;
     };
-  }, [siakad]);
+  }, [siakad, buka, unit]);
 
   const muat = React.useCallback(async () => {
     if (!siakad) return;
@@ -96,8 +98,9 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
     setUnggahan((u) => [...u, ...daftarFile.map((f) => ({ nama: f.name, persen: 0 }))]);
     for (const f of daftarFile) {
       const ubah = (p: Partial<Unggahan>) => setUnggahan((u) => u.map((x) => (x.nama === f.name ? { ...x, ...p } : x)));
-      if (f.size > i.maks_byte) {
-        ubah({ galat: `Lebih dari ${formatBytes(i.maks_byte)}` });
+      const salah = periksaUnggahan(i, f);
+      if (salah) {
+        ubah({ galat: salah });
         continue;
       }
       try {
@@ -186,6 +189,15 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
             {info && <small>Maks. {formatBytes(info.maks_byte)} per berkas</small>}
           </span>
         </div>
+        {info?.kuota && (
+          <MeterKuota
+            className="u-berkas-cepat-kuota"
+            size="sm"
+            label={info.kuota.ruang === 'unit' ? 'Ruang bersama unit' : 'Penyimpanan saya'}
+            terpakai={info.kuota.terpakai_byte}
+            kuota={info.kuota.kuota_byte}
+          />
+        )}
         {unggahan.length > 0 && (
           <div className="u-berkas-cepat-unggah" aria-live="polite">
             {unggahan.map((u) => (
