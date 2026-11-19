@@ -266,3 +266,74 @@
     gap: 0.25rem;
   }
 }
+
+// ================================================================ Bilah simpan (BilahSimpan)
+// Bilah aksi tetap di bawah layar: "Ada perubahan yang belum disimpan" + Batalkan/Simpan. Selama tampil, tombol
+// mengambang (obrolan, tanya jawab) naik setinggi --u-fab-angkat supaya tidak menutupi tombol Simpan.
+:root:has([data-u-bilah-bawah]) {
+  --u-fab-angkat: var(--u-bilah-bawah-tinggi, 4.75rem);
+}
+.u-bilah-simpan {
+  position: sticky;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  width: fit-content;
+  max-width: 100%;
+  margin: 1rem 0 0 auto;
+  padding: 0.625rem 0.625rem 0.625rem 1rem;
+  background: var(--u-popover, var(--u-background));
+  color: var(--u-foreground);
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  box-shadow: var(--u-shadow-lg);
+  animation: u-bilah-simpan-masuk var(--u-duration-base) var(--u-ease-out);
+}
+.u-bilah-simpan-pesan {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 0.5rem;
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+  &::before {
+    content: '';
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--u-warning);
+    flex: none;
+  }
+}
+@media (max-width: 767px) {
+  // Di ponsel bilah memenuhi lebar dan dua baris (pesan, lalu tombol): tombol mengambang naik lebih tinggi.
+  :root:has([data-u-bilah-bawah]) {
+    --u-fab-angkat: var(--u-bilah-bawah-tinggi, 7rem);
+  }
+  .u-bilah-simpan {
+    width: auto;
+    margin-left: 0;
+    bottom: calc(var(--u-bilah-bawah-nav, 0px) + max(0.75rem, env(safe-area-inset-bottom)));
+    .u-bilah-simpan-pesan {
+      flex: 1 1 100%;
+      margin-right: 0;
+    }
+    > .u-button {
+      flex: 1 1 0;
+    }
+  }
+}
+@keyframes u-bilah-simpan-masuk {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .u-bilah-simpan {
+    animation: none;
+  }
+}

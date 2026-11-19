@@ -90,12 +90,21 @@ export interface NavbarPortalProps extends Omit<NavbarProps, 'menus' | 'brand'> 
   ekstra?: (m: MenuPortal) => Partial<NavbarMenu>;
   /** Menu tambahan di ujung (mis. tautan aplikasi) atau saat API belum menjawab. */
   menuTambahan?: NavbarMenu[];
+  /**
+   * Menu bawaan bila situs belum punya menu di lokasi ini (API menjawab kosong atau galat), supaya navbar dan lembar
+   * menu ponsel tidak kosong. Tidak dipakai selama menu masih dimuat.
+   */
+  menuCadangan?: NavbarMenu[];
 }
 
 /** Navbar portal yang menunya diambil dari pengaturan situs (`/v1/portal/situs/{kode}/menu`), lengkap dengan mega menu. */
-export function NavbarPortal({ situs, lokasi = 'utama', brand, app, href, bahasa, ekstra, menuTambahan = [], variant = 'portal', ...rest }: NavbarPortalProps) {
+export function NavbarPortal({ situs, lokasi = 'utama', brand, app, href, bahasa, ekstra, menuTambahan = [], menuCadangan, variant = 'portal', ...rest }: NavbarPortalProps) {
   const q = useSiakadQuery<Record<string, MenuPortal[]>>(['portal-menu', situs, lokasi], (s, signal) => s.portal.getSitusByKodeMenu(situs, { lokasi }, { signal }) as never, { staleTime: 5 * 60_000 });
-  const menus = React.useMemo(() => [...keNavbarMenu(q.data?.[lokasi] ?? [], { href, bahasa, ekstra }), ...menuTambahan], [q.data, lokasi, href, bahasa, ekstra, menuTambahan]);
+  const menus = React.useMemo(() => {
+    const dariSitus = keNavbarMenu(q.data?.[lokasi] ?? [], { href, bahasa, ekstra });
+    const kosong = !dariSitus.length && (q.error != null || (!q.loading && q.data != null));
+    return [...(kosong && menuCadangan ? menuCadangan : dariSitus), ...menuTambahan];
+  }, [q.data, q.error, q.loading, lokasi, href, bahasa, ekstra, menuTambahan, menuCadangan]);
   return <Navbar brand={brand ?? <LogoSitus situs={situs} app={app} />} menus={menus} variant={variant} {...rest} />;
 }
 

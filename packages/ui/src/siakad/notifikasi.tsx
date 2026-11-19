@@ -45,6 +45,7 @@ import { Empty } from '../components/display';
 import { Dialog, Popover, Tooltip } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { useOptionalSiakad } from './provider';
+import { useSinyalRealtime } from './realtime';
 
 /**
  * Notifikasi terpusat SIAKAD (`/v1/notif`, docs/NOTIFIKASI.md di siakad_unipo): jumlah belum dibaca per label, kotak
@@ -227,6 +228,17 @@ export function useNotifikasi({ interval = 60_000, username, jumlah = 15, enable
     void ringkas();
     if (daftar) void muatDaftar();
   });
+
+  // Integrasi WebSocket aktif (Pustikom » Integrasi » Realtime): notifikasi baru/dibaca/dibersihkan di perangkat atau
+  // aplikasi lain langsung tampil. Tanpa integrasi, hanya polling `interval` seperti biasa.
+  useSinyalRealtime(
+    'notif',
+    () => {
+      void ringkas();
+      if (daftar) void muatDaftar();
+    },
+    aktif && !username,
+  );
 
   const kirim = React.useCallback(
     async <T,>(path: string, body: Record<string, unknown>): Promise<T | undefined> => {

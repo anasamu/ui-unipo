@@ -34,14 +34,21 @@ import {
  */
 
 const KATA_KECIL = new Set(['dan', 'atau', 'dari', 'di', 'ke', 'untuk', 'serta']);
-/** "FAKULTAS TEKNIK DAN PERENCANAAN" -> "Fakultas Teknik dan Perencanaan" (nama referensi yang ditulis kapital semua). */
+/** Singkatan yang tetap kapital (S1, PG, TI: kata ≤ 3 huruf dianggap singkatan kecuali kata sambung). */
+const SINGKATAN = new Set(['UNIPO', 'FISIP', 'FKIP', 'MIPA', 'PAUD', 'PGSD', 'PJOK', 'PPKN', 'SPMI', 'LPPM', 'LP2M', 'BAAK', 'BAUK', 'UPT', 'KKN']);
+const judulKata = (w: string, awal: boolean) =>
+  !awal && KATA_KECIL.has(w.toLowerCase()) ? w.toLowerCase() : SINGKATAN.has(w) || (w.length <= 3 && !KATA_KECIL.has(w.toLowerCase()) && w !== 'DAN') ? w : w.charAt(0) + w.slice(1).toLowerCase();
+/**
+ * Nama unit referensi yang ditulis kapital semua dirapikan: "FAKULTAS TEKNIK DAN PERENCANAAN" -> "Fakultas Teknik dan
+ * Perencanaan". Nama campuran juga: deret dua kata kapital atau lebih dirapikan ("Program Studi ILMU PEMERINTAHAN" ->
+ * "Program Studi Ilmu Pemerintahan"), sedangkan singkatan tunggal (FISIP, SPMI, S1) dibiarkan.
+ */
 export function rapikanNamaUnit(nama: string): string {
-  if (nama !== nama.toUpperCase()) return nama;
-  return nama
-    .toLowerCase()
-    .split(' ')
-    .map((w, i) => (i > 0 && KATA_KECIL.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)))
-    .join(' ');
+  if (!nama) return nama;
+  if (nama === nama.toUpperCase() && /[A-Z]{2}/.test(nama)) return nama.split(' ').map((w, i) => judulKata(w, i === 0)).join(' ');
+  return nama.replace(/\b[A-Z]{2,}(?:\s+[A-Z]{2,})+\b/g, (deret, pos: number) =>
+    deret.split(/\s+/).map((w, i) => judulKata(w, i === 0 && (pos === 0 || /[·:(\-–]\s*$/.test(nama.slice(0, pos))))).join(' '),
+  );
 }
 
 /** Lingkup aturan: pemilik (universitas atau fakultas) dan fakultas tempat berlakunya. */

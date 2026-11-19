@@ -2,7 +2,7 @@
 import * as React from 'react';
 import type { Siakad } from 'unipo-siakad-sdk';
 import { Dropzone, FileList, type UploadedFile } from '../components/calendar';
-import { pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 
 /** Data berkas dari /v1/berkas (subset yang dipakai komponen). */
 export interface BerkasTerunggah {
@@ -24,6 +24,54 @@ export interface InfoBerkas {
   ukuran_potongan: number;
   ekstensi: string[];
   penyimpanan: { driver: string; kode: string; nama: string };
+  /**
+   * Kuota efektif pemanggil menurut aturan penyimpanan Pustikom (SIAKAD dengan /v1/penyimpanan): ruang pribadi atau
+   * ruang bersama unit (`?unit=`). null/tidak ada = server belum memasang aturan penyimpanan.
+   */
+  kuota?: {
+    ruang: 'pribadi' | 'unit';
+    kuota_byte: number | null;
+    terpakai_byte: number;
+    jumlah_berkas: number;
+    sisa_byte: number | null;
+    sisa_kolam_byte: number | null;
+    /** Ruang yang masih boleh dipakai (terkecil dari sisa kuota dan sisa kolam unit); null = tanpa batas. */
+    boleh_unggah_byte: number | null;
+    maks_jumlah: number | null;
+    kolam: Array<{ kode: string; nama: string; kolam_byte: number }>;
+    sumber?: { lingkup: string; kunci: string; label: string } | null;
+  } | null;
+}
+
+/**
+ * Periksa file terhadap batas unggah sebelum dikirim (jenis, ukuran per berkas, sisa kuota). Server tetap memeriksa
+ * ulang; ini supaya pengguna langsung tahu alasannya. `terpakaiAntrean` = ukuran file lain dalam antrean yang sama.
+ */
+export function periksaUnggahan(info: InfoBerkas, file: { name: string; size: number }, terpakaiAntrean = 0): string | null {
+  const ext = file.name.includes('.') ? (file.name.split('.').pop() ?? '').toLowerCase() : '';
+  const e = ext === 'jpeg' ? 'jpg' : ext;
+  if (info.ekstensi.length && !info.ekstensi.includes(e) && !(e === 'jpg' && info.ekstensi.includes('jpeg'))) return `Jenis .${ext || '(tanpa ekstensi)'} tidak diizinkan. Jenis yang boleh: ${info.ekstensi.join(', ')}.`;
+  if (file.size > info.maks_byte) return `Ukuran ${fmtByte(file.size)} melebihi batas ${fmtByte(info.maks_byte)} per berkas.`;
+  const sisa = info.kuota?.boleh_unggah_byte;
+  if (sisa !== null && sisa !== undefined && file.size + terpakaiAntrean > sisa) {
+    const k = info.kuota!;
+    return k.sisa_kolam_byte !== null && k.sisa_kolam_byte === sisa && k.kolam.length
+      ? `Kuota penyimpanan unit ${k.kolam[k.kolam.length - 1]!.nama} tidak cukup (sisa ${fmtByte(sisa)}). Hubungi Pustikom atau hapus berkas yang tidak diperlukan.`
+      : `Kuota penyimpanan tidak cukup (sisa ${fmtByte(sisa)}). Hapus berkas yang tidak diperlukan atau minta tambah kuota.`;
+  }
+  return null;
+}
+
+function fmtByte(n: number): string {
+  if (n < 1024) return `${n} B`;
+  const u = ['KB', 'MB', 'GB', 'TB'];
+  let v = n / 1024;
+  let i = 0;
+  while (v >= 1024 && i < u.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  return `${v.toLocaleString('id-ID', { maximumFractionDigits: 1 })} ${u[i]}`;
 }
 
 export interface OpsiUnggahBerkas {
@@ -57,6 +105,8 @@ export async function unggahKeBerkas(
   signal?: AbortSignal,
 ): Promise<BerkasTerunggah> {
   const { paralel = 3, ...atribut } = opsi;
+  const salah = periksaUnggahan(info, file);
+  if (salah) throw new Error(salah);
   const attr = Object.fromEntries(
     Object.entries(atribut)
       .filter(([, v]) => v !== undefined && v !== '')
@@ -96,21 +146,26 @@ export async function unggahKeBerkas(
   return hasil;
 }
 
-/** Batas unggah server (GET /v1/berkas/info), di-cache 10 menit. */
-export function useInfoBerkas() {
-  return useSiakadQuery<InfoBerkas>(['berkas-info'], (s, signal) => s.request<InfoBerkas>({ method: 'GET', path: '/v1/berkas/info' }, { signal }), { staleTime: 600_000 });
+/**
+ * Batas unggah server dan kebijakan penyimpanan efektif (GET /v1/berkas/info), di-cache 1 menit. `unit` = ruang
+ * bersama unit (batas dan kuota unit itu); kosong = ruang pribadi.
+ */
+export function useInfoBerkas(unit?: string) {
+  return useSiakadQuery<InfoBerkas>(['berkas-info', unit ?? ''], (s, signal) => s.request<InfoBerkas>({ method: 'GET', path: '/v1/berkas/info', query: unit ? { unit } : undefined }, { signal }), { staleTime: 60_000 });
 }
 
 /** Fungsi unggah siap pakai: `const unggah = useUnggahBerkas({ kategori: 'dokumen' }); const b = await unggah(file, setPersen);` */
 export function useUnggahBerkas(opsi: OpsiUnggahBerkas = {}) {
   const siakad = useSiakad();
-  const { data: info } = useInfoBerkas();
+  const { data: info } = useInfoBerkas(opsi.unit);
   const ref = React.useRef(opsi);
   ref.current = opsi;
   return React.useCallback(
     async (file: File, onProgress?: (persen: number) => void, signal?: AbortSignal) => {
-      const i = info ?? (await siakad.request<InfoBerkas>({ method: 'GET', path: '/v1/berkas/info' })).data;
-      return unggahKeBerkas(siakad, i, file, ref.current, onProgress, signal);
+      const i = info ?? (await siakad.request<InfoBerkas>({ method: 'GET', path: '/v1/berkas/info', query: ref.current.unit ? { unit: ref.current.unit } : undefined })).data;
+      const hasil = await unggahKeBerkas(siakad, i, file, ref.current, onProgress, signal);
+      invalidateSiakad('berkas-info');
+      return hasil;
     },
     [siakad, info],
   );

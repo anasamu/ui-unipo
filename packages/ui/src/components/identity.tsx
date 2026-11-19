@@ -125,6 +125,7 @@ export interface LogoGambarProps extends Omit<React.ComponentProps<'span'>, 'tit
  */
 export function LogoGambar({ src, size = 32, shape = 'square', tone = 'brand', color, fit, title, onGagal, className, style, ...props }: LogoGambarProps) {
   const cara = fit ?? (color || tone === 'inverse' ? 'contain' : 'cover');
+  const gambar = useSrcLogo(src) ?? src;
   return (
     <span
       className={cn('u-logo-gambar', className)}
@@ -136,7 +137,101 @@ export function LogoGambar({ src, size = 32, shape = 'square', tone = 'brand', c
       style={{ width: size, height: size, ...(color ? { ['--u-logo-pelat' as string]: color } : {}), ...style }}
       {...props}
     >
-      <img src={src} alt="" width={size} height={size} draggable={false} onError={onGagal} />
+      <img src={gambar} alt="" width={size} height={size} draggable={false} onError={onGagal} />
+    </span>
+  );
+}
+
+// ================================================================ Logo gambar yang presisi
+const svgDiperbaiki = new Map<string, Promise<string>>();
+
+/** SVG tanpa viewBox tidak ikut mengecil di <img> (terpotong): tambahkan viewBox dari width/height aslinya. */
+async function svgBerviewBox(src: string): Promise<string> {
+  const r = await fetch(src, { credentials: 'omit' });
+  if (!r.ok) return src;
+  const teks = await r.text();
+  const tag = teks.match(/<svg\b[^>]*>/i)?.[0];
+  if (!tag || /\bviewBox\s*=/i.test(tag)) return src;
+  const ukuran = (n: string) => parseFloat(tag.match(new RegExp(`\\s${n}\\s*=\\s*["']?\\s*([\\d.]+)`, 'i'))?.[1] ?? '');
+  const w = ukuran('width');
+  const h = ukuran('height');
+  if (!(w > 0 && h > 0)) return src;
+  const baru = tag.replace(/<svg\b/i, `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet"`);
+  return URL.createObjectURL(new Blob([teks.replace(tag, baru)], { type: 'image/svg+xml' }));
+}
+
+/**
+ * Alamat logo yang aman ditampilkan mengecil: SVG tanpa viewBox diperbaiki di peramban (sekali per alamat); gambar
+ * lain dan SVG yang tidak bisa diambil (CORS) dikembalikan apa adanya.
+ */
+export function useSrcLogo(src?: string | null): string | undefined {
+  const [hasil, setHasil] = React.useState<string | undefined>(src ?? undefined);
+  React.useEffect(() => {
+    setHasil(src ?? undefined);
+    if (!src || !/^(https?:)?\/\/|^\//.test(src) || !/\.svg(?:[?#]|$)/i.test(src) || typeof fetch === 'undefined') return;
+    let batal = false;
+    let janji = svgDiperbaiki.get(src);
+    if (!janji) {
+      janji = svgBerviewBox(src).catch(() => src);
+      svgDiperbaiki.set(src, janji);
+    }
+    void janji.then((u) => !batal && setHasil(u));
+    return () => {
+      batal = true;
+    };
+  }, [src]);
+  return hasil;
+}
+
+export interface KotakLogoProps extends Omit<React.ComponentProps<'span'>, 'children'> {
+  /** Alamat logo (PNG, SVG, WebP, JPG). Kosong = `cadangan`. */
+  src?: string | null;
+  alt?: string;
+  /** sm 2.5rem, md 3rem, lg 5.5rem, xl 7rem, atau piksel. */
+  ukuran?: 'sm' | 'md' | 'lg' | 'xl' | number;
+  /** Latar papan catur untuk pratinjau unggahan (memperlihatkan bagian transparan). Kotak tampilan biasa tanpa papan catur. */
+  papanCatur?: boolean;
+  bentuk?: 'persegi' | 'lingkaran';
+  /** Isi bila belum ada logo: monogram, ikon, dsb. */
+  cadangan?: React.ReactNode;
+  /** Warna latar kotak (mis. warna utama situs untuk monogram). */
+  latar?: string;
+  onGagal?: () => void;
+}
+
+/**
+ * Kotak logo unggahan yang presisi: rasio 1:1 tetap, jarak dalam 10% dari sisi, gambar utuh (`object-fit: contain`)
+ * dan tepat di tengah, apa pun bentuknya (persegi, lebar, tinggi, SVG tanpa viewBox). Dipakai di kepala profil situs,
+ * daftar situs, dan pratinjau unggah logo (`papanCatur`).
+ */
+export function KotakLogo({ src, alt = '', ukuran = 'md', papanCatur, bentuk = 'persegi', cadangan, latar, onGagal, className, style, ...props }: KotakLogoProps) {
+  const gambar = useSrcLogo(src);
+  const [gagal, setGagal] = React.useState(false);
+  React.useEffect(() => setGagal(false), [src]);
+  const ada = Boolean(gambar) && !gagal;
+  return (
+    <span
+      className={cn('u-kotak-logo', className)}
+      data-ukuran={typeof ukuran === 'string' ? ukuran : undefined}
+      data-papan={papanCatur && ada ? '' : undefined}
+      data-bentuk={bentuk}
+      data-kosong={ada ? undefined : ''}
+      style={{ ...(typeof ukuran === 'number' ? { ['--u-kl-ukuran' as string]: `${ukuran}px` } : {}), ...(latar && !ada ? { background: latar, color: '#fff' } : {}), ...style }}
+      {...props}
+    >
+      {ada ? (
+        <img
+          src={gambar}
+          alt={alt}
+          draggable={false}
+          onError={() => {
+            setGagal(true);
+            onGagal?.();
+          }}
+        />
+      ) : (
+        cadangan
+      )}
     </span>
   );
 }

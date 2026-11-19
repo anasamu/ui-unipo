@@ -72,6 +72,9 @@
   position: relative;
   display: inline-grid;
   place-items: center;
+  // Satu sel setinggi kotak: tanpa ini persen tinggi gambar dihitung dari baris "auto" sehingga logo tinggi
+  // (mis. 80x200) melebar ke bawah lalu terpotong.
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   flex: none;
   overflow: hidden;
   background: var(--u-logo-pelat);
@@ -104,6 +107,11 @@
     img {
       object-fit: contain;
     }
+    // Logo apa adanya (tanpa pelat): penuhi kotak tanpa jarak 78% milik pelat, tetap utuh dan di tengah.
+    &[data-fit='contain'] img {
+      width: 100%;
+      height: 100%;
+    }
   }
   &[data-tone='mono'] img {
     filter: grayscale(1) contrast(1.1);
@@ -134,4 +142,73 @@
 }
 .u-app-logo[data-memuat] > svg {
   opacity: 0.85;
+}
+
+// ================================================================ Kotak logo (KotakLogo)
+// Rasio 1:1 tetap, jarak dalam 10% sisi, gambar utuh dan tepat di tengah. Latar putih di kedua mode supaya logo
+// berwarna gelap/transparan tetap terbaca; papan catur hanya untuk pratinjau unggahan.
+.u-kotak-logo {
+  --u-kl-ukuran: 3rem;
+  box-sizing: border-box;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  flex: none;
+  width: var(--u-kl-ukuran);
+  height: var(--u-kl-ukuran);
+  aspect-ratio: 1;
+  padding: calc(var(--u-kl-ukuran) * 0.1);
+  border: 1px solid var(--u-border);
+  border-radius: calc(var(--u-kl-ukuran) * 0.2);
+  background: var(--u-kl-latar, #fff);
+  color: var(--u-muted-foreground);
+  font-weight: var(--u-weight-semibold, 600);
+  font-size: calc(var(--u-kl-ukuran) * 0.3);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  > img {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    object-fit: contain;
+    object-position: center;
+  }
+  > svg {
+    width: 40%;
+    height: 40%;
+  }
+  &[data-ukuran='sm'] {
+    --u-kl-ukuran: 2.5rem;
+  }
+  &[data-ukuran='lg'] {
+    --u-kl-ukuran: 5.5rem;
+  }
+  &[data-ukuran='xl'] {
+    --u-kl-ukuran: 7rem;
+  }
+  &[data-kosong] {
+    background: var(--u-muted);
+  }
+  &[data-bentuk='lingkaran'] {
+    border-radius: 50%;
+    padding: calc(var(--u-kl-ukuran) * 0.16);
+  }
+  &[data-papan] {
+    border-style: dashed;
+    background-color: #fff;
+    background-image: linear-gradient(45deg, #eef0f3 25%, transparent 25%), linear-gradient(-45deg, #eef0f3 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #eef0f3 75%), linear-gradient(-45deg, transparent 75%, #eef0f3 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  }
+}
+:root[data-theme='dark'] .u-kotak-logo,
+.dark .u-kotak-logo {
+  --u-kl-latar: #f8fafc;
+  border-color: transparent;
 }

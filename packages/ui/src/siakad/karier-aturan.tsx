@@ -533,7 +533,7 @@ function PanelUbahAturanKarier({ aturan: a, onOpenChange }: { aturan: AturanKari
               <Field label="Berlaku mulai tanggal" optional description="Usulan yang diajukan sejak tanggal ini memakai versi ini. Kosong = sejak diterbitkan.">
                 <IsianTanggal value={id.berlaku_tanggal} onValueChange={(v) => setId({ ...id, berlaku_tanggal: v ?? '' })} />
               </Field>
-              <Field label="Catatan perubahan" optional>
+              <Field label="Alasan perubahan" required description="Wajib (minimal 10 karakter) sebelum versi diterbitkan; tampil di riwayat dan pemeriksaan pedoman.">
                 <Textarea rows={2} value={id.catatan_perubahan} onChange={(e) => setId({ ...id, catatan_perubahan: e.target.value })} />
               </Field>
             </div>

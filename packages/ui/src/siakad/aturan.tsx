@@ -1865,7 +1865,10 @@ function bodyAturan(x: IsiAturan, katalog: KatalogAturan | undefined, ubah: bool
   if (!ubah) body.titik = x.titik;
   body.sifat = x.sifat;
   body.pengecualian_oleh = x.sifat === 'boleh_pengecualian' && x.penyetujuPengecualian.length ? x.penyetujuPengecualian.map((kode) => ({ jenis: 'peran', kode })) : null;
-  if (ubah && x.catatan.trim()) body.catatan = x.catatan.trim();
+  if (ubah && x.catatan.trim()) {
+    body.catatan = x.catatan.trim();
+    body.alasan = x.catatan.trim();
+  }
   return body;
 }
 
@@ -2893,7 +2896,13 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
         <Textarea id="aturan-pesan" rows={2} value={isi.pesan} onChange={(e) => set('pesan', e.target.value)} />
       </Field>
       {ubah && aturan && (
-        <Field label="Catatan perubahan" optional description="Masuk riwayat aturan.">
+        <Field
+          label={aturan.status === 'aktif' ? 'Alasan perubahan' : 'Catatan perubahan'}
+          required={aturan.status === 'aktif'}
+          optional={aturan.status !== 'aktif'}
+          description={aturan.status === 'aktif' ? 'Wajib (minimal 10 karakter): mengapa aturan aktif diubah. Masuk riwayat, usulan, dan pemeriksaan pedoman.' : 'Masuk riwayat aturan.'}
+          error={galat.catatan || undefined}
+        >
           <Input id="aturan-catatan" value={isi.catatan} maxLength={500} onChange={(e) => set('catatan', e.target.value)} />
         </Field>
       )}

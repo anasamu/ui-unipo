@@ -37,7 +37,10 @@
 @use 'components/aturan-versi';
 @use 'components/pedoman';
 @use 'components/aturan-karier';
+@use 'components/dupak';
 @use 'components/kurikulum-aturan';
+@use 'components/kurikulum-pengajuan';
+@use 'components/akreditasi-kelengkapan';
 @use 'components/formulir';
 @use 'components/aturan';
 @use 'components/aturan-fakultas';
@@ -71,6 +74,7 @@
 @use 'components/ai';
 @use 'components/akun';
 @use 'components/manajer-berkas';
+@use 'components/penyimpanan';
 @use 'components/profil-kampus';
 @use 'components/tema-aplikasi';
 @use 'components/kode-qr';

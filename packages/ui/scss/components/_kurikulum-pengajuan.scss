@@ -1,0 +1,40 @@
+// Pengajuan kurikulum dari Fakultas & validasi BAAK (siakad/kurikulum-pengajuan.tsx). Tata letak memakai u-bkd-*/u-kur-*.
+
+.u-kp-cek {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  li {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    font-size: var(--u-text-sm);
+    line-height: 1.45;
+  }
+  small {
+    color: var(--u-muted-foreground);
+  }
+}
+.u-kp-ikon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.15rem;
+  color: var(--u-muted-foreground);
+  &[data-t='lolos'] {
+    color: var(--u-success);
+  }
+  &[data-t='peringatan'] {
+    color: var(--u-warning);
+  }
+  &[data-t='galat'] {
+    color: var(--u-danger);
+  }
+}
+.u-kp-isian {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: var(--u-text-sm);
+}
