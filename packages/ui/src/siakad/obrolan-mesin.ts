@@ -1027,11 +1027,24 @@ export class MesinObrolan {
       while (!ac.signal.aborted) {
         const siap = rt.siap;
         const hit = rt.hitungan('obrolan');
+        // Long-poll yang sedang ditahan dibatalkan begitu WebSocket tersambung, lalu putaran berikutnya memakai sinyal.
+        const satu = new AbortController();
+        const batalSatu = () => satu.abort();
+        ac.signal.addEventListener('abort', batalSatu, { once: true });
+        let alih = false;
+        const lepasStatus = !siap && sejak !== null && tunggu > 0
+          ? rt.langgan(() => {
+              if (rt.siap) {
+                alih = true;
+                satu.abort();
+              }
+            })
+          : null;
         try {
           const t = siap ? 0 : tunggu;
           const r: { sejak: number; peristiwa: Array<{ id: number; jenis: string; data: Record<string, unknown> }> } = await this.req('GET', '/peristiwa', {
             query: sejak === null ? { perangkat: this.kunci?.id } : { sejak, tunggu: t, perangkat: this.kunci?.id },
-            signal: ac.signal,
+            signal: satu.signal,
             timeout: (t + 15) * 1000,
           });
           if (!this.s.terhubung) this.set({ terhubung: true });
@@ -1045,9 +1058,13 @@ export class MesinObrolan {
           } else if (tunggu === 0 || awal) await tidur(tunggu === 0 ? 4000 : 50, ac.signal);
         } catch (e) {
           if (ac.signal.aborted) return;
+          if (alih) continue;
           this.set({ terhubung: false });
           await tidur(jeda, ac.signal);
           jeda = Math.min(30_000, jeda * 2);
+        } finally {
+          lepasStatus?.();
+          ac.signal.removeEventListener('abort', batalSatu);
         }
       }
     })();

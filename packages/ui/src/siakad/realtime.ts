@@ -216,7 +216,19 @@ export class KlienRealtime {
       }
       this.ws = ws;
       let hasil: 'putus' | 'tolak' = 'putus';
+      // Selama tersambung, konfigurasi diperiksa ulang tiap 5 menit: penyedia dinonaktifkan/diganti di Pustikom =
+      // koneksi ditutup lalu putaran membaca konfigurasi baru (mis. kembali ke long-poll).
+      const periksa = setInterval(() => {
+        void this.siakad
+          .request<KonfigurasiRealtime>({ method: 'GET', path: '/v1/notif/realtime' }, { signal, maxRetries: 0, timeout: 15_000 })
+          .then((r) => {
+            const b = r.data;
+            if (!b?.aktif || b.kanal !== k.kanal || b.key !== k.key || b.host !== k.host || b.port !== k.port) ws.close();
+          })
+          .catch(() => {});
+      }, CEK_ULANG_MATI);
       const akhiri = () => {
+        clearInterval(periksa);
         signal.removeEventListener('abort', akhiri);
         if (this.ws === ws) this.tutup();
         selesai(hasil);
