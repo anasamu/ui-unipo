@@ -54,7 +54,8 @@ import { Select } from '../components/select';
 import { ConfirmDialog, Dialog, Menu, Tooltip, type MenuEntry } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { formatBytes, formatDate } from '../lib/format';
-import { unggahKeBerkas, useInfoBerkas, useUrlBerkas, type BerkasTerunggah, type InfoBerkas } from './berkas';
+import { periksaUnggahan, unggahKeBerkas, useInfoBerkas, useUrlBerkas, type BerkasTerunggah, type InfoBerkas } from './berkas';
+import { KuotaBerkas } from './penyimpanan';
 import {
   BERKAS_BARU,
   DialogBagikanBerkas,
@@ -970,7 +971,7 @@ export function ManajerBerkas({
 }: ManajerBerkasProps) {
   const siakad = useSiakad();
   const aksi = useAksiBerkas(modul, unit);
-  const { data: info } = useInfoBerkas();
+  const { data: info } = useInfoBerkas(bagi ? undefined : unit);
   const ruangOpsi: RuangBerkasOpsi = React.useMemo(() => ({ modul, unit, bagi }), [modul, unit, bagi]);
   const [periode, setPeriode] = React.useState<string | null>(periodeAwal);
   const pohonQ = useFolderBerkas(modul, { unit, bagi, periode });
@@ -1132,6 +1133,7 @@ export function ManajerBerkas({
           .then(() => {
             ubahItem(berikut.kunci, { status: 'selesai', persen: 100 });
             aksi.segarkan();
+            invalidateSiakad('berkas-info'); // perbarui bar kuota
           })
           .catch((e) => ubahItem(berikut.kunci, ctrl.signal.aborted ? { status: 'batal' } : { status: 'gagal', galat: pesanGalat(e) }))
           .finally(() => {
@@ -1156,18 +1158,24 @@ export function ManajerBerkas({
   const tambahUnggah = React.useCallback(
     async (file: Array<{ file: File; sub: string | null }>, tujuan: string | null) => {
       if (!bolehUnggah || !file.length) return;
-      const infoServer = info ?? (await siakad.request<InfoBerkas>({ method: 'GET', path: '/v1/berkas/info' })).data;
+      const infoServer = info ?? (await siakad.request<InfoBerkas>({ method: 'GET', path: '/v1/berkas/info', query: unit ? { unit } : undefined })).data;
+      // Kuota: jumlahkan dengan antrean yang belum selesai supaya satu kali seret banyak file tidak melewati sisa kuota.
+      let antreanByte = antreanRef.current.filter((x) => x.status === 'antre' || x.status === 'unggah').reduce((a, x) => a + x.file.size, 0);
       const baru: ItemUnggah[] = file.map(({ file: f, sub }) => {
         const ext = f.name.split('.').pop()?.toLowerCase() ?? '';
         const path = sub ? gabung(tujuan, sub) : tujuan;
+        const kuota = periksaUnggahan({ ...infoServer, ekstensi: [] }, f, antreanByte);
         const salah =
           ekstensiBoleh.length && !ekstensiBoleh.includes(ext)
             ? `Jenis .${ext} tidak diizinkan.`
             : f.size > infoServer.maks_byte
               ? `Melebihi batas ${formatBytes(infoServer.maks_byte)}.`
-              : path && path.length > MAKS_PATH_FOLDER
-                ? 'Path folder terlalu panjang.'
-                : null;
+              : kuota
+                ? kuota
+                : path && path.length > MAKS_PATH_FOLDER
+                  ? 'Path folder terlalu panjang.'
+                  : null;
+        if (!salah) antreanByte += f.size;
         return { kunci: `u${++nomorUnggah}`, file: f, folder: path, persen: 0, status: salah ? 'gagal' : 'antre', galat: salah ?? undefined };
       });
       antreanRef.current = [...antreanRef.current, ...baru];
@@ -1776,7 +1784,9 @@ export function ManajerBerkas({
             pohonEl
           )}
         </div>
-        {ringkas && (
+        {info?.kuota && !bagi ? (
+          <KuotaBerkas kuota={info.kuota} unit={unit} />
+        ) : ringkas && (
           <div className="u-mb-penyimpanan">
             <HardDrive aria-hidden />
             <span>
