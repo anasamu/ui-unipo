@@ -541,6 +541,9 @@
 .u-kw-status[data-status='BATAL'] .u-kw-cap {
   color: #b91c1c;
 }
+.u-kw-status[data-status='DIMUKA'] .u-kw-cap {
+  color: #1d4ed8;
+}
 .u-kw-qr {
   grid-area: qr;
   display: grid;
