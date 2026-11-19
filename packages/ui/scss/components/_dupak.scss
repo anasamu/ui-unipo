@@ -1,0 +1,94 @@
+// DUPAK dosen dan SKP tendik berversi (siakad/dupak.tsx, siakad/skp.tsx): sel tabel, editor butir rubrik, isian butir.
+.u-dupak-sel {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+  > small {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+  }
+}
+.u-dupak-peringatan {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+  color: var(--u-warning-text, var(--u-warning)) !important;
+  svg {
+    flex: none;
+    width: 0.875rem;
+    height: 0.875rem;
+    margin-top: 0.0625rem;
+  }
+}
+.u-dupak-coret {
+  color: var(--u-muted-foreground);
+  text-decoration: line-through;
+}
+.u-dupak-bukti {
+  display: grid;
+  gap: 0.125rem;
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--u-primary);
+    font-size: var(--u-text-xs);
+    white-space: nowrap;
+  }
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+}
+.u-dupak-daftar {
+  margin: 0;
+  padding-left: 1.125rem;
+  display: grid;
+  gap: 0.125rem;
+}
+.u-dupak-isian-ak {
+  width: 6rem;
+  text-align: end;
+}
+.u-dupak-isian {
+  border-color: color-mix(in oklab, var(--u-primary) 35%, var(--u-border));
+}
+.u-dupak-sub {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 1px dashed var(--u-border);
+  border-radius: var(--u-radius-lg);
+}
+.u-dupak-sub-kepala {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  > .u-field {
+    flex: 1 1 16rem;
+  }
+}
+.u-dupak-butir > legend {
+  justify-content: space-between;
+}
+.u-dupak-butir-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  > .u-dupak-lebar {
+    grid-column: span 3;
+  }
+  @media (max-width: 48rem) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    > .u-dupak-lebar {
+      grid-column: 1 / -1;
+    }
+  }
+}
+.u-skp-nilai {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7rem;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}

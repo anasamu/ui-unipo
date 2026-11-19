@@ -99,6 +99,8 @@ export * from './pemutakhiran';
 export * from './pemeriksa';
 export * from './aturan-versi';
 export * from './karier-aturan';
+export * from './dupak';
+export * from './skp';
 export * from './aturan-verifikasi';
 export * from './bkd';
 export * from './bkd-alur';
