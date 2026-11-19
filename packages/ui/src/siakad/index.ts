@@ -108,3 +108,4 @@ export * from './kurikulum-aturan';
 export * from './pedoman';
 export * from './pedoman-ruang';
 export * from './pedoman-kelola';
+export * from './beasiswa';
