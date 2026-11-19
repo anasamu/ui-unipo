@@ -432,7 +432,7 @@ export interface PengaturanDokumen {
   ukuran_font?: number;
   warna_utama?: string;
   kop?: {
-    tampil?: boolean; perataan?: 'tengah' | 'kiri'; logo?: 'kampus' | 'berkas' | 'tanpa';
+    tampil?: boolean; perataan?: 'tengah' | 'kiri'; logo?: 'kampus' | 'fakultas' | 'berkas' | 'tanpa';
     logo_berkas_id?: string | null; logo_kanan_berkas_id?: string | null; gambar_berkas_id?: string | null;
     baris?: Array<{ teks: string; ukuran: number; tebal?: boolean; warna?: string }>;
     alamat?: string; kontak?: string; garis?: 'tanpa' | 'tunggal' | 'ganda' | 'tebal_tipis'; warna_garis?: string; tinggi_logo?: number; semua_halaman?: boolean;
@@ -623,7 +623,7 @@ export function EditorTemplatDokumen({ bagian, jenis: jenisAwal = 'umum', classN
               <Field label="Kontak"><Input value={k.kontak ?? ''} onChange={(e) => set({ kop: { kontak: e.target.value } })} /></Field>
               <div className="u-qr-dua">
                 <Field label="Logo">
-                  <Select options={[{ value: 'kampus', label: 'Logo kampus' }, { value: 'berkas', label: 'Berkas' }, { value: 'tanpa', label: 'Tanpa logo' }]} value={k.logo ?? 'kampus'} onValueChange={(v) => v && set({ kop: { logo: v as 'kampus' } })} />
+                  <Select options={[{ value: 'kampus', label: 'Logo kampus' }, { value: 'fakultas', label: 'Logo fakultas penerbit' }, { value: 'berkas', label: 'Berkas' }, { value: 'tanpa', label: 'Tanpa logo' }]} value={k.logo ?? 'kampus'} onValueChange={(v) => v && set({ kop: { logo: v as 'kampus' } })} />
                 </Field>
                 <Field label="Garis bawah kop">
                   <Select options={[{ value: 'tebal_tipis', label: 'Tebal-tipis' }, { value: 'ganda', label: 'Ganda' }, { value: 'tunggal', label: 'Tunggal' }, { value: 'tanpa', label: 'Tanpa' }]} value={k.garis ?? 'tebal_tipis'} onValueChange={(v) => v && set({ kop: { garis: v as 'tunggal' } })} />

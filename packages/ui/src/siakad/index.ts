@@ -114,3 +114,4 @@ export * from './pedoman';
 export * from './pedoman-ruang';
 export * from './pedoman-kelola';
 export * from './akreditasi-kelengkapan';
+export * from './identitas-prodi';
