@@ -21,10 +21,12 @@ import {
 import { unggahKeBerkas, type InfoBerkas } from './berkas';
 import { rapikanSegmen } from './manajer-berkas';
 import { invalidateSiakad } from './provider';
+import { realtimeUntuk } from './realtime';
 
 /**
  * Mesin obrolan: satu per instans Siakad, dipakai bersama semua komponen obrolan di halaman (chat mengambang, kotak
- * obrolan penuh, daftar pengguna). Mengurus kunci perangkat, dekripsi, antrean kirim, dan umpan realtime long-poll.
+ * obrolan penuh, daftar pengguna). Mengurus kunci perangkat, dekripsi, antrean kirim, dan umpan realtime: sinyal
+ * WebSocket bila integrasi realtime aktif (./realtime), long-poll bila tidak atau saat WebSocket terputus.
  * Teks pesan hanya ada di memori tab ini.
  */
 
@@ -318,8 +320,12 @@ export class MesinObrolan {
     this.lepasFokus?.();
     this.loop?.abort();
     this.loop = null;
+    this.lepasRealtime?.();
+    this.lepasRealtime = null;
     this.set({ terhubung: false });
   }
+
+  private lepasRealtime: (() => void) | null = null;
 
   /** Mulai ulang (mis. setelah memulihkan cadangan). */
   async ulang() {
@@ -1001,32 +1007,64 @@ export class MesinObrolan {
     };
   }
 
+  /**
+   * Umpan peristiwa. Bila WebSocket tersambung: ambil peristiwa tanpa menunggu (tunggu=0) setiap ada sinyal `obrolan`
+   * (atau paling lama tiap `cadanganMs` sebagai penjaga). Bila tidak: long-poll seperti biasa. Peralihan otomatis
+   * di setiap putaran, jadi WebSocket yang putus langsung jatuh ke long-poll tanpa kehilangan peristiwa (kursor `sejak`
+   * tetap sama).
+   */
   private jalankanUmpan(tungguMaks: number) {
     this.loop?.abort();
     const ac = new AbortController();
     this.loop = ac;
     const tunggu = Math.min(25, tungguMaks);
+    const rt = realtimeUntuk(this.siakad);
+    this.lepasRealtime?.();
+    this.lepasRealtime = rt.pakai();
     void (async () => {
       let sejak: number | null = null;
       let jeda = 1000;
       while (!ac.signal.aborted) {
+        const siap = rt.siap;
+        const hit = rt.hitungan('obrolan');
+        // Long-poll yang sedang ditahan dibatalkan begitu WebSocket tersambung, lalu putaran berikutnya memakai sinyal.
+        const satu = new AbortController();
+        const batalSatu = () => satu.abort();
+        ac.signal.addEventListener('abort', batalSatu, { once: true });
+        let alih = false;
+        const lepasStatus = !siap && sejak !== null && tunggu > 0
+          ? rt.langgan(() => {
+              if (rt.siap) {
+                alih = true;
+                satu.abort();
+              }
+            })
+          : null;
         try {
+          const t = siap ? 0 : tunggu;
           const r: { sejak: number; peristiwa: Array<{ id: number; jenis: string; data: Record<string, unknown> }> } = await this.req('GET', '/peristiwa', {
-            query: sejak === null ? { perangkat: this.kunci?.id } : { sejak, tunggu, perangkat: this.kunci?.id },
-            signal: ac.signal,
-            timeout: (tunggu + 15) * 1000,
+            query: sejak === null ? { perangkat: this.kunci?.id } : { sejak, tunggu: t, perangkat: this.kunci?.id },
+            signal: satu.signal,
+            timeout: (t + 15) * 1000,
           });
           if (!this.s.terhubung) this.set({ terhubung: true });
           const awal = sejak === null;
           sejak = r.sejak;
           jeda = 1000;
           if (!awal && r.peristiwa.length) await this.olah(r.peristiwa);
-          if (tunggu === 0 || awal) await tidur(tunggu === 0 ? 4000 : 50, ac.signal);
+          if (siap && rt.siap) {
+            // Masih ada sisa (batas 300 per ambil): langsung ambil lagi; selain itu tunggu sinyal berikutnya.
+            if (r.peristiwa.length < 300) await rt.tunggu('obrolan', hit, rt.cadanganMs, ac.signal);
+          } else if (tunggu === 0 || awal) await tidur(tunggu === 0 ? 4000 : 50, ac.signal);
         } catch (e) {
           if (ac.signal.aborted) return;
+          if (alih) continue;
           this.set({ terhubung: false });
           await tidur(jeda, ac.signal);
           jeda = Math.min(30_000, jeda * 2);
+        } finally {
+          lepasStatus?.();
+          ac.signal.removeEventListener('abort', batalSatu);
         }
       }
     })();

@@ -1805,6 +1805,36 @@
     animation: none;
   }
 }
+.u-ssb-rt {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  margin-inline-end: auto;
+  border-radius: 0.375rem;
+  color: var(--u-muted-foreground);
+  cursor: default;
+  svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+  &[data-status='tersambung'] {
+    color: var(--u-success);
+  }
+  &[data-status='cadangan'] {
+    color: var(--u-warning);
+  }
+  &[data-status='menyambung'] svg {
+    animation: u-ssb-denyut 1.4s ease-in-out infinite;
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .u-ssb-rt[data-status='menyambung'] svg {
+    animation: none;
+  }
+}
 .u-ssb-lencana {
   display: inline-flex;
   flex: none;
