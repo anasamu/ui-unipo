@@ -23,6 +23,7 @@ export * from './lppm';
 export * from './lppm-pengajuan';
 export * from './kurikulum';
 export * from './kurikulum-kelola';
+export * from './kurikulum-pengajuan';
 export * from './lms';
 export * from './cbt';
 export * from './akademik';
