@@ -248,7 +248,7 @@ function FormPenerbit({ p, open, onOpenChange }: { p: PengaturanPenerbitKwitansi
       onOpenChange={onOpenChange}
       mode="ubah"
       size="xl"
-      title={`Kwitansi ${p.unit?.nama ?? p.nama}`}
+      title={`Kwitansi ${p.label}`}
       description="Tampilan kwitansi resmi yang diterbitkan unit ini. Isian kwitansi (Bukti Kas Masuk) tetap lengkap di semua varian."
       footerNote="Perubahan berlaku untuk kwitansi berikutnya; kwitansi yang sudah terbit tetap memakai nomor dan catatan saat terbit."
       steps={[
@@ -426,7 +426,7 @@ function TabPenerbit({ unitId, saya }: { unitId?: number; saya: KwitansiSaya }) 
           <div className="u-kwp-kartu-isi">
             <span className="u-kwp-kartu-judul">
               <i style={{ background: p.warna }} aria-hidden />
-              <b>{p.unit?.nama ?? p.nama}</b>
+              <b>{p.label}</b>
             </span>
             <span className="u-kwp-kartu-meta">
               <Badge variant="outline">{p.kode}</Badge>

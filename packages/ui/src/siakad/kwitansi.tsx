@@ -270,6 +270,7 @@ export function RincianPembayaran({ rincian, ringkasan, riwayat, metode, kanal, 
   const lunas = r.sisa <= 0.001;
   const ringkas = varian === 'ringkas';
   const adaPotongan = rincian.some((b) => (b.potongan ?? 0) > 0);
+  const kolomDibayar = !ringkas && rincian.some((b) => b.dibayar != null);
   const teksTerbilang = typeof tampilTerbilang === 'string' ? tampilTerbilang : tampilTerbilang ? terbilang(r.dibayar) : null;
   return (
     <section
@@ -286,7 +287,7 @@ export function RincianPembayaran({ rincian, ringkasan, riwayat, metode, kanal, 
           {lunas ? 'Lunas' : 'Belum lunas'}
         </span>
       </header>
-      <div className="u-rincian-bayar-tabel" role="table" aria-label="Butir biaya">
+      <div className="u-rincian-bayar-tabel" role="table" aria-label="Butir biaya" data-dibayar={kolomDibayar || undefined}>
         <div role="row" className="u-rincian-bayar-baris u-rincian-bayar-judul-kolom">
           <span role="columnheader">Komponen biaya</span>
           {!ringkas && <span role="columnheader">Periode</span>}
@@ -301,6 +302,11 @@ export function RincianPembayaran({ rincian, ringkasan, riwayat, metode, kanal, 
           <span role="columnheader" data-angka>
             Subtotal
           </span>
+          {kolomDibayar && (
+            <span role="columnheader" data-angka>
+              Dibayar
+            </span>
+          )}
         </div>
         {rincian.map((b, i) => {
           const sub = b.subtotal ?? b.nominal - (b.potongan ?? 0);
@@ -327,6 +333,11 @@ export function RincianPembayaran({ rincian, ringkasan, riwayat, metode, kanal, 
               <span role="cell" data-angka data-label="Subtotal">
                 {rp(sub)}
               </span>
+              {kolomDibayar && (
+                <span role="cell" data-angka data-label="Dibayar" data-lunas={b.dibayar != null && b.dibayar >= sub - 0.001 ? '' : undefined}>
+                  {rp(b.dibayar ?? null)}
+                </span>
+              )}
             </div>
           );
         })}
@@ -824,17 +835,24 @@ export function KwitansiResmi({ sumber, data, varian: varianAwal, pilihVarian = 
 }
 
 // ================================================================ Bantuan rincian dari data lain
-/** Butir rincian dari data keuangan mahasiswa (GET /v1/keuangan/mahasiswa/{nim}). */
+/**
+ * Butir rincian dari data keuangan mahasiswa (GET /v1/keuangan/mahasiswa/{nim}): satu butir per jenis biaya per periode
+ * (nominal = tagihan, potongan = potongan/diskon), riwayat dari pembayaran tiap butir. Pakai `ringkasan` dari API
+ * untuk total agar sama persis dengan SIAKAD.
+ */
 export function rincianDariKeuanganMahasiswa(d: {
-  periode: Array<{ tahun_id: string; item: Array<{ jenis_biaya: string; tagihan: number; dibayar: number; potongan?: number; sisa: number; pembayaran?: Array<{ tanggal: string; jumlah: number; keterangan?: string | null; nomor?: string | null; metode?: string | null }> }> }>;
+  periode: Array<{
+    tahun_id: string;
+    item: Array<{ jenis_biaya: string; tagihan: number; dibayar: number; potongan?: number | null; diskon?: number | null; sisa: number; pembayaran?: Array<{ tanggal: string; jumlah: number; keterangan?: string | null; nomor?: string | null; metode?: string | null }> }>;
+  }>;
 }): { rincian: ButirRincianPembayaran[]; riwayat: RiwayatBayarKwitansi[] } {
   const rincian: ButirRincianPembayaran[] = [];
   const riwayat: RiwayatBayarKwitansi[] = [];
   for (const p of d.periode) {
     for (const it of p.item) {
-      const pot = it.potongan ?? 0;
-      rincian.push({ uraian: it.jenis_biaya, periode: namaPeriode(p.tahun_id), nominal: it.tagihan + pot, potongan: pot, subtotal: it.tagihan, dibayar: it.dibayar });
-      for (const b of it.pembayaran ?? []) riwayat.push({ tanggal: b.tanggal, nomor: b.nomor ?? null, metode: b.metode ?? b.keterangan ?? it.jenis_biaya, jumlah: b.jumlah });
+      const pot = Number(it.potongan ?? it.diskon ?? 0);
+      rincian.push({ uraian: it.jenis_biaya, periode: namaPeriode(p.tahun_id), nominal: it.tagihan, potongan: pot, subtotal: it.tagihan - pot, dibayar: it.dibayar });
+      for (const b of it.pembayaran ?? []) riwayat.push({ tanggal: b.tanggal, nomor: b.nomor ?? null, metode: b.metode ?? ([it.jenis_biaya, b.keterangan].filter(Boolean).join(' · ') || null), jumlah: b.jumlah });
     }
   }
   riwayat.sort((a, b) => String(a.tanggal).localeCompare(String(b.tanggal)));

@@ -89,6 +89,12 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+.u-rincian-bayar-tabel[data-dibayar] .u-rincian-bayar-baris {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) repeat(4, minmax(0, 1fr));
+}
+.u-rincian-bayar-baris [data-lunas] {
+  color: #15803d;
+}
 .u-rincian-bayar[data-varian='ringkas'] .u-rincian-bayar-baris {
   grid-template-columns: minmax(0, 2.4fr) repeat(3, minmax(0, 1.1fr));
   padding: 0.35rem 0.6rem;
@@ -229,6 +235,7 @@
     display: none !important;
   }
   .u-rincian-bayar-baris,
+  .u-rincian-bayar-tabel[data-dibayar] .u-rincian-bayar-baris,
   .u-rincian-bayar[data-varian='ringkas'] .u-rincian-bayar-baris {
     grid-template-columns: 1fr auto;
     gap: 0.15rem 0.75rem;

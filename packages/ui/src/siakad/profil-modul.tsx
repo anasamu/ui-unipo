@@ -35,6 +35,7 @@ import { Dropzone, FileList } from '../components/calendar';
 import { Ilustrasi, type NamaIlustrasi } from '../ikon/ilustrasi';
 import { DataDiriMahasiswa, JadwalMengajar, MahasiswaBimbingan, RiwayatStudi, labelTahunAkademik } from './akademik';
 import { useAkunSaya } from './akun';
+import { RincianPembayaran, rincianDariKeuanganMahasiswa } from './kwitansi';
 import { GalatApi } from './galat';
 import { LabelProdi } from './prodi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
@@ -946,41 +947,18 @@ export function KeuanganMahasiswa({ nim: nimProp, className }: { nim?: string; c
                 <span>{formatRupiah(p.ringkasan.tagihan)}</span>
                 {p.ringkasan.sisa > 0 ? <Badge variant="warning">Sisa {formatRupiah(p.ringkasan.sisa)}</Badge> : <Badge variant="success">Lunas</Badge>}
               </button>
-              {terbuka && (
-                <div className="u-modul-tabel-gulir">
-                  <table className="u-modul-tabel">
-                    <thead>
-                      <tr>
-                        <th>Biaya</th>
-                        <th>Tagihan</th>
-                        <th>Dibayar</th>
-                        <th>Sisa</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {p.item.map((it) => (
-                        <React.Fragment key={String(it.kode_biaya)}>
-                          <tr>
-                            <td>{it.jenis_biaya}</td>
-                            <td>{formatRupiah(it.tagihan)}</td>
-                            <td>{formatRupiah(it.dibayar)}</td>
-                            <td>{it.sisa > 0 ? <b>{formatRupiah(it.sisa)}</b> : <Badge variant="success">Lunas</Badge>}</td>
-                          </tr>
-                          {it.pembayaran.map((b) => (
-                            <tr key={b.id} className="u-modul-tabel-anak">
-                              <td colSpan={2}>
-                                {formatDate(b.tanggal, 'medium')}
-                                {b.keterangan ? ` · ${b.keterangan}` : ''}
-                              </td>
-                              <td colSpan={2}>{formatRupiah(b.jumlah)}</td>
-                            </tr>
-                          ))}
-                        </React.Fragment>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              {terbuka && (() => {
+                const rb = rincianDariKeuanganMahasiswa({ periode: [p] });
+                return (
+                  <RincianPembayaran
+                    varian="lengkap"
+                    judul={`Rincian pembayaran ${labelTahunAkademik(p.tahun_id)}`}
+                    rincian={rb.rincian}
+                    riwayat={rb.riwayat}
+                    ringkasan={{ biaya: p.ringkasan.tagihan, potongan: p.ringkasan.potongan, dibayar: p.ringkasan.dibayar, sisa: p.ringkasan.sisa }}
+                  />
+                );
+              })()}
             </li>
           );
         })}
