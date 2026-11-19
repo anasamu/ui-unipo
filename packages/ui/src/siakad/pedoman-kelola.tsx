@@ -283,7 +283,7 @@ interface Deviasi {
 
 interface Kepatuhan {
   ringkas: { menyimpang: number; tanpa_dasar: number; deviasi_menunggu: number; deviasi_aktif: number; hampir_habis: number; penerapan_tertunda: number };
-  menyimpang: Array<{ kunci: string; nama: string; target_jenis: string; target_ref: string; target_label: string; unit_pemilik: string | null; teks_aturan: string; teks_pedoman: string; dasar: string; ketegasan: string; deviasi: { id: number; jenis: string; tindak: string | null; sampai: string | null } | null; penerapan: { id: number; status: string } | null }>;
+  menyimpang: Array<{ kunci: string; nama: string; target_jenis: string; target_ref: string; target_label: string; unit_pemilik: string | null; teks_aturan: string; teks_pedoman: string; dasar: string; ketegasan: string; batas_universitas?: boolean; konflik_induk?: { dasar: string; teks: string } | null; deviasi: { id: number; jenis: string; tindak: string | null; sampai: string | null } | null; penerapan: { id: number; status: string } | null }>;
   tanpa_dasar: Array<{ target_jenis: string; target_ref: string; kode: string; nama: string; kategori: string; tingkat: string; ada_sk: boolean; bawaan: boolean; terpetakan: boolean }>;
   deviasi: Deviasi[];
   hampir_habis: Deviasi[];
@@ -380,7 +380,20 @@ export function KepatuhanPedoman({ className }: { className?: string }) {
           columns={[
             { key: 'nama', header: 'Parameter', cell: (r) => <div className="u-pdm-sel"><strong>{r.nama}</strong><span className="u-pdm-redup">{r.target_label}</span></div> },
             { key: 'nilai', header: 'Aturan → pedoman', cell: (r) => <span>{r.teks_aturan} → <strong>{r.teks_pedoman}</strong></span> },
-            { key: 'dasar', header: 'Dasar', cell: (r) => r.dasar },
+            {
+              key: 'dasar',
+              header: 'Dasar',
+              cell: (r) => (
+                <div className="u-pdm-sel">
+                  <span>{r.dasar}</span>
+                  {r.konflik_induk ? (
+                    <Badge variant="danger">Pedoman fakultas lebih longgar dari {r.konflik_induk.dasar} ({r.konflik_induk.teks})</Badge>
+                  ) : r.batas_universitas ? (
+                    <Badge variant="warning">Batas universitas</Badge>
+                  ) : null}
+                </div>
+              ),
+            },
             {
               key: 'tindak',
               header: 'Tindak lanjut',

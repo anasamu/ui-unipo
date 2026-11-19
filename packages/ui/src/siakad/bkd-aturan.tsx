@@ -381,7 +381,7 @@ function PanelUbahAturanBkd({ aturan: a, onOpenChange }: { aturan: AturanBkdDeta
               <Field label="Tautan dokumen pedoman" optional description="Ditampilkan sebagai rujukan di Aturan BKD.">
                 <Input value={pd.url ?? ''} onChange={(e) => setIsi({ ...isi, pedoman: { ...pd, url: e.target.value || null } })} placeholder="https://…" />
               </Field>
-              <Field label="Catatan perubahan" optional>
+              <Field label="Alasan perubahan" required description="Wajib (minimal 10 karakter) sebelum versi diterbitkan; tampil di riwayat dan pemeriksaan pedoman.">
                 <Textarea rows={2} value={id.catatan_perubahan} onChange={(e) => setId({ ...id, catatan_perubahan: e.target.value })} />
               </Field>
             </div>
