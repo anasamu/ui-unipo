@@ -1,0 +1,191 @@
+// Beasiswa (siakad/beasiswa.tsx): BAAK/Pustikom, Profil, Humas, BAUK.
+.u-bsw {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.u-bsw-form {
+  display: grid;
+  gap: 0.875rem;
+  min-width: 0;
+}
+.u-bsw-h {
+  margin: 0;
+  font-size: var(--u-text-lg);
+  font-weight: var(--u-weight-semibold);
+}
+.u-bsw-sel {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+  small {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+  }
+}
+.u-bsw-ket {
+  margin: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+}
+.u-bsw-label {
+  margin: 0;
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-semibold);
+}
+.u-bsw-kepala,
+.u-bsw-aksi,
+.u-bsw-cepat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.u-bsw-pilih {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 32rem;
+}
+.u-bsw-pilih-2 {
+  max-width: none;
+  grid-template-columns: minmax(0, 1fr);
+  @media (min-width: 48rem) {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+    align-items: center;
+  }
+}
+.u-bsw-baris-judul {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-semibold);
+}
+.u-bsw-baris {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 6rem auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+.u-bsw-baris-3 {
+  grid-template-columns: minmax(0, 1fr);
+  @media (min-width: 40rem) {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+}
+.u-bsw-baris-berkas {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  @media (min-width: 40rem) {
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+  }
+}
+.u-bsw-baris-bobot {
+  grid-template-columns: minmax(0, 1fr) 6rem;
+  font-size: var(--u-text-sm);
+}
+.u-bsw-syarat .u-card-content,
+.u-bsw-syarat > div {
+  display: grid;
+  gap: 0.375rem;
+}
+.u-bsw-cek {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: var(--u-text-sm);
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+}
+.u-bsw-cek-satu,
+.u-bsw-saklar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--u-text-sm);
+}
+.u-bsw-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.25rem;
+  font-size: var(--u-text-sm);
+}
+.u-bsw-riwayat {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.625rem;
+  li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.5rem;
+    font-size: var(--u-text-sm);
+  }
+  li > svg {
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.125rem;
+    color: var(--u-muted-foreground);
+  }
+  span {
+    display: grid;
+    gap: 0.125rem;
+  }
+  small {
+    color: var(--u-muted-foreground);
+  }
+}
+.u-bsw-berkas {
+  display: grid;
+  gap: 0.75rem;
+}
+.u-bsw-berkas-baris {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--u-border);
+  @media (min-width: 40rem) {
+    grid-template-columns: minmax(0, 1fr) auto 11rem;
+  }
+  > .u-input,
+  > input {
+    grid-column: 1 / -1;
+  }
+}
+.u-bsw-pilihan {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.375rem;
+  label {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-md);
+    cursor: pointer;
+  }
+}
+.u-bsw-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+}
+.u-bsw-program[data-memenuhi] {
+  border-color: color-mix(in oklab, var(--u-success, #16a34a) 45%, var(--u-border));
+}
+.u-bsw-kartu {
+  text-decoration: none;
+  color: inherit;
+}
