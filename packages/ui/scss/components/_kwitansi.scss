@@ -32,6 +32,8 @@
 }
 .u-rincian-bayar-status {
   display: inline-flex;
+  flex: none;
+  white-space: nowrap;
   align-items: center;
   gap: 0.3em;
   padding: 0.15em 0.6em;
@@ -267,6 +269,11 @@
 .u-rincian-bayar[data-varian='cetak'] {
   --rb-aksen: #111;
   --rb-latar: #f1f1f1;
+  --rb-garis: #bdbdbd;
+  --rb-redup: #444;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  background: #fff;
   color: #111;
 }
 
@@ -1060,7 +1067,7 @@
     border-radius: 0.25rem;
   }
 }
-:where(.dark, [data-theme='dark']) .u-rincian-bayar {
+:where(.dark, [data-theme='dark']) .u-rincian-bayar:not([data-varian='cetak']) {
   .u-rincian-bayar-status[data-status='lunas'],
   [data-potongan],
   .u-rincian-bayar-ket {
