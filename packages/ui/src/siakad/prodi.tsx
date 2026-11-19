@@ -22,6 +22,11 @@ export interface ProdiReferensi {
   no_sk_ban?: string | null;
   tgl_sk_ban?: string | null;
   tgl_akhir_sk_ban?: string | null;
+  /**
+   * Akreditasi terkini dari SPMI (GET /v1/referensi/prodi, portal). Bila kunci ini ada, ia yang dipakai (bukan kolom
+   * lama); null = akreditasi belum diisi di SPMI.
+   */
+  akreditasi?: AkreditasiSpmi | null;
   /** Status PDDikti: A aktif, N nonaktif, H dihapus, K alih bentuk, M merger, B pembinaan. */
   status_prodi?: string | null;
   gelar?: string | null;
@@ -51,7 +56,23 @@ export const namaRapi = (s?: string | null) => {
 /** "S1 Teknik Sipil". */
 export const judulProdi = (p: Pick<ProdiReferensi, 'nama_prodi' | 'kode_jenjang'>) => [jenjangProdi(p.kode_jenjang), namaRapi(p.nama_prodi)].filter(Boolean).join(' ');
 
-export type KeadaanAkreditasi = 'berlaku' | 'segera_berakhir' | 'kedaluwarsa' | 'belum';
+/** Akreditasi terkini yang dicatat SPMI (objek `akreditasi` dari API SIAKAD). */
+export interface AkreditasiSpmi {
+  lembaga?: string | null;
+  lembaga_nama?: string | null;
+  lembaga_singkatan?: string | null;
+  peringkat?: string | null;
+  status_label?: string | null;
+  nomor_sk?: string | null;
+  tanggal_sk?: string | null;
+  berlaku_sampai?: string | null;
+  sisa_hari?: number | null;
+  /** berlaku | segera_habis | habis | proses | tidak_terakreditasi */
+  keadaan?: string | null;
+  keadaan_label?: string | null;
+}
+
+export type KeadaanAkreditasi = 'berlaku' | 'segera_berakhir' | 'kedaluwarsa' | 'proses' | 'belum';
 export interface InfoAkreditasi {
   /** "Unggul", "Baik Sekali", "A", atau "Belum terakreditasi". */
   peringkat: string;
@@ -63,7 +84,17 @@ export interface InfoAkreditasi {
   berlakuSampai: string | null;
   /** Sisa hari sampai berakhir (negatif bila sudah lewat). */
   sisaHari: number | null;
+  /** Singkatan/nama lembaga (BAN-PT, LAM INFOKOM) bila dari SPMI. */
+  lembaga: string | null;
+  /** Nomor SK akreditasi (kosong, "0", "-" dianggap belum diisi). */
+  nomorSk: string | null;
 }
+
+/** Nomor SK kosong/"0"/"-" = belum diisi. */
+const nomorSk = (v?: string | null) => {
+  const t = String(v ?? '').trim();
+  return !t || t === '0' || t === '-' ? null : t;
+};
 
 const PERINGKAT: Array<[RegExp, string, BadgeVariant]> = [
   [/^(a|unggul|u)$/i, 'Unggul', 'success'],
@@ -75,24 +106,36 @@ const PERINGKAT: Array<[RegExp, string, BadgeVariant]> = [
  * ditampilkan sebagai huruf; peringkat IAPS 4.0 (Unggul/Baik Sekali/Baik) ditampilkan sebagai kata. `segeraHari` =
  * batas "segera berakhir" (bawaan 180 hari).
  */
-export function akreditasiProdi(p: Pick<ProdiReferensi, 'kode_akreditasi' | 'tgl_akhir_sk_ban'>, segeraHari = 180, kini = Date.now()): InfoAkreditasi {
-  const kode = String(p.kode_akreditasi ?? '').trim();
-  const akhir = p.tgl_akhir_sk_ban && !/^0000/.test(p.tgl_akhir_sk_ban) ? p.tgl_akhir_sk_ban.slice(0, 10) : null;
+export function akreditasiProdi(p: Pick<ProdiReferensi, 'kode_akreditasi' | 'tgl_akhir_sk_ban'> & Partial<Pick<ProdiReferensi, 'akreditasi' | 'no_sk_ban'>>, segeraHari = 180, kini = Date.now()): InfoAkreditasi {
+  // Data SPMI (satu sumber) bila tersedia; null = belum diisi (tanpa "masa berlaku habis" dari kolom lama).
+  const spmi = p.akreditasi;
+  const dariSpmi = spmi !== undefined;
+  const kode = String((dariSpmi ? spmi?.peringkat : p.kode_akreditasi) ?? '').trim();
+  const akhirMentah = dariSpmi ? (spmi?.berlaku_sampai ?? null) : p.tgl_akhir_sk_ban;
+  const akhir = akhirMentah && !/^0000/.test(akhirMentah) ? akhirMentah.slice(0, 10) : null;
   const sisa = akhir ? Math.ceil((new Date(`${akhir}T23:59:59`).getTime() - kini) / 86_400_000) : null;
-  if (!kode || kode === '-' || kode === '0' || /^(belum|tidak)/i.test(kode)) {
-    return { peringkat: 'Belum terakreditasi', label: 'Belum terakreditasi', tone: 'neutral', keadaan: 'belum', berlakuSampai: akhir, sisaHari: sisa };
+  const lembaga = spmi ? (spmi.lembaga_singkatan ?? spmi.lembaga_nama ?? null) : null;
+  const nomor = nomorSk(dariSpmi ? spmi?.nomor_sk : p.no_sk_ban);
+  if ((dariSpmi && !spmi) || !kode || kode === '-' || kode === '0' || /^belum/i.test(kode)) {
+    return { peringkat: 'Belum diisi', label: 'Akreditasi belum diisi', tone: 'neutral', keadaan: 'belum', berlakuSampai: null, sisaHari: null, lembaga: null, nomorSk: null };
+  }
+  if (/^tidak/i.test(kode) || spmi?.keadaan === 'tidak_terakreditasi') {
+    return { peringkat: 'Tidak terakreditasi', label: 'Tidak terakreditasi', tone: 'danger', keadaan: 'kedaluwarsa', berlakuSampai: akhir, sisaHari: sisa, lembaga, nomorSk: nomor };
   }
   const cocok = PERINGKAT.find(([re]) => re.test(kode));
   const huruf = /^[abc]$/i.test(kode);
   const peringkat = huruf ? kode.toUpperCase() : cocok ? cocok[1] : namaRapi(kode.toUpperCase());
-  const keadaan: KeadaanAkreditasi = sisa == null ? 'berlaku' : sisa < 0 ? 'kedaluwarsa' : sisa <= segeraHari ? 'segera_berakhir' : 'berlaku';
+  const keadaan: KeadaanAkreditasi =
+    spmi?.keadaan === 'proses' ? 'proses' : sisa == null ? 'berlaku' : sisa < 0 ? 'kedaluwarsa' : sisa <= segeraHari ? 'segera_berakhir' : 'berlaku';
   return {
     peringkat,
-    label: huruf ? `Akreditasi ${peringkat}` : peringkat,
+    label: lembaga ? `${lembaga} ${peringkat}` : huruf ? `Akreditasi ${peringkat}` : peringkat,
     tone: cocok?.[2] ?? 'secondary',
     keadaan,
     berlakuSampai: akhir,
     sisaHari: sisa,
+    lembaga,
+    nomorSk: nomor,
   };
 }
 
@@ -200,9 +243,9 @@ export function LogoFakultas({ kode, nama, logo, ukuran = 'md', className }: Log
 
 // ================================================================ Lencana dan baris prodi
 /** Lencana akreditasi dengan masa berlaku (tooltip) dan penanda kedaluwarsa/segera berakhir. */
-export function LencanaAkreditasi({ prodi, ringkas, className }: { prodi: Pick<ProdiReferensi, 'kode_akreditasi' | 'tgl_akhir_sk_ban' | 'no_sk_ban'>; ringkas?: boolean; className?: string }) {
+export function LencanaAkreditasi({ prodi, ringkas, className }: { prodi: Pick<ProdiReferensi, 'kode_akreditasi' | 'tgl_akhir_sk_ban' | 'no_sk_ban'> & Partial<Pick<ProdiReferensi, 'akreditasi'>>; ringkas?: boolean; className?: string }) {
   const a = akreditasiProdi(prodi);
-  const judul = [a.berlakuSampai ? `Berlaku sampai ${formatDate(a.berlakuSampai)}` : null, prodi.no_sk_ban && prodi.no_sk_ban !== '0' ? `SK ${prodi.no_sk_ban}` : null].filter(Boolean).join(' · ');
+  const judul = [a.lembaga, a.berlakuSampai ? `Berlaku sampai ${formatDate(a.berlakuSampai)}` : null, a.nomorSk ? `SK ${a.nomorSk}` : null].filter(Boolean).join(' · ');
   return (
     <span className={cn('u-lencana-akred', className)} title={judul || undefined}>
       <Badge variant={a.tone}>
@@ -215,6 +258,7 @@ export function LencanaAkreditasi({ prodi, ringkas, className }: { prodi: Pick<P
         </Badge>
       )}
       {a.keadaan === 'segera_berakhir' && <Badge variant="warning">{ringkas ? `${a.sisaHari} hr` : `Berakhir ${a.sisaHari} hari lagi`}</Badge>}
+      {a.keadaan === 'proses' && <Badge variant="info">{ringkas ? 'Proses' : 'Dalam proses reakreditasi'}</Badge>}
     </span>
   );
 }
@@ -409,14 +453,14 @@ const angka = (n: number) => n.toLocaleString('id-ID');
  */
 export function LabelProdi({ kode, nama, prodi, varian = 'baku', akreditasi = true, sub = 'fakultas', ukuran = 'md', bentukLogo = 'kotak', statistik, onClick, href, className }: LabelProdiProps) {
   const k = String(prodi?.kode_prodi ?? kode ?? '');
-  const lengkap = !!prodi && prodi.kode_akreditasi !== undefined && prodi.kode_jenjang !== undefined;
+  const lengkap = !!prodi && (prodi.kode_akreditasi !== undefined || prodi.akreditasi !== undefined) && prodi.kode_jenjang !== undefined;
   const peta = usePetaProdi(!lengkap && !!k);
   const p = { ...(peta.get(k) ?? {}), ...Object.fromEntries(Object.entries(prodi ?? {}).filter(([, v]) => v != null)) } as Partial<ProdiReferensi>;
   const namaP = namaRapi(p.nama_prodi ?? nama ?? k);
   const jenjang = jenjangProdi(p.kode_jenjang);
   const kodeFak = (p.kode_fak ?? (p.kode_fakultas as string | undefined)) || null;
   const baris2 = sub === false ? null : sub === 'fakultas' ? namaRapi(p.nama_fakultas) || null : sub === 'kode' ? k || null : sub;
-  const adaAkred = akreditasi && (p.kode_akreditasi !== undefined || p.tgl_akhir_sk_ban !== undefined);
+  const adaAkred = akreditasi && (p.kode_akreditasi !== undefined || p.tgl_akhir_sk_ban !== undefined || p.akreditasi !== undefined);
   const info = adaAkred ? akreditasiProdi(p as ProdiReferensi) : null;
   const satuBaris = varian === 'ringkas' || varian === 'chip';
   const logo =
@@ -453,7 +497,7 @@ export function LabelProdi({ kode, nama, prodi, varian = 'baku', akreditasi = tr
     varian === 'kartu' && info && info.keadaan !== 'belum' ? (
       <span className="u-label-prodi-sk">
         {info.berlakuSampai ? `Akreditasi berlaku sampai ${formatDate(info.berlakuSampai)}` : 'Masa berlaku akreditasi tidak tercatat'}
-        {p.no_sk_ban && p.no_sk_ban !== '0' ? ` · SK ${p.no_sk_ban}` : ''}
+        {info.nomorSk ? ` · SK ${info.nomorSk}` : ''}
       </span>
     ) : null;
   const isi = (
