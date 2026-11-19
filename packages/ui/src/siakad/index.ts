@@ -121,3 +121,4 @@ export * from './akreditasi-kelengkapan';
 export * from './beasiswa';
 export * from './wisuda';
 export * from './identitas-prodi';
+export * from './beasiswa-bauk';
