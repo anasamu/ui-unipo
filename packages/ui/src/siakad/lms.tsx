@@ -39,6 +39,24 @@ export interface KelasLms {
   peran?: PeranKelas | null;
   pengajar?: string | null;
   jumlah_peserta?: Angka;
+  /** Aturan kampus ber-SK untuk kelas ini (LMS-18/19): syarat hadir UAS dan skala nilai huruf prodi. */
+  aturan?: AturanKelasLms | null;
+}
+/** Sumber nilai aturan: aturan ber-SK, pengaturan periode BAAK, atau bawaan sistem (belum ditetapkan unit berwenang). */
+export type SumberAturanLms = 'aturan' | 'periode' | 'bawaan';
+export interface AturanKelasLms {
+  hadir_min: { nilai: number; sumber: SumberAturanLms; keterangan: string };
+  skala: { baris: { huruf: string; min: number; bobot: number; lulus: boolean }[]; lulus_min: number; sumber: SumberAturanLms; keterangan: string };
+}
+/** Syarat hadir bawaan bila aturan belum termuat (sama dengan bawaan server). */
+export const HADIR_MIN_BAWAAN = 75;
+/** Nada nilai 0-100 menurut skala nilai prodi: huruf kedua teratas ke atas = baik, di atas batas lulus = cukup. */
+export function nadaNilaiLms(v: number | null | undefined, skala?: AturanKelasLms['skala'] | null): 'success' | 'warning' | 'danger' | undefined {
+  if (v == null) return undefined;
+  const baris = skala?.baris?.length ? skala.baris : null;
+  const baik = baris ? (baris[1] ?? baris[0])!.min : 75;
+  const lulus = skala ? skala.lulus_min : 50;
+  return v >= baik ? 'success' : v >= lulus ? 'warning' : 'danger';
 }
 export interface TugasMendatangItem {
   id: number;

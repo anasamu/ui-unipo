@@ -30,6 +30,8 @@ export interface UjianSaya {
   ujian: string;
   jenis: string;
   kode_mk?: string | null;
+  /** Nama mata kuliah (ditampilkan alih-alih kode). */
+  nama_mk?: string | null;
   durasi_menit: number;
   petunjuk?: string | null;
   ujian_status: 'siap' | 'selesai';
@@ -41,6 +43,10 @@ export interface UjianSaya {
   sesi_status: 'terjadwal' | 'dibuka' | 'ditutup';
   sisa_detik?: number | null;
   bisa_mulai: boolean;
+  /** Konteks ujian: kuliah (UTS/UAS), lms (kuis e-learning), pmb. */
+  konteks?: 'kuliah' | 'lms' | 'pmb';
+  /** false = sesi tanpa token pengawas (kuis e-learning): langsung mulai. Bawaan true. */
+  perlu_token?: boolean;
 }
 export interface OpsiSoal {
   id: string;
@@ -90,6 +96,28 @@ export function idPerangkatCbt(): string {
   return perangkatMemori;
 }
 const hdr = () => ({ headers: { 'X-Perangkat': idPerangkatCbt() } });
+/**
+ * Antrean jawaban yang belum terkirim disimpan di perangkat (localStorage per lembar), supaya muat ulang halaman,
+ * peramban tertutup, atau baterai habis saat luring tidak menghilangkan jawaban (CBT-09). Dihapus setelah terkirim
+ * atau ujian dikumpulkan; saat lembar dibuka lagi, antrean dipulihkan dan dikirim.
+ */
+const kunciAntre = (dasar: string) => `unipo-cbt-antre:${dasar}`;
+function simpanAntreLokal(dasar: string, antre: Record<number, unknown>) {
+  try {
+    if (Object.keys(antre).length) localStorage.setItem(kunciAntre(dasar), JSON.stringify(antre));
+    else localStorage.removeItem(kunciAntre(dasar));
+  } catch {
+    /* penyimpanan diblokir/penuh: antrean tetap di memori */
+  }
+}
+function bacaAntreLokal(dasar: string): Record<number, { soal_id: number; jawaban: JawabanCbt; ragu: boolean }> {
+  try {
+    const v = JSON.parse(localStorage.getItem(kunciAntre(dasar)) ?? '{}');
+    return v && typeof v === 'object' ? v : {};
+  } catch {
+    return {};
+  }
+}
 const C = '/v1/cbt';
 
 export function useUjianSaya() {
@@ -159,6 +187,7 @@ function KartuUjian({ u, onMulai }: { u: UjianSaya; onMulai: (pesertaId: number,
   const [sibuk, setSibuk] = React.useState(false);
   const [galat, setGalat] = React.useState<string | null>(null);
   const lanjut = u.status === 'mengerjakan';
+  const tanpaToken = lanjut || u.perlu_token === false;
   const st = STATUS_PESERTA[u.status];
   const mulai = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,7 +195,7 @@ function KartuUjian({ u, onMulai }: { u: UjianSaya; onMulai: (pesertaId: number,
     setSibuk(true);
     setGalat(null);
     try {
-      const r = await siakad.request<LembarUjianData>({ method: 'POST', path: `${C}/kerjakan/${u.id}/mulai`, body: lanjut ? {} : { token: token.trim().toUpperCase() } }, hdr());
+      const r = await siakad.request<LembarUjianData>({ method: 'POST', path: `${C}/kerjakan/${u.id}/mulai`, body: tanpaToken ? {} : { token: token.trim().toUpperCase() } }, hdr());
       invalidateSiakad('cbt-saya');
       onMulai(u.id, r.data);
     } catch (err) {
@@ -184,7 +213,7 @@ function KartuUjian({ u, onMulai }: { u: UjianSaya; onMulai: (pesertaId: number,
         </Badge>
       </header>
       <h3>{u.ujian}</h3>
-      <p className="u-cbt-ujian-sub">{[u.kode_mk, u.sesi, u.nomor_peserta && `No. ${u.nomor_peserta}`].filter(Boolean).join(' · ')}</p>
+      <p className="u-cbt-ujian-sub">{[u.nama_mk ?? u.kode_mk, u.sesi, u.nomor_peserta && `No. ${u.nomor_peserta}`].filter(Boolean).join(' · ')}</p>
       <dl className="u-cbt-ujian-info">
         <div>
           <dt>
@@ -203,7 +232,7 @@ function KartuUjian({ u, onMulai }: { u: UjianSaya; onMulai: (pesertaId: number,
       </dl>
       {u.bisa_mulai ? (
         <form className="u-cbt-token" onSubmit={mulai}>
-          {!lanjut && (
+          {!tanpaToken && (
             <label className="u-cbt-token-input">
               <KeyRound aria-hidden />
               <Input
@@ -217,7 +246,7 @@ function KartuUjian({ u, onMulai }: { u: UjianSaya; onMulai: (pesertaId: number,
               />
             </label>
           )}
-          <Button type="submit" loading={sibuk} disabled={!lanjut && token.trim().length < 4} fullWidth={lanjut}>
+          <Button type="submit" loading={sibuk} disabled={!tanpaToken && token.trim().length < 4} fullWidth={tanpaToken}>
             {lanjut ? 'Lanjutkan ujian' : 'Mulai ujian'}
           </Button>
         </form>
@@ -480,6 +509,7 @@ export function LembarUjian({ pesertaId, awal, onSelesai, basePath, pengawasan =
     if (q.data && !lembar) setLembar(q.data);
   }, [q.data, lembar]);
   const mengerjakan = lembar?.status === 'mengerjakan';
+  const dipulihkan = React.useRef(false);
 
   const muatUlang = React.useCallback(async () => {
     if (!siakad) return;
@@ -501,6 +531,7 @@ export function LembarUjian({ pesertaId, awal, onSelesai, basePath, pengawasan =
       isi.forEach((x) => {
         if (antre.current[x.soal_id] === x) delete antre.current[x.soal_id];
       });
+      simpanAntreLokal(dasar, antre.current);
       setJumlahAntre(Object.keys(antre.current).length);
       setSimpan(Object.keys(antre.current).length ? 'menyimpan' : 'tersimpan');
       setGalat(null);
@@ -525,13 +556,27 @@ export function LembarUjian({ pesertaId, awal, onSelesai, basePath, pengawasan =
       const baru = { ...s, ...perubahan };
       setLembar((l) => (l ? { ...l, soal: l.soal?.map((x) => (x.soal_id === s.soal_id ? baru : x)) } : l));
       antre.current = { ...antre.current, [s.soal_id]: { soal_id: s.soal_id, jawaban: baru.jawaban, ragu: baru.ragu } };
+      simpanAntreLokal(dasar, antre.current);
       setJumlahAntre(Object.keys(antre.current).length);
       clearTimeout(tunda.current);
       const teks = s.jenis === 'esai' || s.jenis === 'isian_singkat';
       tunda.current = setTimeout(() => void sinkron(), 'jawaban' in perubahan && teks ? 800 : 50);
     },
-    [sinkron],
+    [sinkron, dasar],
   );
+
+  // Jawaban yang tertinggal di perangkat (halaman dimuat ulang saat luring) ditampilkan lagi lalu dikirim.
+  React.useEffect(() => {
+    if (!mengerjakan || dipulihkan.current) return;
+    dipulihkan.current = true;
+    const lokal = bacaAntreLokal(dasar);
+    const ids = Object.keys(lokal);
+    if (!ids.length) return;
+    antre.current = { ...lokal, ...antre.current };
+    setJumlahAntre(Object.keys(antre.current).length);
+    setLembar((l) => (l ? { ...l, soal: l.soal?.map((x) => (lokal[x.soal_id] ? { ...x, jawaban: lokal[x.soal_id]!.jawaban, ragu: lokal[x.soal_id]!.ragu } : x)) } : l));
+    void sinkron();
+  }, [mengerjakan, dasar, sinkron]);
 
   // Antrean dikirim ulang berkala dan saat koneksi kembali.
   React.useEffect(() => {
@@ -591,6 +636,8 @@ export function LembarUjian({ pesertaId, awal, onSelesai, basePath, pengawasan =
     try {
       await sinkron();
       const r = await siakad.request<LembarUjianData>({ method: 'POST', path: `${dasar}/selesai`, body: {} }, hdr());
+      antre.current = {};
+      simpanAntreLokal(dasar, {});
       setLembar(r.data);
       invalidateSiakad('cbt-saya');
       invalidateSiakad('pmb-ujian');
@@ -637,7 +684,7 @@ export function LembarUjian({ pesertaId, awal, onSelesai, basePath, pengawasan =
       )}
       {simpan === 'luring' && (
         <Alert variant="warning" icon={<CloudOff />} title="Koneksi terputus">
-          Lanjutkan mengerjakan. Jawaban disimpan di perangkat ini dan dikirim otomatis saat tersambung.
+          Lanjutkan mengerjakan. Jawaban disimpan di perangkat ini (tetap ada walau halaman dimuat ulang) dan dikirim otomatis saat tersambung. Jangan menghapus data peramban sebelum tersambung lagi.
         </Alert>
       )}
       {galat && (
