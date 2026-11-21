@@ -89,7 +89,11 @@ export function PanelLangkah({
 
   React.useEffect(() => {
     if (!open) {
+      // Panel yang tetap terpasang saat tertutup mulai bersih lagi saat dibuka berikutnya.
       first.current = true;
+      setVisited(mode === 'ubah' ? steps.length - 1 : 0);
+      setError(null);
+      setSalah(new Set());
       return;
     }
     if (first.current) {

@@ -1,0 +1,112 @@
+@use '../mixins' as *;
+
+// ================================================================ Wizard kurikulum (u-kw-*): aturan yang diikuti, draf, daftar butir
+.u-kw-rujukan {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin: 0;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-muted);
+  color: var(--u-foreground);
+  font-size: var(--u-text-sm);
+  > svg {
+    flex: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-top: 0.125rem;
+    color: var(--u-primary);
+  }
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+  span {
+    color: var(--u-muted-foreground);
+  }
+  &[data-memuat] {
+    color: var(--u-muted-foreground);
+  }
+}
+.u-kw-draf {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.375rem 0.375rem 0.375rem 0.75rem;
+  border: 1px dashed var(--u-border);
+  border-radius: var(--u-radius-md);
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+}
+.u-kw-bantuan {
+  margin: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+}
+.u-kw-ada {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  > li {
+    display: flex;
+    gap: 0.625rem;
+    align-items: baseline;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-md);
+    background: var(--u-card);
+    font-size: var(--u-text-sm);
+    min-width: 0;
+    > b {
+      flex: none;
+      font-weight: var(--u-weight-semibold);
+    }
+    > span {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+  }
+}
+.u-kw-baris {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card);
+  > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-semibold);
+  }
+}
+.u-kw-pilih {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+}
+.u-kw-beban {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  > b {
+    color: var(--u-foreground);
+    font-weight: var(--u-weight-semibold);
+  }
+}

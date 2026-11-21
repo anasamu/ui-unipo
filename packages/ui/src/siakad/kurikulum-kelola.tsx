@@ -42,7 +42,20 @@ import { PilihEntitas } from './pilih';
 import { PilihBerkas } from './pilih-berkas';
 import { PilihNomorSK } from './isian-sk';
 import { PilihTahunAkademik } from './cari';
-import { RpsMenurutKerangka } from './kurikulum-aturan';
+import { RpsMenurutKerangka, type IsianKerangka } from './kurikulum-aturan';
+import { PanelLangkah, type PanelLangkahStep } from '../components/panel-langkah';
+import { WizardReview } from '../components/wizard';
+import {
+  DrafDipulihkan,
+  IsianKerangkaDinamis,
+  RujukanAturan,
+  nilaiKirim,
+  periksaIsianKerangka,
+  ringkasNilaiIsian,
+  useAturanKurikulumBerlaku,
+  useDrafWizard,
+  wajibMenurut,
+} from './kurikulum-wizard';
 import {
   CapaianCplKurikulum,
   JENIS_MK,
@@ -262,22 +275,42 @@ export interface FormKurikulumObeProps {
   kurikulum?: KurikulumLengkap | null;
   /** Prodi bawaan saat membuat. */
   kodeProdi?: string;
-  /** Batasi pilihan prodi (mis. prodi yang dikelola kaprodi). Kosong = semua prodi dari referensi. */
+  /** Batasi pilihan prodi (mis. prodi yang dikelola kaprodi). Kosong = semua prodi dari referensi aturan kurikulum. */
   pilihanProdi?: Array<{ kode_prodi: string; nama_prodi: string }>;
   onSelesai?: (k: KurikulumLengkap) => void;
 }
 
+const A_KUR = '/v1/kurikulum-aturan';
+/** Bagian kerangka (primitif) yang diisi berupa daftar butir di wizard identitas, dengan endpoint butirnya. */
+const BUTIR_KERANGKA: Record<string, JenisButir> = { profil_lulusan: 'profil-lulusan', cpl: 'cpl', bahan_kajian: 'bahan-kajian' };
+const NAMA_BAWAAN: Record<string, string> = { profil_lulusan: 'Profil lulusan', cpl: 'Capaian pembelajaran lulusan (CPL)', bahan_kajian: 'Bahan kajian' };
+type ButirBaru = { kode: string; nama: string; deskripsi: string; ranah: RanahCpl };
+type DaftarBaru = Record<JenisButir, ButirBaru[]>;
+const BARU_KOSONG: DaftarBaru = { 'profil-lulusan': [], cpl: [], 'bahan-kajian': [] };
+type NilaiIsian = Record<string, Record<string, unknown>>;
+interface IsianKurikulum {
+  skema: Array<{ kode: string; nama: string; isian: IsianKerangka[] }>;
+  nilai: NilaiIsian;
+}
+const potong = (s: string, n = 140) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
 /**
- * Formulir identitas kurikulum: kode, nama, tahun, beban belajar (SKS lulus, wajib, pilihan, masa tempuh, masa studi,
- * IPK lulus), dan uraian naratif (Pasal 44: visi keilmuan, kompetensi, metode, penilaian, tugas akhir, syarat masuk).
- * Kurikulum baru dimulai sebagai draf; beban belajar terisi otomatis dari ketentuan jenjang bila dikosongkan.
+ * Identitas kurikulum sebagai WIZARD di panel samping. Langkah mengikuti aturan kurikulum berversi yang berlaku untuk
+ * prodi & tahun berlakunya (kerangka sebagai data): Identitas → Beban belajar (batas dari aturan) → Uraian → bagian
+ * kerangka berbentuk daftar (profil lulusan, CPL, bahan kajian; hanya yang dituntut kerangka, wajib minimal satu) →
+ * isian bagian kerangka dinamis (mode ubah) → Tinjau. Payload identitas tetap POST/PUT /kurikulum; butir baru dikirim
+ * ke endpoint butir yang sama dengan tab CPL/profil/bahan kajian; isian dinamis ke PUT /v1/kurikulum-aturan/isian.
+ * Mode ubah bisa lompat ke langkah mana pun. Isian yang belum disimpan dipulihkan saat panel dibuka lagi.
  */
 export function FormKurikulumObe({ open, onOpenChange, kurikulum, kodeProdi, pilihanProdi, onSelesai }: FormKurikulumObeProps) {
+  const siakad = useSiakad();
+  const toast = useToast();
   const ubah = !!kurikulum;
   const terkunci = ubah && !['draf', 'diajukan'].includes(kurikulum!.status);
+  const prodiAwal = kurikulum?.kode_prodi ?? kodeProdi ?? pilihanProdi?.[0]?.kode_prodi ?? '';
   const awal = React.useMemo(
     () => ({
-      kode_prodi: kurikulum?.kode_prodi ?? kodeProdi ?? pilihanProdi?.[0]?.kode_prodi ?? '',
+      kode_prodi: prodiAwal,
       kode: kurikulum?.kode ?? '',
       nama: kurikulum?.nama ?? '',
       nama_en: kurikulum?.nama_en ?? '',
@@ -297,18 +330,400 @@ export function FormKurikulumObe({ open, onOpenChange, kurikulum, kodeProdi, pil
       keterangan: kurikulum?.keterangan ?? '',
       id_kurikulum_feeder: kurikulum?.id_kurikulum_feeder ?? '',
     }),
-    [kurikulum, kodeProdi, pilihanProdi],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [kurikulum, prodiAwal],
   );
   const [f, setF] = React.useState(awal);
+  const [baru, setBaru] = React.useState<DaftarBaru>(BARU_KOSONG);
+  const [isian, setIsian] = React.useState<NilaiIsian | null>(null);
+  const [step, setStep] = React.useState(0);
+  const dibuat = React.useRef<KurikulumLengkap | null>(null);
+  const { kirim, kolom, setGalat } = useKirim();
   React.useEffect(() => {
-    if (open) setF(awal);
-  }, [open, awal]);
+    if (!open) return;
+    setF(awal);
+    setBaru(BARU_KOSONG);
+    setIsian(null);
+    setStep(0);
+    setGalat(null);
+    dibuat.current = null;
+  }, [open, awal, setGalat]);
+  const drafKunci = ubah ? `kurikulum:${kurikulum!.id}` : `kurikulum:baru:${prodiAwal}`;
+  const draf = useDrafWizard(
+    drafKunci,
+    open,
+    React.useMemo(() => ({ f, baru, isian }), [f, baru, isian]),
+    (d) => {
+      setF({ ...awal, ...d.f });
+      setBaru({ ...BARU_KOSONG, ...d.baru });
+      if (d.isian) setIsian(d.isian);
+    },
+    (d) => JSON.stringify(d.f) === JSON.stringify(awal) && Object.values(d.baru).every((x) => !x.length) && d.isian === null,
+  );
   const set = (k: keyof typeof f) => (v: string) => setF((x) => ({ ...x, [k]: v }));
-  const { kirim, sibuk, galat, kolom, setGalat } = useKirim();
-  React.useEffect(() => {
-    if (open) setGalat(null);
-  }, [open, setGalat]);
-  const simpan = async () => {
+
+  const ref = useSiakadQuery<{ prodi: Array<{ kode_prodi: string; nama: string }> }>(['kurikulum-aturan', 'referensi'], (s, signal) => s.request({ method: 'GET', path: `${A_KUR}/referensi` }, { signal }), {
+    enabled: open && !ubah && !pilihanProdi?.length,
+    staleTime: 120_000,
+  });
+  const opsiProdi = pilihanProdi?.length ? pilihanProdi.map((p) => ({ value: p.kode_prodi, label: p.nama_prodi })) : (ref.data?.prodi ?? []).map((p) => ({ value: p.kode_prodi, label: p.nama }));
+  const namaProdi = kurikulum?.nama_prodi ?? opsiProdi.find((p) => p.value === f.kode_prodi)?.label ?? f.kode_prodi;
+
+  const a = useAturanKurikulumBerlaku({ prodi: f.kode_prodi || null, kurikulumId: kurikulum?.id, angkatan: Number(f.tahun_berlaku) || undefined, aktif: open });
+  const st = a.isi?.struktur;
+  const sksMin = st?.sks_lulus ?? kurikulum?.jenjang?.sks_min ?? null;
+  const studiMaks = st?.masa_studi?.maks ?? null;
+  const tempuhNormal = st?.masa_studi?.normal ?? kurikulum?.jenjang?.masa_tempuh ?? null;
+  const ipkMin = a.isi?.kelulusan?.ipk_min ?? null;
+  const sumberBatas = a.versi ? `menurut ${a.versi.nama} v${a.versi.versi}` : 'menurut ketentuan jenjang';
+
+  // Bagian berbentuk daftar butir: dari kerangka aturan bila ada; tanpa aturan ditampilkan tanpa kewajiban.
+  const bagianButir = (a.versi ? a.bagian.filter((b) => BUTIR_KERANGKA[b.kode]) : Object.keys(BUTIR_KERANGKA).map((kode) => ({ kode, nama: NAMA_BAWAAN[kode]! }))).map((b) => ({
+    kode: b.kode,
+    nama: b.nama,
+    jenis: BUTIR_KERANGKA[b.kode]!,
+    wajib: !!a.versi,
+  }));
+  const idKur = kurikulum?.id;
+  const adaProfil = useProfilLulusan(open && idKur ? idKur : undefined);
+  const adaCpl = useCplKurikulum(open && idKur ? idKur : undefined);
+  const adaBk = useBahanKajian(open && idKur ? idKur : undefined);
+  const ada: Record<JenisButir, Array<{ kode: string; teks: string }>> = {
+    'profil-lulusan': (adaProfil.data ?? []).map((x) => ({ kode: x.kode, teks: x.nama })),
+    cpl: (adaCpl.data ?? []).map((x) => ({ kode: x.kode, teks: x.deskripsi })),
+    'bahan-kajian': (adaBk.data ?? []).map((x) => ({ kode: x.kode, teks: x.nama })),
+  };
+  const isianQ = useSiakadQuery<IsianKurikulum>(['kurikulum-aturan', 'isian', 'kurikulum', idKur], (s, signal) => s.request({ method: 'GET', path: `${A_KUR}/isian`, query: { entitas: 'kurikulum', kunci: String(idKur) } }, { signal }), {
+    enabled: open && !!idKur,
+    staleTime: 0,
+  });
+  const skema = (isianQ.data?.skema ?? []).filter((b) => b.isian.length);
+  const nilaiIsian = isian ?? isianQ.data?.nilai ?? {};
+
+  const angka = (k: keyof typeof f) => (f[k] === '' ? null : Number(String(f[k]).replace(',', '.')));
+  const cekBeban = (): string | null => {
+    if (terkunci) return null;
+    const sks = angka('sks_lulus');
+    const wajib = angka('sks_wajib');
+    const pil = angka('sks_pilihan');
+    const tempuh = angka('masa_tempuh');
+    const maks = angka('masa_studi_maks');
+    const ipk = angka('ipk_min_lulus');
+    if ([sks, wajib, pil, tempuh, maks, ipk].some((x) => x != null && (!Number.isFinite(x) || x < 0))) return 'Isian beban belajar harus angka positif.';
+    if (sks != null && sksMin && sks < sksMin) return `SKS lulus paling sedikit ${sksMin} ${sumberBatas}.`;
+    if (sks != null && wajib != null && pil != null && wajib + pil > sks) return `SKS wajib (${wajib}) + pilihan (${pil}) melebihi SKS lulus (${sks}).`;
+    if (tempuh != null && maks != null && maks < tempuh) return 'Masa studi paling lama tidak boleh lebih pendek dari masa tempuh.';
+    if (tempuh != null && maks != null && maks > tempuh * 2) return 'Masa studi paling lama maksimal 2× masa tempuh.';
+    if (maks != null && studiMaks && maks > studiMaks) return `Masa studi paling lama ${studiMaks} semester ${sumberBatas}.`;
+    if (ipk != null && (ipk < 0 || ipk > 4)) return 'IPK minimal lulus antara 0 dan 4.';
+    return null;
+  };
+  const cekButir = (b: (typeof bagianButir)[number]): string | null => {
+    const rows = baru[b.jenis];
+    const cpl = b.jenis === 'cpl';
+    if (rows.some((r) => !r.kode.trim() || (cpl ? !r.deskripsi.trim() : !r.nama.trim()))) return `Lengkapi kode dan ${cpl ? 'rumusan' : 'nama'} setiap ${b.nama.toLowerCase()}, atau hapus barisnya.`;
+    const kode = [...ada[b.jenis].map((x) => x.kode), ...rows.map((r) => r.kode.trim())].map((x) => x.toLowerCase());
+    const ganda = kode.find((x, i) => kode.indexOf(x) !== i);
+    if (ganda) return `Kode ${ganda.toUpperCase()} dipakai lebih dari sekali.`;
+    if (b.wajib && !terkunci && ada[b.jenis].length + rows.length === 0) return `Tambahkan minimal satu ${b.nama.toLowerCase()}. ${wajibMenurut(a)}`;
+    return null;
+  };
+  const setBaris = (j: JenisButir, i: number, x: Partial<ButirBaru>) => setBaru((s) => ({ ...s, [j]: s[j].map((r, k) => (k === i ? { ...r, ...x } : r)) }));
+
+  const steps: PanelLangkahStep[] = [
+    {
+      id: 'identitas',
+      title: 'Identitas',
+      description: 'Program studi, kode, nama, dan tahun mulai berlaku. Aturan kurikulum yang berlaku dibaca dari sini.',
+      error: !!(kolom.kode || kolom.nama || kolom.kode_prodi || kolom.tahun_berlaku),
+      validate: () => {
+        if (!ubah && !f.kode_prodi) return 'Pilih program studi.';
+        if (a.memuat) return 'Tunggu sebentar, aturan kurikulum sedang dimuat.';
+        if (!f.kode.trim()) return 'Isi kode kurikulum.';
+        if (!f.nama.trim()) return 'Isi nama kurikulum.';
+        const t = Number(f.tahun_berlaku);
+        if (f.tahun_berlaku && (!Number.isInteger(t) || t < 2000 || t > 2100)) return 'Tahun berlaku tidak wajar.';
+        return null;
+      },
+      content: (
+        <div className="u-kk-form">
+          <DrafDipulihkan waktu={draf.dipulihkan} onBuang={() => { draf.buang(); setF(awal); setBaru(BARU_KOSONG); setIsian(null); }} />
+          {terkunci && (
+            <Alert variant="info" title="Kurikulum sudah disahkan">
+              Kode, beban belajar, dan kompetensi utama terkunci. Ubah lewat revisi (versi baru); uraian lain dan id Feeder tetap bisa diubah.
+            </Alert>
+          )}
+          {!ubah && (
+            <Field label="Program studi" required error={kolom.kode_prodi}>
+              <Select value={f.kode_prodi || null} onValueChange={(v) => set('kode_prodi')(v ? String(v) : '')} options={opsiProdi} placeholder="Pilih…" />
+            </Field>
+          )}
+          <div className="u-kk-grid">
+            <Field label="Kode kurikulum" required error={kolom.kode} description="Unik per prodi, mis. K2026">
+              <Input value={f.kode} disabled={terkunci} onChange={(e) => set('kode')(e.target.value)} placeholder="K2026" />
+            </Field>
+            <Field label="Tahun mulai berlaku" error={kolom.tahun_berlaku} description="Menentukan versi aturan kurikulum yang diikuti.">
+              <Input type="number" inputMode="numeric" value={f.tahun_berlaku} onChange={(e) => set('tahun_berlaku')(e.target.value)} />
+            </Field>
+          </div>
+          <Field label="Nama kurikulum" required error={kolom.nama}>
+            <Input value={f.nama} onChange={(e) => set('nama')(e.target.value)} placeholder="Kurikulum OBE 2026" />
+          </Field>
+          <Field label="Nama dalam bahasa Inggris" optional error={kolom.nama_en}>
+            <Input value={f.nama_en} onChange={(e) => set('nama_en')(e.target.value)} placeholder="OBE Curriculum 2026" />
+          </Field>
+          <RujukanAturan aturan={a} prodiDipilih={!!f.kode_prodi} />
+        </div>
+      ),
+    },
+    {
+      id: 'beban',
+      title: 'Beban belajar',
+      description: terkunci ? 'Terkunci karena kurikulum sudah disahkan.' : `Kosongkan untuk memakai ketentuan bawaan. Batas ${sumberBatas}.`,
+      optional: true,
+      error: !!(kolom.sks_lulus || kolom.sks_wajib || kolom.sks_pilihan || kolom.masa_tempuh || kolom.masa_studi_maks || kolom.ipk_min_lulus),
+      validate: cekBeban,
+      content: (
+        <div className="u-kk-form">
+          <div className="u-kk-grid u-kk-grid-3">
+            <Field label="SKS untuk lulus" error={kolom.sks_lulus} description={sksMin ? `Minimal ${sksMin} SKS ${sumberBatas}.` : 'Kosongkan = minimal jenjang.'}>
+              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.sks_lulus} onChange={(e) => set('sks_lulus')(e.target.value)} placeholder={sksMin ? String(sksMin) : undefined} />
+            </Field>
+            <Field label="SKS mata kuliah wajib" error={kolom.sks_wajib}>
+              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.sks_wajib} onChange={(e) => set('sks_wajib')(e.target.value)} />
+            </Field>
+            <Field label="SKS mata kuliah pilihan" error={kolom.sks_pilihan}>
+              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.sks_pilihan} onChange={(e) => set('sks_pilihan')(e.target.value)} />
+            </Field>
+            <Field label="Masa tempuh normal (semester)" error={kolom.masa_tempuh}>
+              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.masa_tempuh} onChange={(e) => set('masa_tempuh')(e.target.value)} placeholder={tempuhNormal ? String(tempuhNormal) : undefined} />
+            </Field>
+            <Field label="Masa studi paling lama" error={kolom.masa_studi_maks} description={studiMaks ? `Paling lama ${studiMaks} semester ${sumberBatas}.` : 'Paling lama 2× masa tempuh.'}>
+              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.masa_studi_maks} onChange={(e) => set('masa_studi_maks')(e.target.value)} placeholder={studiMaks ? String(studiMaks) : undefined} />
+            </Field>
+            <Field label="IPK minimal lulus" error={kolom.ipk_min_lulus} description={ipkMin ? `Aturan: ${ipkMin}` : undefined}>
+              <Input type="number" inputMode="decimal" step="0.01" disabled={terkunci} value={f.ipk_min_lulus} onChange={(e) => set('ipk_min_lulus')(e.target.value)} placeholder={ipkMin ? String(ipkMin) : undefined} />
+            </Field>
+          </div>
+          {a.pasal('struktur') ? <p className="u-kw-bantuan">Dasar: {a.pasal('struktur')}</p> : null}
+        </div>
+      ),
+    },
+    {
+      id: 'uraian',
+      title: 'Uraian kurikulum',
+      description: 'Uraian naratif dokumen kurikulum (Pasal 44). Semua tidak wajib dan bisa dilengkapi nanti.',
+      optional: true,
+      content: (
+        <div className="u-kk-form">
+          <Field label="Visi keilmuan" optional>
+            <Textarea rows={2} value={f.visi_keilmuan} onChange={(e) => set('visi_keilmuan')(e.target.value)} />
+          </Field>
+          <Field label="Kompetensi utama lulusan" optional description={terkunci ? 'Terkunci setelah disahkan.' : undefined}>
+            <Textarea rows={3} disabled={terkunci} value={f.kompetensi_utama} onChange={(e) => set('kompetensi_utama')(e.target.value)} />
+          </Field>
+          <Field label="Metode dan modalitas pembelajaran" optional>
+            <Textarea rows={2} value={f.metode_pembelajaran} onChange={(e) => set('metode_pembelajaran')(e.target.value)} />
+          </Field>
+          <Field label="Sistem penilaian" optional>
+            <Textarea rows={2} value={f.penilaian} onChange={(e) => set('penilaian')(e.target.value)} />
+          </Field>
+          <Field label="Tugas akhir" optional description="Bentuk tugas akhir (skripsi, proyek, prototipe, dll.)">
+            <Textarea rows={2} value={f.tugas_akhir} onChange={(e) => set('tugas_akhir')(e.target.value)} />
+          </Field>
+          <Field label="Syarat masuk" optional>
+            <Textarea rows={2} value={f.syarat_masuk} onChange={(e) => set('syarat_masuk')(e.target.value)} />
+          </Field>
+          <div className="u-kk-grid">
+            <Field label="id_kurikulum Neo Feeder" optional description="Untuk pelaporan PDDikti.">
+              <Input value={f.id_kurikulum_feeder} onChange={(e) => set('id_kurikulum_feeder')(e.target.value)} />
+            </Field>
+            <Field label="Keterangan" optional>
+              <Input value={f.keterangan} onChange={(e) => set('keterangan')(e.target.value)} />
+            </Field>
+          </div>
+        </div>
+      ),
+    },
+    ...bagianButir.map(
+      (b): PanelLangkahStep => ({
+        id: `bagian-${b.kode}`,
+        title: b.nama,
+        description: b.wajib ? wajibMenurut(a, 'minimal satu') : 'Tidak diwajibkan aturan; bisa dilengkapi nanti di ruang kerja kurikulum.',
+        optional: !b.wajib,
+        validate: () => cekButir(b),
+        content: (
+          <div className="u-kk-form">
+            {ada[b.jenis].length ? (
+              <>
+                <p className="u-kw-bantuan">Sudah tercatat ({ada[b.jenis].length}). Ubah atau hapus di tab {b.nama} ruang kerja kurikulum.</p>
+                <ul className="u-kw-ada">
+                  {ada[b.jenis].map((x) => (
+                    <li key={x.kode}>
+                      <b>{x.kode}</b>
+                      <span>{potong(x.teks)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+            {terkunci ? (
+              <Alert variant="info">Kurikulum sudah disahkan; butir baru ditambahkan lewat revisi.</Alert>
+            ) : (
+              <>
+                {baru[b.jenis].map((r, i) => (
+                  <div key={i} className="u-kw-baris">
+                    <header>
+                      <span>
+                        {b.nama} baru {i + 1}
+                      </span>
+                      <Button size="sm" variant="ghost" onClick={() => setBaru((s) => ({ ...s, [b.jenis]: s[b.jenis].filter((_, k) => k !== i) }))}>
+                        <Trash2 /> Hapus
+                      </Button>
+                    </header>
+                    <div className="u-kk-grid">
+                      <Field label="Kode" required>
+                        <Input value={r.kode} onChange={(e) => setBaris(b.jenis, i, { kode: e.target.value })} placeholder={NAMA_BUTIR[b.jenis].contoh} />
+                      </Field>
+                      {b.jenis === 'cpl' ? (
+                        <Field label="Ranah" required>
+                          <Select value={r.ranah} onValueChange={(v) => setBaris(b.jenis, i, { ranah: (v ?? 'sikap') as RanahCpl })} options={Object.entries(RANAH_CPL).map(([value, l]) => ({ value, label: l }))} placeholder="Pilih…" />
+                        </Field>
+                      ) : (
+                        <Field label="Nama" required>
+                          <Input value={r.nama} onChange={(e) => setBaris(b.jenis, i, { nama: e.target.value })} />
+                        </Field>
+                      )}
+                    </div>
+                    <Field label={b.jenis === 'cpl' ? 'Rumusan' : 'Deskripsi'} required={b.jenis === 'cpl'} optional={b.jenis !== 'cpl'} description={b.jenis === 'cpl' ? 'Mulai dengan kata kerja terukur, mis. "Mampu merancang…"' : undefined}>
+                      <Textarea rows={2} value={r.deskripsi} onChange={(e) => setBaris(b.jenis, i, { deskripsi: e.target.value })} />
+                    </Field>
+                  </div>
+                ))}
+                <div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setBaru((s) => ({
+                        ...s,
+                        [b.jenis]: [...s[b.jenis], { kode: `${NAMA_BUTIR[b.jenis].contoh.replace(/\d+$/, '')}${ada[b.jenis].length + s[b.jenis].length + 1}`, nama: '', deskripsi: '', ranah: 'keterampilan_khusus' as RanahCpl }],
+                      }))
+                    }
+                  >
+                    <Plus /> Tambah {b.nama.toLowerCase()}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        ),
+      }),
+    ),
+    ...(skema.length
+      ? [
+          {
+            id: 'isian-kerangka',
+            title: skema.length === 1 ? skema[0]!.nama : 'Isian kerangka',
+            description: `Isian tambahan yang dituntut kerangka ${a.kerangka ?? ''}. Bertanda * wajib.`,
+            validate: () => {
+              for (const b of skema) {
+                const p = periksaIsianKerangka(b.isian, nilaiIsian[b.kode] ?? {});
+                if (p) return skema.length > 1 ? `${b.nama}: ${p}` : p;
+              }
+              return null;
+            },
+            content: (
+              <div className="u-kk-form">
+                {skema.map((b) => (
+                  <fieldset key={b.kode} className="u-kk-fieldset">
+                    {skema.length > 1 ? <legend>{b.nama}</legend> : null}
+                    <IsianKerangkaDinamis
+                      isian={b.isian}
+                      nilai={nilaiIsian[b.kode] ?? {}}
+                      rujukan={a.rujukan}
+                      onChange={(kode, v) => setIsian({ ...nilaiIsian, [b.kode]: { ...(nilaiIsian[b.kode] ?? {}), [kode]: v } })}
+                    />
+                  </fieldset>
+                ))}
+              </div>
+            ),
+          } as PanelLangkahStep,
+        ]
+      : []),
+    {
+      id: 'tinjau',
+      title: 'Tinjau',
+      description: ubah ? 'Periksa perubahan sebelum disimpan.' : 'Periksa ringkasan. Kurikulum disimpan sebagai draf dan bisa dilengkapi di ruang kerja.',
+      content: (
+        <div className="u-kk-form">
+          <WizardReview
+            sections={[
+              {
+                title: 'Identitas',
+                onEdit: () => setStep(0),
+                items: [
+                  { label: 'Program studi', value: namaProdi },
+                  { label: 'Kurikulum', value: f.kode && f.nama ? `${f.kode.trim()} · ${f.nama.trim()}` : '' },
+                  ...(f.nama_en.trim() ? [{ label: 'Nama Inggris', value: f.nama_en.trim() }] : []),
+                  { label: 'Mulai berlaku', value: f.tahun_berlaku ? `Tahun ${f.tahun_berlaku}` : '' },
+                  { label: 'Aturan yang diikuti', value: a.rujukan ?? 'Ketentuan jenjang (belum ada aturan berversi)' },
+                ],
+              },
+              {
+                title: 'Beban belajar',
+                onEdit: () => setStep(1),
+                items: [
+                  { label: 'Syarat lulus', value: `${f.sks_lulus || (sksMin ? `${sksMin} (bawaan)` : 'bawaan jenjang')} SKS${f.sks_wajib || f.sks_pilihan ? ` (wajib ${f.sks_wajib || '–'}, pilihan ${f.sks_pilihan || '–'})` : ''}` },
+                  { label: 'Lama studi', value: `${f.masa_tempuh || tempuhNormal || '–'} semester, paling lama ${f.masa_studi_maks || studiMaks || '–'} semester` },
+                  { label: 'IPK minimal lulus', value: f.ipk_min_lulus || (ipkMin ? `${ipkMin} (bawaan)` : 'Bawaan jenjang') },
+                ],
+              },
+              {
+                title: 'Uraian kurikulum',
+                onEdit: () => setStep(2),
+                items: (
+                  [
+                    ['visi_keilmuan', 'Visi keilmuan'],
+                    ['kompetensi_utama', 'Kompetensi utama'],
+                    ['metode_pembelajaran', 'Metode pembelajaran'],
+                    ['penilaian', 'Sistem penilaian'],
+                    ['tugas_akhir', 'Tugas akhir'],
+                    ['syarat_masuk', 'Syarat masuk'],
+                  ] as const
+                ).map(([k, l]) => ({ label: l, value: f[k].trim() ? potong(f[k].trim(), 120) : '' })),
+              },
+              ...bagianButir.map((b, i) => {
+                const pesan = cekButir(b);
+                return {
+                  title: b.nama,
+                  onEdit: () => setStep(3 + i),
+                  missing: pesan ?? undefined,
+                  items: [
+                    { label: 'Sudah tercatat', value: ada[b.jenis].length ? `${ada[b.jenis].length} butir` : 'Belum ada' },
+                    { label: 'Ditambahkan sekarang', value: baru[b.jenis].length ? baru[b.jenis].map((r) => r.kode.trim()).join(', ') : 'Tidak ada' },
+                  ],
+                };
+              }),
+              ...skema.map((b) => ({
+                title: b.nama,
+                onEdit: () => setStep(3 + bagianButir.length),
+                items: b.isian.map((i) => ({ label: i.nama, value: ringkasNilaiIsian(i, (nilaiIsian[b.kode] ?? {})[i.kode]) })),
+              })),
+            ]}
+          />
+          {!ubah && a.bagian.some((b) => !b.primitif && b.isian.length) ? (
+            <Alert variant="info">
+              Setelah draf dibuat, lengkapi juga {a.bagian.filter((b) => !b.primitif && b.isian.length).map((b) => b.nama.toLowerCase()).join(', ')} lewat Ubah kurikulum.
+            </Alert>
+          ) : null}
+          {a.rujukan ? <p className="u-kw-bantuan">Langkah dan isian wajib di atas mengikuti {a.rujukan}.</p> : null}
+        </div>
+      ),
+    },
+  ];
+
+  const simpan = async (): Promise<string | null> => {
     const body: Record<string, unknown> = {
       kode: f.kode.trim(),
       nama: f.nama.trim(),
@@ -331,119 +746,70 @@ export function FormKurikulumObe({ open, onOpenChange, kurikulum, kodeProdi, pil
       delete body.kode;
       delete body.kompetensi_utama;
     }
-    if (!ubah) body.kode_prodi = f.kode_prodi;
+    const id = kurikulum?.id ?? dibuat.current?.id;
+    if (!id) body.kode_prodi = f.kode_prodi;
+    let k: KurikulumLengkap | undefined;
     try {
-      const k = await kirim<KurikulumLengkap>(ubah ? 'PUT' : 'POST', ubah ? `${P}/kurikulum/${kurikulum!.id}` : `${P}/kurikulum`, body, ubah ? 'Identitas kurikulum disimpan.' : 'Draf kurikulum dibuat.');
-      onOpenChange(false);
-      if (k) onSelesai?.(k);
-    } catch {
-      /* ditampilkan di KotakGalat */
+      k = await kirim<KurikulumLengkap>(id ? 'PUT' : 'POST', id ? `${P}/kurikulum/${id}` : `${P}/kurikulum`, body);
+    } catch (e) {
+      return pesanGalat(e);
     }
+    const kid = k?.id ?? id;
+    if (!kid) return 'Server tidak mengembalikan kurikulum yang disimpan.';
+    if (!ubah && k) dibuat.current = k;
+    const gagal: string[] = [];
+    if (!terkunci) {
+      for (const b of bagianButir) {
+        const sisa: ButirBaru[] = [];
+        for (const r of baru[b.jenis]) {
+          const isi = b.jenis === 'cpl' ? { kode: r.kode.trim(), ranah: r.ranah, deskripsi: r.deskripsi.trim(), kelompok_sn: null, sumber: null, target: null } : { kode: r.kode.trim(), nama: r.nama.trim(), deskripsi: kosongJadiNull(r.deskripsi) };
+          try {
+            await siakad.request({ method: 'POST', path: `${P}/kurikulum/${kid}/${b.jenis}`, body: isi });
+          } catch (e) {
+            gagal.push(`${r.kode.trim()} (${pesanGalat(e)})`);
+            sisa.push(r);
+          }
+        }
+        setBaru((s) => ({ ...s, [b.jenis]: sisa }));
+      }
+    }
+    if (isian) {
+      for (const b of skema) {
+        const lama = isianQ.data?.nilai?.[b.kode] ?? {};
+        const kini = isian[b.kode] ?? {};
+        if (JSON.stringify(lama) === JSON.stringify(kini)) continue;
+        try {
+          await siakad.request({ method: 'PUT', path: `${A_KUR}/isian`, body: { entitas: 'kurikulum', kunci: String(kid), bagian: b.kode, nilai: Object.fromEntries(Object.entries({ ...lama, ...kini }).map(([x, v]) => [x, nilaiKirim(v)])) } });
+        } catch (e) {
+          gagal.push(`${b.nama} (${pesanGalat(e)})`);
+        }
+      }
+    }
+    invalidateSiakad('kur');
+    invalidateSiakad('kurikulum-aturan');
+    if (gagal.length) return `Identitas kurikulum tersimpan, tetapi belum semua isian tersimpan: ${gagal.join('; ')}. Perbaiki lalu simpan lagi.`;
+    toast.add({ title: ubah ? 'Kurikulum disimpan.' : 'Draf kurikulum dibuat.', type: 'success' });
+    draf.selesai();
+    const hasil = k ?? dibuat.current;
+    if (hasil) onSelesai?.(hasil);
+    return null;
   };
+
   return (
-    <Dialog
-      side="right"
+    <PanelLangkah
       open={open}
       onOpenChange={onOpenChange}
       size="lg"
-      title={ubah ? 'Ubah identitas kurikulum' : 'Kurikulum OBE baru'}
-      description={ubah ? `${kurikulum!.kode} · ${kurikulum!.nama}` : 'Dimulai sebagai draf. Beban belajar yang dikosongkan diisi dari ketentuan jenjang (Permendiktisaintek 39/2025).'}
-      footer={
-        <>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Batal
-          </Button>
-          <Button loading={sibuk} disabled={!f.kode.trim() || !f.nama.trim() || (!ubah && !f.kode_prodi)} onClick={simpan}>
-            {ubah ? 'Simpan identitas' : 'Buat draf'}
-          </Button>
-        </>
-      }
-    >
-      <div className="u-kk-form">
-        <KotakGalat galat={galat} />
-        {terkunci && (
-          <Alert variant="info" title="Kurikulum sudah disahkan">
-            Kode, beban belajar, dan kompetensi utama terkunci. Ubah lewat revisi (versi baru); uraian lain dan id Feeder tetap bisa diubah.
-          </Alert>
-        )}
-        {!ubah && (
-          <Field label="Program studi" required error={kolom.kode_prodi}>
-            <Select
-              value={f.kode_prodi}
-              onValueChange={(v) => set('kode_prodi')(v ?? '')}
-              options={(pilihanProdi ?? []).map((p) => ({ value: p.kode_prodi, label: p.nama_prodi }))}
-              placeholder="Pilih prodi"
-            />
-          </Field>
-        )}
-        <div className="u-kk-grid">
-          <Field label="Kode" required error={kolom.kode} description="Unik per prodi, mis. K2026">
-            <Input value={f.kode} disabled={terkunci} onChange={(e) => set('kode')(e.target.value)} placeholder="K2026" />
-          </Field>
-          <Field label="Tahun berlaku" error={kolom.tahun_berlaku}>
-            <Input type="number" inputMode="numeric" value={f.tahun_berlaku} onChange={(e) => set('tahun_berlaku')(e.target.value)} />
-          </Field>
-        </div>
-        <Field label="Nama kurikulum" required error={kolom.nama}>
-          <Input value={f.nama} onChange={(e) => set('nama')(e.target.value)} placeholder="Kurikulum OBE 2026" />
-        </Field>
-        <Field label="Nama (Inggris)" optional error={kolom.nama_en}>
-          <Input value={f.nama_en} onChange={(e) => set('nama_en')(e.target.value)} placeholder="OBE Curriculum 2026" />
-        </Field>
-        <fieldset className="u-kk-fieldset">
-          <legend>Beban belajar</legend>
-          <div className="u-kk-grid u-kk-grid-3">
-            <Field label="SKS lulus" error={kolom.sks_lulus} description="Kosongkan = minimal jenjang">
-              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.sks_lulus} onChange={(e) => set('sks_lulus')(e.target.value)} />
-            </Field>
-            <Field label="SKS wajib" error={kolom.sks_wajib}>
-              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.sks_wajib} onChange={(e) => set('sks_wajib')(e.target.value)} />
-            </Field>
-            <Field label="SKS pilihan" error={kolom.sks_pilihan}>
-              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.sks_pilihan} onChange={(e) => set('sks_pilihan')(e.target.value)} />
-            </Field>
-            <Field label="Masa tempuh (semester)" error={kolom.masa_tempuh}>
-              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.masa_tempuh} onChange={(e) => set('masa_tempuh')(e.target.value)} />
-            </Field>
-            <Field label="Masa studi maks." error={kolom.masa_studi_maks} description="Paling lama 2× masa tempuh">
-              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.masa_studi_maks} onChange={(e) => set('masa_studi_maks')(e.target.value)} />
-            </Field>
-            <Field label="IPK minimal lulus" error={kolom.ipk_min_lulus}>
-              <Input type="number" inputMode="decimal" step="0.01" disabled={terkunci} value={f.ipk_min_lulus} onChange={(e) => set('ipk_min_lulus')(e.target.value)} />
-            </Field>
-          </div>
-        </fieldset>
-        <fieldset className="u-kk-fieldset">
-          <legend>Uraian kurikulum (Pasal 44)</legend>
-          <Field label="Visi keilmuan" optional>
-            <Textarea rows={2} value={f.visi_keilmuan} onChange={(e) => set('visi_keilmuan')(e.target.value)} />
-          </Field>
-          <Field label="Kompetensi utama lulusan" optional>
-            <Textarea rows={3} disabled={terkunci} value={f.kompetensi_utama} onChange={(e) => set('kompetensi_utama')(e.target.value)} />
-          </Field>
-          <Field label="Metode dan modalitas pembelajaran" optional>
-            <Textarea rows={2} value={f.metode_pembelajaran} onChange={(e) => set('metode_pembelajaran')(e.target.value)} />
-          </Field>
-          <Field label="Sistem penilaian" optional>
-            <Textarea rows={2} value={f.penilaian} onChange={(e) => set('penilaian')(e.target.value)} />
-          </Field>
-          <Field label="Tugas akhir" optional description="Bentuk tugas akhir (skripsi, proyek, prototipe, dll.)">
-            <Textarea rows={2} value={f.tugas_akhir} onChange={(e) => set('tugas_akhir')(e.target.value)} />
-          </Field>
-          <Field label="Syarat masuk" optional>
-            <Textarea rows={2} value={f.syarat_masuk} onChange={(e) => set('syarat_masuk')(e.target.value)} />
-          </Field>
-        </fieldset>
-        <div className="u-kk-grid">
-          <Field label="id_kurikulum Neo Feeder" optional>
-            <Input value={f.id_kurikulum_feeder} onChange={(e) => set('id_kurikulum_feeder')(e.target.value)} />
-          </Field>
-          <Field label="Keterangan" optional>
-            <Input value={f.keterangan} onChange={(e) => set('keterangan')(e.target.value)} />
-          </Field>
-        </div>
-      </div>
-    </Dialog>
+      mode={ubah ? 'ubah' : 'buat'}
+      title={ubah ? 'Ubah kurikulum' : 'Kurikulum baru'}
+      description={ubah ? `${kurikulum!.kode} · ${kurikulum!.nama}` : 'Dimulai sebagai draf. Langkah dan isian wajib mengikuti aturan kurikulum yang berlaku untuk prodi.'}
+      steps={steps}
+      step={step}
+      onStepChange={setStep}
+      finishLabel={ubah ? 'Simpan kurikulum' : 'Buat draf'}
+      footerNote="Bertanda * wajib. Isian tersimpan sementara bila panel ditutup."
+      onFinish={simpan}
+    />
   );
 }
 
@@ -1194,10 +1560,36 @@ export function KelolaMkKurikulum({ kurikulumId, bolehUbah, onBukaMk, className 
   );
 }
 
+/** Kategori MK untuk perangkat wajib aturan (AturanKurikulum::JENIS_MK): teori, praktikum, lapangan, mbkm, ta. */
+const kategoriMk = (f: { jenis: string; sks_praktikum: string; sks_praktik_lapangan: string; luar_prodi: boolean }) =>
+  f.jenis === 'S' ? 'ta' : f.luar_prodi ? 'mbkm' : n(f.sks_praktik_lapangan) > 0 ? 'lapangan' : n(f.sks_praktikum) > 0 ? 'praktikum' : 'teori';
+const NAMA_KATEGORI: Record<string, string> = { teori: 'teori', praktikum: 'praktikum/praktik', lapangan: 'praktik lapangan', mbkm: 'kegiatan MBKM', ta: 'tugas akhir' };
+type BarisPrasyarat = { prasyarat_id: string; jenis: string; nilai_min: string };
+const JENIS_PRASYARAT = [
+  { value: 'lulus', label: 'Harus lulus' },
+  { value: 'pernah_ambil', label: 'Pernah ambil' },
+  { value: 'bersamaan', label: 'Bersamaan' },
+];
+
+/**
+ * Mata kuliah kurikulum sebagai WIZARD di panel samping: Identitas → SKS & semester (batas SKS semester dari aturan) →
+ * Pembelajaran → Prasyarat → CPL/bahan kajian yang didukung (hanya bila kerangka memuat CPL & CPMK) → isian MK tambahan
+ * kerangka → Tinjau (termasuk perangkat yang wajib menurut aturan). Isian wajib mengikuti `mata_kuliah.isian_wajib`
+ * aturan versi kurikulum. Payload MK tetap POST /kurikulum/{id}/mk atau PUT /mk/{id}; prasyarat, pemetaan, dan isian
+ * tambahan memakai endpoint yang sama dengan tab masing-masing.
+ */
 function FormMk({ kurikulumId, awal, onTutup }: { kurikulumId: number | string; awal: Partial<MkDetail>; onTutup: () => void }) {
+  const siakad = useSiakad();
+  const toast = useToast();
   // Daftar MK hanya membawa ringkasan; ambil detail lengkap saat mengubah.
   const det = useMataKuliahObe(awal.id);
   const d = (det.data as MkDetail | undefined) ?? awal;
+  const kur = useKurikulum(kurikulumId);
+  const k = kur.data as KurikulumLengkap | undefined;
+  const semuaMk = useMkKurikulum(kurikulumId);
+  const cplQ = useCplKurikulum(kurikulumId);
+  const bkQ = useBahanKajian(kurikulumId);
+  const a = useAturanKurikulumBerlaku({ prodi: k?.kode_prodi, kurikulumId: Number(kurikulumId) || null, angkatan: k?.angkatan?.[0] ?? k?.tahun_berlaku ?? undefined });
   const isi = React.useCallback(
     (m: Partial<MkDetail>) => ({
       kode_mk: m.kode_mk ?? '',
@@ -1221,17 +1613,384 @@ function FormMk({ kurikulumId, awal, onTutup }: { kurikulumId: number | string; 
     }),
     [],
   );
+  const cplDari = React.useCallback(
+    (m: Partial<MkDetail>): string[] =>
+      ((m.cpl as unknown as Array<{ cpl_id?: number } | string> | null | undefined) ?? [])
+        .map((x) => (typeof x === 'string' ? cplQ.data?.find((c) => c.kode === x)?.id : x?.cpl_id))
+        .filter((x): x is number => x != null)
+        .map(String),
+    [cplQ.data],
+  );
+  const prasyaratDari = (m: Partial<MkDetail>): BarisPrasyarat[] =>
+    ((m.prasyarat as Array<{ prasyarat_id: number; jenis: string; nilai_min?: string | null }> | undefined) ?? []).map((x) => ({ prasyarat_id: String(x.prasyarat_id), jenis: x.jenis, nilai_min: x.nilai_min ?? '' }));
   const [f, setF] = React.useState(() => isi(awal));
+  const [pras, setPras] = React.useState<BarisPrasyarat[]>([]);
+  const [cpl, setCpl] = React.useState<string[] | null>(null);
+  const [bk, setBk] = React.useState<string[] | null>(null);
+  const [isianMk, setIsianMk] = React.useState<Record<string, unknown> | null>(null);
+  const [step, setStep] = React.useState(0);
+  const dibuat = React.useRef<number | null>(null);
   const dimuat = React.useRef(false);
+  const draf = useDrafWizard(
+    `mk:${kurikulumId}:${awal.id ?? 'baru'}`,
+    true,
+    React.useMemo(() => ({ f, pras, cpl, bk, isianMk }), [f, pras, cpl, bk, isianMk]),
+    (x) => {
+      dimuat.current = true;
+      setF({ ...isi(awal), ...x.f });
+      setPras(x.pras ?? []);
+      setCpl(x.cpl ?? null);
+      setBk(x.bk ?? null);
+      setIsianMk(x.isianMk ?? null);
+    },
+    (x) => JSON.stringify(x.f) === JSON.stringify(isi(d)) && x.cpl === null && x.bk === null && x.isianMk === null && JSON.stringify(x.pras) === JSON.stringify(prasyaratDari(d)),
+  );
   React.useEffect(() => {
     if (det.data && !dimuat.current) {
       dimuat.current = true;
       setF(isi(det.data as MkDetail));
+      setPras(prasyaratDari(det.data as MkDetail));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [det.data, isi]);
-  const { kirim, sibuk, galat, kolom } = useKirim();
+  const { kirim, kolom } = useKirim();
+
+  const W = new Set(a.isianMkWajib);
+  const wajib = { nama_en: W.has('nama_en'), nidn: W.has('nidn'), metode: W.has('metode'), pertemuan: W.has('pertemuan'), kelompok: W.has('kelompok'), cpmk: W.has('cpmk') };
+  const bantuWajib = (kode: string, teks?: string) => (W.has(kode) ? [teks, wajibMenurut(a)].filter(Boolean).join(' ') : teks);
+  const pertemuanMin = a.isi?.mata_kuliah?.pertemuan_min ?? a.definisi?.rps?.pertemuan_min ?? null;
   const total = n(f.sks_tatap_muka) + n(f.sks_praktikum) + n(f.sks_praktik_lapangan) + n(f.sks_simulasi);
-  const simpan = async () => {
+  const sem = f.semester === '' ? null : Number(f.semester);
+  const lain = (semuaMk.data ?? []).filter((m) => m.id !== d.id);
+  const bebanSemester = sem ? lain.filter((m) => (m.semester ?? 0) === sem && !pilihan(m)).reduce((x, m) => x + n(m.sks), 0) : 0;
+  const maksAturan = sem ? a.maksSksSemester(sem) : null;
+  const maks = sem ? (maksAturan ?? maksSksSemester(sem)) : null;
+  const sesudah = bebanSemester + (pilihan(f) ? 0 : total);
+  const pakaiCpl = !!a.punya('cpl') && (!!a.punya('cpmk') || wajib.cpmk);
+  const pakaiBk = pakaiCpl && !!a.punya('bahan_kajian');
+  const cplAwal = cplDari(d);
+  const bkAwal = (d.bahan_kajian ?? []).map((x) => String(x.id));
+  const cplPilih = cpl ?? cplAwal;
+  const bkPilih = bk ?? bkAwal;
+  const skemaMk = (a.definisi?.isian_mk ?? []).map((i) => ({ ...i, wajib: i.wajib || W.has(i.kode) }));
+  const kunciIsian = k?.kode_prodi && f.kode_mk.trim() ? `${k.kode_prodi}:${(d.kode_mk ?? f.kode_mk).trim()}` : '';
+  const isianQ = useSiakadQuery<{ nilai: Record<string, Record<string, unknown>> }>(['kurikulum-aturan', 'isian', 'mk', kunciIsian], (s, signal) => s.request({ method: 'GET', path: '/v1/kurikulum-aturan/isian', query: { entitas: 'mk', kunci: kunciIsian } }, { signal }), {
+    enabled: !!d.id && !!kunciIsian && skemaMk.length > 0,
+    staleTime: 0,
+  });
+  const nilaiMk = isianMk ?? isianQ.data?.nilai?.[''] ?? {};
+  const perangkat = (a.isi?.mata_kuliah?.perangkat ?? []).filter((p) => !p.wajib_untuk?.length || p.wajib_untuk.includes(kategoriMk(f)));
+  const opsiPras = lain
+    .slice()
+    .sort((x, y) => (x.semester ?? 99) - (y.semester ?? 99))
+    .map((m) => ({ value: String(m.id), label: `${m.kode_mk} · ${m.nama}`, description: m.semester ? `Semester ${m.semester}` : 'Pilihan bebas', group: m.semester && sem && m.semester >= sem ? 'Semester sama/sesudahnya' : 'Semester sebelumnya' }));
+  const namaMk = (id: string) => {
+    const m = lain.find((x) => String(x.id) === id);
+    return m ? `${m.kode_mk} ${m.nama}` : `MK #${id}`;
+  };
+  const kelompokOpsi = [...(wajib.kelompok ? [] : [{ value: '', label: 'Tidak dicatat' }]), ...Object.entries(KELOMPOK_MK).map(([value, l]) => ({ value, label: l }))];
+
+  const steps: PanelLangkahStep[] = [
+    {
+      id: 'identitas',
+      title: 'Identitas',
+      description: 'Kode, nama, dan sifat mata kuliah.',
+      error: !!(kolom.kode_mk || kolom.nama || kolom.jenis),
+      validate: () => {
+        if (a.memuat) return 'Tunggu sebentar, aturan kurikulum sedang dimuat.';
+        const kode = f.kode_mk.trim();
+        if (!kode) return 'Isi kode mata kuliah.';
+        if (lain.some((m) => m.kode_mk.toLowerCase() === kode.toLowerCase())) return `Kode ${kode} sudah dipakai mata kuliah lain di kurikulum ini.`;
+        if (!f.nama.trim()) return 'Isi nama mata kuliah.';
+        if (wajib.nama_en && !f.nama_en.trim()) return `Isi nama dalam bahasa Inggris. ${wajibMenurut(a)}`;
+        if (wajib.kelompok && !f.kelompok) return `Pilih kelompok MK. ${wajibMenurut(a)}`;
+        return null;
+      },
+      content: (
+        <div className="u-kk-form">
+          <DrafDipulihkan waktu={draf.dipulihkan} onBuang={() => { draf.buang(); setF(isi(d)); setPras(prasyaratDari(d)); setCpl(null); setBk(null); setIsianMk(null); }} />
+          <div className="u-kk-grid">
+            <Field label="Kode MK" required error={kolom.kode_mk}>
+              <Input value={f.kode_mk} onChange={(e) => setF({ ...f, kode_mk: e.target.value.toUpperCase() })} placeholder="IF101" />
+            </Field>
+            <Field label="Sifat" required error={kolom.jenis}>
+              <Select value={f.jenis} onValueChange={(v) => setF({ ...f, jenis: v ?? 'A' })} options={JENIS_MK_OPSI} placeholder="Pilih…" />
+            </Field>
+          </div>
+          <Field label="Nama mata kuliah" required error={kolom.nama}>
+            <Input value={f.nama} onChange={(e) => setF({ ...f, nama: e.target.value })} />
+          </Field>
+          <Field label="Nama dalam bahasa Inggris" required={wajib.nama_en} optional={!wajib.nama_en} error={kolom.nama_en} description={bantuWajib('nama_en')}>
+            <Input value={f.nama_en} onChange={(e) => setF({ ...f, nama_en: e.target.value })} />
+          </Field>
+          <Field label="Kelompok MK" required={wajib.kelompok} optional={!wajib.kelompok} error={kolom.kelompok} description={bantuWajib('kelompok')}>
+            <Select value={f.kelompok || null} onValueChange={(v) => setF({ ...f, kelompok: v ?? '' })} options={kelompokOpsi} placeholder="Pilih…" />
+          </Field>
+          <Field label="Deskripsi singkat" optional>
+            <Textarea rows={3} value={f.deskripsi} onChange={(e) => setF({ ...f, deskripsi: e.target.value })} />
+          </Field>
+          <RujukanAturan aturan={a} prodiDipilih={!!k} />
+        </div>
+      ),
+    },
+    {
+      id: 'sks',
+      title: 'SKS & semester',
+      description: 'Total SKS dihitung dari tatap muka, praktikum, praktik lapangan, dan simulasi.',
+      error: !!(kolom.semester || kolom.sks_tatap_muka || kolom.pertemuan),
+      validate: () => {
+        const bagian = [f.sks_tatap_muka, f.sks_praktikum, f.sks_praktik_lapangan, f.sks_simulasi];
+        if (bagian.some((x) => x !== '' && (!Number.isFinite(Number(x)) || Number(x) < 0))) return 'SKS harus angka 0 atau lebih.';
+        if (total <= 0) return 'Isi SKS minimal di satu komponen.';
+        const p = f.pertemuan === '' ? null : Number(f.pertemuan);
+        if (wajib.pertemuan && p == null) return `Isi jumlah pertemuan. ${wajibMenurut(a)}`;
+        if (p != null && (!Number.isInteger(p) || p < 1 || p > 32)) return 'Jumlah pertemuan 1–32.';
+        if (p != null && pertemuanMin && p < pertemuanMin) return `Jumlah pertemuan paling sedikit ${pertemuanMin} ${a.versi ? `menurut ${a.versi.nama} v${a.versi.versi}` : ''}.`.trim();
+        return null;
+      },
+      content: (
+        <div className="u-kk-form">
+          <Field label="Semester" error={kolom.semester}>
+            <Select value={f.semester} onValueChange={(v) => setF({ ...f, semester: v ?? '' })} options={SEMESTER_OPSI} placeholder="Pilih…" />
+          </Field>
+          <fieldset className="u-kk-fieldset">
+            <legend>
+              Beban SKS <span className="u-kk-total">Total {formatNumber(total)} SKS</span>
+            </legend>
+            <div className="u-kk-grid u-kk-grid-4">
+              <Field label="Tatap muka" error={kolom.sks_tatap_muka}>
+                <Input type="number" step="0.5" min={0} value={f.sks_tatap_muka} onChange={(e) => setF({ ...f, sks_tatap_muka: e.target.value })} />
+              </Field>
+              <Field label="Praktikum">
+                <Input type="number" step="0.5" min={0} value={f.sks_praktikum} onChange={(e) => setF({ ...f, sks_praktikum: e.target.value })} />
+              </Field>
+              <Field label="Praktik lapangan">
+                <Input type="number" step="0.5" min={0} value={f.sks_praktik_lapangan} onChange={(e) => setF({ ...f, sks_praktik_lapangan: e.target.value })} />
+              </Field>
+              <Field label="Simulasi">
+                <Input type="number" step="0.5" min={0} value={f.sks_simulasi} onChange={(e) => setF({ ...f, sks_simulasi: e.target.value })} />
+              </Field>
+            </div>
+          </fieldset>
+          {sem && maks ? (
+            sesudah > maks ? (
+              <Alert variant="warning" title={`Semester ${sem} melebihi batas ${maks} SKS`}>
+                MK wajib lain di semester ini {formatNumber(bebanSemester)} SKS; dengan MK ini jadi {formatNumber(sesudah)} SKS. Batas {maksAturan != null && a.versi ? `menurut ${a.versi.nama} v${a.versi.versi}` : 'menurut SN Dikti Pasal 17–18'}.
+              </Alert>
+            ) : (
+              <p className="u-kw-beban">
+                Semester {sem}: <b>{formatNumber(sesudah)}</b> dari batas <b>{maks}</b> SKS {maksAturan != null && a.versi ? `(${a.versi.nama} v${a.versi.versi})` : '(SN Dikti Pasal 17–18)'}
+              </p>
+            )
+          ) : null}
+          <Field label="Jumlah pertemuan" required={wajib.pertemuan} optional={!wajib.pertemuan} error={kolom.pertemuan} description={bantuWajib('pertemuan', pertemuanMin ? `Paling sedikit ${pertemuanMin} pertemuan.` : undefined)}>
+            <Input type="number" min={1} max={32} value={f.pertemuan} onChange={(e) => setF({ ...f, pertemuan: e.target.value })} />
+          </Field>
+        </div>
+      ),
+    },
+    {
+      id: 'pembelajaran',
+      title: 'Pembelajaran',
+      description: 'Cara mata kuliah dilaksanakan dan dinilai, serta dosen koordinatornya.',
+      error: !!(kolom.bentuk_pembelajaran || kolom.nidn_koordinator),
+      validate: () => {
+        if (wajib.metode && !f.bentuk_pembelajaran.length) return `Pilih minimal satu bentuk pembelajaran. ${wajibMenurut(a)}`;
+        if (wajib.nidn && !f.nidn_koordinator) return `Pilih dosen koordinator. ${wajibMenurut(a)}`;
+        return null;
+      },
+      content: (
+        <div className="u-kk-form">
+          <div className="u-kk-grid">
+            <Field label="Modalitas">
+              <Select value={f.modalitas} onValueChange={(v) => setF({ ...f, modalitas: v ?? 'luring' })} options={MODALITAS} placeholder="Pilih…" />
+            </Field>
+            <Field label="Bentuk nilai">
+              <Select
+                value={f.bentuk_nilai}
+                onValueChange={(v) => setF({ ...f, bentuk_nilai: v ?? 'ip' })}
+                options={[
+                  { value: 'ip', label: 'Huruf (masuk IP)' },
+                  { value: 'lulus', label: 'Lulus/tidak lulus' },
+                ]}
+                placeholder="Pilih…"
+              />
+            </Field>
+          </div>
+          <Field label="Bentuk pembelajaran" required={wajib.metode} error={kolom.bentuk_pembelajaran} description={bantuWajib('metode', 'Pasal 15: kuliah, praktikum, praktik, proyek, magang, dll.')}>
+            <CheckboxGroup columns={3} value={f.bentuk_pembelajaran} onValueChange={(v) => setF({ ...f, bentuk_pembelajaran: v })} options={BENTUK_PEMBELAJARAN.map((b) => ({ value: b, label: label(b) }))} />
+          </Field>
+          <Field label="Dosen koordinator" required={wajib.nidn} optional={!wajib.nidn} error={kolom.nidn_koordinator} description={bantuWajib('nidn', 'Koordinator dapat menyusun RPS mata kuliah ini.')}>
+            <PilihEntitas jenis="dosen" value={f.nidn_koordinator} onValueChange={(v) => setF({ ...f, nidn_koordinator: v })} />
+          </Field>
+          {a.isi?.mbkm?.aktif || f.luar_prodi || !a.versi ? (
+            <label className="u-kk-centang">
+              <Switch checked={f.luar_prodi} onCheckedChange={(v) => setF({ ...f, luar_prodi: !!v })} /> Dapat ditempuh di luar prodi/kampus (MBKM)
+            </label>
+          ) : null}
+          <Field label="id_matkul Neo Feeder" optional description="Untuk pelaporan PDDikti.">
+            <Input value={f.id_matkul_feeder} onChange={(e) => setF({ ...f, id_matkul_feeder: e.target.value })} />
+          </Field>
+        </div>
+      ),
+    },
+    {
+      id: 'prasyarat',
+      title: 'Prasyarat',
+      description: 'Lulus = harus lulus dengan nilai minimal; pernah ambil = pernah menempuh; bersamaan = boleh di semester yang sama.',
+      optional: true,
+      validate: () => {
+        if (pras.some((b) => !b.prasyarat_id)) return 'Pilih mata kuliah untuk setiap baris prasyarat, atau hapus barisnya.';
+        const id = pras.map((b) => b.prasyarat_id);
+        if (new Set(id).size !== id.length) return 'Ada mata kuliah prasyarat yang dipilih dua kali.';
+        return null;
+      },
+      content: (
+        <div className="u-kk-form">
+          {!pras.length && <p className="u-kw-bantuan">Belum ada prasyarat. Mata kuliah ini dapat diambil tanpa syarat.</p>}
+          {pras.map((b, i) => (
+            <div key={i} className="u-kk-prasyarat">
+              <Select value={b.prasyarat_id || null} onValueChange={(v) => setPras(pras.map((x, j) => (j === i ? { ...x, prasyarat_id: v ?? '' } : x)))} options={opsiPras} placeholder="Pilih…" aria-label="MK prasyarat" />
+              <Select value={b.jenis} onValueChange={(v) => setPras(pras.map((x, j) => (j === i ? { ...x, jenis: v ?? 'lulus' } : x)))} options={JENIS_PRASYARAT} aria-label="Jenis prasyarat" />
+              <Select
+                value={b.nilai_min}
+                disabled={b.jenis !== 'lulus'}
+                onValueChange={(v) => setPras(pras.map((x, j) => (j === i ? { ...x, nilai_min: v ?? '' } : x)))}
+                options={[{ value: '', label: 'Nilai bebas' }, ...['A', 'B', 'C', 'D'].map((x) => ({ value: x, label: `Minimal ${x}` }))]}
+                aria-label="Nilai minimal"
+              />
+              <Button size="sm" variant="ghost" iconOnly aria-label="Hapus prasyarat" onClick={() => setPras(pras.filter((_, j) => j !== i))}>
+                <Trash2 />
+              </Button>
+            </div>
+          ))}
+          <div>
+            <Button size="sm" variant="outline" onClick={() => setPras([...pras, { prasyarat_id: '', jenis: 'lulus', nilai_min: 'C' }])}>
+              <Plus /> Tambah prasyarat
+            </Button>
+          </div>
+        </div>
+      ),
+    },
+    ...(pakaiCpl
+      ? [
+          {
+            id: 'cpl',
+            title: pakaiBk ? 'CPL & bahan kajian' : 'CPL yang didukung',
+            description: wajib.cpmk ? wajibMenurut(a, a.punya('cpmk')?.nama ?? 'CPMK terpetakan ke CPL') : 'CPL kurikulum yang didukung mata kuliah ini. Bobot per CPL diatur lewat CPMK di ruang mata kuliah.',
+            optional: !wajib.cpmk,
+            validate: () => (wajib.cpmk && !cplPilih.length ? `Pilih minimal satu CPL yang didukung. ${wajibMenurut(a)}` : null),
+            content: (
+              <div className="u-kk-form">
+                <Field label={a.punya('cpl')?.nama ?? 'CPL'} required={wajib.cpmk} description="Bobot per CPL diatur lewat CPMK di ruang mata kuliah.">
+                  {cplQ.data?.length ? (
+                    <CheckboxGroup columns={1} value={cplPilih} onValueChange={(v) => setCpl(v)} options={cplQ.data.map((c) => ({ value: String(c.id), label: `${c.kode} · ${RANAH_CPL[c.ranah] ?? c.ranah}`, description: potong(c.deskripsi, 160) }))} />
+                  ) : (
+                    <p className="u-kw-bantuan">{cplQ.loading ? 'Memuat CPL…' : 'Kurikulum belum punya CPL. Isi dulu di langkah CPL pada identitas kurikulum.'}</p>
+                  )}
+                </Field>
+                {pakaiBk ? (
+                  <Field label={a.punya('bahan_kajian')?.nama ?? 'Bahan kajian'} optional>
+                    {bkQ.data?.length ? (
+                      <CheckboxGroup columns={2} value={bkPilih} onValueChange={(v) => setBk(v)} options={bkQ.data.map((b) => ({ value: String(b.id), label: `${b.kode} · ${b.nama}` }))} />
+                    ) : (
+                      <p className="u-kw-bantuan">{bkQ.loading ? 'Memuat bahan kajian…' : 'Kurikulum belum punya bahan kajian.'}</p>
+                    )}
+                  </Field>
+                ) : null}
+              </div>
+            ),
+          } as PanelLangkahStep,
+        ]
+      : []),
+    ...(skemaMk.length
+      ? [
+          {
+            id: 'isian-mk',
+            title: 'Isian tambahan',
+            description: `Isian mata kuliah yang dituntut kerangka ${a.kerangka ?? ''}.`,
+            validate: () => periksaIsianKerangka(skemaMk, nilaiMk),
+            content: (
+              <div className="u-kk-form">
+                <IsianKerangkaDinamis isian={skemaMk} nilai={nilaiMk} rujukan={a.rujukan} onChange={(kode, v) => setIsianMk({ ...nilaiMk, [kode]: v })} />
+              </div>
+            ),
+          } as PanelLangkahStep,
+        ]
+      : []),
+    {
+      id: 'tinjau',
+      title: 'Tinjau',
+      description: 'Periksa ringkasan mata kuliah sebelum disimpan.',
+      content: (
+        <div className="u-kk-form">
+          <WizardReview
+            sections={[
+              {
+                title: 'Identitas',
+                onEdit: () => setStep(0),
+                items: [
+                  { label: 'Mata kuliah', value: f.kode_mk && f.nama ? `${f.kode_mk.trim()} · ${f.nama.trim()}` : '' },
+                  ...(f.nama_en.trim() ? [{ label: 'Nama Inggris', value: f.nama_en.trim() }] : []),
+                  { label: 'Sifat', value: JENIS_MK[f.jenis] ?? f.jenis },
+                  { label: 'Kelompok', value: f.kelompok ? (KELOMPOK_MK[f.kelompok] ?? f.kelompok) : wajib.kelompok ? '' : 'Tidak dicatat' },
+                ],
+              },
+              {
+                title: 'SKS & semester',
+                onEdit: () => setStep(1),
+                missing: sem && maks && sesudah > maks ? `Semester ${sem} jadi ${formatNumber(sesudah)} SKS, melebihi batas ${maks}.` : undefined,
+                items: [
+                  { label: 'Beban', value: `${formatNumber(total)} SKS (${[['tatap muka', f.sks_tatap_muka], ['praktikum', f.sks_praktikum], ['lapangan', f.sks_praktik_lapangan], ['simulasi', f.sks_simulasi]].filter(([, v]) => n(v)).map(([l, v]) => `${l} ${v}`).join(', ') || '–'})` },
+                  { label: 'Ditawarkan', value: sem ? `Semester ${sem}` : 'Pilihan bebas (tanpa semester paket)' },
+                  { label: 'Pertemuan', value: f.pertemuan ? `${f.pertemuan} kali` : '' },
+                ],
+              },
+              {
+                title: 'Pembelajaran',
+                onEdit: () => setStep(2),
+                items: [
+                  { label: 'Cara belajar', value: `${MODALITAS.find((m) => m.value === f.modalitas)?.label ?? f.modalitas}; ${f.bentuk_pembelajaran.map(label).join(', ') || '–'}` },
+                  { label: 'Nilai', value: f.bentuk_nilai === 'lulus' ? 'Lulus/tidak lulus (tidak masuk IP)' : 'Huruf, dihitung dalam IP' },
+                  { label: 'Dosen koordinator', value: f.nidn_koordinator ? (d.nidn_koordinator === f.nidn_koordinator && d.nama_koordinator ? d.nama_koordinator : `NIDN ${f.nidn_koordinator}`) : wajib.nidn ? '' : 'Belum ditentukan' },
+                  ...(f.luar_prodi ? [{ label: 'MBKM', value: 'Dapat ditempuh di luar prodi/kampus' }] : []),
+                ],
+              },
+              {
+                title: 'Prasyarat',
+                onEdit: () => setStep(3),
+                items: [{ label: 'Syarat mengambil', value: pras.length ? pras.map((b) => `${namaMk(b.prasyarat_id)} (${JENIS_PRASYARAT.find((j) => j.value === b.jenis)?.label.toLowerCase()}${b.jenis === 'lulus' && b.nilai_min ? `, min. ${b.nilai_min}` : ''})`).join('; ') : 'Tanpa prasyarat' }],
+              },
+              ...(pakaiCpl
+                ? [
+                    {
+                      title: pakaiBk ? 'CPL & bahan kajian' : 'CPL yang didukung',
+                      onEdit: () => setStep(4),
+                      missing: wajib.cpmk && !cplPilih.length ? 'Belum ada CPL yang didukung.' : undefined,
+                      items: [
+                        { label: 'CPL', value: cplPilih.map((id) => cplQ.data?.find((c) => String(c.id) === id)?.kode ?? id).join(', ') },
+                        ...(pakaiBk ? [{ label: 'Bahan kajian', value: bkPilih.map((id) => bkQ.data?.find((b) => String(b.id) === id)?.kode ?? id).join(', ') || 'Tidak ada' }] : []),
+                      ],
+                    },
+                  ]
+                : []),
+              ...(skemaMk.length ? [{ title: 'Isian tambahan', onEdit: () => setStep(steps.length - 2), items: skemaMk.map((i) => ({ label: i.nama, value: ringkasNilaiIsian(i, nilaiMk[i.kode]) })) }] : []),
+            ]}
+          />
+          {a.versi ? (
+            <Alert variant="info" title="Perangkat yang wajib dilengkapi setelah disimpan">
+              {perangkat.length
+                ? `Untuk mata kuliah ${NAMA_KATEGORI[kategoriMk(f)]}: ${perangkat.map((p) => p.nama).join(', ')} (bukti diunggah dan diverifikasi di tab Perangkat). `
+                : `Aturan tidak mewajibkan perangkat untuk mata kuliah ${NAMA_KATEGORI[kategoriMk(f)]}. `}
+              Menurut {a.rujukan}.
+            </Alert>
+          ) : null}
+        </div>
+      ),
+    },
+  ];
+
+  const simpan = async (): Promise<string | null> => {
     const body = {
       kode_mk: f.kode_mk.trim(),
       nama: f.nama.trim(),
@@ -1252,112 +2011,62 @@ function FormMk({ kurikulumId, awal, onTutup }: { kurikulumId: number | string; 
       deskripsi: kosongJadiNull(f.deskripsi),
       id_matkul_feeder: kosongJadiNull(f.id_matkul_feeder),
     };
+    const id0 = d.id ?? dibuat.current;
+    let hasil: MkDetail | undefined;
     try {
-      await kirim(d.id ? 'PUT' : 'POST', d.id ? `${P}/mk/${d.id}` : `${P}/kurikulum/${kurikulumId}/mk`, body, d.id ? 'Mata kuliah disimpan.' : 'Mata kuliah ditambahkan.');
-      onTutup();
-    } catch {
-      /* tampil */
+      hasil = await kirim<MkDetail>(id0 ? 'PUT' : 'POST', id0 ? `${P}/mk/${id0}` : `${P}/kurikulum/${kurikulumId}/mk`, body);
+    } catch (e) {
+      return pesanGalat(e);
     }
-  };
-  return (
-    <Dialog
-      side="right"
-      open
-      size="lg"
-      onOpenChange={(o) => !o && onTutup()}
-      title={d.id ? `Ubah ${d.kode_mk}` : 'Tambah mata kuliah'}
-      description="SKS total dihitung dari komponen tatap muka, praktikum, praktik lapangan, dan simulasi."
-      footer={
-        <>
-          <Button variant="ghost" onClick={onTutup}>
-            Batal
-          </Button>
-          <Button loading={sibuk} disabled={!f.kode_mk.trim() || !f.nama.trim() || total <= 0} onClick={simpan}>
-            Simpan mata kuliah
-          </Button>
-        </>
+    const id = hasil?.id ?? id0;
+    if (!id) return 'Server tidak mengembalikan mata kuliah yang disimpan.';
+    if (!d.id) dibuat.current = id;
+    const gagal: string[] = [];
+    const tulis = async (nama: string, method: 'PUT', path: string, isiBody: unknown) => {
+      try {
+        await siakad.request({ method, path, body: isiBody });
+      } catch (e) {
+        gagal.push(`${nama} (${pesanGalat(e)})`);
       }
-    >
-      <div className="u-kk-form">
-        <KotakGalat galat={galat} />
-        <div className="u-kk-grid">
-          <Field label="Kode MK" required error={kolom.kode_mk}>
-            <Input value={f.kode_mk} onChange={(e) => setF({ ...f, kode_mk: e.target.value.toUpperCase() })} placeholder="IF101" />
-          </Field>
-          <Field label="Semester" error={kolom.semester}>
-            <Select value={f.semester} onValueChange={(v) => setF({ ...f, semester: v ?? '' })} options={SEMESTER_OPSI} />
-          </Field>
-        </div>
-        <Field label="Nama mata kuliah" required error={kolom.nama}>
-          <Input value={f.nama} onChange={(e) => setF({ ...f, nama: e.target.value })} />
-        </Field>
-        <Field label="Nama (Inggris)" optional>
-          <Input value={f.nama_en} onChange={(e) => setF({ ...f, nama_en: e.target.value })} />
-        </Field>
-        <div className="u-kk-grid">
-          <Field label="Sifat" required error={kolom.jenis}>
-            <Select value={f.jenis} onValueChange={(v) => setF({ ...f, jenis: v ?? 'A' })} options={JENIS_MK_OPSI} />
-          </Field>
-          <Field label="Kelompok MK" optional>
-            <Select value={f.kelompok} onValueChange={(v) => setF({ ...f, kelompok: v ?? '' })} options={[{ value: '', label: 'Tidak dicatat' }, ...Object.entries(KELOMPOK_MK).map(([value, l]) => ({ value, label: l }))]} />
-          </Field>
-        </div>
-        <fieldset className="u-kk-fieldset">
-          <legend>
-            Beban SKS <span className="u-kk-total">Total {formatNumber(total)} SKS</span>
-          </legend>
-          <div className="u-kk-grid u-kk-grid-4">
-            <Field label="Tatap muka" error={kolom.sks_tatap_muka}>
-              <Input type="number" step="0.5" min={0} value={f.sks_tatap_muka} onChange={(e) => setF({ ...f, sks_tatap_muka: e.target.value })} />
-            </Field>
-            <Field label="Praktikum">
-              <Input type="number" step="0.5" min={0} value={f.sks_praktikum} onChange={(e) => setF({ ...f, sks_praktikum: e.target.value })} />
-            </Field>
-            <Field label="Praktik lapangan">
-              <Input type="number" step="0.5" min={0} value={f.sks_praktik_lapangan} onChange={(e) => setF({ ...f, sks_praktik_lapangan: e.target.value })} />
-            </Field>
-            <Field label="Simulasi">
-              <Input type="number" step="0.5" min={0} value={f.sks_simulasi} onChange={(e) => setF({ ...f, sks_simulasi: e.target.value })} />
-            </Field>
-          </div>
-        </fieldset>
-        <div className="u-kk-grid u-kk-grid-3">
-          <Field label="Modalitas">
-            <Select value={f.modalitas} onValueChange={(v) => setF({ ...f, modalitas: v ?? 'luring' })} options={MODALITAS} />
-          </Field>
-          <Field label="Bentuk nilai">
-            <Select
-              value={f.bentuk_nilai}
-              onValueChange={(v) => setF({ ...f, bentuk_nilai: v ?? 'ip' })}
-              options={[
-                { value: 'ip', label: 'Huruf (masuk IP)' },
-                { value: 'lulus', label: 'Lulus/tidak lulus' },
-              ]}
-            />
-          </Field>
-          <Field label="Jumlah pertemuan" error={kolom.pertemuan}>
-            <Input type="number" min={1} max={32} value={f.pertemuan} onChange={(e) => setF({ ...f, pertemuan: e.target.value })} />
-          </Field>
-        </div>
-        <Field label="Bentuk pembelajaran" description="Pasal 15: kuliah, praktikum, praktik, proyek, magang, dll." error={kolom.bentuk_pembelajaran}>
-          <CheckboxGroup columns={3} value={f.bentuk_pembelajaran} onValueChange={(v) => setF({ ...f, bentuk_pembelajaran: v })} options={BENTUK_PEMBELAJARAN.map((b) => ({ value: b, label: label(b) }))} />
-        </Field>
-        <Field label="Dosen koordinator" optional description="Koordinator dapat menyusun RPS MK ini." error={kolom.nidn_koordinator}>
-          <PilihEntitas jenis="dosen" value={f.nidn_koordinator} onValueChange={(v) => setF({ ...f, nidn_koordinator: v })} />
-        </Field>
-        <Field label="Deskripsi singkat" optional>
-          <Textarea rows={3} value={f.deskripsi} onChange={(e) => setF({ ...f, deskripsi: e.target.value })} />
-        </Field>
-        <div className="u-kk-grid">
-          <label className="u-kk-centang">
-            <Switch checked={f.luar_prodi} onCheckedChange={(v) => setF({ ...f, luar_prodi: !!v })} /> Dapat ditempuh di luar prodi/PT (MBKM)
-          </label>
-          <Field label="id_matkul Neo Feeder" optional>
-            <Input value={f.id_matkul_feeder} onChange={(e) => setF({ ...f, id_matkul_feeder: e.target.value })} />
-          </Field>
-        </div>
-      </div>
-    </Dialog>
+    };
+    if (JSON.stringify(pras) !== JSON.stringify(prasyaratDari(d)))
+      await tulis('prasyarat', 'PUT', `${P}/mk/${id}/prasyarat`, { prasyarat: pras.map((b) => ({ prasyarat_id: Number(b.prasyarat_id), jenis: b.jenis, nilai_min: b.jenis === 'lulus' && b.nilai_min ? b.nilai_min : null })) });
+    const beda = (awal0: string[], kini: string[]) => ({ tambah: kini.filter((x) => !awal0.includes(x)), hapus: awal0.filter((x) => !kini.includes(x)) });
+    if (pakaiCpl && cpl) {
+      const x = beda(cplAwal, cpl);
+      if (x.tambah.length || x.hapus.length)
+        await tulis('pemetaan CPL', 'PUT', `${P}/kurikulum/${kurikulumId}/matriks/cpl-mk`, { tambah: x.tambah.map((c) => ({ mk_id: id, cpl_id: Number(c) })), hapus: x.hapus.map((c) => ({ mk_id: id, cpl_id: Number(c) })) });
+    }
+    if (pakaiBk && bk) {
+      const x = beda(bkAwal, bk);
+      if (x.tambah.length || x.hapus.length)
+        await tulis('pemetaan bahan kajian', 'PUT', `${P}/kurikulum/${kurikulumId}/matriks/bk-mk`, { tambah: x.tambah.map((b) => ({ mk_id: id, bk_id: Number(b) })), hapus: x.hapus.map((b) => ({ mk_id: id, bk_id: Number(b) })) });
+    }
+    if (isianMk && k?.kode_prodi)
+      await tulis('isian tambahan', 'PUT', '/v1/kurikulum-aturan/isian', { entitas: 'mk', kunci: `${k.kode_prodi}:${body.kode_mk}`, bagian: '', nilai: Object.fromEntries(Object.entries({ ...(isianQ.data?.nilai?.[''] ?? {}), ...isianMk }).map(([x, v]) => [x, nilaiKirim(v)])) });
+    invalidateSiakad('kur');
+    invalidateSiakad('kurikulum-aturan');
+    if (gagal.length) return `Mata kuliah tersimpan, tetapi belum semua tersimpan: ${gagal.join('; ')}. Perbaiki lalu simpan lagi.`;
+    toast.add({ title: d.id ? 'Mata kuliah disimpan.' : 'Mata kuliah ditambahkan.', type: 'success' });
+    draf.selesai();
+    return null;
+  };
+
+  return (
+    <PanelLangkah
+      open
+      onOpenChange={(o) => !o && onTutup()}
+      size="lg"
+      mode={d.id ? 'ubah' : 'buat'}
+      title={d.id ? `Ubah ${d.kode_mk}` : 'Tambah mata kuliah'}
+      description={d.id ? d.nama : 'Isian wajib mengikuti aturan kurikulum yang berlaku.'}
+      steps={steps}
+      step={step}
+      onStepChange={setStep}
+      finishLabel="Simpan mata kuliah"
+      footerNote="Bertanda * wajib. Isian tersimpan sementara bila panel ditutup."
+      onFinish={simpan}
+    />
   );
 }
 
@@ -2732,102 +3441,269 @@ export function KelolaPeninjauan({ kurikulumId, bolehUbah, className }: { kuriku
   );
 }
 
+interface JenisEvaluasiKerangka {
+  kode: string;
+  nama: string;
+  tingkat: 'mk' | 'prodi';
+  siklus: string;
+  siklus_tahun: number | null;
+  instrumen: IsianKerangka[];
+  tahap: { judul: string }[];
+  hasil_versi: boolean;
+}
+interface EvaluasiRingkas {
+  id: number;
+  jenis: string;
+  nama_jenis: string;
+  kode_mk: string | null;
+  periode: string;
+  status: string;
+  updated_at: string;
+}
+const SIKLUS_TINJAU: Record<string, string> = { semester: 'tiap semester', tahunan: 'tiap tahun', n_tahun: 'berkala' };
+const STATUS_TINJAU: SelectOption<string>[] = [
+  { value: 'rencana', label: 'Rencana' },
+  { value: 'berjalan', label: 'Berjalan' },
+  { value: 'selesai', label: 'Selesai' },
+];
+
+/**
+ * Catatan peninjauan kurikulum sebagai WIZARD di panel samping: Lingkup & dasar → Masukan & temuan (bisa diambil dari
+ * evaluasi kurikulum prodi yang sudah berjalan) → Usulan perubahan → Tinjau. Jenis evaluasi, siklus, dan instrumen
+ * wajibnya dibaca dari definisi kerangka yang berlaku (GET /v1/kurikulum-aturan/evaluasi/definisi): bila kerangka
+ * mewajibkan instrumen, temuan dan usulan wajib diisi saat status Selesai. Payload tetap POST/PUT /peninjauan.
+ */
 function FormPeninjauan({ kurikulumId, awal, onTutup }: { kurikulumId: number | string; awal: Partial<PeninjauanLengkap>; onTutup: () => void }) {
-  const [f, setF] = React.useState({
-    jenis: awal.jenis ?? 'evaluasi_tahunan',
-    judul: awal.judul ?? '',
-    tanggal: awal.tanggal ?? '',
-    pelaksana: awal.pelaksana ?? '',
-    status: awal.status ?? 'rencana',
-    ringkasan: awal.ringkasan ?? '',
-    temuan: awal.temuan ?? '',
-    tindak_lanjut: awal.tindak_lanjut ?? '',
-    tautan_dokumen: awal.tautan_dokumen ?? '',
+  const siakad = useSiakad();
+  const toast = useToast();
+  const isiAwal = (p: Partial<PeninjauanLengkap>) => ({
+    jenis: p.jenis ?? 'evaluasi_tahunan',
+    judul: p.judul ?? '',
+    tanggal: p.tanggal ?? '',
+    pelaksana: p.pelaksana ?? '',
+    status: p.status ?? 'rencana',
+    ringkasan: p.ringkasan ?? '',
+    temuan: p.temuan ?? '',
+    tindak_lanjut: p.tindak_lanjut ?? '',
+    tautan_dokumen: p.tautan_dokumen ?? '',
   });
-  const { kirim, sibuk, galat, kolom } = useKirim();
-  return (
-    <Dialog
-      side="right"
-      open
-      size="lg"
-      onOpenChange={(o) => !o && onTutup()}
-      title={awal.id ? 'Ubah catatan peninjauan' : 'Catat peninjauan kurikulum'}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onTutup}>
-            Batal
-          </Button>
-          <Button
-            loading={sibuk}
-            disabled={!f.judul.trim()}
-            onClick={async () => {
-              const body = {
-                jenis: f.jenis,
-                judul: f.judul.trim(),
-                tanggal: f.tanggal || null,
-                pelaksana: kosongJadiNull(f.pelaksana),
-                status: f.status,
-                ringkasan: kosongJadiNull(f.ringkasan),
-                temuan: kosongJadiNull(f.temuan),
-                tindak_lanjut: kosongJadiNull(f.tindak_lanjut),
-                tautan_dokumen: kosongJadiNull(f.tautan_dokumen),
-              };
-              try {
-                await kirim(awal.id ? 'PUT' : 'POST', awal.id ? `${P}/kurikulum/${kurikulumId}/peninjauan/${awal.id}` : `${P}/kurikulum/${kurikulumId}/peninjauan`, body, 'Catatan peninjauan disimpan.');
-                onTutup();
-              } catch {
-                /* tampil */
-              }
-            }}
-          >
-            Simpan catatan
-          </Button>
-        </>
+  const [f, setF] = React.useState(() => isiAwal(awal));
+  const [step, setStep] = React.useState(0);
+  const [ambil, setAmbil] = React.useState<number | null>(null);
+  const draf = useDrafWizard(`peninjauan:${kurikulumId}:${awal.id ?? 'baru'}`, true, f, (x) => setF({ ...isiAwal(awal), ...x }), (x) => JSON.stringify(x) === JSON.stringify(isiAwal(awal)));
+  const { kirim, kolom } = useKirim();
+  const kur = useKurikulum(kurikulumId);
+  const prodi = kur.data?.kode_prodi;
+  const qa = <T,>(path: string) => (s: ReturnType<typeof useSiakad>, signal: AbortSignal) => s.request<T>({ method: 'GET', path, query: { prodi: String(prodi) } }, { signal });
+  const def = useSiakadQuery<{ aturan: { nama: string; versi: number } | null; jenis: JenisEvaluasiKerangka[] }>(['kurikulum-aturan', 'evaluasi-def', prodi], qa('/v1/kurikulum-aturan/evaluasi/definisi'), { enabled: !!prodi });
+  const evals = useSiakadQuery<EvaluasiRingkas[]>(['kurikulum-aturan', 'evaluasi', prodi], qa('/v1/kurikulum-aturan/evaluasi'), { enabled: !!prodi });
+  const jenisDef = def.data?.jenis.find((j) => j.kode === f.jenis) ?? (f.jenis === 'evaluasi_tahunan' ? def.data?.jenis.find((j) => j.tingkat === 'prodi' && j.siklus === 'tahunan') : undefined);
+  const instrumenWajib = (jenisDef?.instrumen ?? []).filter((i) => i.wajib);
+  const rujukan = def.data?.aturan ? `${def.data.aturan.nama} v${def.data.aturan.versi}` : null;
+  const perluIsi = f.status === 'selesai' && instrumenWajib.length > 0;
+  const bantuWajib = perluIsi ? `Wajib saat status Selesai menurut ${rujukan ?? 'kerangka'} (${instrumenWajib.map((i) => i.nama.toLowerCase()).join('; ')}).` : undefined;
+  const evalProdi = (evals.data ?? []).filter((e) => !e.kode_mk && ['proses', 'disahkan'].includes(e.status));
+  const pakaiEvaluasi = async (e: EvaluasiRingkas) => {
+    setAmbil(e.id);
+    try {
+      const r = await siakad.request<{ definisi: { instrumen: IsianKerangka[] } | null; isian: Record<string, string> }>({ method: 'GET', path: `/v1/kurikulum-aturan/evaluasi/${e.id}` });
+      const x = (r as { data?: unknown })?.data ?? r;
+      const det = x as { definisi: { instrumen: IsianKerangka[] } | null; isian: Record<string, string> };
+      const teks = (det.definisi?.instrumen ?? [])
+        .filter((i) => (det.isian?.[i.kode] ?? '').trim())
+        .map((i) => `${i.nama}: ${det.isian[i.kode]!.trim()}`)
+        .join('\n\n');
+      if (!teks) {
+        toast.add({ title: 'Evaluasi itu belum berisi isian.', type: 'info' });
+        return;
       }
-    >
-      <div className="u-kk-form">
-        <KotakGalat galat={galat} />
-        <Field label="Judul kegiatan" required error={kolom.judul}>
-          <Input value={f.judul} onChange={(e) => setF({ ...f, judul: e.target.value })} placeholder="Evaluasi kurikulum tahunan 2026" />
-        </Field>
-        <div className="u-kk-grid u-kk-grid-3">
-          <Field label="Jenis">
-            <Select value={f.jenis} onValueChange={(v) => setF({ ...f, jenis: v ?? 'lainnya' })} options={JENIS_TINJAU} />
+      setF((v) => ({ ...v, temuan: [v.temuan.trim(), `Dari ${e.nama_jenis} ${e.periode}:\n${teks}`].filter(Boolean).join('\n\n') }));
+    } catch (err) {
+      toast.add({ title: pesanGalat(err), type: 'error' });
+    } finally {
+      setAmbil(null);
+    }
+  };
+
+  const steps: PanelLangkahStep[] = [
+    {
+      id: 'lingkup',
+      title: 'Lingkup & dasar',
+      description: 'Kegiatan apa, kapan, oleh siapa, dan sampai mana.',
+      error: !!(kolom.judul || kolom.tanggal || kolom.jenis),
+      validate: () => (!f.judul.trim() ? 'Isi judul kegiatan.' : null),
+      content: (
+        <div className="u-kk-form">
+          <DrafDipulihkan waktu={draf.dipulihkan} onBuang={() => { draf.buang(); setF(isiAwal(awal)); }} />
+          <Field label="Judul kegiatan" required error={kolom.judul}>
+            <Input value={f.judul} onChange={(e) => setF({ ...f, judul: e.target.value })} placeholder="Peninjauan kurikulum 2026" />
           </Field>
-          <Field label="Tanggal">
-            <Input type="date" value={f.tanggal} onChange={(e) => setF({ ...f, tanggal: e.target.value })} />
+          <div className="u-kk-grid u-kk-grid-3">
+            <Field label="Jenis" error={kolom.jenis}>
+              <Select value={f.jenis} onValueChange={(v) => setF({ ...f, jenis: v ?? 'lainnya' })} options={JENIS_TINJAU} placeholder="Pilih…" />
+            </Field>
+            <Field label="Tanggal" error={kolom.tanggal}>
+              <Input type="date" value={f.tanggal} onChange={(e) => setF({ ...f, tanggal: e.target.value })} />
+            </Field>
+            <Field label="Status">
+              <Select value={f.status} onValueChange={(v) => setF({ ...f, status: (v ?? 'rencana') as 'rencana' })} options={STATUS_TINJAU} placeholder="Pilih…" />
+            </Field>
+          </div>
+          <Field label="Pelaksana" optional>
+            <Input value={f.pelaksana} onChange={(e) => setF({ ...f, pelaksana: e.target.value })} placeholder="Tim kurikulum prodi, GKM, asosiasi" />
           </Field>
-          <Field label="Status">
-            <Select
-              value={f.status}
-              onValueChange={(v) => setF({ ...f, status: (v ?? 'rencana') as 'rencana' })}
-              options={[
-                { value: 'rencana', label: 'Rencana' },
-                { value: 'berjalan', label: 'Berjalan' },
-                { value: 'selesai', label: 'Selesai' },
-              ]}
-            />
+          {jenisDef ? (
+            <div className="u-kw-rujukan">
+              <BookOpen aria-hidden />
+              <div>
+                <strong>
+                  {jenisDef.nama} dilakukan {SIKLUS_TINJAU[jenisDef.siklus] ?? jenisDef.siklus}
+                  {jenisDef.siklus === 'n_tahun' && jenisDef.siklus_tahun ? ` (${jenisDef.siklus_tahun} tahun sekali)` : ''}
+                </strong>
+                <span>Menurut {rujukan ?? 'kerangka kurikulum'}. Tahap: {jenisDef.tahap.map((t) => t.judul).join(' → ')}{jenisDef.hasil_versi ? ' → draf versi kurikulum baru' : ''}.</span>
+                {instrumenWajib.length ? <span>Bila selesai, wajib mencatat: {instrumenWajib.map((i) => i.nama).join('; ')}.</span> : null}
+              </div>
+            </div>
+          ) : prodi && def.loading ? (
+            <p className="u-kw-rujukan" data-memuat="">Memuat aturan evaluasi kurikulum…</p>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      id: 'masukan',
+      title: 'Masukan & temuan',
+      description: 'Ringkasan masukan pemangku kepentingan dan hasil evaluasi. Bisa diambil dari evaluasi kurikulum prodi.',
+      optional: !perluIsi,
+      error: !!(kolom.ringkasan || kolom.temuan),
+      validate: () => (perluIsi && !f.temuan.trim() ? `Isi temuan. ${bantuWajib}` : null),
+      content: (
+        <div className="u-kk-form">
+          {evalProdi.length ? (
+            <fieldset className="u-kk-fieldset">
+              <legend>Hasil evaluasi kurikulum prodi</legend>
+              <ul className="u-kw-ada">
+                {evalProdi.slice(0, 5).map((e) => (
+                  <li key={e.id}>
+                    <b>{e.nama_jenis}</b>
+                    <span>
+                      Periode {e.periode} · {e.status === 'disahkan' ? 'disahkan' : 'sedang diperiksa'}{' '}
+                      <Button size="sm" variant="ghost" loading={ambil === e.id} onClick={() => void pakaiEvaluasi(e)}>
+                        <Copy /> Pakai isiannya
+                      </Button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </fieldset>
+          ) : null}
+          <Field label="Ringkasan" optional error={kolom.ringkasan}>
+            <Textarea rows={2} value={f.ringkasan} onChange={(e) => setF({ ...f, ringkasan: e.target.value })} />
+          </Field>
+          <Field label="Temuan" required={perluIsi} optional={!perluIsi} error={kolom.temuan} description={bantuWajib ?? 'Masukan pemangku kepentingan, perkembangan keilmuan, regulasi, dan capaian CPL.'}>
+            <Textarea rows={5} value={f.temuan} onChange={(e) => setF({ ...f, temuan: e.target.value })} />
           </Field>
         </div>
-        <Field label="Pelaksana" optional>
-          <Input value={f.pelaksana} onChange={(e) => setF({ ...f, pelaksana: e.target.value })} placeholder="Tim kurikulum prodi, GKM, asosiasi" />
-        </Field>
-        <Field label="Ringkasan" optional>
-          <Textarea rows={2} value={f.ringkasan} onChange={(e) => setF({ ...f, ringkasan: e.target.value })} />
-        </Field>
-        <div className="u-kk-grid">
-          <Field label="Temuan" optional>
-            <Textarea rows={3} value={f.temuan} onChange={(e) => setF({ ...f, temuan: e.target.value })} />
+      ),
+    },
+    {
+      id: 'usulan',
+      title: 'Usulan perubahan',
+      description: 'Rekomendasi atau tindak lanjut, serta dokumen pendukung.',
+      optional: !perluIsi,
+      error: !!(kolom.tindak_lanjut || kolom.tautan_dokumen),
+      validate: () => {
+        if (perluIsi && !f.tindak_lanjut.trim()) return `Isi usulan perubahan/tindak lanjut. ${bantuWajib}`;
+        if (f.tautan_dokumen.trim() && !/^https?:\/\/\S+$/i.test(f.tautan_dokumen.trim())) return 'Tautan dokumen harus diawali http:// atau https://.';
+        return null;
+      },
+      content: (
+        <div className="u-kk-form">
+          <Field label="Usulan perubahan / tindak lanjut" required={perluIsi} optional={!perluIsi} error={kolom.tindak_lanjut} description={bantuWajib ?? (jenisDef?.hasil_versi ? 'Peninjauan yang disahkan menjadi dasar versi kurikulum berikutnya.' : undefined)}>
+            <Textarea rows={5} value={f.tindak_lanjut} onChange={(e) => setF({ ...f, tindak_lanjut: e.target.value })} />
           </Field>
-          <Field label="Tindak lanjut" optional>
-            <Textarea rows={3} value={f.tindak_lanjut} onChange={(e) => setF({ ...f, tindak_lanjut: e.target.value })} />
+          <Field label="Tautan dokumen" optional error={kolom.tautan_dokumen} description="Notulen, laporan, atau berkas di Berkas UNIPO.">
+            <Input type="url" value={f.tautan_dokumen} onChange={(e) => setF({ ...f, tautan_dokumen: e.target.value })} placeholder="https://" />
           </Field>
         </div>
-        <Field label="Tautan dokumen" optional description="Notulen, laporan, atau berkas di Berkas UNIPO">
-          <Input type="url" value={f.tautan_dokumen} onChange={(e) => setF({ ...f, tautan_dokumen: e.target.value })} placeholder="https://" />
-        </Field>
-      </div>
-    </Dialog>
+      ),
+    },
+    {
+      id: 'tinjau',
+      title: 'Tinjau',
+      description: 'Periksa catatan sebelum disimpan.',
+      content: (
+        <WizardReview
+          sections={[
+            {
+              title: 'Lingkup & dasar',
+              onEdit: () => setStep(0),
+              items: [
+                { label: 'Kegiatan', value: f.judul.trim() },
+                { label: 'Jenis', value: JENIS_TINJAU.find((j) => j.value === f.jenis)?.label ?? f.jenis },
+                { label: 'Waktu', value: f.tanggal ? formatDate(f.tanggal) : '' },
+                { label: 'Pelaksana', value: f.pelaksana.trim() },
+                { label: 'Status', value: STATUS_TINJAU.find((s) => s.value === f.status)?.label },
+              ],
+            },
+            {
+              title: 'Masukan & temuan',
+              onEdit: () => setStep(1),
+              missing: perluIsi && !f.temuan.trim() ? 'Temuan wajib saat status Selesai.' : undefined,
+              items: [
+                { label: 'Ringkasan', value: f.ringkasan.trim() ? potong(f.ringkasan.trim()) : '' },
+                { label: 'Temuan', value: f.temuan.trim() ? potong(f.temuan.trim(), 220) : '' },
+              ],
+            },
+            {
+              title: 'Usulan perubahan',
+              onEdit: () => setStep(2),
+              missing: perluIsi && !f.tindak_lanjut.trim() ? 'Usulan wajib saat status Selesai.' : undefined,
+              items: [
+                { label: 'Usulan / tindak lanjut', value: f.tindak_lanjut.trim() ? potong(f.tindak_lanjut.trim(), 220) : '' },
+                { label: 'Dokumen', value: f.tautan_dokumen.trim() },
+              ],
+            },
+          ]}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <PanelLangkah
+      open
+      onOpenChange={(o) => !o && onTutup()}
+      size="lg"
+      mode={awal.id ? 'ubah' : 'buat'}
+      title={awal.id ? 'Ubah catatan peninjauan' : 'Catat peninjauan kurikulum'}
+      description="Bahan siklus PPEPP dan akreditasi. Isian wajib mengikuti kerangka evaluasi kurikulum yang berlaku."
+      steps={steps}
+      step={step}
+      onStepChange={setStep}
+      finishLabel="Simpan catatan"
+      footerNote="Bertanda * wajib. Isian tersimpan sementara bila panel ditutup."
+      onFinish={async () => {
+        const body = {
+          jenis: f.jenis,
+          judul: f.judul.trim(),
+          tanggal: f.tanggal || null,
+          pelaksana: kosongJadiNull(f.pelaksana),
+          status: f.status,
+          ringkasan: kosongJadiNull(f.ringkasan),
+          temuan: kosongJadiNull(f.temuan),
+          tindak_lanjut: kosongJadiNull(f.tindak_lanjut),
+          tautan_dokumen: kosongJadiNull(f.tautan_dokumen),
+        };
+        try {
+          await kirim(awal.id ? 'PUT' : 'POST', awal.id ? `${P}/kurikulum/${kurikulumId}/peninjauan/${awal.id}` : `${P}/kurikulum/${kurikulumId}/peninjauan`, body, 'Catatan peninjauan disimpan.');
+          draf.selesai();
+          return null;
+        } catch (e) {
+          return pesanGalat(e);
+        }
+      }}
+    />
   );
 }
 
