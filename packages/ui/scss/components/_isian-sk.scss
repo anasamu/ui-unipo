@@ -444,3 +444,45 @@
     gap: 0.5rem;
   }
 }
+
+// Orang yang disebut di SK (IsianPihakSK): nama + peran + hapus; di ponsel peran turun ke baris kedua.
+.u-sk-pihak {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 14rem) auto;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-md);
+    background: var(--u-background);
+  }
+  @media (max-width: 30rem) {
+    li {
+      grid-template-columns: minmax(0, 1fr) auto;
+      > :nth-child(2) {
+        grid-column: 1 / -1;
+        grid-row: 2;
+      }
+    }
+  }
+}
+.u-sk-pihak-nama {
+  display: grid;
+  min-width: 0;
+  strong {
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  small {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+  }
+}

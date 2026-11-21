@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { Archive, ArrowRightLeft, Ban, Check, Hash, Link2, Pencil, Plus, Search, Trash2, Upload, UserPen, X } from 'lucide-react';
+import { Archive, ArrowRightLeft, Ban, Check, Hash, Link2, Pencil, Plus, Search, Trash2, Upload, UserPen, UserRound, UsersRound, X } from 'lucide-react';
 import { PanelLangkah } from '../components/panel-langkah';
 import { Field, Input, SegmentedControl, Textarea } from '../components/forms';
 import { Alert, Empty } from '../components/display';
@@ -10,7 +10,7 @@ import { DatePicker } from '../components/calendar';
 import { CariAtauUnggahDokumen } from './cari-dokumen';
 import { KewenanganSK, ProfilYayasan } from './yayasan-sk';
 import { cn } from '../lib/cn';
-import { AjukanPencatatanSK, IsianPenandatangan, KartuSK, STATUS_SK, bodyPenandatangan, type NilaiPenandatangan, type SKRegistri } from './isian-sk';
+import { AjukanPencatatanSK, IsianPenandatangan, IsianPihakSK, KartuSK, STATUS_SK, bodyPenandatangan, bodyPihakSK, type NilaiPenandatangan, type PihakSK, type SKRegistri } from './isian-sk';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { PilihUnit } from './pilih-unit';
 
@@ -28,6 +28,8 @@ export interface DetailSK extends SKRegistri {
   mengubah: Array<{ id: string; nomor: string; perihal: string | null; jenis: 'mengubah' | 'mencabut'; status: SKRegistri['status'] }>;
   diubah_oleh_sk: Array<{ id: string; nomor: string; perihal: string | null; jenis: 'mengubah' | 'mencabut'; status: SKRegistri['status'] }>;
   ganda: SKRegistri[];
+  /** Orang yang disebut di SK (diangkat/ditugaskan/ditetapkan); dikabari saat SK terbit. */
+  pihak?: PihakSK[];
   /** hapus = boleh menghapus entri dicabut (izin sk.registri.hapus); hapus_tolak = alasan entri ini belum bisa dihapus. */
   boleh: { catat: boolean; hapus?: boolean };
   hapus_tolak?: string[];
@@ -99,6 +101,8 @@ export function UbahSK({ sk, open, onOpenChange, onTersimpan }: { sk: DetailSK; 
     ? { tautan: sk.penandatangan.tautan ?? (sk.penandatangan.pejabat_id ? 'pejabat' : 'teks'), pejabat_id: sk.penandatangan.pejabat_id, jabatan_id: sk.penandatangan.jabatan_id ?? null, unit_id: sk.penandatangan.unit_id ?? null, jabatan: sk.penandatangan.jabatan, nama: sk.penandatangan.nama }
     : null;
   const [penandatangan, setPenandatangan] = React.useState<NilaiPenandatangan | null>(awalTtd);
+  const awalPihak = sk.pihak ?? [];
+  const [pihak, setPihak] = React.useState<PihakSK[]>(awalPihak);
   const simpan = async (): Promise<string | void> => {
     try {
       await siakad.request({
@@ -107,6 +111,7 @@ export function UbahSK({ sk, open, onOpenChange, onTersimpan }: { sk: DetailSK; 
         body: {
           nomor: isi.nomor.trim(), tanggal: isi.tanggal, perihal: isi.perihal.trim() || null, tempat: isi.tempat.trim() || null,
           ...(JSON.stringify(penandatangan) !== JSON.stringify(awalTtd) ? bodyPenandatangan(penandatangan) : {}), ...(isi.berkas ? { berkas_id: isi.berkas } : {}), ...(isi.ttd ? { ttd_berkas_id: isi.ttd } : {}),
+          ...(JSON.stringify(bodyPihakSK(pihak)) !== JSON.stringify(bodyPihakSK(awalPihak)) ? { pihak: bodyPihakSK(pihak) } : {}),
         },
       });
       invalidateSiakad('sk');
@@ -160,6 +165,14 @@ export function UbahSK({ sk, open, onOpenChange, onTersimpan }: { sk: DetailSK; 
               </Field>
             </div>
           ),
+        },
+        {
+          id: 'pihak',
+          title: 'Orang di SK',
+          icon: <UsersRound />,
+          optional: true,
+          description: sk.status === 'terbit' ? 'Orang yang baru ditambahkan langsung mendapat notifikasi SK terbit.' : 'Mereka mendapat notifikasi saat SK terbit.',
+          content: <IsianPihakSK value={pihak} onValueChange={setPihak} />,
         },
         {
           id: 'berkas',
@@ -272,6 +285,22 @@ export function RincianSK({ id, open, onOpenChange, onBuka }: { id: string | nul
                 <Textarea value={catatan} onChange={(e) => setCatatan(e.target.value)} rows={2} />
               </Field>
             </Alert>
+          )}
+          {(sk.pihak?.length ?? 0) > 0 && (
+            <section>
+              <h3 className="u-sk-subjudul">Orang di SK ({sk.pihak!.length})</h3>
+              <ul className="u-sk-pakai">
+                {sk.pihak!.map((p) => (
+                  <li key={p.username}>
+                    <UserRound aria-hidden />
+                    <span>
+                      <strong>{p.nama ?? p.username}</strong>
+                      {p.keterangan ? `: ${p.keterangan}` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
           <section>
             <h3 className="u-sk-subjudul">Dipakai di ({sk.pemakaian.length})</h3>
