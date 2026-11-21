@@ -388,105 +388,107 @@ export function PersetujuanKrs({ prodi, tahunId, className }: PersetujuanKrsProp
           setHal(1);
           setTandai([]);
         }}
+        aria-label="Status KRS"
         items={(['menunggu', 'belum', 'disetujui'] as const).map((s) => ({ value: s, label: STATUS_KRS[s].label, count: r?.[s] }))}
-      />
-      <div className="u-alur-alat">
-        <div className="u-alur-cari">
-          <Search aria-hidden />
-          <input
-            type="search"
-            value={cari}
-            placeholder="Cari NIM atau nama"
-            aria-label="Cari mahasiswa"
-            onChange={(e) => {
-              setCari(e.target.value);
-              setHal(1);
-            }}
-          />
+      >
+        <div className="u-alur-alat">
+          <div className="u-alur-cari">
+            <Search aria-hidden />
+            <input
+              type="search"
+              value={cari}
+              placeholder="Cari NIM atau nama"
+              aria-label="Cari mahasiswa"
+              onChange={(e) => {
+                setCari(e.target.value);
+                setHal(1);
+              }}
+            />
+          </div>
+          {status === 'menunggu' && (
+            <ConfirmDialog
+              trigger={
+                <Button disabled={!tandai.length}>
+                  <CheckCircle2 />
+                  Setujui {tandai.length || ''} KRS
+                </Button>
+              }
+              tone="primary"
+              title={`Setujui KRS ${tandai.length} mahasiswa?`}
+              description="KRS yang disetujui muncul di kartu ujian dan presensi kelas."
+              confirmLabel={`Setujui ${tandai.length} KRS`}
+              onConfirm={setujuiBanyak}
+            />
+          )}
         </div>
-        {status === 'menunggu' && (
-          <ConfirmDialog
-            trigger={
-              <Button disabled={!tandai.length}>
-                <CheckCircle2 />
-                Setujui {tandai.length || ''} KRS
-              </Button>
-            }
-            tone="primary"
-            title={`Setujui KRS ${tandai.length} mahasiswa?`}
-            description="KRS yang disetujui muncul di kartu ujian dan presensi kelas."
-            confirmLabel={`Setujui ${tandai.length} KRS`}
-            onConfirm={setujuiBanyak}
-          />
-        )}
-      </div>
-      {info && <Alert variant={info.v}>{info.t}</Alert>}
-      {q.error ? (
-        <GalatApi error={q.error} onRetry={q.refetch} />
-      ) : q.loading && !q.data ? (
-        <Skeleton height={240} />
-      ) : !baris.length ? (
-        <Empty icon={<ClipboardCheck />} title={status === 'menunggu' ? 'Tidak ada KRS yang menunggu' : 'Tidak ada data'} description={cari ? 'Coba kata lain.' : undefined} />
-      ) : (
-        <div className="u-tabel-nilai-wrap">
-          <table className="u-tabel-nilai u-alur-tabel">
-            <thead>
-              <tr>
-                {status === 'menunggu' && (
-                  <th>
-                    <Checkbox aria-label="Pilih semua" checked={tandai.length === baris.length} onCheckedChange={(c) => setTandai(c ? baris.map((b) => b.nim) : [])} />
-                  </th>
-                )}
-                <th>Mahasiswa</th>
-                <th>Angkatan</th>
-                <th data-angka>MK</th>
-                <th data-angka>SKS</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {baris.map((b) => (
-                <tr key={b.nim}>
+        {info && <Alert variant={info.v}>{info.t}</Alert>}
+        {q.error ? (
+          <GalatApi error={q.error} onRetry={q.refetch} />
+        ) : q.loading && !q.data ? (
+          <Skeleton height={240} />
+        ) : !baris.length ? (
+          <Empty icon={<ClipboardCheck />} title={status === 'menunggu' ? 'Tidak ada KRS yang menunggu' : 'Tidak ada data'} description={cari ? 'Coba kata lain.' : undefined} />
+        ) : (
+          <div className="u-tabel-nilai-wrap">
+            <table className="u-tabel-nilai u-alur-tabel">
+              <thead>
+                <tr>
                   {status === 'menunggu' && (
-                    <td>
-                      <Checkbox aria-label={`Pilih ${b.nama}`} checked={tandai.includes(b.nim)} onCheckedChange={(c) => setTandai((t) => (c ? [...t, b.nim] : t.filter((x) => x !== b.nim)))} />
-                    </td>
+                    <th>
+                      <Checkbox aria-label="Pilih semua" checked={tandai.length === baris.length} onCheckedChange={(c) => setTandai(c ? baris.map((b) => b.nim) : [])} />
+                    </th>
                   )}
-                  <td>
-                    <button type="button" className="u-alur-tautan" onClick={() => setBuka(b.nim)}>
-                      <strong>{b.nama}</strong>
-                      <span className="u-alur-meta">{b.nim}</span>
-                    </button>
-                  </td>
-                  <td>{b.angkatan}</td>
-                  <td data-angka>
-                    {b.mk_disetujui}/{b.mk}
-                  </td>
-                  <td data-angka>{b.sks}</td>
-                  <td>
-                    <Badge variant={STATUS_KRS[b.status].v} dot>
-                      {STATUS_KRS[b.status].label}
-                    </Badge>
-                  </td>
+                  <th>Mahasiswa</th>
+                  <th>Angkatan</th>
+                  <th data-angka>MK</th>
+                  <th data-angka>SKS</th>
+                  <th>Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {(meta?.total_pages ?? 1) > 1 && (
-        <div className="u-alur-halaman">
-          <Button variant="outline" size="sm" disabled={hal <= 1} onClick={() => setHal((h) => h - 1)}>
-            Sebelumnya
-          </Button>
-          <span>
-            Halaman {hal} dari {meta?.total_pages}
-          </span>
-          <Button variant="outline" size="sm" disabled={hal >= (meta?.total_pages ?? 1)} onClick={() => setHal((h) => h + 1)}>
-            Berikutnya
-          </Button>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {baris.map((b) => (
+                  <tr key={b.nim}>
+                    {status === 'menunggu' && (
+                      <td>
+                        <Checkbox aria-label={`Pilih ${b.nama}`} checked={tandai.includes(b.nim)} onCheckedChange={(c) => setTandai((t) => (c ? [...t, b.nim] : t.filter((x) => x !== b.nim)))} />
+                      </td>
+                    )}
+                    <td>
+                      <button type="button" className="u-alur-tautan" onClick={() => setBuka(b.nim)}>
+                        <strong>{b.nama}</strong>
+                        <span className="u-alur-meta">{b.nim}</span>
+                      </button>
+                    </td>
+                    <td>{b.angkatan}</td>
+                    <td data-angka>
+                      {b.mk_disetujui}/{b.mk}
+                    </td>
+                    <td data-angka>{b.sks}</td>
+                    <td>
+                      <Badge variant={STATUS_KRS[b.status].v} dot>
+                        {STATUS_KRS[b.status].label}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {(meta?.total_pages ?? 1) > 1 && (
+          <div className="u-alur-halaman">
+            <Button variant="outline" size="sm" disabled={hal <= 1} onClick={() => setHal((h) => h - 1)}>
+              Sebelumnya
+            </Button>
+            <span>
+              Halaman {hal} dari {meta?.total_pages}
+            </span>
+            <Button variant="outline" size="sm" disabled={hal >= (meta?.total_pages ?? 1)} onClick={() => setHal((h) => h + 1)}>
+              Berikutnya
+            </Button>
+          </div>
+        )}
+      </Tabs>
       <Sheet open={Boolean(buka)} onOpenChange={(o) => !o && setBuka(null)} title="KRS mahasiswa" size="lg">
         {buka && <DetailKrsPaIsi nim={buka} tahunId={tahunId} />}
       </Sheet>

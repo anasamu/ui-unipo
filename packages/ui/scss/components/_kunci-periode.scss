@@ -15,6 +15,13 @@
     height: 0.8rem;
   }
 }
+// Pola lama aplikasi: isian berlabel dengan lencana periode DI BAWAH pemilih (label > Select … LencanaPeriode). Baris
+// saringannya biasanya rata bawah, sehingga isian bertambah tinggi itu menaikkan pemilihnya dan isian lain tidak sejajar.
+// Baris seperti itu dirata atas: label satu baris sama tinggi, kotak isian sejajar, lencana menggantung di bawah tanpa
+// menggeser apa pun. Pola baru: `Select lencana={...}` / PilihPeriodeAkademik (lencana di dalam isian).
+:has(> :is(label, .u-field) > .u-select-trigger ~ .u-lencana-periode) {
+  align-items: flex-start;
+}
 .u-opsi-periode-ikon {
   width: 0.95rem;
   height: 0.95rem;
