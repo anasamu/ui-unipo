@@ -9,7 +9,7 @@ import { Field, SegmentedControl, Switch, Textarea, Input } from '../components/
 import { ConfirmDialog, Sheet } from '../components/overlays';
 import { BarList, DonutChart, GroupedBarChart, LineChart, chartColor } from '../components/charts';
 import { PanelLangkah } from '../components/panel-langkah';
-import { BatangAlokasi, MeterKuota, SliderNilai, type BagianAlokasi } from '../components/alokasi';
+import { BatangAlokasi, MeterKuota, SliderNilai, nadaKuota, type BagianAlokasi } from '../components/alokasi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 
 /**
@@ -1068,17 +1068,51 @@ export function BagiKuotaUnit({ kode, open, onOpenChange, onSaved }: BagiKuotaUn
 export interface KuotaBerkasProps {
   kuota: { ruang: 'pribadi' | 'unit'; kuota_byte: number | null; terpakai_byte: number; sisa_kolam_byte: number | null; kolam: KolamPenyimpanan[]; sumber?: SumberNilai | null; batas?: BatasPenyimpanan | null } | null | undefined;
   unit?: string;
+  /** Satu baris ringkas (meter tipis + teks kecil + tombol rincian) untuk kaki sidebar bergaya Finder. */
+  ringkas?: boolean;
   className?: string;
 }
 
 /** Bar kuota di sisi ManajerBerkas: ruang pribadi (Penyimpanan saya) atau ruang bersama unit (Penyimpanan unit). */
-export function KuotaBerkas({ kuota, unit, className }: KuotaBerkasProps) {
+export function KuotaBerkas({ kuota, unit, ringkas, className }: KuotaBerkasProps) {
   const [saya, setSaya] = React.useState(false);
   const [panelUnit, setPanelUnit] = React.useState<string | null>(null);
   const unitQ = useSiakadQuery<{ unit: RingkasUnitPenyimpanan[] }>(['penyimpanan', 'unit-kelola'], (s, signal) => s.request({ method: 'GET', path: '/v1/berkas/penyimpanan/unit' }, { signal }), { enabled: !!unit, staleTime: 60_000 });
   if (!kuota) return null;
   const kelolaUnit = unit ? unitQ.data?.unit.some((u) => u.kode === unit) : false;
   const kolam = kuota.kolam[kuota.kolam.length - 1];
+  if (ringkas) {
+    const kolamIkat = kuota.batas && kuota.batas.sumber === 'kolam';
+    const pakai = kolamIkat ? kuota.batas!.terpakai_byte : kuota.terpakai_byte;
+    const batas = kuota.batas ? kuota.batas.byte : kuota.kuota_byte;
+    const persen = batas ? (pakai / batas) * 100 : null;
+    const teks = batas ? `${formatBytes(pakai)} dari ${formatBytes(batas)}` : `${formatBytes(pakai)} · tanpa batas`;
+    const label = kuota.ruang === 'unit' ? 'Ruang bersama unit' : 'Penyimpanan saya';
+    const bisaRinci = kuota.ruang === 'pribadi' || kelolaUnit;
+    const Isi = bisaRinci ? 'button' : 'span';
+    return (
+      <>
+        <Isi
+          {...(bisaRinci ? { type: 'button' as const, onClick: () => (kuota.ruang === 'pribadi' ? setSaya(true) : setPanelUnit(unit ?? null)) } : {})}
+          className={`u-mb-kuota-ringkas ${className ?? ''}`}
+          data-nada={nadaKuota(persen)}
+          title={`${label}: ${teks}${kolamIkat ? ` (mengikuti ${kuota.batas!.label})` : ''}${bisaRinci ? '. Klik untuk rincian & minta kuota.' : ''}`}
+        >
+          <HardDrive aria-hidden />
+          <span>
+            {batas ? (
+              <span className="u-dd-trek" role="meter" aria-valuemin={0} aria-valuemax={batas} aria-valuenow={pakai} aria-label={label} aria-valuetext={teks}>
+                <i style={{ width: `${Math.min(100, Math.max(persen ?? 0, pakai > 0 ? 3 : 0))}%` }} />
+              </span>
+            ) : null}
+            <small>{teks}</small>
+          </span>
+        </Isi>
+        {saya && <PanelPenyimpananSaya open onOpenChange={setSaya} />}
+        <PanelPenyimpananUnit kode={panelUnit} onOpenChange={(o) => !o && setPanelUnit(null)} />
+      </>
+    );
+  }
   return (
     <div className={`u-mb-kuota ${className ?? ''}`}>
       {kuota.batas && kuota.batas.sumber === 'kolam' ? (

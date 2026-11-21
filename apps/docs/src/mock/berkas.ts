@@ -80,7 +80,15 @@ let BERKAS: B[] = [
   b('Rekaman rapat pimpinan.mp3', 12_800_000, 'lampiran', 'Notulen'),
   b('Notulen rapat pimpinan 3 November.docx', 58_000, 'dokumen', 'Notulen'),
   b('Catatan.txt', 1_200, 'lampiran'),
+  b('Logo UNIPO.png', 128_000, 'foto'),
+  b('Jadwal kuliah ganjil.pdf', 356_000, 'dokumen'),
+  b('Daftar hadir seminar nasional.xlsx', 64_000, 'lampiran'),
+  b('Surat tugas dosen pembimbing.docx', 41_000, 'dokumen'),
+  b('Bahan rapat koordinasi.pptx', 3_400_000, 'lampiran'),
+  b('Arsip nilai 2024.zip', 9_800_000, 'lampiran'),
 ];
+// Berkas di akar: sebagian baru saja diubah supaya kelompok "Hari ini"/"Kemarin" tampak.
+BERKAS.filter((x) => !x.folder).slice(0, 3).forEach((x, i) => (x.dibuat_at = new Date(Date.now() - i * 20 * 3_600_000).toISOString().slice(0, 19).replace('T', ' ')));
 const SAMPAH: B[] = [];
 interface F {
   path: string;
@@ -96,7 +104,15 @@ let FOLDER: F[] = [
 ];
 
 // ---------------------------------------------------------------- ruang: pribadi, unit, folder yang dibagikan
-const unitB = (unit: string, nama: string, ukuran: number, folder: string | null, periode: string, terenkripsi = false): B => ({ ...b(nama, ukuran, 'dokumen', folder), unit, periode, terenkripsi });
+const PEMILIK = ['siti.bauk', 'andi.keu', 'rahma.bauk'];
+let nPemilik = 0;
+const unitB = (unit: string, nama: string, ukuran: number, folder: string | null, periode: string, terenkripsi = false): B & { pemilik: string } => ({
+  ...b(nama, ukuran, 'dokumen', folder),
+  unit,
+  periode,
+  terenkripsi,
+  pemilik: PEMILIK[nPemilik++ % PEMILIK.length],
+});
 const RUANG: Record<string, { berkas: B[]; folder: F[] }> = {
   u: { berkas: BERKAS, folder: FOLDER },
   'n:bauk': {
@@ -481,6 +497,34 @@ function efektif(unit: string | null) {
 const NAMA_PERIODE: Record<string, string> = { '20251': '2025/2026 Ganjil', '20242': '2024/2025 Genap' };
 tambahRute(/^\/v1\/berkas\/unit$/, (u) => ({
   data: { unit: UNIT.map((x) => ({ ...x, enkripsi: efektif(x.kode) })), ...(u.searchParams.get('semua') ? { semua: SEMUA_UNIT.map(({ kode, nama, singkatan, jenis }) => ({ kode, nama, singkatan, jenis })) } : {}) },
+}));
+// Drive berjenjang (GET /v1/berkas/drive): Berkas saya, universitas → fakultas → prodi, unit bagian, dan arsip.
+const GB = 1024 ** 3;
+const ukuranRuang = (k: string) => (RUANG[k]?.berkas ?? []).reduce((a, x) => a + x.ukuran, 0);
+const drv = (id: string, nama: string, singkatan: string | null, induk: string | null, tingkat: number, unit: string | null, jenis: 'unit' | 'arsip', hak: 'kelola' | 'anggota' | 'pembaca' | null, batasGb: number | null, unitJenis = 'unit') => {
+  const pakai = unit ? ukuranRuang(`n:${unit}`) : 0;
+  return {
+    id, jenis, unit_id: unit, unit_jenis: unitJenis, induk, tingkat, nama, singkatan, hak,
+    ruang: jenis === 'arsip' ? { unit, modul: 'arsip' } : { unit },
+    pakai: hak === null ? null : { byte: pakai, jumlah: unit ? (RUANG[`n:${unit}`]?.berkas.length ?? 0) : 0 },
+    batas: batasGb ? { byte: batasGb * GB, terpakai_byte: pakai + Math.round(batasGb * GB * (unit === 'bauk' ? 0.83 : 0.21)), sisa_byte: 0, persen: 0, sumber: 'bersama', kode: unit, label: 'Ruang bersama' } : null,
+  };
+};
+tambahRute(/^\/v1\/berkas\/drive$/, () => ({
+  data: {
+    penyimpanan: true,
+    drive: [
+      { id: 'pribadi', jenis: 'pribadi', unit_id: null, induk: null, tingkat: 0, nama: 'Berkas saya', hak: 'pemilik', ruang: {}, pakai: { byte: ukuranRuang('u'), jumlah: RUANG.u.berkas.length }, batas: { byte: 2 * GB, terpakai_byte: ukuranRuang('u'), sisa_byte: 0, persen: 0, sumber: 'kuota', kode: null, label: 'Kuota pribadi' } },
+      drv('unit:univ', 'Universitas Pohuwato', 'UNIPO', null, 0, 'univ', 'unit', 'anggota', 50, 'universitas'),
+      drv('arsip:univ', 'Arsip universitas', 'Arsip', 'unit:univ', 1, 'univ', 'arsip', 'pembaca', null, 'universitas'),
+      drv('unit:bauk', 'Biro Administrasi Umum dan Keuangan', 'BAUK', 'unit:univ', 1, 'bauk', 'unit', 'kelola', 10),
+      drv('unit:baak', 'Biro Administrasi Akademik', 'BAAK', 'unit:univ', 1, 'baak', 'unit', 'anggota', 10),
+      drv('unit:fak-teknik', 'Fakultas Teknik', 'FT', 'unit:univ', 1, 'fak-teknik', 'unit', null, null, 'fakultas'),
+      drv('unit:inf', 'Program Studi Informatika', 'INF', 'unit:fak-teknik', 2, 'inf', 'unit', 'anggota', 5, 'prodi'),
+      drv('arsip:inf', 'Arsip Informatika', 'Arsip INF', 'unit:inf', 3, 'inf', 'arsip', 'pembaca', null, 'prodi'),
+      drv('unit:si', 'Program Studi Sistem Informasi', 'SI', 'unit:fak-teknik', 2, 'si', 'unit', 'anggota', 5, 'prodi'),
+    ],
+  },
 }));
 tambahRute(/^\/v1\/berkas\/periode$/, (u) => {
   pakai(u);

@@ -8,7 +8,7 @@ import { formatBytes, formatDate } from '../lib/format';
 import { useDibagikanBerkas, type BagiBerkas } from './berkas-ruang';
 import { DaftarDrive, useDriveBerkas, type DriveBerkasData } from './daftar-drive';
 import { Dialog } from '../components/overlays';
-import { ManajerBerkas, useAksiBerkas, type ManajerBerkasProps } from './manajer-berkas';
+import { ManajerBerkas, useAksiBerkas, type ManajerBerkasProps, type OpsiSampingBerkas } from './manajer-berkas';
 import { invalidateSiakad, pesanGalat, useSiakad } from './provider';
 
 export interface DriveBerkasProps extends Omit<ManajerBerkasProps, 'unit' | 'bagi' | 'judul'> {
@@ -52,6 +52,8 @@ export function DriveBerkas({ ruangAwal, unitTampil, tampilPribadi = true, tampi
             ? { jenis: 'drive', id: 'pribadi' }
             : { jenis: 'dibagikan' };
   const [pilih, setPilih] = React.useState<Pilihan>(awal);
+  // Klik drive aktif saat berada di Terbaru: buka ulang drive itu dari akarnya.
+  const [kunci, setKunci] = React.useState(0);
   // Bila drive yang diminta tidak bisa dibuka pengguna, kembali ke ruang pribadi (atau drive pertama).
   React.useEffect(() => {
     if (pilih.jenis !== 'drive' || !dq.drive) return;
@@ -64,13 +66,17 @@ export function DriveBerkas({ ruangAwal, unitTampil, tampilPribadi = true, tampi
   const aktif = pilih.jenis === 'drive' ? (drive.find((x) => x.id === pilih.id) ?? null) : null;
   const unitAktif = aktif?.ruang.unit ?? (pilih.jenis === 'drive' && pilih.id.startsWith('unit:') ? pilih.id.slice(5) : undefined);
 
-  const daftar = (folder?: React.ReactNode) => (
+  const daftar = (folder?: React.ReactNode, opsi?: OpsiSampingBerkas) => (
     <DaftarDrive
       drive={drive}
-      aktif={pilih.jenis === 'drive' ? pilih.id : null}
+      aktif={pilih.jenis === 'drive' && !opsi?.terbaru.aktif ? pilih.id : null}
       memuat={dq.loading}
-      onPilih={(d) => setPilih({ jenis: 'drive', id: d.id })}
+      onPilih={(d) => (pilih.jenis === 'drive' && pilih.id === d.id && opsi?.terbaru.aktif ? setKunci((k) => k + 1) : setPilih({ jenis: 'drive', id: d.id }))}
       folder={folder}
+      ringkas={opsi?.ringkas}
+      terbaru={opsi?.terbaru}
+      onLepas={opsi ? (d, e) => opsi.lepasKeRuang({ unit: d.ruang.unit ?? null, modul: d.ruang.modul ?? undefined, label: d.singkatan || d.nama }, e) : undefined}
+      bisaLepas={opsi?.bisaLepas}
       dibagikan={tampilDibagikan ? { aktif: pilih.jenis !== 'drive', onPilih: () => setPilih({ jenis: 'dibagikan' }) } : undefined}
     />
   );
@@ -80,9 +86,6 @@ export function DriveBerkas({ ruangAwal, unitTampil, tampilPribadi = true, tampi
       {pilih.jenis === 'dibagikan' ? (
         <div className="u-db-tata" style={{ height: tinggi }}>
           <aside className="u-mb-samping" aria-label="Drive">
-            <div className="u-mb-samping-kepala">
-              <span>Drive</span>
-            </div>
             <div className="u-mb-samping-isi">{daftar()}</div>
           </aside>
           <div className="u-db-tata-utama">
@@ -101,7 +104,7 @@ export function DriveBerkas({ ruangAwal, unitTampil, tampilPribadi = true, tampi
             </div>
           )}
           <ManajerBerkas
-            key={pilih.jenis === 'bagi' ? `bagi:${pilih.id}` : pilih.id}
+            key={`${pilih.jenis === 'bagi' ? `bagi:${pilih.id}` : pilih.id}:${kunci}`}
             {...props}
             modul={aktif?.ruang.modul ?? props.modul}
             tinggi={tinggi}
