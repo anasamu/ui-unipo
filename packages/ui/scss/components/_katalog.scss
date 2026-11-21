@@ -604,6 +604,13 @@
     height: 1rem;
   }
 }
+.u-pemeliharaan-aksi {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--u-space-2, 0.5rem);
+}
 .u-pemeliharaan-kaki {
   margin-top: 0.5rem;
   font-size: var(--u-text-sm);

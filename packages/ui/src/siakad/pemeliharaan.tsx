@@ -86,8 +86,22 @@ export interface StatusPemeliharaanBff {
   pesan: string;
   sampai: string | null;
   sejak: string | null;
-  /** Pengguna ini pengelola (mis. ADMIN / izin pustikom.akses) yang tetap boleh membuka aplikasi. */
+  /** Pengguna ini pengelola (izin pustikom.pemeliharaan.lewati, bawaan Admin Pustikom) yang tetap boleh membuka aplikasi. */
   lolos: boolean;
+  /** Sudah login di aplikasi ini (BFF baru; undefined = tidak diketahui, tombol masuk tetap ditampilkan). */
+  masuk?: boolean;
+  /** Rute login BFF yang tetap dibuka selama pemeliharaan (bawaan "/masuk", PMB "/panitia/masuk"). */
+  rute_masuk?: string;
+}
+
+/**
+ * Alamat tombol "Masuk (khusus Pustikom)" di halaman pemeliharaan: hanya bila BFF menutup aplikasi dan pengunjung belum
+ * login di aplikasi ini. Setelah login lewat SSO, Admin Pustikom kembali ke halaman yang sama (`kembali`).
+ */
+export function alamatMasukPemeliharaan(bff: string | false | undefined, status: StatusPemeliharaanBff | null, kembali = '/'): string | null {
+  if (!bff || !status?.aktif || status.lolos || status.masuk === true) return null;
+  const rute = status.rute_masuk && /^\/[A-Za-z0-9/_-]*$/.test(status.rute_masuk) ? status.rute_masuk : '/masuk';
+  return `${bff.replace(/\/$/, '')}${rute}?kembali=${encodeURIComponent(kembali || '/')}`;
 }
 
 /**
@@ -102,7 +116,11 @@ export function usePemeliharaanBff(bff: string | false | undefined, intervalMs =
     try {
       const r = await globalThis.fetch(`${bff.replace(/\/$/, '')}/pemeliharaan`, { credentials: 'same-origin', headers: { Accept: 'application/json' }, cache: 'no-store' });
       const d = r.ok ? ((await r.json()) as Partial<StatusPemeliharaanBff>) : null;
-      setStatus(d && typeof d.aktif === 'boolean' ? { aktif: d.aktif, pesan: d.pesan ?? '', sampai: d.sampai ?? null, sejak: d.sejak ?? null, lolos: Boolean(d.lolos) } : null);
+      setStatus(
+        d && typeof d.aktif === 'boolean'
+          ? { aktif: d.aktif, pesan: d.pesan ?? '', sampai: d.sampai ?? null, sejak: d.sejak ?? null, lolos: Boolean(d.lolos), masuk: typeof d.masuk === 'boolean' ? d.masuk : undefined, rute_masuk: typeof d.rute_masuk === 'string' ? d.rute_masuk : undefined }
+          : null,
+      );
       if (d && d.aktif === false && sekarang) laporPemeliharaan(null);
     } catch {
       /* jaringan putus: biarkan status terakhir */
@@ -124,7 +142,7 @@ export function usePemeliharaanBff(bff: string | false | undefined, intervalMs =
   return { status, memuat, periksa };
 }
 
-export interface GerbangPemeliharaanProps extends Omit<ModePemeliharaanProps, 'until' | 'onRetry'> {
+export interface GerbangPemeliharaanProps extends Omit<ModePemeliharaanProps, 'until' | 'onRetry' | 'login'> {
   children: React.ReactNode;
   /**
    * Awalan BFF aplikasi (mis. "/bff"): status pemeliharaan diambil dari `GET /bff/pemeliharaan` yang diatur admin di
@@ -133,6 +151,11 @@ export interface GerbangPemeliharaanProps extends Omit<ModePemeliharaanProps, 'u
   bff?: string | false;
   /** Teks pita bagi pengelola saat pemeliharaan berjalan. */
   bypassNotice?: React.ReactNode;
+  /**
+   * Tombol "Masuk (khusus Pustikom)" di halaman pemeliharaan bagi pengunjung yang belum login. Bawaan: rute masuk dari
+   * BFF (`{bff}/masuk?kembali=<halaman ini>`). `false` = tanpa tombol; string = alamat lain.
+   */
+  loginHref?: string | false;
   /** Paksa mode pemeliharaan (mis. dari pengaturan aplikasi). */
   active?: boolean;
   /** Jadwal pemeliharaan: spanduk muncul sebelumnya, halaman pemeliharaan saat berjalan. */
@@ -146,7 +169,7 @@ export interface GerbangPemeliharaanProps extends Omit<ModePemeliharaanProps, 'u
  * (pasang {@link fetchPemeliharaan} di SDK), atau saat BFF (`bff="/bff"`) melaporkan mode pemeliharaan dari Pustikom/SSO.
  * Spanduk muncul sebelum jadwal; pengelola yang lolos melihat pita "Mode pemeliharaan aktif".
  */
-export function GerbangPemeliharaan({ children, active, schedule, onRetry, message, bff, bypassNotice, ...rest }: GerbangPemeliharaanProps) {
+export function GerbangPemeliharaan({ children, active, schedule, onRetry, message, bff, bypassNotice, loginHref, ...rest }: GerbangPemeliharaanProps) {
   const dariApi = usePemeliharaan();
   const { status: dariBff, memuat, periksa } = usePemeliharaanBff(bff);
   const [kini, setKini] = React.useState(() => Date.now());
@@ -163,8 +186,12 @@ export function GerbangPemeliharaan({ children, active, schedule, onRetry, messa
   const pengelola = Boolean(dariBff?.aktif && dariBff.lolos);
   if (bff && memuat && !dariBff) return null;
   if (active || terjadwal || bffTutup || (dariApi && !pengelola)) {
+    const kembali = typeof window === 'undefined' ? '/' : `${window.location.pathname}${window.location.search}`;
+    const otomatis = alamatMasukPemeliharaan(bff, dariBff, kembali);
+    const masuk = loginHref === false || !otomatis ? null : (loginHref ?? otomatis);
     return (
       <ModePemeliharaan
+        login={masuk ? { href: masuk } : null}
         {...rest}
         message={(bffTutup && dariBff?.pesan) || dariApi?.message || (terjadwal ? schedule?.message : undefined) || message}
         until={(bffTutup ? dariBff?.sampai : null) ?? dariApi?.until ?? (schedule?.end ? schedule.end : null)}
@@ -185,7 +212,7 @@ export function GerbangPemeliharaan({ children, active, schedule, onRetry, messa
           <Wrench aria-hidden />
           <p>
             <b>Mode pemeliharaan aktif.</b>{' '}
-            {bypassNotice ?? `Pengguna lain melihat halaman pemeliharaan${dariBff?.pesan ? ` ("${dariBff.pesan}")` : ''}. Anda tetap bisa membuka aplikasi karena pengelola.`}
+            {bypassNotice ?? `Pengguna lain melihat halaman pemeliharaan${dariBff?.pesan ? ` ("${dariBff.pesan}")` : ''}. Anda tetap bisa membuka aplikasi sebagai administrator Pustikom.`}
           </p>
         </div>
       )}

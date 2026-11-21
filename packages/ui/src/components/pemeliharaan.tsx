@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { CalendarClock, RefreshCw, Wrench, X } from 'lucide-react';
+import { CalendarClock, LogIn, RefreshCw, Wrench, X } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { formatDate, formatTime } from '../lib/format';
 import { Button } from './actions';
@@ -43,6 +43,11 @@ export interface ModePemeliharaanProps {
   footer?: React.ReactNode;
   /** Isi layar penuh (bawaan) atau kartu di dalam halaman. */
   variant?: 'page' | 'inline';
+  /**
+   * Tombol masuk bagi administrator Pustikom yang tetap boleh membuka aplikasi selama pemeliharaan (mis. `/bff/masuk`).
+   * Diisi otomatis oleh GerbangPemeliharaan bagi pengunjung yang belum login. Label bawaan "Masuk (khusus Pustikom)".
+   */
+  login?: { href: string; label?: React.ReactNode } | null;
   className?: string;
 }
 
@@ -50,7 +55,7 @@ export interface ModePemeliharaanProps {
  * Halaman pemeliharaan: aplikasi sedang diperbarui. Menampilkan perkiraan selesai, hitung mundur, dan tombol coba
  * lagi. Pasang di depan aplikasi saat API membalas 503 (lihat GerbangPemeliharaan di unipo-ui/siakad).
  */
-export function ModePemeliharaan({ title = 'Sedang ada pemeliharaan', message = 'Kami sedang memperbarui sistem agar lebih cepat dan aman. Data Anda tetap aman; silakan kembali sebentar lagi.', until, onRetry, autoRetry = true, logo, footer, variant = 'page', className }: ModePemeliharaanProps) {
+export function ModePemeliharaan({ title = 'Sedang ada pemeliharaan', message = 'Kami sedang memperbarui sistem agar lebih cepat dan aman. Data Anda tetap aman; silakan kembali sebentar lagi.', until, onRetry, autoRetry = true, logo, footer, variant = 'page', login, className }: ModePemeliharaanProps) {
   const kini = useKini(15_000);
   const selesai = keDate(until);
   const [sibuk, setSibuk] = React.useState(false);
@@ -86,10 +91,19 @@ export function ModePemeliharaan({ title = 'Sedang ada pemeliharaan', message = 
             Perkiraan selesai {formatDate(selesai, 'medium') === formatDate(kini, 'medium') ? '' : `${formatDate(selesai, 'medium')} `}pukul {formatTime(selesai)} ({sisaWaktu(selesai, kini)})
           </p>
         )}
-        {onRetry && (
-          <Button variant="outline" onClick={coba} loading={sibuk}>
-            <RefreshCw /> Coba lagi
-          </Button>
+        {(onRetry || login) && (
+          <div className="u-pemeliharaan-aksi">
+            {onRetry && (
+              <Button variant="outline" onClick={coba} loading={sibuk}>
+                <RefreshCw /> Coba lagi
+              </Button>
+            )}
+            {login && (
+              <Button variant="ghost" render={<a href={login.href} />}>
+                <LogIn /> {login.label ?? 'Masuk (khusus Pustikom)'}
+              </Button>
+            )}
+          </div>
         )}
         {footer && <div className="u-pemeliharaan-kaki">{footer}</div>}
       </div>
