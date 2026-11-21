@@ -22,12 +22,10 @@ import {
   Receipt,
   Search,
   ShieldAlert,
-  ShieldCheck,
   Signature,
   Target,
   Trash2,
   UserSearch,
-  Users,
   Wallet,
 } from 'lucide-react';
 import { Badge, Button, Spinner, type BadgeVariant } from '../components/actions';
@@ -35,7 +33,7 @@ import { Alert, Card, Empty, Tabs } from '../components/display';
 import { DataTable, type DataColumn } from '../components/data-table';
 import { CheckboxGroup, Field, Input, RadioGroup, Switch, Textarea } from '../components/forms';
 import { IsianTanggal } from '../components/formulir';
-import { ConfirmDialog, Sheet, useToast, type MenuEntry } from '../components/overlays';
+import { ConfirmDialog, Sheet, useToast } from '../components/overlays';
 import { PanelLangkah } from '../components/panel-langkah';
 import { Select, type SelectOption } from '../components/select';
 import { WizardReview } from '../components/wizard';
@@ -45,6 +43,7 @@ import { PilihTahunAkademik } from './cari';
 import { GalatApi } from './galat';
 import { namaRapi } from './prodi';
 import { PerangkatKasir } from './perangkat-kasir';
+import { DaftarAturan, FormAturan as FormAturanUmum, type Aturan } from './aturan';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 
 // Pengaturan kasir per unit penerbit (SIAKAD /v1/kasir/kelola, docs/KASIR.md "Pengaturan di aplikasi unit"): jenis
@@ -102,6 +101,8 @@ export interface KasirKelolaSaya {
   keputusan: Record<KeputusanKasir, string>;
   sumber_jadwal: Record<SumberJadwalKasir, string>;
   tahapan: Array<{ kode: string; label: string }>;
+  /** Titik aturan penerimaan (kasir.terima); aturan dikelola di modul Aturan. */
+  aturan_titik?: string;
   templat: {
     jenis: Array<{ kode: JenisTemplatKasir; nama: string; sumber: string; bawaan: Partial<IsiTemplatKasir> }>;
     kolom: Record<string, KolomTemplatKasir[]>;
@@ -207,6 +208,8 @@ interface NilaiSimulasi {
   alasan: string | null;
   keputusan: KeputusanKasir;
   jendela: JendelaKasir;
+  /** Aturan peringatan / aturan tanpa SK dasar (belum menolak). */
+  peringatan?: Array<{ aturan_id?: string | null; nama?: string | null; pesan: string; tanpa_sk?: boolean }>;
 }
 
 export interface SimulasiKasir {
@@ -230,11 +233,6 @@ const PERLAKUAN: Record<string, { label: string; keterangan: string }> = {
   sewaktu: { label: 'Sewaktu-waktu', keterangan: 'Layanan sesuai permintaan, mis. legalisir.' },
 };
 const NADA_KEPUTUSAN: Record<KeputusanKasir, BadgeVariant> = { izinkan: 'success', tunggakan_saja: 'warning', tolak: 'danger' };
-const KET_KEPUTUSAN: Record<KeputusanKasir, string> = {
-  izinkan: 'Kasir boleh menerima pembayaran baru dan pelunasan tunggakan.',
-  tunggakan_saja: 'Kasir hanya boleh menerima pelunasan tagihan periode sebelumnya yang masih bersisa.',
-  tolak: 'Kasir tidak boleh menerima pembayaran apa pun untuk sasaran ini.',
-};
 const STATUS_JENDELA: Record<JendelaKasir['status'], { label: string; nada: BadgeVariant }> = {
   buka: { label: 'Dibuka', nada: 'success' },
   belum: { label: 'Belum dibuka', nada: 'info' },
@@ -658,161 +656,6 @@ function TabJenis({ saya, unitId }: { saya: KasirKelolaSaya; unitId?: number }) 
 // setujui/tolak/cabut (izin kasir.perangkat.setujui), ganti nama, riwayat.
 
 // ================================================================ Tab Aturan penerimaan
-interface IsianAturan extends IsianSasaran {
-  kunci?: string;
-  status: string[];
-  keputusan: KeputusanKasir | null;
-  alasan: string;
-  berlaku_mulai: string | null;
-  berlaku_selesai: string | null;
-  aktif: boolean;
-  catatan: string;
-}
-
-function labelStatus(saya: KasirKelolaSaya, k: string) {
-  if (k === '*') return 'Semua status';
-  return saya.status.find((s) => s.kode === k)?.label ?? k;
-}
-
-function FormAturan({ awal, onOpenChange, saya, unitId, jenis }: { awal: IsianAturan | null; onOpenChange: (o: boolean) => void; saya: KasirKelolaSaya; unitId?: number; jenis: JenisBiayaKasir[] }) {
-  const siakad = useSiakad();
-  const toast = useToast();
-  const [v, setV] = React.useState<IsianAturan | null>(awal);
-  React.useEffect(() => {
-    if (awal) setV(awal);
-  }, [awal]);
-  if (!v) return null;
-  const set = (x: Partial<IsianAturan>) => setV((o) => (o ? { ...o, ...x } : o));
-  const semua = v.status.includes('*');
-  const jumlah = semua ? saya.status.reduce((n, s) => n + s.jumlah, 0) : saya.status.filter((s) => v.status.includes(s.kode)).reduce((n, s) => n + s.jumlah, 0);
-  const sasaran = teksSasaranIsian(saya, v, jenis);
-  return (
-    <PanelLangkah
-      open={Boolean(awal)}
-      onOpenChange={onOpenChange}
-      mode={v.kunci ? 'ubah' : 'buat'}
-      title={v.kunci ? 'Ubah aturan penerimaan' : 'Tambah aturan penerimaan'}
-      description="Status akademik mana yang boleh diproses kasir untuk jenis biaya tertentu."
-      footerNote="Menyimpan membuat versi baru; versi lama tetap tercatat di riwayat."
-      steps={[
-        { id: 'sasaran', title: 'Sasaran', icon: <Target />, validate: () => validasiSasaran(v), content: <IsianSasaranForm saya={saya} unitId={unitId} v={v} set={set} jenis={jenis} kunciTetap={Boolean(v.kunci)} /> },
-        {
-          id: 'status',
-          title: 'Status akademik',
-          icon: <Users />,
-          validate: () => (v.status.length ? null : 'Pilih minimal satu status akademik.'),
-          content: (
-            <div className="u-ksu-isian">
-              <Sakelar nilai={semua} ubah={(c) => set({ status: c ? ['*'] : [] })} label="Semua status akademik" ket="Termasuk status yang ditambahkan kemudian." />
-              {!semua && (
-                <>
-                  <CheckboxGroup<string>
-                    variant="card"
-                    columns={2}
-                    value={v.status}
-                    onValueChange={(x) => set({ status: x })}
-                    options={saya.status.map((s) => ({ value: s.kode, label: `${s.label} (${s.kode})`, description: s.jumlah ? `${formatNumber(s.jumlah)} mahasiswa` : 'Belum ada mahasiswa' }))}
-                  />
-                  <span className="u-ksu-baris-aksi">
-                    <Button size="sm" variant="ghost" onClick={() => set({ status: saya.status.filter((s) => s.kode !== 'A').map((s) => s.kode) })}>
-                      Semua selain Aktif
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => set({ status: [] })}>
-                      Kosongkan
-                    </Button>
-                  </span>
-                </>
-              )}
-              <p className="u-ksu-catatan">{v.status.length ? `Mengenai ±${formatNumber(jumlah)} mahasiswa saat ini.` : 'Belum ada status dipilih.'}</p>
-            </div>
-          ),
-        },
-        {
-          id: 'keputusan',
-          title: 'Keputusan & alasan',
-          icon: <Gavel />,
-          validate: () => (!v.keputusan ? 'Pilih keputusan.' : null),
-          content: (
-            <div className="u-ksu-isian">
-              <Field label="Keputusan" required>
-                <RadioGroup<KeputusanKasir>
-                  variant="card"
-                  columns={1}
-                  value={v.keputusan ?? undefined}
-                  onValueChange={(x) => set({ keputusan: x })}
-                  options={(Object.keys(saya.keputusan) as KeputusanKasir[]).map((k) => ({ value: k, label: saya.keputusan[k], description: KET_KEPUTUSAN[k] }))}
-                />
-              </Field>
-              <Field label="Alasan untuk kasir" optional description="Tampil di aplikasi Kasir saat pembayaran ditolak. Kosong = alasan bawaan.">
-                <Input value={v.alasan} maxLength={255} onChange={(e) => set({ alasan: e.target.value })} placeholder="Mis. Mahasiswa lulus hanya boleh melunasi tunggakan." />
-              </Field>
-              <Field label="Catatan internal" optional>
-                <Textarea rows={2} maxLength={1000} value={v.catatan} onChange={(e) => set({ catatan: e.target.value })} />
-              </Field>
-            </div>
-          ),
-        },
-        {
-          id: 'berlaku',
-          title: 'Masa berlaku',
-          icon: <CalendarRange />,
-          optional: true,
-          validate: () => (v.berlaku_mulai && v.berlaku_selesai && v.berlaku_selesai < v.berlaku_mulai ? 'Tanggal selesai tidak boleh sebelum tanggal mulai.' : null),
-          content: (
-            <div className="u-ksu-isian">
-              <div className="u-ksu-dua">
-                <Field label="Berlaku mulai" optional>
-                  <IsianTanggal value={v.berlaku_mulai} onValueChange={(x) => set({ berlaku_mulai: x || null })} placeholder="Pilih…" />
-                </Field>
-                <Field label="Berlaku sampai" optional>
-                  <IsianTanggal value={v.berlaku_selesai} onValueChange={(x) => set({ berlaku_selesai: x || null })} min={v.berlaku_mulai} placeholder="Pilih…" />
-                </Field>
-              </div>
-              <p className="u-ksu-catatan">Kosongkan keduanya agar aturan berlaku terus.</p>
-              <Sakelar nilai={v.aktif} ubah={(c) => set({ aktif: c })} label="Aktif" ket="Aturan nonaktif disimpan tetapi tidak dipakai kasir." />
-            </div>
-          ),
-        },
-        {
-          id: 'ringkasan',
-          title: 'Ringkasan',
-          icon: <Eye />,
-          content: (
-            <div className="u-ksu-isian">
-              <Alert variant={v.keputusan ? (v.keputusan === 'izinkan' ? 'success' : v.keputusan === 'tolak' ? 'danger' : 'warning') : 'neutral'} title={v.keputusan ? saya.keputusan[v.keputusan] : 'Keputusan belum dipilih'}>
-                {`${sasaran} di ${namaUnit(saya, unitDariKunci(v.unit))}, mahasiswa berstatus ${v.status.map((s) => labelStatus(saya, s)).join(', ') || '–'}.`}
-              </Alert>
-              <WizardReview
-                sections={[
-                  { title: 'Sasaran', items: [{ label: 'Unit', value: namaUnit(saya, unitDariKunci(v.unit)) }, { label: 'Berlaku untuk', value: sasaran }] },
-                  { title: 'Status akademik', items: [{ label: 'Status', value: v.status.map((s) => labelStatus(saya, s)).join(', ') }, { label: 'Mahasiswa terdampak', value: `±${formatNumber(jumlah)}` }] },
-                  { title: 'Keputusan', items: [{ label: 'Keputusan', value: v.keputusan ? saya.keputusan[v.keputusan] : null }, { label: 'Alasan', value: v.alasan || 'Alasan bawaan' }] },
-                  { title: 'Masa berlaku', items: [{ label: 'Berlaku', value: v.berlaku_mulai || v.berlaku_selesai ? `${v.berlaku_mulai ? tgl(v.berlaku_mulai) : '…'} – ${v.berlaku_selesai ? tgl(v.berlaku_selesai) : '…'}` : 'Selalu' }, { label: 'Status', value: v.aktif ? 'Aktif' : 'Nonaktif' }] },
-                ]}
-              />
-            </div>
-          ),
-        },
-      ]}
-      onFinish={async () => {
-        try {
-          await siakad.request({
-            method: 'POST',
-            path: `${API}/aturan`,
-            body: { ...(v.kunci ? { kunci: v.kunci } : {}), ...bodySasaran(v), status: v.status, keputusan: v.keputusan, alasan: v.alasan, berlaku_mulai: v.berlaku_mulai, berlaku_selesai: v.berlaku_selesai, aktif: v.aktif, catatan: v.catatan },
-          });
-          toast.add({ title: 'Aturan penerimaan disimpan', type: 'success' });
-          invalidateSiakad(`${API}/aturan`);
-          invalidateSiakad(`${API}/simulasi`);
-          return null;
-        } catch (e) {
-          return pesanGalat(e);
-        }
-      }}
-    />
-  );
-}
-
 function PanelSimulasi({ open, onOpenChange, saya }: { open: boolean; onOpenChange: (o: boolean) => void; saya: KasirKelolaSaya }) {
   const [nim, setNim] = React.useState('');
   const [tanggal, setTanggal] = React.useState<string | null>(null);
@@ -822,8 +665,9 @@ function PanelSimulasi({ open, onOpenChange, saya }: { open: boolean; onOpenChan
   const nimSalah = nim && !/^[A-Za-z0-9.-]{3,20}$/.test(nim.trim()) ? 'NIM 3–20 huruf/angka.' : null;
   const sel = (n: NilaiSimulasi) => (
     <span className="u-ksu-putusan">
-      <Badge variant={n.boleh ? 'success' : 'danger'}>{n.boleh ? 'Boleh' : 'Ditolak'}</Badge>
+      <Badge variant={n.boleh ? (n.peringatan?.length ? 'warning' : 'success') : 'danger'}>{n.boleh ? (n.peringatan?.length ? 'Boleh, ada catatan' : 'Boleh') : 'Ditolak'}</Badge>
       <small>{n.boleh ? n.jendela.keterangan : n.alasan}</small>
+      {n.boleh && n.peringatan?.map((x) => <small key={x.pesan}>{x.pesan}</small>)}
     </span>
   );
   const m = q.data?.mahasiswa;
@@ -893,7 +737,7 @@ function PanelSimulasi({ open, onOpenChange, saya }: { open: boolean; onOpenChan
               empty={{ title: 'Tidak ada jenis biaya aktif di lingkup Anda', icon: <Receipt /> }}
               mobile="cards"
             />
-            <p className="u-ksu-catatan">Pelunasan tunggakan (tagihan periode sebelum periode aktif yang masih bersisa) selalu boleh kecuali aturannya “Tidak boleh diproses”.</p>
+            <p className="u-ksu-catatan">Pelunasan tunggakan (tagihan periode sebelum periode aktif yang masih bersisa) tidak terkena jadwal loket. Aturan yang belum punya SK dasar hanya memberi catatan.</p>
           </>
         )}
       </div>
@@ -901,136 +745,27 @@ function PanelSimulasi({ open, onOpenChange, saya }: { open: boolean; onOpenChan
   );
 }
 
-function TabAturan({ saya, unitId }: { saya: KasirKelolaSaya; unitId?: number }) {
-  const siakad = useSiakad();
-  const toast = useToast();
-  const q = useSiakadQuery<AturanPenerimaanKasir[]>([`${API}/aturan`], (s, signal) => s.request({ method: 'GET', path: `${API}/aturan` }, { signal }));
-  const jenis = useSiakadQuery<JenisBiayaKasir[]>([`${API}/jenis`], (s, signal) => s.request({ method: 'GET', path: `${API}/jenis` }, { signal }));
-  const [form, setForm] = React.useState<IsianAturan | null>(null);
-  const [hapus, setHapus] = React.useState<AturanPenerimaanKasir | null>(null);
-  const [riwayat, setRiwayat] = React.useState<AturanPenerimaanKasir | null>(null);
+function TabAturan({ saya }: { saya: KasirKelolaSaya; unitId?: number }) {
   const [cek, setCek] = React.useState(false);
-  const rows = dalamUnit(q.data, saya, unitId, true);
-  const univ = rows?.filter((r) => !r.boleh_ubah);
-  const milik = rows?.filter((r) => r.boleh_ubah);
-  const baru = (dasar?: AturanPenerimaanKasir): IsianAturan => ({
-    unit: dasar ? (saya.unit.some((u) => u.id === unitId) ? String(unitId) : unitAwal(saya, unitId)) : unitAwal(saya, unitId),
-    cakupan: dasar ? sasaranDari(saya, dasar).cakupan : 'semua',
-    kode_biaya: dasar?.kode_biaya ?? null,
-    kategori: dasar?.kategori ?? null,
-    status: dasar?.status ?? [],
-    keputusan: null,
-    alasan: '',
-    berlaku_mulai: null,
-    berlaku_selesai: null,
-    aktif: true,
-    catatan: '',
-  });
-  const ubah = (r: AturanPenerimaanKasir): IsianAturan => ({ ...sasaranDari(saya, r), kunci: r.kunci, status: r.status, keputusan: r.keputusan, alasan: r.alasan ?? '', berlaku_mulai: r.berlaku_mulai, berlaku_selesai: r.berlaku_selesai, aktif: benar(r.aktif), catatan: r.catatan ?? '' });
-  const kolom: DataColumn<AturanPenerimaanKasir>[] = [
-    { key: 'sasaran', header: 'Sasaran', value: (r) => teksSasaran(saya, r), cell: (r) => <SasaranSel saya={saya} r={r} />, mobile: 'title' },
-    {
-      key: 'status',
-      header: 'Status akademik',
-      value: (r) => r.status.map((s) => labelStatus(saya, s)).join(', '),
-      cell: (r) => (
-        <span className="u-ksu-lencana-daftar">
-          {r.status.map((s) => (
-            <Badge key={s} variant="outline">
-              {labelStatus(saya, s)}
-            </Badge>
-          ))}
-        </span>
-      ),
-    },
-    { key: 'keputusan', header: 'Keputusan', value: (r) => saya.keputusan[r.keputusan], cell: (r) => <Badge variant={NADA_KEPUTUSAN[r.keputusan]}>{saya.keputusan[r.keputusan] ?? r.keputusan}</Badge>, mobile: 'badge' },
-    { key: 'alasan', header: 'Alasan', value: (r) => r.alasan ?? '', cell: (r) => <span className="u-ksu-teks">{r.alasan || <span className="u-ksu-redup">Alasan bawaan</span>}</span> },
-    { key: 'berlaku', header: 'Berlaku', value: (r) => `${r.berlaku_mulai ?? ''}${r.berlaku_selesai ?? ''}`, cell: (r) => (r.berlaku_mulai || r.berlaku_selesai ? `${r.berlaku_mulai ? tgl(r.berlaku_mulai) : '…'} – ${r.berlaku_selesai ? tgl(r.berlaku_selesai) : '…'}` : 'Selalu') },
-    { key: 'aktif', header: 'Aktif', value: (r) => (benar(r.aktif) ? 'Aktif' : 'Nonaktif'), cell: (r) => <LencanaAktif aktif={r.aktif} />, shrink: true },
-  ];
-  const aksi = (r: AturanPenerimaanKasir): MenuEntry[] => [
-    { label: 'Riwayat versi', icon: <History />, onSelect: () => setRiwayat(r) },
-    ...(r.boleh_ubah
-      ? [
-          { label: 'Ubah', icon: <Pencil />, onSelect: () => setForm(ubah(r)) },
-          { label: 'Hapus', icon: <Trash2 />, destructive: true, onSelect: () => setHapus(r) },
-        ]
-      : saya.unit.length
-        ? [{ label: 'Buat aturan unit dari ini', icon: <Plus />, onSelect: () => setForm(baru(r)) }]
-        : []),
-  ];
+  const [form, setForm] = React.useState<{ aturan: Aturan | null } | null>(null);
+  const titik = saya.aturan_titik ?? 'kasir.terima';
   return (
     <div className="u-ksu-tumpuk">
-      <Alert variant="info" title="Aturan paling khusus yang dipakai">
-        Jenis biaya + unit, lalu unit, lalu universitas. Tanpa aturan yang cocok, pembayaran diizinkan. Aturan universitas menjadi acuan dan hanya bisa diubah BAUK.
+      <Alert variant="info" title="Aturan penerimaan kini aturan keuangan berdasar SK">
+        Aturan siapa yang boleh membayar apa di loket (mis. mahasiswa lulus hanya pelunasan tunggakan) berlaku sama untuk aplikasi UNIPO Kasir dan loket web BAUK. Aturan
+        dibuat dan diubah lewat alur aturan (usul, SK dasar, persetujuan). Aturan yang belum punya SK dasar hanya memberi peringatan kepada petugas, belum menolak pembayaran.
       </Alert>
       <div className="u-ksu-bilah">
-        <Button onClick={() => setForm(baru())} disabled={!saya.unit.length && !saya.universitas}>
+        <Button onClick={() => setForm({ aturan: null })}>
           <Plus /> Tambah aturan
         </Button>
         <Button variant="outline" onClick={() => setCek(true)}>
           <UserSearch /> Cek satu mahasiswa
         </Button>
       </div>
-      {q.error ? (
-        <GalatApi error={q.error} onRetry={q.refetch} />
-      ) : (
-        <>
-          <section className="u-ksu-bagian">
-            <h3>
-              <ShieldCheck aria-hidden /> Aturan {saya.universitas && unitId == null ? 'yang bisa Anda ubah' : 'unit'}
-            </h3>
-            <DataTable<AturanPenerimaanKasir> columns={kolom} rows={milik} rowKey={(r) => r.kunci} loading={q.loading} rowActions={aksi} onRowClick={(r) => setForm(ubah(r))} pagination={false} columnToggle={false} densityToggle={false} empty={{ title: 'Belum ada aturan unit', description: 'Tanpa aturan unit, kasir mengikuti aturan universitas di bawah.', icon: <Gavel /> }} mobile="cards" />
-          </section>
-          {univ && univ.length > 0 && (
-            <section className="u-ksu-bagian">
-              <h3>
-                <FileText aria-hidden /> Acuan universitas <Badge variant="outline">Hanya baca</Badge>
-              </h3>
-              <DataTable<AturanPenerimaanKasir> columns={kolom} rows={univ} rowKey={(r) => r.kunci} rowActions={aksi} pagination={false} columnToggle={false} densityToggle={false} mobile="cards" />
-            </section>
-          )}
-        </>
-      )}
-      <FormAturan awal={form} onOpenChange={(o) => !o && setForm(null)} saya={saya} unitId={unitId} jenis={dalamUnit(jenis.data, saya, unitId, false) ?? []} />
+      <DaftarAturan filter={{ titik }} saring={false} onBuka={(a) => setForm({ aturan: a })} />
+      <FormAturanUmum aturan={form?.aturan ?? null} titik={titik} kategori="keuangan" open={form !== null} onOpenChange={(o) => !o && setForm(null)} onTersimpan={() => invalidateSiakad('aturan')} />
       <PanelSimulasi open={cek} onOpenChange={setCek} saya={saya} />
-      <RiwayatVersi
-        jenis="aturan"
-        kunci={riwayat?.kunci ?? null}
-        judul="Riwayat aturan penerimaan"
-        onOpenChange={(o) => !o && setRiwayat(null)}
-        ringkas={(r) => {
-          let st: string[] = [];
-          try {
-            st = Array.isArray(r.status) ? (r.status as string[]) : JSON.parse(String(r.status ?? '[]'));
-          } catch {
-            st = [];
-          }
-          const k = r.keputusan as KeputusanKasir;
-          return (
-            <>
-              <Badge variant={NADA_KEPUTUSAN[k] ?? 'neutral'}>{saya.keputusan[k] ?? String(k)}</Badge> {st.map((s) => labelStatus(saya, s)).join(', ')}
-              {r.alasan ? <small>{String(r.alasan)}</small> : null}
-            </>
-          );
-        }}
-      />
-      <ConfirmDialog
-        open={Boolean(hapus)}
-        onOpenChange={(o) => !o && setHapus(null)}
-        title="Hapus aturan penerimaan?"
-        description={hapus ? `${teksSasaran(saya, hapus)} (${hapus.status.map((s) => labelStatus(saya, s)).join(', ')}). Kasir kembali mengikuti aturan lain yang berlaku. Riwayat versi tetap tersimpan.` : undefined}
-        confirmLabel="Hapus aturan"
-        onConfirm={async () => {
-          try {
-            await siakad.request({ method: 'POST', path: `${API}/aturan/${hapus!.kunci}/hapus` });
-            toast.add({ title: 'Aturan dihapus', type: 'success' });
-            invalidateSiakad(`${API}/aturan`);
-          } catch (e) {
-            toast.add({ title: 'Gagal menghapus', description: pesanGalat(e), type: 'error' });
-          }
-        }}
-      />
     </div>
   );
 }

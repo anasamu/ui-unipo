@@ -98,6 +98,7 @@ export * from './tugas-akhir';
 export * from './ujian-ta';
 export * from './pemenuhan-aturan';
 export * from './kasir';
+export * from './kasir-peramban';
 export * from './kasir-unit';
 export * from './perangkat-kasir';
 export * from './kwitansi';

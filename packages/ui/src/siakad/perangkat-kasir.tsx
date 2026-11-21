@@ -38,6 +38,9 @@ export interface PerangkatKasirBaris {
   aktif: boolean;
   punya_kunci: boolean;
   sidik_kunci: string | null;
+  /** aplikasi = UNIPO Kasir desktop; peramban = loket web BAUK (kunci WebCrypto). */
+  jenis?: 'aplikasi' | 'peramban';
+  jenis_label?: string;
   sidik: { nama_komputer?: string; os?: string; arch?: string; versi?: string; pengguna_os?: string } | null;
   versi: string | null;
   os: string | null;
@@ -110,6 +113,7 @@ export function LencanaPerangkatKasir({ status }: { status: StatusPerangkatKasir
 
 function teksSidik(p: PerangkatKasirBaris): string {
   const s = p.sidik;
+  if (p.jenis === 'peramban') return ['Peramban loket web', s?.nama_komputer].filter(Boolean).join(' · ');
   return [s?.nama_komputer, s?.os && `${s.os}${s.arch ? '/' + s.arch : ''}`, (s?.versi || p.versi) && `Kasir v${s?.versi || p.versi}`].filter(Boolean).join(' · ') || '–';
 }
 
@@ -194,7 +198,7 @@ function FormSetujui({ p, data, onOpenChange }: { p: PerangkatKasirBaris | null;
           <label className="u-pk-centang">
             <Checkbox checked={cocok} onCheckedChange={(c) => setCocok(c === true)} />
             <span>
-              Kode verifikasi <strong>{p.sidik_kunci}</strong> sama dengan yang tampil di layar Kasir komputer itu (menu Perangkat & printer). Jangan setujui bila berbeda.
+              Kode verifikasi <strong>{p.sidik_kunci}</strong> sama dengan yang tampil di {p.jenis === 'peramban' ? 'bilah sesi kasir halaman Loket di peramban itu' : 'layar Kasir komputer itu (menu Perangkat & printer)'}. Jangan setujui bila berbeda.
             </span>
           </label>
           <DescriptionList
