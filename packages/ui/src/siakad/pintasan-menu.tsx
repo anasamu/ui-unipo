@@ -107,7 +107,8 @@ function ratakanMenu(groups: NavGroup[]): Array<NavItem & { teks: string; kelomp
         for (const c of it.children) out.push({ ...c, icon: c.icon ?? it.icon, teks: c.labelTeks ?? (teksDari(c.label) || c.key), kelompok: [kg, ki].filter(Boolean).join(' › ') || undefined });
       } else out.push({ ...it, teks: it.labelTeks ?? (teksDari(it.label) || it.key), kelompok: kg || undefined });
     }
-  return out.filter((x) => x.href && !x.disabled);
+  // Tautan keluar (aplikasi lain) tidak dijadikan pintasan.
+  return out.filter((x) => x.href && !x.disabled && !x.luar);
 }
 
 /**
