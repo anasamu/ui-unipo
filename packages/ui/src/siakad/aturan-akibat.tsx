@@ -27,7 +27,7 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
 
 // ================================================================ Tipe
 
-export type BentukAkibat = 'tarif' | 'keringanan' | 'konversi_huruf' | 'bobot_nilai' | 'predikat_lulus';
+export type BentukAkibat = 'tarif' | 'keringanan' | 'konversi_huruf' | 'bobot_nilai' | 'predikat_lulus' | 'bobot_skripsi';
 
 export interface ParameterAkibat {
   akibat?: string;
@@ -45,6 +45,9 @@ export interface ParameterAkibat {
   tarif_periode_baru?: boolean;
   potongan_persen?: number;
   potongan_nominal?: number;
+  /** bobot_skripsi: persen nilai pembimbing dan penguji sidang (jumlah 100). */
+  bimbingan?: number;
+  sidang?: number;
 }
 
 export interface UbahTagihanAkibat {
@@ -174,6 +177,8 @@ export function kalimatAkibat(p0: unknown): string {
         .join(' + ')}${p.wajib ? ', wajib untuk semua kelas.' : ', untuk kelas yang dosennya belum mengatur bobot.'}`;
     case 'predikat_lulus':
       return `${mulai}predikat lulusan: ${(p.tingkat ?? []).map((t) => `${t.predikat} (IPK ≥ ${angkaId(t.ipk_min)}${t.maks_semester ? `, lulus paling lama ${t.maks_semester} semester` : ''})`).join('; ')}.`;
+    case 'bobot_skripsi':
+      return `${mulai}nilai skripsi = ${angkaId(p.bimbingan ?? 0)}% nilai pembimbing + ${angkaId(p.sidang ?? 100)}% nilai penguji sidang (bila nilai pembimbing belum ada, 100% nilai sidang). Nilai yang sudah ada di KHS tidak diubah otomatis.`;
     case 'tarif':
       return `${mulai}tarif per semester: ${(p.tarif ?? []).map((t) => `biaya ${t.kode_biaya} ${rupiah(t.rupiah)}`).join(', ')}. Dipakai saat tagihan diterbitkan.`;
     case 'keringanan': {
@@ -199,6 +204,7 @@ const JUDUL_BENTUK: Record<BentukAkibat, string> = {
   konversi_huruf: 'Konversi nilai huruf',
   bobot_nilai: 'Bobot nilai akhir',
   predikat_lulus: 'Predikat kelulusan',
+  bobot_skripsi: 'Bobot nilai skripsi',
 };
 
 /** Isi kebijakan berakibat: kalimat + tabel isinya. */
