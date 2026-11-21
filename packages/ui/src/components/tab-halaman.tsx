@@ -1,6 +1,7 @@
 'use client';
 import * as React from 'react';
 import { cn } from '../lib/cn';
+import { PenyediaTingkatTab } from '../lib/tingkat-tab';
 import type { NavItem } from './layout';
 import type { HasilMenu, TabHalamanAktif } from './menu-aplikasi';
 
@@ -109,7 +110,8 @@ export function TabMenuHalaman({ menu: menuProp, navigasi: navProp, renderLink: 
           })}
         </div>
       </nav>
-      {perluAlih ? null : isi ? isiAktif : children}
+      {/* Tab halaman = tingkat pertama: `Tabs` berisi di dalamnya otomatis vertikal (lihat Tabs orientation auto). */}
+      <PenyediaTingkatTab>{perluAlih ? null : isi ? isiAktif : children}</PenyediaTingkatTab>
     </>
   );
 }

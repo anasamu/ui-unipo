@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Award, BookOpen, Briefcase, ClipboardCheck, ClipboardList, GraduationCap, Medal, Users, Wallet } from 'lucide-react';
-import { Accordion, Badge, Breadcrumb, Button, Field, Input, PageHeader, Pagination, PanelLangkah, Progress, ProgressRing, Stepper, Tabs, WizardReview } from 'unipo-ui';
+import { Accordion, Badge, Breadcrumb, Button, Field, Input, PageHeader, Pagination, PanelLangkah, Progress, ProgressRing, Select, Stepper, Tabs, WizardReview } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 import { jsxProps } from '../Playground';
 
@@ -15,6 +15,8 @@ export const meta: DemoMeta = {
     TabPil: 'Tabs pil',
     PanelLangkahDemo: 'PanelLangkah (wizard di panel samping)',
     TabVertikal: 'Tabs vertikal berkelompok (ikon, jumlah; pilihan tarik-turun di wadah sempit)',
+    TabBersarang: 'Tab bersarang otomatis vertikal (tab di dalam panel tab; deret gulir di wadah sempit)',
+    SaringanSejajar: 'Saringan sejajar: lencana periode di dalam isian (Select lencana)',
     Langkah: 'Stepper',
     LangkahVertikal: 'Stepper vertikal',
     Halaman: 'Pagination',
@@ -112,6 +114,66 @@ export function TabVertikal() {
         { value: 'keluarga', label: 'Keluarga', icon: <Users />, count: 4, group: 'Pribadi', content: isi('Pasangan dan 3 anak') },
       ]}
     />
+  );
+}
+
+const STATUS_KRS = [
+  { value: 'menunggu', label: 'Menunggu', count: 0 },
+  { value: 'belum', label: 'Belum isi', count: 0 },
+  { value: 'disetujui', label: 'Disetujui', count: 42 },
+];
+
+/** Tab di dalam panel tab lain otomatis vertikal (orientation auto): tidak ada dua baris tab horizontal bertumpuk. */
+export function TabBersarang() {
+  const isi = (t: string) => <p className="u-field-description">{t}</p>;
+  return (
+    <Tabs
+      items={[
+        {
+          value: 'persetujuan',
+          label: 'Persetujuan',
+          content: (
+            <Tabs
+              aria-label="Status KRS"
+              items={STATUS_KRS.map((s) => ({ ...s, content: isi(s.count ? `${s.count} KRS ${s.label.toLowerCase()}.` : `Tidak ada KRS ${s.label.toLowerCase()}.`) }))}
+            />
+          ),
+        },
+        { value: 'atas-nama', label: 'Isi atas nama', content: isi('Pilih mahasiswa untuk mengisi KRS atas namanya.') },
+        { value: 'riwayat', label: 'Riwayat atas nama', content: isi('Riwayat perubahan KRS oleh BAAK.') },
+      ]}
+    />
+  );
+}
+
+const PRODI = [
+  { value: 'ti', label: 'S1 Teknik Informatika' },
+  { value: 'si', label: 'S1 Sistem Informasi' },
+];
+const TAHUN = [
+  { value: '20251', label: '2025/2026 Ganjil', description: 'Periode aktif' },
+  { value: '20242', label: '2024/2025 Genap', description: 'Ditutup · hanya lihat' },
+];
+
+/** Lencana status periode di dalam isian (Select `lencana`): kotak isian satu baris tetap sejajar. */
+export function SaringanSejajar() {
+  const [tahun, setTahun] = React.useState<string | null>('20251');
+  return (
+    <div className="demo-row" style={{ alignItems: 'flex-end', flexWrap: 'wrap', gap: '0.75rem', width: '100%' }}>
+      <Field label="Program studi" style={{ flex: '1 1 16rem', maxWidth: '24rem' }}>
+        <Select aria-label="Program studi" options={PRODI} defaultValue="ti" />
+      </Field>
+      <Field label="Tahun akademik" style={{ flex: '1 1 14rem', maxWidth: '18rem' }}>
+        <Select
+          aria-label="Tahun akademik"
+          options={TAHUN}
+          value={tahun}
+          onValueChange={setTahun}
+          lencana={tahun === '20251' ? <Badge variant="success" dot>Aktif</Badge> : <Badge variant="neutral">Ditutup</Badge>}
+        />
+      </Field>
+      <Button variant="outline">Terapkan</Button>
+    </div>
   );
 }
 

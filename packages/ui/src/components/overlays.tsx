@@ -8,6 +8,7 @@ import { Menu as BaseMenu } from '@base-ui/react/menu';
 import { Toast as BaseToast } from '@base-ui/react/toast';
 import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from 'lucide-react';
 import { cn } from '../lib/cn';
+import { AkarTingkatTab } from '../lib/tingkat-tab';
 import { usePlatform } from '../lib/platform';
 import { Button, Kbd, Spinner } from './actions';
 import { infoGalatDari, TombolLaporGalat, type InfoGalat } from './galat';
@@ -53,7 +54,11 @@ export function Dialog({ open, defaultOpen, onOpenChange, trigger, title, descri
         <BaseDialog.Title className="u-dialog-title">{title}</BaseDialog.Title>
         {description && <BaseDialog.Description className="u-dialog-description">{description}</BaseDialog.Description>}
       </div>
-      {children && <div className="u-dialog-body">{children}</div>}
+      {children && (
+        <div className="u-dialog-body">
+          <AkarTingkatTab>{children}</AkarTingkatTab>
+        </div>
+      )}
       {footer && <div className="u-dialog-footer">{footer}</div>}
       <BaseDialog.Close className="u-dialog-close" aria-label="Tutup">
         <X />
@@ -116,7 +121,11 @@ export function ConfirmDialog({ open, onOpenChange, trigger, title, description,
               <BaseAlertDialog.Title className="u-dialog-title">{title}</BaseAlertDialog.Title>
               {description && <BaseAlertDialog.Description className="u-dialog-description">{description}</BaseAlertDialog.Description>}
             </div>
-            {children && <div className="u-dialog-body">{children}</div>}
+            {children && (
+              <div className="u-dialog-body">
+                <AkarTingkatTab>{children}</AkarTingkatTab>
+              </div>
+            )}
             <div className="u-dialog-footer" style={children ? undefined : { marginTop: '1.25rem' }}>
               <BaseAlertDialog.Close render={<Button variant="outline" disabled={busy} />}>{cancelLabel}</BaseAlertDialog.Close>
               <Button
@@ -171,7 +180,7 @@ export function Popover({ trigger, title, description, children, side = 'bottom'
             </BasePopover.Arrow>
             {title && <BasePopover.Title className="u-popover-title">{title}</BasePopover.Title>}
             {description && <BasePopover.Description className="u-popover-description">{description}</BasePopover.Description>}
-            {children}
+            <AkarTingkatTab>{children}</AkarTingkatTab>
           </BasePopover.Popup>
         </BasePopover.Positioner>
       </BasePopover.Portal>

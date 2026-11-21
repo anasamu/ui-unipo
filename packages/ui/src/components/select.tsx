@@ -31,12 +31,17 @@ export interface SelectProps<V> {
   className?: string;
   id?: string;
   'aria-label'?: string;
+  /**
+   * Lencana kecil di dalam isian, rata kanan sebelum ikon panah (mis. `<LencanaPeriode>` "Aktif"/"Ditutup"). Letakkan
+   * lencana status di sini, bukan di bawah isian, supaya isian satu baris saringan tetap sejajar.
+   */
+  lencana?: React.ReactNode;
 }
 
 const KOSONG = '\u0000kosong';
 
 /** Pilihan tunggal dari daftar pendek yang sudah diketahui (≤ ±30 butir). Untuk daftar panjang/berasal dari API, pakai Combobox. */
-export function Select<V = string>({ options, placeholder = 'Pilih…', size, className, value, defaultValue, onValueChange, ...props }: SelectProps<V>) {
+export function Select<V = string>({ options, placeholder = 'Pilih…', size, className, value, defaultValue, onValueChange, lencana, ...props }: SelectProps<V>) {
   const groups = React.useMemo(() => {
     const map = new Map<string, SelectOption<V>[]>();
     for (const o of options) {
@@ -72,6 +77,7 @@ export function Select<V = string>({ options, placeholder = 'Pilih…', size, cl
     >
       <BaseSelect.Trigger className={cn('u-select-trigger', className)} data-size={size} id={props.id} aria-label={props['aria-label']}>
         <BaseSelect.Value className="u-select-value" placeholder={placeholder} />
+        {lencana ? <span className="u-select-lencana">{lencana}</span> : null}
         <BaseSelect.Icon className="u-select-icon">
           <ChevronsUpDown />
         </BaseSelect.Icon>

@@ -167,7 +167,7 @@ export interface PilihPeriodeAkademikProps {
   label?: (tahunId: string) => string;
   className?: string;
   'aria-label'?: string;
-  /** Tampilkan lencana status di samping pemilih. Bawaan true. */
+  /** Tampilkan lencana status di dalam isian pemilih (rata kanan, tidak menggeser penjajaran saringan). Bawaan true. */
   lencana?: boolean;
 }
 
@@ -178,8 +178,13 @@ export function PilihPeriodeAkademik({ value, onValueChange, daftar, label, clas
   const opsi = useOpsiPeriode(sumber, label);
   return (
     <div className={cn('u-pilih-periode-akademik', className)}>
-      <Select options={opsi} value={value} onValueChange={(v) => v && onValueChange(String(v))} aria-label={rest['aria-label'] ?? 'Periode akademik'} />
-      {lencana ? <LencanaPeriode status={value ? k.peta.get(value) : null} /> : null}
+      <Select
+        options={opsi}
+        value={value}
+        onValueChange={(v) => v && onValueChange(String(v))}
+        aria-label={rest['aria-label'] ?? 'Periode akademik'}
+        lencana={lencana ? <LencanaPeriode status={value ? k.peta.get(value) : null} /> : null}
+      />
     </div>
   );
 }

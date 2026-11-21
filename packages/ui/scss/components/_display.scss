@@ -398,7 +398,7 @@
   container-type: inline-size;
   min-width: 0;
 }
-.u-tabs[data-orientation='vertical'] {
+.u-tabs-wadah > .u-tabs {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
@@ -475,10 +475,14 @@
   width: 100%;
 }
 @container (min-width: 40rem) {
-  .u-tabs[data-orientation='vertical'] {
+  .u-tabs-wadah > .u-tabs {
     grid-template-columns: minmax(11rem, 15rem) minmax(0, 1fr);
     gap: 1.5rem;
     align-items: start;
+  }
+  // Tab bersarang biasanya sedikit dan berlabel pendek (status, jenis): daftar lebih ramping.
+  .u-tabs-wadah > .u-tabs[data-bersarang] {
+    grid-template-columns: minmax(9.5rem, 12.5rem) minmax(0, 1fr);
   }
   .u-tabs-samping {
     position: sticky;
@@ -491,6 +495,53 @@
   }
   .u-tabs-pilih {
     display: none;
+  }
+}
+// Tab bersarang di wadah sempit (ponsel, kolom sempit): deret pil yang dapat digulir, jumlah tetap terlihat, panah
+// kiri/kanan (orientasi diukur di Tabs). Tab vertikal eksplisit tetap memakai pilihan tarik-turun.
+@container (max-width: 39.999rem) {
+  .u-tabs[data-bersarang] .u-tabs-list[data-variant='side'] {
+    display: flex;
+    flex-direction: row;
+    width: fit-content;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    padding: 3px;
+    gap: 2px;
+    border-radius: calc(var(--u-radius) + 1px);
+    background: var(--u-muted);
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    > .u-tab {
+      flex: none;
+      min-height: 1.875rem;
+      padding: 0.25rem 0.75rem;
+      white-space: nowrap;
+      &:hover:not([data-active]):not([data-selected]) {
+        background: transparent;
+      }
+      &[data-active],
+      &[data-selected] {
+        color: var(--u-foreground);
+      }
+      .u-badge {
+        margin-inline-start: 0;
+      }
+    }
+    > .u-tabs-indicator {
+      left: var(--active-tab-left);
+      width: var(--active-tab-width);
+      background: var(--u-background);
+      box-shadow:
+        var(--u-shadow-sm),
+        0 0 0 1px color-mix(in oklab, var(--u-foreground) 6%, transparent);
+      transition:
+        left var(--u-duration-base) var(--u-ease-out),
+        width var(--u-duration-base) var(--u-ease-out);
+    }
   }
 }
 .u-tabs-panel {

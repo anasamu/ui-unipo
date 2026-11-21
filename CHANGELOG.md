@@ -2,6 +2,13 @@
 
 ## 1.51.0 (belum dirilis)
 
+- **Tab bersarang otomatis vertikal + saringan sejajar** (`components/display.tsx`, `lib/tingkat-tab.tsx` baru, `components/tab-halaman.tsx`, `components/overlays.tsx`, `components/select.tsx`, `siakad/kunci-periode.tsx`, `siakad/alur.tsx`):
+  - `Tabs orientation` kini bawaan `auto`: tab yang berada di dalam panel tab lain atau di bawah tab halaman dari menu (`TabMenuHalaman`/`KerangkaAplikasi` = tingkat pertama) dan punya isi (`content` atau `children`) tampil **vertikal** (daftar kiri 9,5–12,5rem, isi kanan, jumlah rata kanan, aktif bergaris kiri + latar `--u-primary-soft`), sehingga tidak ada dua baris tab horizontal bertumpuk. Di wadah < 40rem daftarnya menjadi deret pil yang dapat digulir (jumlah tetap terlihat). Tab penyaring tanpa isi, tab di dalam tab yang sudah vertikal, dan isi Dialog/Sheet/Popover tidak terpengaruh. `orientation="horizontal"|"vertical"` tetap memaksa. Aksesibilitas: `aria-orientation="vertical"` + panah atas/bawah di layar lebar, panah kiri/kanan di deret sempit (orientasi diukur dengan ResizeObserver).
+  - Diekspor: `useTingkatTab`, `PenyediaTingkatTab`, `AkarTingkatTab`, `tataTab`.
+  - `PersetujuanKrs`: pencarian, tabel, dan paging menjadi isi tab status, jadi di halaman bertab (BAAK KRS) status Menunggu/Belum isi/Disetujui tampil vertikal.
+  - `Select lencana`: lencana status di dalam isian (rata kanan sebelum panah); `PilihPeriodeAkademik` memakainya (sebelumnya di samping isian). Baris saringan berpola lama `label > Select … LencanaPeriode` (PilihKonteks BAAK/keuangan) kini dirata atas sehingga isian Program studi dan Tahun akademik sejajar walau ada lencana "Aktif" di bawah.
+  - Uji `packages/ui/test/tab-bersarang.test.tsx`; demo docs "Tabs » Tab bersarang" dan "Saringan sejajar".
+
 - **Standar tabel (audit 21 Nov, gelombang 2: komponen saja)** (`components/data-table.tsx`, `components/select.tsx`, `lib/tabel.ts` baru, `siakad/tabel.tsx`; tanpa perubahan SIAKAD):
   - `Select`: nilai `''` tanpa opsi bernilai `''` (mis. isian formulir yang belum diisi) kini menampilkan `placeholder`, bukan teks penanda internal "kosong". Opsi bernilai `''` (mis. "Semua status") tetap tampil dan nilai formulirnya (`name`) terkirim `''`.
   - `DataTable` header lengket: `stickyHeader` (bawaan `true`) memberi tabel tinggi maksimum setinggi layar (`100dvh - --u-dt-sticky-offset`, bawaan 10rem, minimal 18rem) sehingga baris digulir di dalam tabel, header tetap terlihat, dan gulir horizontal di ponsel tetap berjalan. `maxHeight` tetap mengganti tinggi bawaan; `stickyHeader={false}` untuk tabel cetak/kecil. `TableContainer stickyHeader` untuk tabel primitif.

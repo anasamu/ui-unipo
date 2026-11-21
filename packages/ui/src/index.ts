@@ -18,6 +18,7 @@ export {
   type PetaStatus,
 } from './lib/tabel';
 export * from './lib/tautan';
+export * from './lib/tingkat-tab';
 export * from './components/actions';
 export * from './components/forms';
 export * from './components/select';
