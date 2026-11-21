@@ -208,12 +208,12 @@ function RincianAturanSkp({ id, onPilih }: { id: number; onPilih: (id: number | 
             </div>
             <div className="u-bkd-kepala-status">
               {a.berlaku_sekarang ? <Badge variant="primary">Berlaku sekarang</Badge> : null}
-              <LencanaStatusVersi status={a.status}>{a.diterbitkan_at ? ` ${tgl(a.diterbitkan_at)}` : ''}</LencanaStatusVersi>
+              <LencanaStatusVersi status={a.status} menunggu={a.menunggu_validasi}>{a.diterbitkan_at ? ` ${tgl(a.diterbitkan_at)}` : ''}</LencanaStatusVersi>
             </div>
           </div>
           <DescriptionList
             items={[
-              { label: 'SK/pedoman', value: a.sk ? a.sk.nomor : <span className="u-bkd-keterangan">Belum dilampirkan (wajib sebelum terbit)</span> },
+              { label: 'SK/pedoman', value: a.sk ? a.sk.nomor : <span className="u-bkd-keterangan">Belum dilampirkan (tetap bisa terbit dengan peringatan "Perlu SK")</span> },
               { label: 'Berlaku mulai', value: a.berlaku_tanggal ? tgl(a.berlaku_tanggal) : a.status === 'terbit' ? 'Sejak diterbitkan' : 'Diisi sebelum terbit' },
               { label: 'Rumus nilai', value: `${angka(isi.rumus.bobot_hasil, '%')} hasil kerja + ${angka(isi.rumus.bobot_perilaku, '%')} perilaku kerja` },
               { label: 'Dipakai', value: a.periode.length ? `${a.periode.length} SKP mengunci versi ini` : 'Belum ada' },
@@ -344,7 +344,7 @@ function RincianAturanSkp({ id, onPilih }: { id: number; onPilih: (id: number | 
         description={`${a.nama} v${a.versi} dikunci dan dipakai SKP yang rencananya diajukan sesudah ini. SKP yang sudah diajukan tetap memakai versinya.`}
         confirmLabel="Terbitkan"
         onConfirm={async () => {
-          await aksi('POST', `${BASIS}/${a.id}/terbitkan`, {}, 'Komponen SKP diterbitkan.');
+          await aksi('POST', `${BASIS}/${a.id}/terbitkan`, {}, 'Komponen SKP diterbitkan. Bila rantai validator diatur, berlaku setelah validator terakhir menyetujui.');
           setPanel(null);
         }}
       />
@@ -394,7 +394,7 @@ function PanelUbahAturanSkp({ aturan: a, onOpenChange }: { aturan: AturanSkpDeta
               <Field label="Dasar hukum" description="Peraturan penilaian kinerja pegawai yang berlaku.">
                 <Textarea rows={3} value={id.dasar_hukum} onChange={(e) => setId({ ...id, dasar_hukum: e.target.value })} />
               </Field>
-              <PilihSK value={id.sk_id} onValueChange={(v: string | null) => setId({ ...id, sk_id: v })} jenis="aturan" label="SK/pedoman yang dirujuk" description="Dari registri SK; wajib sebelum terbit." />
+              <PilihSK value={id.sk_id} onValueChange={(v: string | null) => setId({ ...id, sk_id: v })} jenis="aturan" label="SK/pedoman yang dirujuk" description="Dari registri SK. Tanpa SK versi tetap bisa terbit dengan peringatan Perlu SK." />
               <Field label="Berlaku mulai tanggal" optional>
                 <IsianTanggal value={id.berlaku_tanggal} onValueChange={(v) => setId({ ...id, berlaku_tanggal: v ?? '' })} />
               </Field>
@@ -498,7 +498,7 @@ function PanelUbahAturanSkp({ aturan: a, onOpenChange }: { aturan: AturanSkpDeta
           content: (
             <WizardReview
               sections={[
-                { title: 'Dasar hukum', items: [{ label: 'Nama', value: id.nama }, { label: 'SK', value: id.sk_id ? 'Terlampir' : null }, { label: 'Berlaku mulai', value: id.berlaku_tanggal ? tgl(id.berlaku_tanggal) : 'Sejak diterbitkan' }], onEdit: () => setStep(0), missing: id.sk_id ? undefined : 'SK/pedoman wajib dilampirkan sebelum terbit.' },
+                { title: 'Dasar hukum', items: [{ label: 'Nama', value: id.nama }, { label: 'SK', value: id.sk_id ? 'Terlampir' : null }, { label: 'Berlaku mulai', value: id.berlaku_tanggal ? tgl(id.berlaku_tanggal) : 'Sejak diterbitkan' }], onEdit: () => setStep(0), missing: id.sk_id ? undefined : 'Belum ada SK/pedoman: versi terbit dengan peringatan "Perlu SK".' },
                 { title: 'Hasil kerja', items: [...hk.jenis.map((j) => ({ label: j.nama, value: `min ${j.min}${j.maks != null ? `, maks ${j.maks}` : ''}` })), { label: 'Aspek', value: hk.aspek.filter((x) => x.aktif).map((x) => x.nama).join(', ') }], onEdit: () => setStep(1) },
                 { title: 'Perilaku kerja', items: [{ label: 'Perilaku', value: isi.perilaku.map((p) => p.nama).join(', ') || 'Tidak dinilai' }], onEdit: () => setStep(2) },
                 { title: 'Rumus & predikat', items: [{ label: 'Bobot', value: `${angka(isi.rumus.bobot_hasil, '%')} hasil + ${angka(isi.rumus.bobot_perilaku, '%')} perilaku` }, ...isi.predikat.map((p) => ({ label: p.nama, value: `≥ ${angka(p.min)}` }))], onEdit: () => setStep(3) },

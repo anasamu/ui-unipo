@@ -83,6 +83,7 @@ export * from './aturan-rute';
 export * from './aturan-kanvas';
 export * from './aturan-pengatur';
 export * from './aturan-akibat';
+export * from './aturan-gerbang';
 export * from './biaya';
 export * from './panitia';
 export * from './tema-aplikasi';

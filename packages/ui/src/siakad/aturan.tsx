@@ -427,6 +427,8 @@ export interface AturanSaya {
   boleh_validator_lihat?: boolean;
   boleh_validator_atur?: boolean;
   kategori: Array<{ kategori: KategoriAturan; judul: string; boleh_atur: boolean; prodi: string[] | null; semua_prodi: boolean; pengatur?: unknown }>;
+  /** Titik berpengatur sendiri yang boleh saya atur (mis. pmb.* untuk Ketua/Panitia PMB). SIAKAD terbaru. */
+  titik_atur?: Array<{ titik: string; kategori: string; unit: string | null }>;
 }
 export interface PelanggaranAturan {
   id: string;
@@ -5291,6 +5293,11 @@ export interface KelolaAturanProps {
   tampilan?: 'kartu' | 'kelompok';
   /** Portal Fakultas (tampilan kelompok): hanya aturan universitas umum + aturan yang lingkupnya fakultas ini. */
   fakultas?: string | null;
+  /**
+   * Saring daftar dan ringkasan ke aturan di titik milik `unit` (mis. PMB: titik pmb.* lintas kategori). Pengatur titik
+   * unit itu (GET /v1/aturan/saya `titik_atur`) juga boleh menambah aturan walau bukan pengatur kategori.
+   */
+  saringUnit?: boolean;
   className?: string;
 }
 
@@ -5492,10 +5499,11 @@ export function PengingatSkAturan({ unit, kategori, href, onBuka, className }: {
  * riwayat), alur persetujuan (menunggu persetujuan saya, telaah SPMI), sampah (admin), pengatur, dan titik penerapan.
  * Hak akses mengikuti GET /v1/aturan/saya.
  */
-export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik dinamis', tampilTitik = false, tautanPejabat, tampilan = 'kartu', fakultas, className }: KelolaAturanProps) {
+export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik dinamis', tampilTitik = false, tautanPejabat, tampilan = 'kartu', fakultas, saringUnit = false, className }: KelolaAturanProps) {
   const kelompok = tampilan === 'kelompok' && !titik;
   const saya = useAturanSaya();
-  const ringkas = useDaftarAturan({ kategori, titik, per_page: 200 });
+  const unitSaring = saringUnit && unit ? unit : undefined;
+  const ringkas = useDaftarAturan({ kategori, titik, unit: unitSaring, per_page: 200 });
   const hakSaya = hakAlur(saya.data);
   // GET /v1/aturan/saya belum memuat hak menyetujui/menelaah: antrean yang berisi juga menandakan berhak.
   const antreanSetuju = useDaftarAturan({ antrean: 'persetujuan_saya', kategori, per_page: 100 });
@@ -5513,7 +5521,11 @@ export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik d
   const [wizardContoh, setWizardContoh] = React.useState(false);
   const [buka, setBuka] = React.useState<string | null>(null);
   const [form, setForm] = React.useState<{ aturan: Aturan | null; langkah?: number } | null>(null);
-  const bolehTambah = saya.data ? saya.data.admin || saya.data.kategori.some((k) => k.boleh_atur && (!kategori || k.kategori === kategori)) : false;
+  const bolehTambah = saya.data
+    ? saya.data.admin ||
+      saya.data.kategori.some((k) => k.boleh_atur && (!kategori || k.kategori === kategori)) ||
+      Boolean(unitSaring && saya.data.titik_atur?.some((t) => t.unit === unitSaring && (!kategori || t.kategori === kategori)))
+    : false;
   const hitung = (s: StatusAturan) => ringkas.data?.filter((a) => a.status === s).length ?? 0;
   const tanpaSk = ringkas.data?.filter((a) => (a.status === 'draf' || a.status === 'dikembalikan') && !a.jumlah_sk && !a.sk?.nomor).length ?? 0;
   const tombolTambah = bolehTambah ? (
@@ -5573,7 +5585,7 @@ export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik d
             ) : (
               <div className="u-aturan-detail-isi">
                 {!titik && <AturanBawaanPanel kategori={kategori} unit={unit} bolehAtur={bolehTambah} onBuka={(a) => setBuka(a.id)} onLampirkan={(a) => setForm({ aturan: a, langkah: 4 })} />}
-                <DaftarAturan filter={{ kategori, titik }} onBuka={(a) => setBuka(a.id)} />
+                <DaftarAturan filter={{ kategori, titik, unit: unitSaring }} onBuka={(a) => setBuka(a.id)} />
               </div>
             ),
           },
