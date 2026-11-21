@@ -85,6 +85,7 @@ import {
   useAjuanPengecualianAturan,
   type AjukanPengecualianAturanProps,
 } from './aturan-keputusan';
+import { Stack } from '../components/tata-letak';
 import { DasarPedoman } from './pedoman';
 import { useFakultasReferensi } from './prodi';
 import { DasarSkAturanDaftar, LencanaDasarSk, PenjelasanPengaturValidator, PanelAjukanAturan, PanelLampirSkDasar, ValidatorAturan, WizardTemplatAturan, type DasarSkAturan, type UnitRingkas } from './aturan-sk';
@@ -5178,10 +5179,10 @@ export function AntreanPersetujuanAturan({ kategori, onBuka, className }: { kate
 /** Antrean telaah SPMI (GET /v1/aturan?antrean=telaah): catatan telaah yang tidak memblokir. Untuk aplikasi SPMI. */
 export function AntreanTelaahAturan({ kategori, onBuka, className }: { kategori?: KategoriAturan; onBuka?: (a: Aturan) => void; className?: string }) {
   return (
-    <>
+    <Stack gap={4} className={className}>
       <PengingatSkAturan kategori={kategori} />
-      <AntreanAlurAturan antrean="telaah" kategori={kategori} onBuka={onBuka} className={className} />
-    </>
+      <AntreanAlurAturan antrean="telaah" kategori={kategori} onBuka={onBuka} />
+    </Stack>
   );
 }
 
