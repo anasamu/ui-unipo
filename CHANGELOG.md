@@ -2,6 +2,11 @@
 
 ## 1.51.0 (belum dirilis)
 
+- **Dosen/pegawai nonaktif tidak ditawarkan, nilai lama berlencana** (`components/select.tsx`, `siakad/pilih.tsx`, `siakad/cari.tsx`; butuh SIAKAD dengan `aktif`/`status_label` di `/v1/dosen` dan bawaan `status_aktif=bekerja` di `/v1/sdm/pegawai`, branch fix/dosen-aktif):
+  - `Combobox`: prop baru `lencana(item)` menampilkan lencana butir terpilih di dalam isian (tersembunyi saat daftar terbuka).
+  - `PilihEntitas` jenis `dosen`/`pegawai` dan `CariDosen`/`CariPegawai`: daftar pilihan dari SIAKAD hanya dosen aktif / pegawai yang masih bekerja; nilai tersimpan yang menunjuk dosen keluar/pensiun/studi lanjut atau pegawai keluar tetap terbaca dengan lencana **Nonaktif** (status rinci di keterangan/tooltip). `SumberEntitas.lencana` untuk sumber sendiri. Uji `packages/ui/test/dosen-nonaktif.test.tsx`.
+  - `TabelDosen`/`FilterDosen`: saringan status mengikuti SIAKAD (kosong/Aktif = bawaan dosen aktif, Semua nonaktif, Semua status, atau satu kode r_kode 15); label status memakai kode r_kode 15 yang benar (T = tugas di instansi lain, bukan tugas belajar; ditambah studi lanjut, tugas belajar, pensiun, almarhum) dengan cadangan `status_label`.
+
 - **Standar tabel (audit 21 Nov, gelombang 2: komponen saja)** (`components/data-table.tsx`, `components/select.tsx`, `lib/tabel.ts` baru, `siakad/tabel.tsx`; tanpa perubahan SIAKAD):
   - `Select`: nilai `''` tanpa opsi bernilai `''` (mis. isian formulir yang belum diisi) kini menampilkan `placeholder`, bukan teks penanda internal "kosong". Opsi bernilai `''` (mis. "Semua status") tetap tampil dan nilai formulirnya (`name`) terkirim `''`.
   - `DataTable` header lengket: `stickyHeader` (bawaan `true`) memberi tabel tinggi maksimum setinggi layar (`100dvh - --u-dt-sticky-offset`, bawaan 10rem, minimal 18rem) sehingga baris digulir di dalam tabel, header tetap terlihat, dan gulir horizontal di ponsel tetap berjalan. `maxHeight` tetap mengganti tinggi bawaan; `stickyHeader={false}` untuk tabel cetak/kecil. `TableContainer stickyHeader` untuk tabel primitif.
