@@ -2,6 +2,21 @@
 // widget per fitur di 'unipo-ui/widgets'.
 export * from './lib/cn';
 export * from './lib/format';
+export {
+  ambilSemuaHalaman,
+  BATAS_EKSPOR,
+  namaBerkasCsv,
+  rataFormat,
+  selCsv,
+  susunCsv,
+  teksFormat,
+  type FormatKolom,
+  type HalamanServer,
+  type HasilAmbilSemua,
+  type NadaStatus,
+  type OpsiAmbilSemua,
+  type PetaStatus,
+} from './lib/tabel';
 export * from './lib/tautan';
 export * from './components/actions';
 export * from './components/forms';

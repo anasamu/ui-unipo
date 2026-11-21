@@ -493,8 +493,12 @@ export function Empty({
 }
 
 // ---------------------------------------------------------------- Table (primitif)
-export function TableContainer({ className, ...props }: React.ComponentProps<'div'>) {
-  return <div className={cn('u-table-wrap', className)} {...props} />;
+/**
+ * Pembungkus tabel (gulir horizontal). `stickyHeader`: tinggi maksimum setinggi layar dengan gulir vertikal di dalam
+ * tabel sehingga header tetap terlihat (untuk daftar panjang; tabel cetak/kecil biarkan tanpa).
+ */
+export function TableContainer({ className, stickyHeader, ...props }: React.ComponentProps<'div'> & { stickyHeader?: boolean }) {
+  return <div className={cn('u-table-wrap', className)} data-sticky={dataFlag(stickyHeader)} {...props} />;
 }
 export function Table({ className, density, striped, ...props }: { density?: 'comfortable' | 'compact'; striped?: boolean } & React.ComponentProps<'table'>) {
   return <table className={cn('u-table', className)} data-density={density} data-striped={dataFlag(striped)} {...props} />;
