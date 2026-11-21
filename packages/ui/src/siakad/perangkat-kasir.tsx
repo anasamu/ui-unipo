@@ -20,7 +20,7 @@ const API = '/v1/kasir/kelola';
 
 export type StatusPerangkatKasir = 'menunggu' | 'disetujui' | 'ditolak' | 'dicabut';
 
-export interface UnitRingkas {
+export interface UnitPerangkatRingkas {
   id: number;
   kode: string;
   nama: string;
@@ -43,9 +43,9 @@ export interface PerangkatKasirBaris {
   os: string | null;
   pengguna: string | null;
   unit_id: number | null;
-  unit: UnitRingkas | null;
+  unit: UnitPerangkatRingkas | null;
   unit_diminta_id: number | null;
-  unit_diminta: UnitRingkas | null;
+  unit_diminta: UnitPerangkatRingkas | null;
   catatan_pemohon: string | null;
   pemohon: string | null;
   diminta_at: string | null;
@@ -63,7 +63,7 @@ export interface PersetujuanPerangkatKasir {
   hitung: Record<StatusPerangkatKasir, number>;
   boleh_setujui: boolean;
   global: boolean;
-  unit: UnitRingkas[];
+  unit: UnitPerangkatRingkas[];
 }
 
 interface RiwayatPerangkat {
@@ -96,7 +96,7 @@ const AKSI: Record<string, string> = {
 };
 
 const tgl = (s: string | null | undefined) => (s ? formatDate(s.replace(' ', 'T'), 'medium') : '–');
-const namaUnit = (u: UnitRingkas | null | undefined) => (u ? u.singkatan || u.nama : null);
+const namaUnit = (u: UnitPerangkatRingkas | null | undefined) => (u ? u.singkatan || u.nama : null);
 
 export function LencanaPerangkatKasir({ status }: { status: StatusPerangkatKasir }) {
   const s = STATUS_PERANGKAT_KASIR[status] ?? STATUS_PERANGKAT_KASIR.menunggu;
