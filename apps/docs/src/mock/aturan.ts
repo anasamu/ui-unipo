@@ -896,6 +896,7 @@ const bentukTitik = (kode: string) => {
     status_mahasiswa: (t as Baris).status_mahasiswa ?? null,
     pengatur: PENGATUR_TITIK[kode] ?? [],
     jumlah_aturan: ATURAN.filter((a) => a.titik === kode && !a.dihapus_at).length,
+    rute: kode.startsWith('rute.'),
   };
 };
 TITIK_ATURAN['kustom.seminar_proposal'] = {
@@ -1188,3 +1189,69 @@ const UNIT_KATEGORI: Record<string, string> = {
   umum: 'baak',
 };
 for (const a of ATURAN) if (a.bawaan) a.unit ??= UNIT_KATEGORI[a.kategori] ?? 'baak';
+
+// ---------------------------------------------------------------- Titik dari aksi aplikasi (/v1/aturan/rute, tahap 2a)
+const saranMhs = (path: string) => ({
+  mahasiswa: path.includes('{nim}') ? [{ sumber: 'path:nim', label: 'NIM di alamat aksi' }] : [{ sumber: 'pengguna:nim', label: 'Mahasiswa yang sedang masuk (yang menekan tombol)' }],
+  pegawai: [{ sumber: 'pengguna:username', label: 'Pegawai yang sedang masuk (yang menekan tombol)' }],
+  pendaftar: [],
+  tahun: [{ sumber: 'body:tahun_id', label: 'Periode yang dikirim di isian' }],
+  prodi: [{ sumber: 'body:prodi', label: 'Kode prodi di isian (prodi)' }],
+});
+const KATALOG_RUTE = [
+  ['Ujian TA', [['POST', '/v1/ta/ujian/ajukan', 'Mahasiswa mengajukan siap ujian', 'Ujian TA: Kelayakan & pengajuan'], ['POST', '/v1/ta/ujian/{id}/jadwal', 'Susun jadwal dan tim', 'Ujian TA: Penjadwalan']]],
+  ['KRS', [['POST', '/v1/mahasiswa/{nim}/krs', 'Simpan KRS mahasiswa', 'KRS: Pengisian']]],
+  ['Cuti', [['POST', '/v1/cuti/ajukan', 'Mahasiswa mengajukan cuti', 'Cuti: Pengajuan']]],
+  ['KKN', [['POST', '/v1/lppm/kkn/daftar', 'Mahasiswa mendaftar KKN', 'KKN: Pendaftaran']]],
+] as const;
+const ruteKatalog = () => ({
+  jumlah: 5,
+  cari: [{ kode: 'ujian_ta', label: 'Mahasiswa pemilik ujian tugas akhir', subjek: 'mahasiswa', dari: 'UUID ujian TA' }],
+  sumber_pengguna: [],
+  kelompok: KATALOG_RUTE.map(([modul, r]) => ({
+    modul,
+    jumlah: r.length,
+    rute: r.map(([m, p, nama, tag]) => ({ kunci: `${m} ${p}`, metode: m, path: p, nama, tag, keterangan: '', parameter_path: [], hanya_pengguna: true, saran: saranMhs(p), titik: [] })),
+  })),
+});
+const RUTE_TITIK: Record<string, Baris> = {};
+tambahRute(/^\/v1\/aturan\/rute\/katalog$/, () => ({ data: ruteKatalog() }));
+tambahRute(/^\/v1\/aturan\/rute$/, (_u, init) => {
+  if (metode(init) === 'POST') {
+    const b = badan(init);
+    const kode = `rute.${String(b.judul ?? 'aksi').toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 40)}`;
+    TITIK_ATURAN[kode] = { judul: b.judul, keterangan: b.keterangan ?? '', kategori: b.kategori, subjek: b.subjek, jenis: b.jenis, konteks: [], lama: null, penerapan: [], unit: b.unit ?? 'baak', kustom: true };
+    (TITIK_ATURAN[kode] as Baris).konteks_def = b.konteks ?? [];
+    RUTE_TITIK[kode] = { ...b, kode };
+    return { __status: 201, data: { kode } };
+  }
+  return { data: Object.values(RUTE_TITIK).map((r) => bentukRute(String(r.kode))) };
+});
+const bentukRute = (kode: string) => {
+  const r = RUTE_TITIK[kode]!;
+  const [m, p] = String(r.rute).split(' ');
+  const nama = KATALOG_RUTE.flatMap(([, x]) => x).find((x) => x[1] === p)?.[2] ?? p;
+  return {
+    kode, judul: TITIK_ATURAN[kode]?.judul, keterangan: '', aktif: true, rute: { kunci: r.rute, metode: m, path: p, nama, modul: 'Ujian TA', ada: true },
+    subjek: r.subjek, subjek_sumber: r.subjek_sumber ?? [], tahun_sumber: r.tahun_sumber ?? [], prodi_sumber: [], konteks_sumber: r.konteks_sumber ?? {},
+    bila: (r.bila ?? []), kategori: r.kategori, jenis: r.jenis, konteks: r.konteks ?? [], jumlah_aturan_aktif: 0,
+  };
+};
+tambahRute(/^\/v1\/aturan\/rute\/rute\.[^/]+$/, (u) => {
+  const kode = decodeURIComponent(u.pathname.split('/').pop()!);
+  return RUTE_TITIK[kode] ? { data: bentukRute(kode) } : tidakAda;
+});
+RUTE_TITIK['rute.mahasiswa_mendaftar_seminar_proposal'] = {
+  kode: 'rute.mahasiswa_mendaftar_seminar_proposal', rute: 'POST /v1/ta/ujian/ajukan', subjek: 'mahasiswa', subjek_sumber: ['pengguna:nim'], kategori: ['akademik'], jenis: ['syarat'],
+  bila: [{ sumber: 'body:jenis', nilai: ['proposal'] }],
+};
+TITIK_ATURAN['rute.mahasiswa_mendaftar_seminar_proposal'] = {
+  judul: 'Mahasiswa mendaftar seminar proposal (otomatis)', keterangan: 'Diperiksa otomatis sebelum aksi "Mahasiswa mengajukan siap ujian" dijalankan.', kategori: ['akademik'], subjek: 'mahasiswa',
+  jenis: ['syarat'], konteks: [], lama: null, penerapan: [], unit: 'baak', kustom: true,
+};
+tambahRute(/^\/v1\/rbac\/peran$/, () => ({
+  data: [
+    { kode: 'kepala-baak', nama: 'Kepala BAAK' }, { kode: 'staf-baak', nama: 'Staf BAAK' }, { kode: 'dekan', nama: 'Dekan' }, { kode: 'wakil-dekan', nama: 'Wakil dekan' },
+    { kode: 'kaprodi', nama: 'Ketua program studi' }, { kode: 'kepala-bauk', nama: 'Kepala BAUK' },
+  ],
+}));
