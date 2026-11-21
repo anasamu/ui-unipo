@@ -1027,8 +1027,12 @@
   min-height: 0;
   width: 100%;
   display: grid;
+  // Lintasan pasti (bukan auto) supaya max-height gambar mengacu ke kotak ini: gambar potret tidak pernah meluap.
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   place-items: center;
-  img {
+  overflow: hidden;
+  img,
+  video {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
@@ -2109,10 +2113,7 @@
     display: block;
   }
 }
-// Sidebar drive lebih lebar dari sidebar folder biasa.
-.u-db .u-mb {
-  grid-template-columns: 14.5rem minmax(0, 1fr);
-}
+// Sidebar drive memakai lebar yang bisa digeser (--u-mb-lebar, bawaan 256px) seperti sidebar folder biasa.
 
 .u-dd {
   display: flex;
@@ -2447,7 +2448,8 @@ span.u-dd-lipat {
       height: 1rem;
     }
     small {
-      @include truncate;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
     }
   }
 }
@@ -2482,12 +2484,21 @@ span.u-dd-lipat {
     flex: 1;
     min-width: 0;
   }
+  // Tidak dipotong: teks pendek dua baris yang boleh membungkus bila sidebar sempit.
   small {
     font-size: 0.6875rem;
-    line-height: 1.2;
+    line-height: 1.25;
     color: var(--u-muted-foreground);
     font-variant-numeric: tabular-nums;
-    @include truncate;
+    overflow-wrap: anywhere;
+  }
+  .u-mb-kuota-utama {
+    color: var(--u-foreground);
+    font-weight: var(--u-weight-medium, 500);
+  }
+  &[data-nada='kritis'] .u-mb-kuota-utama,
+  &[data-nada='penuh'] .u-mb-kuota-utama {
+    color: var(--u-danger);
   }
   &:is(button) {
     cursor: pointer;
@@ -2732,14 +2743,42 @@ span.u-dd-lipat {
 .u-mb-info {
   flex: none;
   width: 17rem;
+  min-width: 0;
   padding: 1rem 0.875rem;
   border-inline-start: 1px solid var(--u-border);
   background: var(--u-card, var(--u-background));
   overflow-y: auto;
+  // Pratinjau punya kotak sendiri (latar netral, tinggi maksimum): potret/lanskap/PDF tidak menutupi nama dan rincian.
   .u-mb-besar {
     flex: none;
-    height: 9.5rem;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    max-height: 12rem;
+    padding: 0.5rem;
+    border-radius: var(--u-radius-md);
+    background: color-mix(in srgb, var(--u-muted) 70%, var(--u-card, var(--u-background)));
+    img,
+    video {
+      box-shadow: 0 2px 8px rgb(0 0 0 / 0.14);
+    }
   }
+}
+// Panel info sempit: label di atas nilai, supaya nilai tidak terpecah per huruf.
+.u-mb-info {
+  container: mbinfo / inline-size;
+}
+@container mbinfo (max-width: 14rem) {
+  .u-mb-info .u-mb-info-isi .u-mb-detail > div,
+  .u-mb-info .u-mb-info-folder .u-mb-detail > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.125rem;
+  }
+}
+.u-mb-pemilik small {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--u-muted-foreground);
+  font-variant-numeric: tabular-nums;
 }
 .u-mb-info-isi,
 .u-mb-info-folder {
@@ -2769,6 +2808,7 @@ span.u-dd-lipat {
 .u-mb-kolom-pratinjau .u-mb-besar {
   flex: none;
   height: 10rem;
+  max-height: 40vh;
 }
 .u-mb-info-nama {
   margin-top: 0.5rem;
@@ -2809,24 +2849,42 @@ span.u-dd-lipat {
   background: color-mix(in srgb, var(--u-muted) 35%, var(--u-card, var(--u-background)));
 }
 
-// ---------------------------------------------------------------- DaftarDrive bergaya sidebar Finder
+// ---------------------------------------------------------------- DaftarDrive bergaya sidebar Finder (1.52: pohon unit rapi)
 .u-dd-bagian + .u-dd-bagian {
   margin-top: 0.375rem;
 }
 .u-dd {
   gap: 0;
   li > ul {
-    margin-inline-start: 0.625rem;
-    padding-inline-start: 0.125rem;
-    border-inline-start: 0;
+    margin-inline-start: 0.5rem;
+    padding-inline-start: 0.25rem;
+    border-inline-start: 1px solid color-mix(in srgb, var(--u-border) 70%, transparent);
   }
 }
-.u-dd-lain {
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-  border-top: 0;
+.u-dd-bagian-judul {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  > span:first-child {
+    @include truncate;
+  }
+}
+.u-dd-bagian-ket {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: none;
+  font-weight: var(--u-weight-normal, 400);
+  opacity: 0.85;
+  svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
 }
 .u-dd-baris {
+  position: relative;
+  min-height: 1.75rem;
   border-radius: 6px;
   &:hover {
     background: color-mix(in srgb, var(--u-foreground) 5%, transparent);
@@ -2835,6 +2893,13 @@ span.u-dd-lipat {
     background: color-mix(in srgb, var(--u-foreground) 10%, transparent);
     color: var(--u-foreground);
     box-shadow: none;
+    .u-dd-label {
+      font-weight: var(--u-weight-medium, 500);
+    }
+  }
+  // Drive aktif saat yang terbuka adalah subfolder-nya: penanda halus, sorotan pindah ke folder.
+  &[data-dalam] .u-dd-label {
+    font-weight: var(--u-weight-medium, 500);
   }
   &[data-sasaran] {
     background: color-mix(in srgb, var(--u-primary) 16%, transparent);
@@ -2846,12 +2911,16 @@ span.u-dd-lipat {
   height: 1rem;
 }
 .u-dd-drive {
-  gap: 0.5rem;
+  gap: 0.4375rem;
   min-height: 1.75rem;
-  padding: 0.1875rem 0.375rem 0.1875rem 0.125rem;
+  padding: 0.1875rem 0.375rem 0.1875rem 0.25rem;
+  font-size: var(--u-text-sm);
   &:hover,
   .u-dd-baris[data-aktif] &:hover {
     background: transparent;
+  }
+  .u-dd-baris:has(> .u-dd-lipat) & {
+    padding-inline-start: 0.125rem;
   }
 }
 .u-dd-ikon {
@@ -2872,46 +2941,194 @@ span.u-dd-lipat {
     color: var(--u-primary);
   }
 }
-.u-dd-teks {
-  gap: 0.125rem;
+.u-dd-label {
+  flex: 1;
+  min-width: 0;
+  @include truncate;
 }
-.u-dd-nama {
-  b {
-    font-weight: var(--u-weight-normal, 400);
-  }
-  .u-dd-baris[data-aktif] & b {
-    font-weight: var(--u-weight-medium, 500);
-  }
-}
-// Meter mini: garis tipis; teks hanya untuk drive aktif atau saat disorot.
-.u-dd-trek {
-  height: 0.1875rem;
-}
-.u-dd-meter small {
-  display: none;
+.u-dd-singkat {
+  flex: none;
+  max-width: 4.5rem;
+  padding: 0 0.3125rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--u-foreground) 6%, transparent);
   font-size: 0.625rem;
+  font-weight: var(--u-weight-medium, 500);
+  line-height: 1rem;
+  letter-spacing: 0.02em;
+  color: var(--u-muted-foreground);
+  @include truncate;
 }
-.u-dd-baris[data-aktif] .u-dd-meter small,
-.u-dd-baris:hover .u-dd-meter small,
-.u-dd-meter[data-nada='kritis'] small,
-.u-dd-meter[data-nada='penuh'] small {
-  display: block;
+.u-dd-hak {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  color: var(--u-muted-foreground);
+  svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+  &[data-hak='pembaca'] {
+    opacity: 0.8;
+  }
 }
-.u-dd-meter[data-tanpa] {
+.u-dd-jumlah {
+  flex: none;
+  min-width: 1rem;
+  text-align: end;
+  font-size: 0.6875rem;
+  color: var(--u-muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.u-dd-semat {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.375rem;
+  height: 1.375rem;
+  margin-inline-end: 0.125rem;
+  border-radius: 4px;
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 0.125rem;
+  translate: 0 -50%;
   display: none;
+  background: color-mix(in srgb, var(--u-muted) 85%, var(--u-card, var(--u-background)));
+  color: var(--u-muted-foreground);
+  cursor: pointer;
+  svg {
+    width: 0.8125rem;
+    height: 0.8125rem;
+  }
+  // Muncul di atas ujung kanan baris saat disorot/difokus (tidak memakan tempat nama unit).
+  .u-dd-baris:hover &,
+  .u-dd-baris:focus-within &,
+  &:focus-visible {
+    display: inline-grid;
+  }
+  &:hover {
+    background: color-mix(in srgb, var(--u-foreground) 8%, transparent);
+    color: var(--u-foreground);
+  }
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--u-ring);
+  }
+  // Layar sentuh tidak punya hover: tombol sematkan tampil pada baris drive aktif.
+  @media (hover: none) {
+    .u-dd-baris[data-aktif] & {
+      display: inline-grid;
+    }
+  }
 }
-.u-dd-baris[data-aktif] .u-dd-meter[data-tanpa],
-.u-dd-baris:hover .u-dd-meter[data-tanpa] {
+.u-dd-cari {
   display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0.125rem 0.25rem 0.375rem;
+  padding: 0 0.5rem;
+  height: 1.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--u-border);
+  background: var(--u-card, var(--u-background));
+  color: var(--u-muted-foreground);
+  &:focus-within {
+    border-color: var(--u-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--u-ring) 45%, transparent);
+  }
+  > svg {
+    flex: none;
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  input {
+    all: unset;
+    flex: 1;
+    min-width: 0;
+    font-size: var(--u-text-sm);
+    color: var(--u-foreground);
+    &::placeholder {
+      color: var(--u-muted-foreground);
+    }
+    &::-webkit-search-cancel-button {
+      display: none;
+    }
+  }
+  button {
+    all: unset;
+    display: inline-grid;
+    place-items: center;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 999px;
+    cursor: pointer;
+    svg {
+      width: 0.75rem;
+      height: 0.75rem;
+    }
+    &:hover {
+      background: var(--u-muted);
+      color: var(--u-foreground);
+    }
+  }
+}
+.u-dd-kosong {
+  margin: 0.25rem 0.5rem;
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
 }
 .u-dd-folder {
-  margin: 0 0 0.25rem 0.75rem;
+  margin: 0 0 0.25rem 0.875rem;
   border-inline-start: 0;
   padding-inline-start: 0;
 }
 .u-dd-jalur {
-  min-height: 1.5rem;
-  padding-block: 0.125rem;
+  flex: 1;
+  gap: 0.4375rem;
+  min-height: 1.625rem;
+  padding: 0.125rem 0.375rem 0.125rem 0.125rem;
+  opacity: 1;
+  .u-dd-ikon {
+    color: var(--u-muted-foreground);
+    svg {
+      width: 0.875rem;
+      height: 0.875rem;
+    }
+  }
+}
+.u-dd-huruf {
+  display: none;
+}
+// Mode ikon: unit tampil sebagai huruf singkatan (FIK, INF) di kotak kecil supaya bisa dibedakan.
+.u-mb-samping[data-mode='ikon'] {
+  .u-dd-label,
+  .u-dd-singkat,
+  .u-dd-hak,
+  .u-dd-jumlah,
+  .u-dd-semat,
+  .u-dd-cari,
+  .u-dd-kosong,
+  .u-dd li[data-jalur] > .u-dd-baris {
+    display: none;
+  }
+  .u-dd-huruf {
+    display: grid;
+    place-items: center;
+    min-width: 1.625rem;
+    height: 1.25rem;
+    padding: 0 0.1875rem;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--u-primary) 12%, transparent);
+    font-size: 0.5625rem;
+    font-weight: var(--u-weight-semibold, 600);
+    letter-spacing: 0.01em;
+    color: var(--u-primary);
+  }
+  .u-dd-baris[data-aktif] .u-dd-huruf {
+    background: var(--u-primary);
+    color: var(--u-primary-foreground, #fff);
+  }
 }
 @container mb (max-width: 640px) {
   .u-mb-riwayat,

@@ -156,7 +156,10 @@ export interface BerkasManajer extends BerkasTerunggah {
   modul?: string | null;
   dibuat_at?: string | null;
   jumlah_unduh?: number;
+  /** Username pengunggah (NIDN/NIM/username); tampilkan `pemilik_nama` bila ada. */
   pemilik?: string | null;
+  /** Nama pengguna pemilik (SIAKAD 2026-11+). */
+  pemilik_nama?: string | null;
   /** Kode unit bila berkas ada di ruang bersama unit. */
   unit?: string | null;
   /** Periode akademik (m_tahun, mis. 20251). */
@@ -435,10 +438,12 @@ interface PohonProps {
   nonaktif?: (path: string) => boolean;
   onLepas?: (tujuan: string | null, e: React.DragEvent) => void;
   bisaLepas?: (e: React.DragEvent) => boolean;
+  /** Tanpa simpul akar ("Semua berkas"): subfolder langsung di tingkat pertama, mis. di bawah baris drive di sidebar. */
+  tanpaAkar?: boolean;
 }
 
 /** Pohon folder dengan role="tree": panah kanan/kiri membuka/menutup, atas/bawah berpindah, Enter memilih. */
-function PohonFolder({ pohon, aktif, onPilih, akarLabel, akarInfo, nonaktif, onLepas, bisaLepas }: PohonProps) {
+function PohonFolder({ pohon, aktif, onPilih, akarLabel, akarInfo, nonaktif, onLepas, bisaLepas, tanpaAkar }: PohonProps) {
   const [terbuka, setTerbuka] = React.useState<Set<string>>(() => new Set());
   const [sasaran, setSasaran] = React.useState<string | null | undefined>(undefined);
   const ref = React.useRef<HTMLUListElement>(null);
@@ -547,6 +552,14 @@ function PohonFolder({ pohon, aktif, onPilih, akarLabel, akarInfo, nonaktif, onL
       );
     });
 
+  if (tanpaAkar) {
+    if (!pohon.length) return null;
+    return (
+      <ul className="u-mb-pohon" role="tree" aria-label={`Folder di ${akarLabel}`} ref={ref} data-tanpa-akar="">
+        {render(pohon, 0)}
+      </ul>
+    );
+  }
   // Fokus awal ke baris aktif bila tidak ada yang aktif (akar selalu bisa difokus).
   return (
     <ul className="u-mb-pohon" role="tree" aria-label="Folder" ref={ref}>
@@ -967,7 +980,10 @@ function PanelInfoBerkas({
         {b.pemilik && (
           <div>
             <dt>Pemilik</dt>
-            <dd>{b.pemilik}</dd>
+            <dd className="u-mb-pemilik">
+              {b.pemilik_nama || b.pemilik}
+              {b.pemilik_nama && b.pemilik_nama !== b.pemilik && <small>{b.pemilik}</small>}
+            </dd>
           </div>
         )}
         {b.periode && (
@@ -1033,6 +1049,14 @@ export interface OpsiSampingBerkas {
   lepasKeRuang: (tujuan: TujuanRuangBerkas & { label: string }, e: React.DragEvent) => void;
   /** Apakah seretan ini bisa dilepas ke ruang lain. */
   bisaLepas: (e: React.DragEvent) => boolean;
+  /** Ruang aktif sedang di folder utamanya (bukan subfolder atau Terbaru). */
+  diAkar: boolean;
+  /** Buka folder utama ruang aktif (klik ulang baris drive aktif). */
+  bukaAkar: () => void;
+  /** Jumlah berkas di ruang aktif (termasuk subfolder), bila sudah dimuat. */
+  jumlah?: number;
+  /** Lebarkan sidebar dari mode ikon. */
+  lebarkan: () => void;
 }
 
 export interface ManajerBerkasProps {
@@ -1976,8 +2000,8 @@ export function ManajerBerkas({
             {jenisAwam(b)}
           </span>
           {adaPemilik && (
-            <span role="gridcell" className="u-mb-baris-pemilik">
-              {b.pemilik || '—'}
+            <span role="gridcell" className="u-mb-baris-pemilik" title={b.pemilik_nama && b.pemilik ? b.pemilik : undefined}>
+              {b.pemilik_nama || b.pemilik || '—'}
             </span>
           )}
           <span role="gridcell">{tombolAksi}</span>
@@ -2038,6 +2062,7 @@ export function ManajerBerkas({
 
   const pohonEl = (
     <PohonFolder
+      tanpaAkar={Boolean(samping)}
       pohon={pohon}
       aktif={terbaru ? '\u0000' : folder}
       onPilih={(p) => {
@@ -2101,6 +2126,10 @@ export function ManajerBerkas({
     terbaru: { aktif: terbaru, onPilih: () => (pergi({ folder: akarBagi, terbaru: true }), setPanelPohon(false)) },
     lepasKeRuang: (t, e) => void lepasKeRuang(t, e),
     bisaLepas: bisaLepasRuang,
+    diAkar: folder === akarBagi && !terbaru,
+    bukaAkar: () => (buka(akarBagi), setPanelPohon(false)),
+    jumlah: ringkas?.total_berkas,
+    lebarkan: () => setModeSamping('penuh'),
   };
   const isiPohon = pohonQ.loading && !pohonQ.data ? pohonMuat : pohonEl;
   const isiSamping = (laci: boolean) =>

@@ -150,6 +150,7 @@ export interface BerkasUrut extends BerkasJenis {
   dibuat_at?: string | null;
   diubah_at?: string | null;
   pemilik?: string | null;
+  pemilik_nama?: string | null;
 }
 
 /** Waktu ubah terakhir (diubah_at, kalau tidak ada dibuat_at) dalam milidetik; 0 bila tidak diketahui. */
@@ -219,7 +220,7 @@ export function kelompokDari(b: BerkasUrut, k: KelompokBerkas, sekarang: Date = 
   }
   if (k === 'pemilik') {
     const p = (b.pemilik ?? '').trim();
-    return p ? { kunci: `p:${p}`, label: p, urutan: 0 } : { kunci: 'tanpa', label: 'Tanpa keterangan pemilik', urutan: 1 };
+    return p ? { kunci: `p:${p}`, label: (b.pemilik_nama ?? '').trim() || p, urutan: 0 } : { kunci: 'tanpa', label: 'Tanpa keterangan pemilik', urutan: 1 };
   }
   if (k === 'tanggal') {
     const t = waktuBerkas(b);
@@ -269,7 +270,7 @@ export interface PrefBerkas {
 }
 
 export const KUNCI_PREF_BERKAS = 'unipo-ui:kelola-berkas';
-export const PREF_BERKAS_BAWAAN: PrefBerkas = { tampilan: 'ikon', urut: { kunci: 'tanggal', arah: 'turun' }, kelompok: 'tidak', samping: 'penuh', lebar: 232, info: false };
+export const PREF_BERKAS_BAWAAN: PrefBerkas = { tampilan: 'ikon', urut: { kunci: 'tanggal', arah: 'turun' }, kelompok: 'tidak', samping: 'penuh', lebar: 256, info: false };
 
 const TAMPILAN: TampilanBerkas[] = ['ikon', 'daftar', 'kolom', 'galeri'];
 const KELOMPOK: KelompokBerkas[] = ['tidak', 'jenis', 'tanggal', 'ukuran', 'pemilik'];

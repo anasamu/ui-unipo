@@ -52,6 +52,7 @@ export * from './drive-berkas';
 export * from './sampah-berkas';
 export * from './batas-unggah';
 export * from './daftar-drive';
+export { rapikanNamaUnit, AMBANG_BANYAK_UNIT } from './drive-pohon';
 export * from './penyimpanan';
 export * from './profil-kampus';
 export * from './obrolan';
