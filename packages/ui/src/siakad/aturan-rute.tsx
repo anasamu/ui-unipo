@@ -1,14 +1,15 @@
 'use client';
 import * as React from 'react';
-import { CircleCheck, FlaskConical, Pencil, Plus, Route as IkonRute, Search, ShieldAlert, Trash2, X } from 'lucide-react';
+import { FlaskConical, Pencil, Plus, Route as IkonRute, Trash2, X } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Empty } from '../components/display';
-import { Field, Input, Textarea } from '../components/forms';
-import { Pilihan, PilihanBanyak, PanelForm } from '../components/formulir';
+import { Field, Input } from '../components/forms';
+import { Pilihan, PanelForm } from '../components/formulir';
 import { ConfirmDialog, useToast } from '../components/overlays';
-import { PanelLangkah } from '../components/panel-langkah';
-import { labelKategoriAturan, useKatalogAturan } from './aturan';
+import { labelKategoriAturan } from './aturan';
+import type { TitikKelolaAturan } from './aturan-titik';
+import { WizardTitikPenerapan } from './aturan-titik-wizard';
 import { GalatApi } from './galat';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 
@@ -86,17 +87,8 @@ export function useKatalogRute(aktif = true) {
 export function useTitikRute() {
   return useSiakadQuery<TitikRute[]>(['aturan', 'rute', 'daftar'], (s, signal) => s.request({ method: 'GET', path: '/v1/aturan/rute' }, { signal }), { staleTime: 30_000 });
 }
-function usePeran() {
-  return useSiakadQuery<Array<{ kode: string; nama: string }>>(['rbac', 'peran'], (s, signal) => s.request({ method: 'GET', path: '/v1/rbac/peran', query: { per_page: 100 } }, { signal }), { staleTime: 300_000 });
-}
 
 // ================================================================ Bahasa awam untuk sumber
-const SUBJEK: Array<{ v: SubjekRute; judul: string; ket: string }> = [
-  { v: 'mahasiswa', judul: 'Mahasiswa', ket: 'IPK, SKS, status, tagihan, dan data akademik mahasiswa yang melakukan/dikenai aksi.' },
-  { v: 'pegawai', judul: 'Pegawai', ket: 'Dosen atau tendik: masa kerja, jabatan, BKD.' },
-  { v: 'pendaftar', judul: 'Pendaftar', ket: 'Calon mahasiswa baru (PMB).' },
-  { v: 'umum', judul: 'Tidak ada orang tertentu', ket: 'Hanya waktu/periode/prodi, mis. masa buka layanan.' },
-];
 const LABEL_SUBJEK: Record<SubjekRute, string> = { mahasiswa: 'mahasiswa', pegawai: 'pegawai', pendaftar: 'pendaftar', umum: 'umum' };
 
 /** Sumber data dalam kalimat awam, mis. "body:nim" → "isian “nim” yang dikirim". */
@@ -216,24 +208,8 @@ export function KelolaTitikRute({ className }: { className?: string }) {
 }
 
 // ================================================================ Wizard
-interface IsiRute {
-  rute: RuteKatalog | null;
-  subjek: SubjekRute | '';
-  subjek_sumber: string[];
-  tahun_sumber: string[];
-  prodi_sumber: string[];
-  bila: Array<{ sumber: string; nilai: string }>;
-  konteks: Array<{ kode: string; judul: string; tipe: 'angka' | 'teks' | 'benar_salah'; sumber: string }>;
-  judul: string;
-  keterangan: string;
-  kategori: string;
-  jenis: string[];
-  pengatur: string[];
-}
-const kosong = (): IsiRute => ({ rute: null, subjek: '', subjek_sumber: [], tahun_sumber: ['query:tahun_id', 'body:tahun_id'], prodi_sumber: [], bila: [], konteks: [], judul: '', keterangan: '', kategori: '', jenis: ['syarat'], pengatur: [] });
-
 /** Sumber manual: pilih "dari" + nama isian. */
-function PilihSumber({ value, onChange, katalog, subjek, label }: { value: string; onChange: (v: string) => void; katalog?: KatalogRute; subjek?: SubjekRute | ''; label: string }) {
+export function PilihSumberRute({ value, onChange, katalog, subjek, label }: { value: string; onChange: (v: string) => void; katalog?: KatalogRute; subjek?: SubjekRute | ''; label: string }) {
   const m = /^(pengguna|path|query|body|cari:[a-z_]+:(?:path|query|body)):(.*)$/.exec(value) ?? /^(cari:[a-z_]+):(pengguna):(.*)$/.exec(value);
   const dari = m?.[1] ?? 'body';
   const nama = m?.[2] ?? '';
@@ -268,372 +244,12 @@ function PilihSumber({ value, onChange, katalog, subjek, label }: { value: strin
   );
 }
 
+/** Tambah/ubah titik dari aksi aplikasi: memakai panel tunggal `WizardTitikPenerapan` (sumber = aksi aplikasi). */
 export function WizardTitikRute({ open, onOpenChange, titik }: { open: boolean; onOpenChange: (o: boolean) => void; titik: TitikRute | null }) {
-  const kat = useKatalogRute(open);
-  const katalogAturan = useKatalogAturan();
-  const peran = usePeran();
-  const siakad = useSiakad();
-  const toast = useToast();
-  const ubah = Boolean(titik);
-  const [langkah, setLangkah] = React.useState(0);
-  const [isi, setIsi] = React.useState<IsiRute>(kosong);
-  const [cari, setCari] = React.useState('');
-  const [modul, setModul] = React.useState<string | null>(null);
-  React.useEffect(() => {
-    if (!open) return;
-    setLangkah(0);
-    setCari('');
-    setModul(null);
-    if (!titik) return setIsi(kosong());
-    setIsi({
-      rute: null,
-      subjek: titik.subjek,
-      subjek_sumber: titik.subjek_sumber,
-      tahun_sumber: titik.tahun_sumber,
-      prodi_sumber: titik.prodi_sumber,
-      bila: titik.bila.map((b) => ({ sumber: b.sumber, nilai: b.nilai.join(', ') })),
-      konteks: titik.konteks.map((k) => ({ kode: k.kode, judul: k.judul, tipe: (k.tipe as 'angka') ?? 'teks', sumber: titik.konteks_sumber[k.kode] ?? `body:${k.kode}` })),
-      judul: titik.judul,
-      keterangan: titik.keterangan ?? '',
-      kategori: titik.kategori[0] ?? '',
-      jenis: titik.jenis,
-      pengatur: [],
-    });
-  }, [open, titik]);
-  // Saat ubah, rute dari katalog (untuk saran) setelah katalog termuat.
-  React.useEffect(() => {
-    if (!titik || !kat.data || isi.rute) return;
-    const r = kat.data.kelompok.flatMap((g) => g.rute).find((x) => x.kunci === titik.rute.kunci);
-    if (r) setIsi((x) => ({ ...x, rute: r }));
-  }, [titik, kat.data, isi.rute]);
-  const set = <K extends keyof IsiRute>(k: K, v: IsiRute[K]) => setIsi((x) => ({ ...x, [k]: v }));
-  const kata = cari.trim().toLowerCase();
-  const semua = kat.data?.kelompok.flatMap((g) => g.rute.map((r) => ({ ...r, modul: g.modul }))) ?? [];
-  const hasilCari = kata ? semua.filter((r) => `${r.nama} ${r.modul} ${r.tag} ${r.path}`.toLowerCase().includes(kata)).slice(0, 60) : [];
-  const ruteModul = modul ? (kat.data?.kelompok.find((g) => g.modul === modul)?.rute ?? []) : [];
-  const saranSubjek = isi.rute && isi.subjek && isi.subjek !== 'umum' ? isi.rute.saran[isi.subjek] : [];
-  const pilihRute = (r: RuteKatalog) =>
-    setIsi((x) => ({
-      ...x,
-      rute: r,
-      judul: x.judul && ubah ? x.judul : r.nama,
-      subjek: x.subjek || (r.saran.mahasiswa.length ? 'mahasiswa' : ''),
-      subjek_sumber: x.subjek_sumber.length && ubah ? x.subjek_sumber : r.saran.mahasiswa[0] ? [r.saran.mahasiswa[0].sumber] : [],
-    }));
-  const kartuRute = (r: RuteKatalog & { modul?: string }) => (
-    <button
-      key={r.kunci}
-      type="button"
-      role="radio"
-      aria-checked={isi.rute?.kunci === r.kunci}
-      className="u-arute-opsi"
-      data-pilih={isi.rute?.kunci === r.kunci || undefined}
-      onClick={() => pilihRute(r)}
-    >
-      <strong>{r.nama}</strong>
-      <span className="u-arute-opsi-sub">
-        {r.modul ? `${r.modul} · ` : ''}
-        {r.tag.includes(':') ? r.tag.split(':').slice(1).join(':').trim() : r.tag}
-        {r.titik.length ? ` · sudah ada titik: ${r.titik.map((t) => t.judul).join(', ')}` : ''}
-      </span>
-      <details className="u-arute-teknis" onClick={(e) => e.stopPropagation()}>
-        <summary>Detail teknis</summary>
-        <code>{r.kunci}</code>
-      </details>
-    </button>
-  );
-  const kalimat = isi.rute
-    ? `Sebelum aksi aplikasi “${isi.rute.nama}” dijalankan, SIAKAD memeriksa aturan aktif untuk ${kalimatSubjek(isi.subjek, isi.subjek_sumber, kat.data)}${
-        isi.bila.filter((b) => b.sumber && b.nilai.trim()).length ? `, hanya bila ${isi.bila.filter((b) => b.sumber && b.nilai.trim()).map((b) => `${labelSumberRute(b.sumber, kat.data)} berisi ${b.nilai.split(',').map((n) => `“${n.trim()}”`).join(' atau ')}`).join(' dan ')}` : ''
-      }. Bila aturan dilanggar, aksi ditolak dengan kalimat aturannya.`
-    : '';
-  return (
-    <>
-      <PanelLangkah
-        open={open}
-        onOpenChange={onOpenChange}
-        step={langkah}
-        onStepChange={setLangkah}
-        mode={ubah ? 'ubah' : 'buat'}
-        size="xl"
-        title={ubah ? `Ubah titik pemeriksaan: ${titik?.judul}` : 'Titik pemeriksaan baru'}
-        description="Pilih aksi aplikasi, siapa yang diperiksa, dan dari mana datanya. Aplikasinya tidak perlu diubah."
-        finishLabel={ubah ? 'Simpan perubahan' : 'Buat titik'}
-        steps={[
-          {
-            id: 'aksi',
-            title: 'Aksi',
-            description: 'Aksi mana yang diberi aturan?',
-            validate: () => (isi.rute || ubah ? null : 'Pilih satu aksi.'),
-            content: !kat.data ? (
-              kat.error ? (
-                <GalatApi error={kat.error} onRetry={kat.refetch} />
-              ) : (
-                <Skeleton height={240} />
-              )
-            ) : (
-              <div className="u-arute-langkah">
-                {isi.rute && (
-                  <Alert variant="info" icon={<CircleCheck />} title={`Dipilih: ${isi.rute.nama}`}>
-                    {isi.rute.keterangan.slice(0, 220) || isi.rute.tag}
-                  </Alert>
-                )}
-                <div className="u-aturan-cari">
-                  <Search aria-hidden />
-                  <Input value={cari} onChange={(e) => setCari(e.target.value)} placeholder={`Cari di ${kat.data.jumlah} aksi, mis. seminar proposal, KRS, cuti`} aria-label="Cari aksi" />
-                </div>
-                {kata ? (
-                  <div className="u-arute-pilihan" role="radiogroup" aria-label="Hasil pencarian aksi">
-                    {hasilCari.length ? hasilCari.map(kartuRute) : <Empty title="Tidak ada aksi yang cocok" />}
-                  </div>
-                ) : modul ? (
-                  <div className="u-arute-pilihan" role="radiogroup" aria-label={`Aksi ${modul}`}>
-                    <Button variant="ghost" size="sm" onClick={() => setModul(null)}>
-                      ← Semua modul
-                    </Button>
-                    {ruteModul.map(kartuRute)}
-                  </div>
-                ) : (
-                  <ul className="u-arute-modul" aria-label="Modul">
-                    {kat.data.kelompok.map((g) => (
-                      <li key={g.modul}>
-                        <button type="button" onClick={() => setModul(g.modul)}>
-                          <strong>{g.modul}</strong>
-                          <span>{g.jumlah} aksi</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ),
-          },
-          {
-            id: 'subjek',
-            title: 'Siapa diperiksa',
-            description: 'Orang yang datanya dipakai kondisi aturan',
-            validate: () => (!isi.subjek ? 'Pilih siapa yang diperiksa.' : isi.subjek !== 'umum' && !isi.subjek_sumber.filter((s) => /:[^:]+$/.test(s)).length ? 'Pilih dari mana datanya diambil.' : null),
-            content: (
-              <div className="u-arute-langkah">
-                <div className="u-aturan-jenis-kisi" data-kolom="4" role="radiogroup" aria-label="Siapa yang diperiksa">
-                  {SUBJEK.map((s) => (
-                    <button
-                      key={s.v}
-                      type="button"
-                      role="radio"
-                      aria-checked={isi.subjek === s.v}
-                      className="u-aturan-jenis-opsi"
-                      data-pilih={isi.subjek === s.v || undefined}
-                      disabled={ubah && (titik?.jumlah_aturan_aktif ?? 0) > 0 && titik?.subjek !== s.v}
-                      onClick={() => setIsi((x) => ({ ...x, subjek: s.v, subjek_sumber: s.v === 'umum' ? [] : x.rute?.saran[s.v]?.[0] ? [x.rute.saran[s.v][0]!.sumber] : [] }))}
-                    >
-                      <strong>{s.judul}</strong>
-                      <span className="u-aturan-jenis-contoh">{s.ket}</span>
-                    </button>
-                  ))}
-                </div>
-                {isi.subjek && isi.subjek !== 'umum' && (
-                  <Field label={`Dari mana ${LABEL_SUBJEK[isi.subjek]} diambil?`} description="Disarankan dari aksi yang dipilih. Data diambil dari SIAKAD.">
-                    <div className="u-arute-saran" role="radiogroup" aria-label="Saran sumber">
-                      {saranSubjek.map((s) => (
-                        <button
-                          key={s.sumber}
-                          type="button"
-                          role="radio"
-                          aria-checked={isi.subjek_sumber[0] === s.sumber}
-                          className="u-arute-opsi"
-                          data-pilih={isi.subjek_sumber[0] === s.sumber || undefined}
-                          onClick={() => set('subjek_sumber', [s.sumber])}
-                        >
-                          <strong>{s.label}</strong>
-                        </button>
-                      ))}
-                    </div>
-                    <details className="u-aturan-lanjutan" open={!saranSubjek.length || (isi.subjek_sumber[0] !== undefined && !saranSubjek.some((s) => s.sumber === isi.subjek_sumber[0])) || undefined}>
-                      <summary>Sumber lain (teknis)</summary>
-                      <PilihSumber value={isi.subjek_sumber[0] ?? 'body:'} onChange={(v) => set('subjek_sumber', [v])} katalog={kat.data} subjek={isi.subjek} label="Sumber subjek" />
-                    </details>
-                  </Field>
-                )}
-              </div>
-            ),
-          },
-          {
-            id: 'data',
-            title: 'Data & syarat',
-            optional: true,
-            description: 'Periode, hanya bila, data tambahan',
-            validate: () =>
-              isi.bila.some((b) => !b.sumber.split(':')[1] || !b.nilai.trim())
-                ? 'Lengkapi baris “hanya bila” atau hapus.'
-                : isi.konteks.some((k) => !/^[a-z][a-z0-9_]{1,40}$/.test(k.kode) || !k.judul.trim())
-                  ? 'Data tambahan: kode huruf kecil (mis. jumlah_sks) dan label wajib.'
-                  : null,
-            content: (
-              <div className="u-arute-langkah">
-                <Field label="Periode" description="Periode diambil dari periode yang dipilih di aplikasi; bila tidak ada, dipakai periode aktif.">
-                  <PilihanBanyak
-                    options={[
-                      { value: 'query:tahun_id', label: 'Periode di alamat (teknis: tahun_id)' },
-                      { value: 'body:tahun_id', label: 'Periode di isian formulir (teknis: tahun_id)' },
-                    ]}
-                    value={isi.tahun_sumber}
-                    onValueChange={(v) => set('tahun_sumber', v)}
-                    placeholder="Periode aktif"
-                  />
-                </Field>
-                {isi.subjek === 'umum' && (
-                  <Field label="Prodi" optional description="Untuk cakupan aturan per prodi bila tidak ada orang yang diperiksa.">
-                    <PilihanBanyak options={(isi.rute?.saran.prodi ?? []).map((s) => ({ value: s.sumber, label: s.label }))} value={isi.prodi_sumber} onValueChange={(v) => set('prodi_sumber', v)} placeholder="Tanpa prodi" />
-                  </Field>
-                )}
-                <Field label="Hanya bila" optional description="Hanya diperiksa bila isian formulir berisi nilai tertentu, mis. jenis berisi “proposal” (bukan seminar hasil).">
-                  <div className="u-arute-baris-daftar">
-                    {isi.bila.map((b, i) => (
-                      <div key={i} className="u-arute-baris">
-                        <PilihSumber value={b.sumber} onChange={(v) => set('bila', isi.bila.map((x, j) => (j === i ? { ...x, sumber: v } : x)))} katalog={undefined} label={`Hanya bila ${i + 1}`} />
-                        <span>berisi</span>
-                        <Input value={b.nilai} onChange={(e) => set('bila', isi.bila.map((x, j) => (j === i ? { ...x, nilai: e.target.value } : x)))} placeholder="nilai, pisahkan koma" aria-label={`Nilai hanya bila ${i + 1}`} />
-                        <Button variant="ghost" size="sm" iconOnly aria-label={`Hapus syarat ${i + 1}`} onClick={() => set('bila', isi.bila.filter((_, j) => j !== i))}>
-                          <X />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button variant="ghost" size="sm" onClick={() => set('bila', [...isi.bila, { sumber: 'body:jenis', nilai: '' }])}>
-                      <Plus /> Tambah syarat “hanya bila”
-                    </Button>
-                  </div>
-                </Field>
-                <Field label="Data tambahan dari aksi" optional description="Angka/teks yang dikirim aksi dan ingin dipakai di kondisi, mis. jumlah SKS yang diambil.">
-                  <div className="u-arute-baris-daftar">
-                    {isi.konteks.map((k, i) => {
-                      const ubahK = (p: Partial<IsiRute['konteks'][number]>) => set('konteks', isi.konteks.map((x, j) => (j === i ? { ...x, ...p } : x)));
-                      return (
-                        <div key={i} className="u-arute-baris">
-                          <Input value={k.judul} onChange={(e) => ubahK({ judul: e.target.value })} placeholder="Label, mis. Jumlah SKS" aria-label={`Label data ${i + 1}`} />
-                          <Input value={k.kode} onChange={(e) => ubahK({ kode: e.target.value.trim(), sumber: `body:${e.target.value.trim()}` })} placeholder="kode, mis. jumlah_sks" aria-label={`Kode data ${i + 1}`} spellCheck={false} />
-                          <Pilihan
-                            tampilan="daftar"
-                            aria-label={`Jenis data ${i + 1}`}
-                            options={[
-                              { value: 'angka', label: 'Angka' },
-                              { value: 'teks', label: 'Teks' },
-                              { value: 'benar_salah', label: 'Ya/tidak' },
-                            ]}
-                            value={k.tipe}
-                            onValueChange={(v) => ubahK({ tipe: (v ?? 'teks') as 'angka' })}
-                          />
-                          <Button variant="ghost" size="sm" iconOnly aria-label={`Hapus data ${i + 1}`} onClick={() => set('konteks', isi.konteks.filter((_, j) => j !== i))}>
-                            <X />
-                          </Button>
-                        </div>
-                      );
-                    })}
-                    <Button variant="ghost" size="sm" onClick={() => set('konteks', [...isi.konteks, { kode: '', judul: '', tipe: 'angka', sumber: 'body:' }])}>
-                      <Plus /> Tambah data
-                    </Button>
-                  </div>
-                </Field>
-              </div>
-            ),
-          },
-          {
-            id: 'nama',
-            title: 'Nama & pengatur',
-            description: 'Dilihat pejabat saat membuat aturan',
-            validate: () => (!isi.judul.trim() ? 'Tulis nama titik pemeriksaan.' : !isi.kategori ? 'Pilih unit pemilik aturan.' : null),
-            content: (
-              <div className="u-arute-langkah">
-                <Field label="Nama titik pemeriksaan" required description="Dalam bahasa sehari-hari, mis. “Mahasiswa mendaftar seminar proposal”. Nama ini yang dilihat pejabat.">
-                  <Input value={isi.judul} maxLength={150} onChange={(e) => set('judul', e.target.value)} />
-                </Field>
-                <Field label="Keterangan" optional>
-                  <Textarea rows={2} value={isi.keterangan} onChange={(e) => set('keterangan', e.target.value)} />
-                </Field>
-                <Field label="Unit pemilik" required description="Menentukan siapa yang berwenang mengatur aturannya.">
-                  <Pilihan
-                    options={(katalogAturan.data?.kategori ?? []).map((k) => ({ value: k.kode, label: labelKategoriAturan(k.kode) }))}
-                    value={isi.kategori || null}
-                    onValueChange={(v) => set('kategori', v ?? '')}
-                    placeholder="Pilih…"
-                  />
-                </Field>
-                <Field label="Pejabat yang boleh membuat aturan di sini" optional description="Bila kosong, yang boleh membuat aturan adalah pengatur unit pemilik.">
-                  <PilihanBanyak options={(peran.data ?? []).map((p) => ({ value: p.kode, label: p.nama }))} value={isi.pengatur} onValueChange={(v) => set('pengatur', v)} placeholder="Pilih peran…" />
-                </Field>
-                <Field label="Jenis aturan yang boleh" description="Syarat = tolak bila tidak terpenuhi. Batas waktu = hanya pada tanggal tertentu.">
-                  <PilihanBanyak
-                    options={[
-                      { value: 'syarat', label: 'Syarat' },
-                      { value: 'batas_waktu', label: 'Batas waktu' },
-                      { value: 'batas_nilai', label: 'Batas jumlah' },
-                    ]}
-                    value={isi.jenis}
-                    onValueChange={(v) => set('jenis', v)}
-                  />
-                </Field>
-              </div>
-            ),
-          },
-          {
-            id: 'tinjau',
-            title: 'Tinjau',
-            description: 'Periksa sebelum disimpan',
-            content: (
-              <div className="u-arute-langkah">
-                <div className="u-arute-tinjau">
-                  <p className="u-arute-kalimat">{kalimat || 'Pilih aksi dulu.'}</p>
-                  <dl>
-                    <dt>Nama titik</dt>
-                    <dd>{isi.judul || '-'}</dd>
-                    <dt>Unit pemilik</dt>
-                    <dd>{isi.kategori ? labelKategoriAturan(isi.kategori) : '-'}</dd>
-                    <dt>Periode</dt>
-                    <dd>{isi.tahun_sumber.length ? isi.tahun_sumber.map((s) => labelSumberRute(s, kat.data)).join(' / ') : 'Periode aktif'}</dd>
-                    {isi.konteks.length > 0 && (
-                      <>
-                        <dt>Data tambahan</dt>
-                        <dd>{isi.konteks.map((k) => k.judul).join(', ')}</dd>
-                      </>
-                    )}
-                  </dl>
-                </div>
-                <Alert variant="neutral" icon={<ShieldAlert />} title="Setelah titik dibuat">
-                  Pejabat membuat aturan untuk titik ini dengan mengisi contoh kalimat (wajib mencantumkan SK dan disetujui pemeriksa aturan). Aturan baru diperiksa setelah berlaku. Uji dulu dengan tombol Simulasi.
-                </Alert>
-              </div>
-            ),
-          },
-        ]}
-        onFinish={async () => {
-          const body = {
-            judul: isi.judul.trim(),
-            keterangan: isi.keterangan.trim() || undefined,
-            ...(isi.rute && (!ubah || isi.rute.kunci !== titik?.rute.kunci) ? { rute: isi.rute.kunci } : {}),
-            subjek: isi.subjek,
-            subjek_sumber: isi.subjek === 'umum' ? [] : isi.subjek_sumber,
-            tahun_sumber: isi.tahun_sumber,
-            prodi_sumber: isi.prodi_sumber,
-            kategori: [isi.kategori],
-            jenis: isi.jenis.length ? isi.jenis : ['syarat'],
-            konteks: isi.konteks.map((k) => ({ kode: k.kode, judul: k.judul.trim(), tipe: k.tipe })),
-            konteks_sumber: Object.fromEntries(isi.konteks.map((k) => [k.kode, k.sumber])),
-            bila: isi.bila.map((b) => ({ sumber: b.sumber, nilai: b.nilai.split(',').map((x) => x.trim()).filter(Boolean) })),
-            ...(isi.pengatur.length ? { pengatur: isi.pengatur.map((kode) => ({ jenis: 'peran', kode })) } : {}),
-          };
-          try {
-            await siakad.request({ method: 'POST', path: ubah ? `/v1/aturan/rute/${encodeURIComponent(titik!.kode)}` : '/v1/aturan/rute', body });
-          } catch (e) {
-            return pesanGalat(e);
-          }
-          invalidateSiakad('aturan');
-          toast.add({ title: ubah ? 'Titik diperbarui' : 'Titik dibuat', description: ubah ? undefined : 'Pejabat kini bisa membuat aturan untuk titik ini.', type: 'success' });
-          onOpenChange(false);
-          return null;
-        }}
-      />
-    </>
-  );
+  const daftar = useSiakadQuery<Array<TitikKelolaAturan>>(['aturan', 'titik-kelola'], (s, signal) => s.request({ method: 'GET', path: '/v1/aturan/titik' }, { signal }), { staleTime: 60_000, enabled: open && Boolean(titik) });
+  const t = titik ? (daftar.data?.find((x) => x.kode === titik.kode) ?? null) : null;
+  if (titik && !t) return null;
+  return <WizardTitikPenerapan open={open} onOpenChange={onOpenChange} titik={t} sumberAwal={titik ? undefined : 'rute'} />;
 }
 
 // ================================================================ Simulasi

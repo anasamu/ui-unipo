@@ -614,3 +614,241 @@
   border-radius: var(--u-radius-md);
   background: var(--u-card);
 }
+
+// ---------------------------------------------------------------- panel tunggal "Tambah titik pemeriksaan" (aturan-titik-wizard.tsx)
+// Panel lebar: daftar langkah vertikal di kiri, satu fokus per langkah di kanan. Panel sempit/ponsel: bawaan PanelLangkah.
+@media (min-width: 64rem) {
+  .u-wtp .u-dialog-body {
+    display: grid;
+    grid-template-columns: 11.5rem minmax(0, 1fr);
+    column-gap: 1.5rem;
+    align-items: start;
+  }
+  .u-wtp .u-pl-langkah {
+    grid-column: 1;
+    margin: 0;
+    padding: 1.25rem 0 0;
+    background: transparent;
+    ol {
+      flex-direction: column;
+      gap: 0.125rem;
+      overflow: visible;
+      padding: 0;
+    }
+    li {
+      flex: 0 0 auto;
+      &::after {
+        display: none;
+      }
+      .u-pl-judul-langkah {
+        display: inline;
+      }
+    }
+    li[data-aktif] button {
+      background: color-mix(in oklab, var(--u-primary) 10%, transparent);
+      width: 100%;
+    }
+    button {
+      width: 100%;
+      border-radius: var(--u-radius-md);
+      padding: 0.375rem 0.5rem;
+    }
+  }
+  .u-wtp .u-pl-progres {
+    display: none;
+  }
+  .u-wtp .u-pl-isi {
+    grid-column: 2;
+    min-width: 0;
+  }
+}
+.u-wtp-langkah {
+  display: grid;
+  gap: 1rem;
+}
+.u-wtp-kisi {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.625rem;
+  &[data-kolom='3'] {
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  }
+  &[data-kolom='4'] {
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  }
+}
+.u-wtp-kartu,
+.u-wtp-tambah {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.875rem;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+  background: var(--u-card);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+  &:hover:not(:disabled),
+  &:focus-visible {
+    border-color: var(--u-primary);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--u-primary);
+    outline-offset: 2px;
+  }
+  &[data-pilih] {
+    border-color: var(--u-primary);
+    box-shadow: inset 0 0 0 1px var(--u-primary);
+    background: color-mix(in oklab, var(--u-primary) 7%, var(--u-card));
+  }
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+.u-wtp-tambah {
+  padding: 0.625rem;
+  border-style: dashed;
+  small {
+    display: block;
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+  }
+  strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: var(--u-text-sm);
+    svg {
+      width: 0.875rem;
+      height: 0.875rem;
+    }
+  }
+}
+.u-wtp-kartu-ikon {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--u-radius-md);
+  background: color-mix(in oklab, var(--u-primary) 12%, transparent);
+  color: var(--u-primary);
+  svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+.u-wtp-kartu-teks {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  padding-right: 1.25rem;
+  > span {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
+    line-height: 1.5;
+  }
+}
+.u-wtp-kartu-centang {
+  position: absolute;
+  top: 0.625rem;
+  right: 0.625rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--u-primary);
+}
+.u-wtp-data {
+  display: grid;
+  gap: 0.625rem;
+}
+.u-wtp-data-baris {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+  background: var(--u-card);
+  > .u-wtp-opsi,
+  > .u-wtp-data-teknis {
+    grid-column: 2 / -1;
+  }
+}
+.u-wtp-opsi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+  }
+}
+.u-wtp-data-teknis[open] {
+  display: grid;
+  gap: 0.375rem;
+}
+.u-wtp-ringkas {
+  display: grid;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--u-border);
+}
+.u-wtp-ringkas-label {
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-semibold);
+  color: var(--u-muted-foreground);
+}
+.u-wtp-titik {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+  background: var(--u-card);
+  p {
+    margin: 0;
+    line-height: 1.6;
+  }
+  dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 0.25rem 1rem;
+    font-size: var(--u-text-sm);
+  }
+  dt {
+    color: var(--u-muted-foreground);
+  }
+  dd {
+    margin: 0;
+  }
+}
+.u-wtp-titik-kepala {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  > svg {
+    width: 1rem;
+    height: 1rem;
+    color: var(--u-primary);
+  }
+}
+// Ponsel: lembar penuh (bukan setengah layar), tanpa geser ke samping.
+.u-sheet.u-wtp[data-side='bottom'] {
+  top: 0;
+  max-height: 100dvh;
+  border-radius: 0;
+}
+.u-wtp .u-dialog-body {
+  overflow-x: hidden;
+}
