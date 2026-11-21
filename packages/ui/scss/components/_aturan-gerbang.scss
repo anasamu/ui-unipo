@@ -1,0 +1,67 @@
+// Gerbang SK + validator kebijakan unit (siakad/aturan-gerbang.tsx): daftar kerja "Perlu SK", antrean validasi.
+.u-agb {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.u-agb-bagian {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  h3 {
+    margin: 0;
+    font-size: var(--u-text-sm);
+    font-weight: 600;
+    color: var(--u-muted-foreground);
+  }
+}
+.u-agb-panel {
+  display: grid;
+  gap: 1rem;
+}
+.u-agb-nama,
+.u-agb-unit {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+  strong {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  span {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
+  }
+}
+.u-agb-unit[data-pilih] strong {
+  color: var(--u-primary);
+}
+.u-agb-saring {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+}
+.u-agb-sub {
+  margin: 0;
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+}
+.u-agb-ikon-kecil {
+  width: 0.875rem;
+  height: 0.875rem;
+  vertical-align: -0.125rem;
+}
+.u-agb-teks {
+  margin: 0;
+}
+.u-agb-tombol {
+  margin-top: 0.75rem;
+  max-width: 100%;
+  white-space: normal;
+  height: auto;
+  text-align: start;
+}
