@@ -1230,7 +1230,7 @@ tambahRute(/^\/v1\/aturan\/rute$/, (_u, init) => {
 const bentukRute = (kode: string) => {
   const r = RUTE_TITIK[kode]!;
   const [m, p] = String(r.rute).split(' ');
-  const nama = KATALOG_RUTE.flatMap(([, x]) => x).find((x) => x[1] === p)?.[2] ?? p;
+  const nama = KATALOG_RUTE.flatMap(([, x]): ReadonlyArray<readonly string[]> => x).find((x) => x[1] === p)?.[2] ?? p;
   return {
     kode, judul: TITIK_ATURAN[kode]?.judul, keterangan: '', aktif: true, rute: { kunci: r.rute, metode: m, path: p, nama, modul: 'Ujian TA', ada: true },
     subjek: r.subjek, subjek_sumber: r.subjek_sumber ?? [], tahun_sumber: r.tahun_sumber ?? [], prodi_sumber: [], konteks_sumber: r.konteks_sumber ?? {},
