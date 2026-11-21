@@ -20,6 +20,7 @@ import { PilihBerkas } from './pilih-berkas';
 import { PilihEntitas } from './pilih';
 import { AlurPemeriksa, LabelPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import { BannerPeriodeTerkunci, usePeriodeTerkunci } from './kunci-periode';
+import { TombolHapusDraf } from './hapus-draf';
 import { DaftarKegiatanBkd, KesimpulanBkd, RingkasanBebanBkd, SyaratBkd, TahapBkd, sksBkd, type BidangBkd, type KegiatanBkd, type SyaratBkdItem } from './bkd';
 
 /*
@@ -147,6 +148,8 @@ export interface LaporanBkdData {
     atur_asesor: boolean;
     tindak_lanjut: boolean;
     tautan_asesor?: number[];
+    /** Hapus draf (belum pernah dikirim): dosen pemilik atau petugas SDM unitnya. */
+    hapus?: boolean;
   };
   aturan?: { id: number; nama: string; versi: number; dasar_hukum: string | null; bidang: { kode: string; nama: string }[]; kategori: KategoriBkd[]; batas: { min_total: number | null; maks_total: number | null }; asesor: { jumlah: number }; tahap: { kaprodi: boolean; dekan: boolean } };
   periksa?: { blokir: { kode: string; pesan: string; item_id?: number }[]; peringatan: { kode: string; pesan: string; item_id?: number }[] };
@@ -399,7 +402,7 @@ export function LaporanBkd({ id, ringkas = false, className }: { id: number | st
   const L = lap.data;
   const h = L.hasil;
   const b: LaporanBkdData['bisa'] = kunci.terkunci
-    ? { ...L.bisa, ubah_isi: false, impor: false, fase: false, kirim: false, nilai: false, kembalikan: false, mengetahui: [], tetapkan: false, atur_asesor: false, tindak_lanjut: false }
+    ? { ...L.bisa, ubah_isi: false, impor: false, fase: false, kirim: false, nilai: false, kembalikan: false, mengetahui: [], tetapkan: false, atur_asesor: false, tindak_lanjut: false, hapus: false }
     : L.bisa;
   const kat = Object.fromEntries((L.aturan?.kategori ?? []).map((k) => [k.kode, k.nama]));
   const jadwal = L.bkd.jadwal;
@@ -493,6 +496,13 @@ export function LaporanBkd({ id, ringkas = false, className }: { id: number | st
             <Button variant="ghost" onClick={() => cetakLaporanBkd(L)}>
               <Printer /> Unduh laporan
             </Button>
+            <TombolHapusDraf
+              apa="laporan BKD"
+              nama={L.periode.nama}
+              ikut={[`${L.item.length} kegiatan yang sudah diisi`, 'bukti kegiatan']}
+              sembunyi={!b.hapus}
+              onHapus={() => aksi('DELETE', `/v1/sdm/bkd/laporan/${L.id}`, undefined, 'Draf laporan BKD dihapus.')}
+            />
           </div>
         </CardContent>
       </Card>
