@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { Archive, Building2, ChevronRight, HardDrive, Users } from 'lucide-react';
+import { Archive, Building2, ChevronRight, Clock, HardDrive, Users } from 'lucide-react';
 import { nadaKuota } from '../components/alokasi';
 import { cn } from '../lib/cn';
 import { formatBytes } from '../lib/format';
@@ -78,8 +78,15 @@ export interface DaftarDriveProps {
   onPilih: (d: DriveBerkasData) => void;
   /** Pohon folder drive aktif, ditaruh di bawah drive terpilih. */
   folder?: React.ReactNode;
-  /** Item "Dibagikan" di bawah daftar. */
+  /** Item "Dibagikan ke saya" di bagian Pintasan. */
   dibagikan?: { aktif: boolean; onPilih: () => void };
+  /** Pintasan "Terbaru" untuk drive aktif. */
+  terbaru?: { aktif: boolean; onPilih: () => void };
+  /** Mode ikon saja (sidebar diringkas): tanpa label, pohon diratakan. */
+  ringkas?: boolean;
+  /** Lepas berkas/folder yang diseret ke sebuah drive (bukan drive aktif). */
+  onLepas?: (d: DriveBerkasData, e: React.DragEvent) => void;
+  bisaLepas?: (e: React.DragEvent) => boolean;
   memuat?: boolean;
   className?: string;
 }
@@ -132,7 +139,26 @@ export function MeterDrive({ d, namaKolam }: { d: DriveBerkasData; namaKolam?: (
  * prodi/unit bagian) yang terindentasi dan bisa dilipat. Unit induk yang tidak bisa dibuka tampil sebagai penanda jalur
  * nonaktif. Pohon folder drive aktif tampil tepat di bawahnya.
  */
-export function DaftarDrive({ drive, aktif, onPilih, folder, dibagikan, memuat, className }: DaftarDriveProps) {
+export function DaftarDrive({ drive, aktif, onPilih, folder, dibagikan, terbaru, ringkas, onLepas, bisaLepas, memuat, className }: DaftarDriveProps) {
+  const [sasaran, setSasaran] = React.useState<string | null>(null);
+  const lepas = (d: DriveBerkasData) =>
+    onLepas && d.hak !== null && d.id !== aktif && d.hak !== 'pembaca'
+      ? {
+          onDragOver: (e: React.DragEvent) => {
+            if (bisaLepas && !bisaLepas(e)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            setSasaran(d.id);
+          },
+          onDragLeave: () => setSasaran((s) => (s === d.id ? null : s)),
+          onDrop: (e: React.DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setSasaran(null);
+            onLepas(d, e);
+          },
+        }
+      : {};
   const anak = React.useMemo(() => {
     const m = new Map<string | null, DriveBerkasData[]>();
     const ada = new Set(drive.map((d) => d.id));
@@ -178,7 +204,7 @@ export function DaftarDrive({ drive, aktif, onPilih, folder, dibagikan, memuat, 
     const ini = d.id === aktif;
     return (
       <li key={d.id} role="treeitem" aria-expanded={turunan.length ? terbuka : undefined} aria-selected={ini} data-jalur={jalur ? '' : undefined}>
-        <div className="u-dd-baris" data-aktif={ini ? '' : undefined} data-jenis={d.jenis} data-unit={d.unit_jenis ?? undefined}>
+        <div className="u-dd-baris" data-aktif={ini ? '' : undefined} data-sasaran={sasaran === d.id ? '' : undefined} data-jenis={d.jenis} data-unit={d.unit_jenis ?? undefined} {...lepas(d)}>
           {turunan.length ? (
             <button type="button" className="u-dd-lipat" aria-label={`${terbuka ? 'Lipat' : 'Buka'} ${namaPendek(d)}`} aria-expanded={terbuka} onClick={() => alih(d.id)}>
               <ChevronRight aria-hidden data-buka={terbuka ? '' : undefined} />
@@ -192,7 +218,7 @@ export function DaftarDrive({ drive, aktif, onPilih, folder, dibagikan, memuat, 
               <span>{namaPendek(d)}</span>
             </span>
           ) : (
-            <button type="button" className="u-dd-drive" aria-current={ini ? 'page' : undefined} title={d.nama} onClick={() => onPilih(d)}>
+            <button type="button" className="u-dd-drive" aria-current={ini ? 'page' : undefined} title={ringkas ? `${d.nama}${d.batas ? ` · ${formatBytes(d.batas.terpakai_byte)} dari ${formatBytes(d.batas.byte)}` : ''}` : d.nama} onClick={() => onPilih(d)}>
               <span className="u-dd-ikon">
                 <IkonDrive d={d} />
               </span>
@@ -212,8 +238,36 @@ export function DaftarDrive({ drive, aktif, onPilih, folder, dibagikan, memuat, 
     );
   };
 
+  const akar = anak.get(null) ?? [];
+  const pribadi = akar.filter((d) => d.jenis === 'pribadi');
+  const lain = akar.filter((d) => d.jenis !== 'pribadi');
+  const pintas = (label: string, ikon: React.ReactNode, x: { aktif: boolean; onPilih: () => void }) => (
+    <li role="treeitem" aria-selected={x.aktif}>
+      <div className="u-dd-baris" data-aktif={x.aktif ? '' : undefined}>
+        <span className="u-dd-lipat" aria-hidden />
+        <button type="button" className="u-dd-drive" aria-current={x.aktif ? 'page' : undefined} title={label} onClick={x.onPilih}>
+          <span className="u-dd-ikon">{ikon}</span>
+          <span className="u-dd-teks">
+            <span className="u-dd-nama">
+              <b>{label}</b>
+            </span>
+          </span>
+        </button>
+      </div>
+    </li>
+  );
+
   return (
-    <nav className={cn('u-dd', className)} aria-label="Drive berkas">
+    <nav className={cn('u-dd', className)} aria-label="Drive berkas" data-ringkas={ringkas ? '' : undefined}>
+      {(terbaru || dibagikan) && (
+        <div className="u-dd-bagian">
+          <h4 className="u-dd-bagian-judul">Pintasan</h4>
+          <ul role="tree" aria-label="Pintasan" className="u-dd-lain">
+            {terbaru && pintas('Terbaru', <Clock aria-hidden />, terbaru)}
+            {dibagikan && pintas('Dibagikan ke saya', <Users aria-hidden />, dibagikan)}
+          </ul>
+        </div>
+      )}
       {memuat && !drive.length ? (
         <div className="u-dd-muat" role="status" aria-label="Memuat drive">
           {[0.7, 0.55, 0.8, 0.6].map((w, i) => (
@@ -224,28 +278,24 @@ export function DaftarDrive({ drive, aktif, onPilih, folder, dibagikan, memuat, 
           ))}
         </div>
       ) : (
-        <ul role="tree" aria-label="Drive">
-          {(anak.get(null) ?? []).map(simpul)}
-        </ul>
-      )}
-      {dibagikan && (
-        <ul role="tree" aria-label="Dibagikan" className="u-dd-lain">
-          <li role="treeitem" aria-selected={dibagikan.aktif}>
-            <div className="u-dd-baris" data-aktif={dibagikan.aktif ? '' : undefined}>
-              <span className="u-dd-lipat" aria-hidden />
-              <button type="button" className="u-dd-drive" aria-current={dibagikan.aktif ? 'page' : undefined} onClick={dibagikan.onPilih}>
-                <span className="u-dd-ikon">
-                  <Users aria-hidden />
-                </span>
-                <span className="u-dd-teks">
-                  <span className="u-dd-nama">
-                    <b>Dibagikan</b>
-                  </span>
-                </span>
-              </button>
+        <>
+          {pribadi.length > 0 && (
+            <div className="u-dd-bagian">
+              <h4 className="u-dd-bagian-judul">Berkas saya</h4>
+              <ul role="tree" aria-label="Berkas saya">
+                {pribadi.map(simpul)}
+              </ul>
             </div>
-          </li>
-        </ul>
+          )}
+          {lain.length > 0 && (
+            <div className="u-dd-bagian">
+              <h4 className="u-dd-bagian-judul">Unit</h4>
+              <ul role="tree" aria-label="Drive unit">
+                {lain.map(simpul)}
+              </ul>
+            </div>
+          )}
+        </>
       )}
     </nav>
   );

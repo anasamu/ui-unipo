@@ -46,6 +46,7 @@ export * from './alur';
 export * from './ai';
 export * from './akun';
 export * from './manajer-berkas';
+export * from './berkas-finder';
 export * from './berkas-ruang';
 export * from './drive-berkas';
 export * from './daftar-drive';

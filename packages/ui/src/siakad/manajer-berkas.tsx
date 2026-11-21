@@ -2,8 +2,20 @@
 import * as React from 'react';
 import { ContextMenu as BaseContextMenu } from '@base-ui/react/context-menu';
 import {
+  ArrowDownWideNarrow,
   ArrowUpDown,
   Check,
+  ChevronLeft,
+  ChevronUp,
+  Clock,
+  Columns3,
+  Filter,
+  GalleryHorizontal,
+  Group,
+  Info,
+  PanelLeft,
+  PanelLeftClose,
+  PanelLeftOpen,
   ChevronDown,
   ChevronRight,
   CircleAlert,
@@ -27,7 +39,6 @@ import {
   FolderInput,
   FolderOpen,
   FolderPlus,
-  FolderTree,
   FolderUp,
   HardDrive,
   LayoutGrid,
@@ -50,7 +61,6 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/actions';
 import { Input } from '../components/forms';
-import { Select } from '../components/select';
 import { ConfirmDialog, Dialog, Menu, Tooltip, type MenuEntry } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { formatBytes, formatDate } from '../lib/format';
@@ -73,6 +83,31 @@ import {
   type SasaranBagi,
 } from './berkas-ruang';
 import { invalidateSiakad, pesanGalat, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
+import {
+  JENIS_BERKAS,
+  KUNCI_PREF_BERKAS,
+  LABEL_KELOMPOK,
+  LABEL_TAMPILAN,
+  LABEL_URUT,
+  PREF_BERKAS_BAWAAN,
+  arahAwal,
+  bacaPrefBerkas,
+  jenisAwam,
+  jenisBerkas,
+  kelompokkanBerkas,
+  klikKolom,
+  simpanPrefBerkas,
+  urutKeServer,
+  urutkanBerkas,
+  urutkanFolder,
+  type JenisBerkas,
+  type KelompokBerkas,
+  type KunciUrut,
+  type PrefBerkas,
+  type TampilanBerkas,
+  type UrutKolom,
+  type UrutServer,
+} from './berkas-finder';
 
 // ================================================================ Tipe dan aturan (sama dengan /v1/berkas)
 
@@ -132,29 +167,6 @@ export interface BerkasManajer extends BerkasTerunggah {
   diubah_at?: string | null;
 }
 
-export type JenisBerkas = 'gambar' | 'pdf' | 'dokumen' | 'spreadsheet' | 'presentasi' | 'arsip' | 'video' | 'audio';
-/** Kelompok jenis untuk filter `jenis` di GET /v1/berkas (sama dengan BerkasController::JENIS). */
-export const JENIS_BERKAS: Record<JenisBerkas, { label: string; ekstensi: string[] }> = {
-  gambar: { label: 'Gambar', ekstensi: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'heic', 'tif', 'tiff'] },
-  pdf: { label: 'PDF', ekstensi: ['pdf'] },
-  dokumen: { label: 'Dokumen', ekstensi: ['doc', 'docx', 'odt', 'rtf', 'txt', 'md'] },
-  spreadsheet: { label: 'Spreadsheet', ekstensi: ['xls', 'xlsx', 'ods', 'csv'] },
-  presentasi: { label: 'Presentasi', ekstensi: ['ppt', 'pptx', 'odp'] },
-  arsip: { label: 'Arsip (zip)', ekstensi: ['zip', 'rar', '7z', 'tar', 'gz'] },
-  video: { label: 'Video', ekstensi: ['mp4', 'webm', 'mov', 'mkv', 'avi'] },
-  audio: { label: 'Audio', ekstensi: ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'] },
-};
-
-/** Golongan berkas (gambar, pdf, dokumen, lembar kerja, presentasi, arsip, video, audio, atau lain) dari ekstensi atau MIME, untuk ikon dan pratinjau. */
-export function jenisBerkas(b: { ekstensi?: string | null; mime?: string | null; nama?: string }): JenisBerkas | 'lain' {
-  const ext = String(b.ekstensi ?? b.nama?.split('.').pop() ?? '').toLowerCase();
-  for (const [k, v] of Object.entries(JENIS_BERKAS)) if (v.ekstensi.includes(ext)) return k as JenisBerkas;
-  if (b.mime?.startsWith('image/')) return 'gambar';
-  if (b.mime?.startsWith('video/')) return 'video';
-  if (b.mime?.startsWith('audio/')) return 'audio';
-  return 'lain';
-}
-
 const IKON_JENIS: Record<JenisBerkas | 'lain', React.ComponentType<{ 'aria-hidden'?: boolean }>> = {
   gambar: FileImage,
   pdf: FileText,
@@ -167,15 +179,8 @@ const IKON_JENIS: Record<JenisBerkas | 'lain', React.ComponentType<{ 'aria-hidde
   lain: IkonFile,
 };
 
-export type UrutBerkas = 'baru' | 'lama' | 'nama' | '-nama' | 'ukuran' | '-ukuran';
-const URUT: Array<{ value: UrutBerkas; label: string }> = [
-  { value: 'baru', label: 'Terbaru' },
-  { value: 'lama', label: 'Terlama' },
-  { value: 'nama', label: 'Nama A-Z' },
-  { value: '-nama', label: 'Nama Z-A' },
-  { value: '-ukuran', label: 'Terbesar' },
-  { value: 'ukuran', label: 'Terkecil' },
-];
+/** Nilai `urut` GET /v1/berkas (tetap diekspor untuk pemakai lama). */
+export type UrutBerkas = UrutServer;
 
 export const MAKS_NAMA_FOLDER = 60;
 export const MAKS_PATH_FOLDER = 150;
@@ -601,6 +606,7 @@ function DialogNamaFolder({
       onOpenChange={(o) => !o && tutup()}
       title={judul}
       description={induk ? `Di dalam ${induk}` : 'Di folder utama'}
+      side="right"
       size="sm"
       footer={
         <>
@@ -764,6 +770,8 @@ function DialogPindah({
       onOpenChange={(o) => !o && tutup()}
       title={judul}
       description={`Tujuan: ${tujuan ?? akarLabel}`}
+      side="right"
+      size="sm"
       footer={
         <>
           <Button variant="ghost" onClick={tutup}>
@@ -793,7 +801,7 @@ function Pratinjau({ b, tutup, unduh, onAksi }: { b: BerkasManajer | null; tutup
       open={Boolean(b)}
       onOpenChange={(o) => !o && tutup()}
       title={b?.nama ?? ''}
-      description={b ? [formatBytes(b.ukuran), JENIS_BERKAS[j as JenisBerkas]?.label ?? String(b.ekstensi ?? '').toUpperCase(), b.folder ?? undefined].filter(Boolean).join(' · ') : undefined}
+      description={b ? [formatBytes(b.ukuran), jenisAwam(b), b.folder ?? undefined].filter(Boolean).join(' · ') : undefined}
       size="xl"
       footer={
         <>
@@ -879,6 +887,117 @@ function Pratinjau({ b, tutup, unduh, onAksi }: { b: BerkasManajer | null; tutup
   );
 }
 
+/** Pratinjau besar (galeri): gambar asli bila jenisnya gambar, selain itu ikon jenis besar. */
+function GambarBesar({ b, onBuka }: { b: BerkasManajer; onBuka?: () => void }) {
+  const gambar = jenisBerkas(b) === 'gambar';
+  const { data, loading } = useUrlBerkas(gambar ? b.id : null);
+  return (
+    <div className="u-mb-besar" data-jenis={jenisBerkas(b)} onDoubleClick={onBuka}>
+      {gambar && data?.url ? <img src={data.url} alt={b.nama} /> : gambar && loading ? <span className="u-skeleton u-mb-besar-muat" aria-label="Memuat pratinjau" /> : <IkonBerkas b={b} besar />}
+    </div>
+  );
+}
+
+/** Panel info ala Finder (kanan, atau kolom pratinjau di tampilan Kolom). */
+function PanelInfoBerkas({
+  b,
+  judul,
+  jumlah = 1,
+  buka,
+  unduh,
+  bagikan,
+}: {
+  b: BerkasManajer;
+  judul: string;
+  jumlah?: number;
+  buka: () => void;
+  unduh: () => void;
+  bagikan?: () => void;
+}) {
+  return (
+    <div className="u-mb-info-isi">
+      <GambarBesar b={b} onBuka={buka} />
+      <b className="u-mb-info-nama">{b.nama}</b>
+      <small className="u-mb-info-sub">
+        {jenisAwam(b)} · {formatBytes(b.ukuran)}
+        {jumlah > 1 ? ` · ${jumlah} dipilih` : ''}
+      </small>
+      <div className="u-mb-info-aksi">
+        <Button variant="outline" size="sm" onClick={buka}>
+          <Eye aria-hidden />
+          Buka
+        </Button>
+        <Button variant="ghost" size="sm" iconOnly aria-label="Unduh" onClick={unduh}>
+          <Download aria-hidden />
+        </Button>
+        {bagikan && (
+          <Button variant="ghost" size="sm" iconOnly aria-label="Bagikan" onClick={bagikan}>
+            <Share2 aria-hidden />
+          </Button>
+        )}
+      </div>
+      <dl className="u-mb-detail">
+        <div>
+          <dt>Jenis</dt>
+          <dd>{jenisAwam(b)}</dd>
+        </div>
+        <div>
+          <dt>Lokasi</dt>
+          <dd>{b.folder ? `${judul} › ${b.folder.split('/').join(' › ')}` : judul}</dd>
+        </div>
+        {b.dibuat_at && (
+          <div>
+            <dt>Diunggah</dt>
+            <dd>{formatDate(b.dibuat_at, 'long')}</dd>
+          </div>
+        )}
+        {b.diubah_at && b.diubah_at !== b.dibuat_at && (
+          <div>
+            <dt>Diubah</dt>
+            <dd>{formatDate(b.diubah_at, 'long')}</dd>
+          </div>
+        )}
+        {b.pemilik && (
+          <div>
+            <dt>Pemilik</dt>
+            <dd>{b.pemilik}</dd>
+          </div>
+        )}
+        {b.periode && (
+          <div>
+            <dt>Periode</dt>
+            <dd>{namaPeriode(b.periode)}</dd>
+          </div>
+        )}
+        {b.terenkripsi !== undefined && (
+          <div>
+            <dt>Keamanan</dt>
+            <dd>{b.terenkripsi ? 'Terenkripsi' : 'Tidak dienkripsi'}</dd>
+          </div>
+        )}
+        {b.lihat && (
+          <div>
+            <dt>Bisa dilihat</dt>
+            <dd>{labelLihatBerkas(b.lihat)}</dd>
+          </div>
+        )}
+        {typeof b.jumlah_unduh === 'number' && (
+          <div>
+            <dt>Diunduh</dt>
+            <dd>{b.jumlah_unduh}×</dd>
+          </div>
+        )}
+        {b.keterangan && (
+          <div>
+            <dt>Keterangan</dt>
+            <dd>{b.keterangan}</dd>
+          </div>
+        )}
+      </dl>
+    </div>
+  );
+}
+
 // ================================================================ ManajerBerkas
 
 type Sasaran = { jenis: 'folder'; f: FolderBerkas } | { jenis: 'berkas'; b: BerkasManajer } | { jenis: 'kosong' };
@@ -896,6 +1015,18 @@ type DialogManajer =
 const TIPE_SERET = 'application/x-unipo-berkas';
 /** Peristiwa React dari portal (menu, dialog) ikut naik ke induk; abaikan yang bukan dari elemen ini. */
 const dariSini = (e: React.SyntheticEvent) => e.currentTarget.contains(e.target as Node);
+
+/** Diberikan ManajerBerkas ke `samping` (mis. DaftarDrive di DriveBerkas). */
+export interface OpsiSampingBerkas {
+  /** Sidebar dalam mode ikon saja. */
+  ringkas: boolean;
+  /** Pintasan "Terbaru" ruang aktif. */
+  terbaru: { aktif: boolean; onPilih: () => void };
+  /** Lepas berkas/folder yang diseret ke ruang lain (drive): disalin ke akar ruang itu. */
+  lepasKeRuang: (tujuan: TujuanRuangBerkas & { label: string }, e: React.DragEvent) => void;
+  /** Apakah seretan ini bisa dilepas ke ruang lain. */
+  bisaLepas: (e: React.DragEvent) => boolean;
+}
 
 export interface ManajerBerkasProps {
   /** Ruang folder per aplikasi/modul (mis. "arsip"); kosong = umum. Berkas baru juga diberi modul ini. */
@@ -920,7 +1051,10 @@ export interface ManajerBerkasProps {
   /** Folder terkendali; pasangkan dengan onFolderChange, mis. untuk menyimpan folder di URL. */
   folder?: string | null;
   onFolderChange?: (folder: string | null) => void;
-  tampilanAwal?: 'grid' | 'daftar';
+  /** Tampilan awal bila pengguna belum pernah memilih: ikon (= 'grid'), daftar, kolom, atau galeri. Pilihan pengguna diingat. */
+  tampilanAwal?: 'grid' | TampilanBerkas;
+  /** Kunci localStorage preferensi tampilan/urut/kelompok/sidebar. `false` = tidak diingat. Bawaan sama untuk semua Kelola berkas. */
+  kunciPreferensi?: string | false;
   /** Ekstensi yang diterima saat unggah, mis. ".pdf,.docx". Dicek juga oleh server. */
   accept?: string;
   bolehUnggah?: boolean;
@@ -938,10 +1072,11 @@ export interface ManajerBerkasProps {
   /** Tinggi komponen (bawaan 36rem). */
   tinggi?: number | string;
   /**
-   * Isi panel samping pengganti judul "Folder", mis. daftar drive di DriveBerkas. Menerima pohon folder ruang aktif
-   * untuk ditaruh di bawah drive terpilih. Di layar sempit tampil di lembar "Drive & folder".
+   * Isi panel samping pengganti pohon folder, mis. daftar drive di DriveBerkas. Menerima pohon folder ruang aktif
+   * untuk ditaruh di bawah drive terpilih, dan `opsi` (mode ringkas, pintasan Terbaru, lepas seretan ke drive lain).
+   * Di layar sempit tampil di laci "Drive & folder".
    */
-  samping?: (folder: React.ReactNode) => React.ReactNode;
+  samping?: (folder: React.ReactNode, opsi: OpsiSampingBerkas) => React.ReactNode;
   className?: string;
 }
 
@@ -962,6 +1097,7 @@ export function ManajerBerkas({
   folder: folderProp,
   onFolderChange,
   tampilanAwal = 'grid',
+  kunciPreferensi = KUNCI_PREF_BERKAS,
   accept,
   bolehUnggah: bolehUnggahProp = true,
   bolehHapus: bolehHapusProp = true,
@@ -1004,18 +1140,71 @@ export function ManajerBerkas({
   const [folderDalam, setFolderDalam] = React.useState<string | null>(folderAwal);
   const folderPilih = folderProp !== undefined ? folderProp : folderDalam;
   const folder = folderPilih ?? akarBagi;
-  const buka = React.useCallback(
-    (f: string | null) => {
-      setFolderDalam(f);
-      onFolderChange?.(f);
+  // Pintasan "Terbaru": semua berkas ruang ini tanpa memandang folder, terbaru dulu.
+  const [terbaru, setTerbaru] = React.useState(false);
+  // Riwayat navigasi ‹ › ala Finder.
+  type Lokasi = { folder: string | null; terbaru: boolean };
+  const [riwayat, setRiwayat] = React.useState<{ daftar: Lokasi[]; i: number }>(() => ({ daftar: [{ folder: folderPilih ?? null, terbaru: false }], i: 0 }));
+  const terapkanLokasi = React.useCallback(
+    (l: Lokasi) => {
+      setTerbaru(l.terbaru);
+      setFolderDalam(l.folder);
+      onFolderChange?.(l.folder);
     },
     [onFolderChange],
   );
-  const [tampilan, setTampilan] = React.useState<'grid' | 'daftar'>(tampilanAwal);
+  const pergi = React.useCallback(
+    (l: Lokasi) => {
+      terapkanLokasi(l);
+      setRiwayat((r) => {
+        const kini = r.daftar[r.i];
+        if (kini && kini.folder === l.folder && kini.terbaru === l.terbaru) return r;
+        return { daftar: [...r.daftar.slice(0, r.i + 1), l].slice(-50), i: Math.min(r.i + 1, 49) };
+      });
+    },
+    [terapkanLokasi],
+  );
+  const buka = React.useCallback((f: string | null) => pergi({ folder: f, terbaru: false }), [pergi]);
+  const bisaMundur = riwayat.i > 0;
+  const bisaMaju = riwayat.i < riwayat.daftar.length - 1;
+  const langkah = (d: -1 | 1) => {
+    const i = riwayat.i + d;
+    const l = riwayat.daftar[i];
+    if (!l) return;
+    setRiwayat((r) => ({ ...r, i }));
+    terapkanLokasi(l);
+  };
+
+  // Preferensi tampilan (diingat per pengguna di peramban).
+  const prefAwal = React.useMemo<Partial<PrefBerkas>>(() => (kunciPreferensi ? bacaPrefBerkas(kunciPreferensi) : {}), [kunciPreferensi]);
+  const [tampilan, setTampilan] = React.useState<TampilanBerkas>(() => prefAwal.tampilan ?? (tampilanAwal === 'grid' ? 'ikon' : tampilanAwal));
+  const [urut, setUrut] = React.useState<UrutKolom>(() => prefAwal.urut ?? PREF_BERKAS_BAWAAN.urut);
+  const [kelompok, setKelompok] = React.useState<KelompokBerkas>(() => prefAwal.kelompok ?? PREF_BERKAS_BAWAAN.kelompok);
+  const [modeSamping, setModeSamping] = React.useState<PrefBerkas['samping']>(() => prefAwal.samping ?? PREF_BERKAS_BAWAAN.samping);
+  const [lebarSamping, setLebarSamping] = React.useState(() => prefAwal.lebar ?? PREF_BERKAS_BAWAAN.lebar);
+  const [panelInfo, setPanelInfo] = React.useState(() => prefAwal.info ?? PREF_BERKAS_BAWAAN.info);
+  React.useEffect(() => {
+    if (kunciPreferensi) simpanPrefBerkas({ tampilan, urut, kelompok, samping: modeSamping, lebar: lebarSamping, info: panelInfo }, kunciPreferensi);
+  }, [kunciPreferensi, tampilan, urut, kelompok, modeSamping, lebarSamping, panelInfo]);
+  const urutServer: UrutServer = terbaru ? 'baru' : urutKeServer(urut);
+  // Lebar komponen (bukan layar): di bawah 640px sidebar menjadi laci.
+  const refAkar = React.useRef<HTMLDivElement>(null);
+  const refKolom = React.useRef<HTMLDivElement>(null);
+  const [sempit, setSempit] = React.useState(false);
+  React.useEffect(() => {
+    const el = refAkar.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([e]) => setSempit((e?.contentRect.width ?? 1000) < 640));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  React.useEffect(() => {
+    const el = refKolom.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, [folder, tampilan]);
   const [q, setQ] = React.useState('');
   const [kata, setKata] = React.useState('');
   const [jenis, setJenis] = React.useState<JenisBerkas | 'semua'>('semua');
-  const [urut, setUrut] = React.useState<UrutBerkas>('baru');
   const [halaman, setHalaman] = React.useState(1);
   const [isi, setIsi] = React.useState<BerkasManajer[]>([]);
   const [total, setTotal] = React.useState(0);
@@ -1049,10 +1238,10 @@ export function ManajerBerkas({
   // Folder yang ditampilkan: anak langsung, atau saat mencari, semua subfolder yang namanya cocok.
   const subfolder = React.useMemo(() => {
     const k = kata.toLowerCase();
+    if (terbaru || jenis !== 'semua') return [];
     const r = daftarFolder.filter((f) => (mencari ? (!folder || f.path.startsWith(`${folder}/`)) && f.nama.toLowerCase().includes(k) : f.induk === folder));
-    const arah = urut === '-nama' ? -1 : 1;
-    return jenis !== 'semua' ? [] : r.sort((a, b) => arah * a.nama.localeCompare(b.nama, 'id', { numeric: true, sensitivity: 'base' }));
-  }, [daftarFolder, folder, kata, mencari, urut, jenis]);
+    return urutkanFolder(r, urut);
+  }, [daftarFolder, folder, kata, mencari, urut, jenis, terbaru]);
 
   React.useEffect(() => {
     const t = setTimeout(() => setKata(q.trim()), 300);
@@ -1061,7 +1250,7 @@ export function ManajerBerkas({
   React.useEffect(() => {
     setHalaman(1);
     setTerpilih(new Set());
-  }, [folder, kata, jenis, urut, modul, unit, bagi, periode]);
+  }, [folder, kata, jenis, urutServer, modul, unit, bagi, periode, terbaru]);
 
   // Daftar berkas di folder ini (atau hasil pencarian di folder ini beserta subfoldernya).
   React.useEffect(() => {
@@ -1081,11 +1270,12 @@ export function ManajerBerkas({
       periode: periode || undefined,
       q: kata || undefined,
       jenis: jenis === 'semua' ? undefined : jenis,
-      urut,
+      urut: urutServer,
       page: halaman,
       per_page: 60,
     };
-    if (mencari) query.dalam = folder ?? undefined;
+    if (terbaru) query.dalam = akarBagi ?? undefined;
+    else if (mencari) query.dalam = folder ?? undefined;
     else query.folder = folder ?? '/';
     siakad
       .request<BerkasManajer[]>({ method: 'GET', path: '/v1/berkas', query }, { signal: ctrl.signal })
@@ -1099,7 +1289,7 @@ export function ManajerBerkas({
       .catch((e) => !ctrl.signal.aborted && setGalat(pesanGalat(e)))
       .finally(() => !ctrl.signal.aborted && setMemuat(false));
     return () => ctrl.abort();
-  }, [siakad, folder, kata, mencari, jenis, urut, halaman, ruangOpsi, periode, nonce, bagi, pohonQ.error]);
+  }, [siakad, folder, kata, mencari, jenis, urutServer, halaman, ruangOpsi, periode, nonce, bagi, pohonQ.error, terbaru, akarBagi]);
 
   // Segarkan saat aksi lain memanggil invalidateSiakad('berkas-isi').
   useSaatInvalidasi('berkas-isi', () => {
@@ -1200,7 +1390,12 @@ export function ManajerBerkas({
   };
 
   // ---------------------------------------------------------------- pilihan
-  const semuaId = isi.map((b) => b.id);
+  // Urutan tampil: urut di peramban (jenis tidak didukung server) lalu kelompok; pilihan Shift mengikuti urutan ini.
+  const kelompokEfektif: KelompokBerkas = terbaru && kelompok === 'tidak' ? 'tanggal' : kelompok;
+  const isiUrut = React.useMemo(() => urutkanBerkas(isi, urut), [isi, urut]);
+  const kelompokIsi = React.useMemo(() => kelompokkanBerkas(isiUrut, kelompokEfektif), [isiUrut, kelompokEfektif]);
+  const isiTampil = React.useMemo(() => kelompokIsi.flatMap((k) => k.isi), [kelompokIsi]);
+  const semuaId = isiTampil.map((b) => b.id);
   const berkasTerpilih = isi.filter((b) => terpilih.has(b.id));
   const klikBerkas = (b: BerkasManajer, e: React.MouseEvent | React.KeyboardEvent) => {
     setTerpilih((t) => {
@@ -1331,7 +1526,7 @@ export function ManajerBerkas({
       id = terpilih.has(item.berkas.id) ? [...terpilih] : [item.berkas.id];
       if (!terpilih.has(item.berkas.id)) setTerpilih(new Set([item.berkas.id]));
     }
-    e.dataTransfer.setData(TIPE_SERET, JSON.stringify({ id, folder: item.f?.path ?? null }));
+    e.dataTransfer.setData(TIPE_SERET, JSON.stringify({ id, folder: item.f?.path ?? null, asal: { unit: unit ?? null, modul: modul ?? null } }));
     e.dataTransfer.effectAllowed = 'move';
   };
 
@@ -1363,6 +1558,31 @@ export function ManajerBerkas({
     if (seretFile(e) && bolehUnggah) void tambahUnggah(await fileDariDrop(e.dataTransfer), tujuan);
   };
 
+  /** Seret ke drive lain di sidebar = salin ke akar ruang itu (seperti Finder menyalin antar disk). */
+  const lepasKeRuang = async (t: TujuanRuangBerkas & { label: string }, e: React.DragEvent) => {
+    setSasaranLepas(null);
+    if (!seretDalam(e)) return;
+    try {
+      const d = JSON.parse(e.dataTransfer.getData(TIPE_SERET) || '{}') as { id?: string[]; folder?: string | null };
+      if ((t.unit ?? null) === (unit ?? null) && (unit || (t.modul ?? '') === (modul ?? ''))) return;
+      const ke: TujuanRuangBerkas = { unit: t.unit, modul: t.modul };
+      if (d.folder) {
+        const r = await aksi.salinFolder(d.folder, null, ke);
+        setPesan({ nada: 'sukses', teks: `Folder ${namaDari(d.folder)} disalin (${r.berkas_disalin} berkas) ke ${t.label}.` });
+      } else if (d.id?.length) {
+        const r = await aksi.salinBerkas(d.id, null, ke);
+        setPesan(
+          r.gagal.length
+            ? { nada: 'galat', teks: `${r.disalin.length} berkas disalin, ${r.gagal.length} gagal: ${r.gagal[0].pesan}` }
+            : { nada: 'sukses', teks: `${r.disalin.length} berkas disalin ke ${t.label}.` },
+        );
+      }
+      invalidateSiakad('berkas-info');
+    } catch (err) {
+      setPesan({ nada: 'galat', teks: pesanGalat(err) });
+    }
+  };
+
   const propsLepasFolder = (f: FolderBerkas) => ({
     onDragOver: (e: React.DragEvent) => {
       if (!(seretDalam(e) && bolehKelola) && !(seretFile(e) && bolehUnggah)) return;
@@ -1386,7 +1606,7 @@ export function ManajerBerkas({
       return [
         { label: 'Buka', icon: <FolderOpen aria-hidden />, onSelect: () => buka(f.path) },
         ...(bolehBagikan && bolehKelolaRuang
-          ? ([{ label: 'Bagikan…', icon: <Share2 aria-hidden />, onSelect: () => setDialog({ jenis: 'bagikan', sasaran: { jenis: 'folder', path: f.path, nama: f.nama, ruang: ruangOpsi } }) }] as MenuEntry[])
+          ? ([{ label: 'Bagikan atau buat tautan…', icon: <Share2 aria-hidden />, onSelect: () => setDialog({ jenis: 'bagikan', sasaran: { jenis: 'folder', path: f.path, nama: f.nama, ruang: ruangOpsi } }) }] as MenuEntry[])
           : []),
         sep,
         { label: 'Salin', icon: <Copy aria-hidden />, shortcut: 'Ctrl+C', onSelect: () => keKlip('salin', { f }) },
@@ -1413,9 +1633,11 @@ export function ManajerBerkas({
       return [
         ...(satu
           ? ([
-              { label: pilih === 'satu' ? labelPilih || 'Pakai berkas ini' : 'Pratinjau', icon: <Eye aria-hidden />, onSelect: () => bukaBerkas(b) },
+              { label: pilih === 'satu' ? labelPilih || 'Pakai berkas ini' : 'Buka', icon: <Eye aria-hidden />, shortcut: 'Enter', onSelect: () => bukaBerkas(b) },
+              ...(pilih === 'satu' ? [] : [{ label: 'Lihat cepat', icon: <Eye aria-hidden />, shortcut: 'Spasi', onSelect: () => setPratinjau(b) }]),
+              { label: 'Lihat info', icon: <Info aria-hidden />, onSelect: () => (setTerpilih(new Set([b.id])), setPanelInfo(true)) },
               { label: 'Unduh', icon: <Download aria-hidden />, onSelect: () => void unduh(b) },
-              ...(bolehBagikan ? [{ label: 'Bagikan…', icon: <Share2 aria-hidden />, onSelect: () => setDialog({ jenis: 'bagikan', sasaran: { jenis: 'berkas', b } }) }] : []),
+              ...(bolehBagikan ? [{ label: 'Bagikan atau buat tautan…', icon: <Share2 aria-hidden />, onSelect: () => setDialog({ jenis: 'bagikan', sasaran: { jenis: 'berkas', b } }) }] : []),
               ...(bolehAturLihat ? [{ label: 'Siapa yang bisa melihat…', icon: <Users aria-hidden />, onSelect: () => setDialog({ jenis: 'lihat', b }) }] : []),
             ] as MenuEntry[])
           : [{ type: 'label', label: `${banyak.length} berkas dipilih` } as MenuEntry]),
@@ -1501,29 +1723,63 @@ export function ManajerBerkas({
       e.preventDefault();
       setGantiNama(berkasTerpilih[0] ?? null);
     } else if (['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'].includes(e.key) && el.dataset.mbItem !== undefined) {
-      const semua = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[data-mb-item]'));
-      const i = semua.indexOf(el);
-      const kolom = tampilan === 'grid' ? Math.max(1, Math.round((e.currentTarget.querySelector('.u-mb-kisi')?.clientWidth ?? 1) / (el.offsetWidth || 1))) : 1;
-      const lompat = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowDown' ? kolom : -kolom;
-      const ke = semua[Math.max(0, Math.min(semua.length - 1, i + lompat))];
+      // Navigasi menurut letak di layar: berlaku untuk ikon (kisi berkelompok), daftar, kolom, dan strip galeri.
+      const wadah = el.closest('[data-mb-navigasi]') ?? e.currentTarget;
+      const semua = Array.from(wadah.querySelectorAll<HTMLElement>('[data-mb-item]')).filter((x) => x.offsetParent !== null);
+      const a = el.getBoundingClientRect();
+      const ax = a.left + a.width / 2;
+      const ay = a.top + a.height / 2;
+      let ke: HTMLElement | undefined;
+      let skor = Infinity;
+      for (const x of semua) {
+        if (x === el) continue;
+        const r = x.getBoundingClientRect();
+        const dx = r.left + r.width / 2 - ax;
+        const dy = r.top + r.height / 2 - ay;
+        const ok = e.key === 'ArrowRight' ? dx > 4 && Math.abs(dy) < a.height / 2 : e.key === 'ArrowLeft' ? dx < -4 && Math.abs(dy) < a.height / 2 : e.key === 'ArrowDown' ? dy > 4 : dy < -4;
+        if (!ok) continue;
+        const n = e.key === 'ArrowRight' || e.key === 'ArrowLeft' ? Math.abs(dx) : Math.abs(dy) * 1000 + Math.abs(dx);
+        if (n < skor) {
+          skor = n;
+          ke = x;
+        }
+      }
       if (ke) {
         e.preventDefault();
         ke.focus();
+        ke.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        const id = ke.dataset.id;
+        if (id && !mod) {
+          if (e.shiftKey && pilih !== 'satu' && jangkar.current) {
+            const i = semuaId.indexOf(jangkar.current);
+            const j = semuaId.indexOf(id);
+            if (i >= 0 && j >= 0) setTerpilih(new Set(semuaId.slice(Math.min(i, j), Math.max(i, j) + 1)));
+          } else {
+            jangkar.current = id;
+            setTerpilih(new Set([id]));
+          }
+        }
       }
     }
   };
 
   // ---------------------------------------------------------------- tampilan item
-  const kartuFolder = (f: FolderBerkas) => {
+  /** ikon = kisi ala Finder, daftar = baris berkolom, kolom = Miller columns, strip = film strip galeri. */
+  type Gaya = 'ikon' | 'daftar' | 'kolom' | 'strip';
+  const adaPemilik = Boolean(unit) && isi.some((b) => b.pemilik);
+  const tglFolder = (f: FolderBerkas) => f.terakhir_isi_at ?? f.dibuat_at ?? null;
+
+  const kartuFolder = (f: FolderBerkas, gaya: Gaya, aktifKolom?: boolean) => {
     const isiLabel = [f.jumlah_subfolder ? `${f.jumlah_subfolder} folder` : null, `${f.total_berkas} berkas`].filter(Boolean).join(' · ');
     const umum = {
       'data-mb-item': '',
       tabIndex: 0,
       draggable: bolehKelola,
+      title: f.nama,
+      'data-aktif': aktifKolom ? '' : undefined,
       'data-sasaran': sasaranLepas === f.path ? '' : undefined,
       'data-potong': papan?.mode === 'potong' && papan.folder?.path === f.path && samaRuang(papan.asal) ? '' : undefined,
       onDragStart: (e: React.DragEvent) => mulaiSeret(e, { f }),
-      onDoubleClick: (e: React.MouseEvent) => dariSini(e) && buka(f.path),
       onClick: (e: React.MouseEvent) => {
         if (dariSini(e) && !(e.target as HTMLElement).closest('.u-mb-aksi')) buka(f.path);
       },
@@ -1551,7 +1807,7 @@ export function ManajerBerkas({
         items={entriMenu({ jenis: 'folder', f })}
       />
     );
-    if (tampilan === 'daftar')
+    if (gaya === 'daftar')
       return (
         <div key={`f:${f.path}`} role="row" className="u-mb-baris" data-folder="" aria-label={`Folder ${f.nama}`} {...umum}>
           <span role="gridcell" className="u-mb-baris-cek" />
@@ -1565,23 +1821,47 @@ export function ManajerBerkas({
               {mencari && f.induk && <small>{f.induk}</small>}
             </span>
           </span>
-          <span role="gridcell" className="u-mb-baris-info">
-            {isiLabel}
+          <span role="gridcell" className="u-mb-baris-tgl">
+            {tglFolder(f) ? formatDate(tglFolder(f)!, 'short') : '—'}
           </span>
           <span role="gridcell" className="u-mb-baris-ukuran">
-            {formatBytes(f.total_ukuran)}
+            {f.total_berkas ? formatBytes(f.total_ukuran) : '—'}
           </span>
-          <span role="gridcell" className="u-mb-baris-tgl">
-            {f.terakhir_isi_at ? formatDate(f.terakhir_isi_at, 'short') : '—'}
+          <span role="gridcell" className="u-mb-baris-info">
+            Folder · {isiLabel}
           </span>
+          {adaPemilik && (
+            <span role="gridcell" className="u-mb-baris-pemilik">
+              —
+            </span>
+          )}
           <span role="gridcell">{tombolAksi}</span>
+        </div>
+      );
+    if (gaya === 'kolom')
+      return (
+        <div key={`f:${f.path}`} role="option" aria-selected={Boolean(aktifKolom)} className="u-mb-kol-baris" data-folder="" {...umum}>
+          <IkonFolderWarna warna={f.warna} buka={aktifKolom} />
+          <span className="u-mb-kol-nama">{f.nama}</span>
+          {f.total_berkas > 0 && <small>{f.total_berkas}</small>}
+          <ChevronRight aria-hidden className="u-mb-kol-panah" />
+        </div>
+      );
+    if (gaya === 'strip')
+      return (
+        <div key={`f:${f.path}`} role="gridcell" className="u-mb-strip-item" data-folder="" aria-label={`Folder ${f.nama}`} {...umum}>
+          <span className="u-mb-strip-gambar">
+            <IkonFolderWarna warna={f.warna} />
+          </span>
         </div>
       );
     return (
       <div key={`f:${f.path}`} role="gridcell" className="u-mb-kartu" data-folder="" aria-label={`Folder ${f.nama}, ${isiLabel}`} {...umum}>
-        <IkonFolderWarna warna={f.warna} />
+        <span className="u-mb-kartu-gambar">
+          <IkonFolderWarna warna={f.warna} />
+        </span>
         <span className="u-mb-kartu-teks">
-          <b title={f.nama}>
+          <b>
             {f.nama}
             {unit && <LencanaLihat lihat={f.lihat} />}
           </b>
@@ -1592,12 +1872,14 @@ export function ManajerBerkas({
     );
   };
 
-  const kartuBerkas = (b: BerkasManajer) => {
+  const kartuBerkas = (b: BerkasManajer, gaya: Gaya) => {
     const dipilih = terpilih.has(b.id);
     const umum = {
       'data-mb-item': '',
+      'data-id': b.id,
       tabIndex: 0,
       draggable: bolehKelola,
+      title: b.nama,
       'aria-selected': dipilih,
       'data-potong': papan?.mode === 'potong' && papan.berkas.some((x) => x.id === b.id) ? '' : undefined,
       onDragStart: (e: React.DragEvent) => mulaiSeret(e, { berkas: b }),
@@ -1610,8 +1892,10 @@ export function ManajerBerkas({
         if (!dariSini(e) || e.target !== e.currentTarget) return;
         if (e.key === 'Enter') bukaBerkas(b);
         if (e.key === ' ') {
+          // Spasi = lihat cepat (Quick Look); Ctrl/Cmd+Spasi = centang untuk pilih banyak.
           e.preventDefault();
-          centang(b);
+          if (e.ctrlKey || e.metaKey) centang(b);
+          else setPratinjau(b);
         }
       },
       onContextMenu: (e: React.MouseEvent) => {
@@ -1650,7 +1934,8 @@ export function ManajerBerkas({
         <Lock aria-hidden />
       </span>
     ) : null;
-    if (tampilan === 'daftar')
+    const gambar = jenisBerkas(b) === 'gambar';
+    if (gaya === 'daftar')
       return (
         <div key={b.id} role="row" className="u-mb-baris" aria-label={b.nama} {...umum}>
           <span role="gridcell" className="u-mb-baris-cek">
@@ -1659,36 +1944,57 @@ export function ManajerBerkas({
           <span role="gridcell" className="u-mb-baris-nama">
             <IkonBerkas b={b} />
             <span>
-              <b title={b.nama}>
+              <b>
                 {b.nama}
                 {gembok}
                 {unit && <LencanaLihat lihat={b.lihat} />}
               </b>
-              {mencari ? <small>{b.folder || judul}</small> : (status ?? (b.periode && !periode ? <small>{namaPeriode(b.periode)}</small> : null))}
+              {mencari || terbaru ? <small>{b.folder || judul}</small> : status}
             </span>
           </span>
-          <span role="gridcell" className="u-mb-baris-info">
-            {JENIS_BERKAS[jenisBerkas(b) as JenisBerkas]?.label ?? String(b.ekstensi ?? '').toUpperCase()}
+          <span role="gridcell" className="u-mb-baris-tgl">
+            {b.diubah_at || b.dibuat_at ? formatDate((b.diubah_at || b.dibuat_at)!, 'short') : '—'}
           </span>
           <span role="gridcell" className="u-mb-baris-ukuran">
             {formatBytes(b.ukuran)}
           </span>
-          <span role="gridcell" className="u-mb-baris-tgl">
-            {b.dibuat_at ? formatDate(b.dibuat_at, 'short') : '—'}
+          <span role="gridcell" className="u-mb-baris-info">
+            {jenisAwam(b)}
           </span>
+          {adaPemilik && (
+            <span role="gridcell" className="u-mb-baris-pemilik">
+              {b.pemilik || '—'}
+            </span>
+          )}
           <span role="gridcell">{tombolAksi}</span>
+        </div>
+      );
+    if (gaya === 'kolom')
+      return (
+        <div key={b.id} role="option" className="u-mb-kol-baris" {...umum}>
+          <IkonBerkas b={b} />
+          <span className="u-mb-kol-nama">{b.nama}</span>
+          {gembok}
+        </div>
+      );
+    if (gaya === 'strip')
+      return (
+        <div key={b.id} role="gridcell" className="u-mb-strip-item" aria-label={b.nama} {...umum}>
+          <span className="u-mb-strip-gambar">{gambar ? <GambarMini b={b} /> : <IkonBerkas b={b} />}</span>
         </div>
       );
     return (
       <div key={b.id} role="gridcell" className="u-mb-kartu" data-berkas="" aria-label={b.nama} {...umum}>
-        {jenisBerkas(b) === 'gambar' ? <GambarMini b={b} /> : <span className="u-mb-mini">{<IkonBerkas b={b} besar />}</span>}
+        <span className="u-mb-kartu-gambar">
+          {gambar ? <GambarMini b={b} /> : <IkonBerkas b={b} besar />}
+          {gembok}
+        </span>
         <span className="u-mb-kartu-teks">
-          <b title={b.nama}>
+          <b>
             {b.nama}
-            {gembok}
             {unit && <LencanaLihat lihat={b.lihat} />}
           </b>
-          <small>{mencari ? b.folder || judul : [formatBytes(b.ukuran), b.dibuat_at ? formatDate(b.dibuat_at, 'short') : null].filter(Boolean).join(' · ')}</small>
+          <small>{mencari || terbaru ? b.folder || judul : formatBytes(b.ukuran)}</small>
           {status}
         </span>
         {cek}
@@ -1699,7 +2005,7 @@ export function ManajerBerkas({
 
   // ---------------------------------------------------------------- render
   const jejak = folder ? folder.split('/').map((s, i, a) => ({ label: s, path: a.slice(0, i + 1).join('/') })).filter((j) => !akarBagi || j.path.length > akarBagi.length) : [];
-  const diAkar = folder === akarBagi;
+  const diAkar = folder === akarBagi && !terbaru;
   const daftarPeriode = periodeQ.data?.periode ?? [];
   const opsiPeriode = [
     { value: 'semua', label: 'Semua periode' },
@@ -1712,16 +2018,19 @@ export function ManajerBerkas({
   const aktifUnggah = antrean.filter((x) => x.status === 'antre' || x.status === 'unggah').length;
   const kosong = !memuat && !galat && !isi.length && !subfolder.length;
   const tujuanUnggah = folderIni?.nama ?? (folder ? namaDari(folder) : judul);
+  const ikonSaja = modeSamping === 'ikon' && !sempit;
+  const fokus = berkasTerpilih[berkasTerpilih.length - 1] ?? null;
+  const bisaLepasRuang = (e: React.DragEvent) => seretDalam(e);
 
   const pohonEl = (
     <PohonFolder
       pohon={pohon}
-      aktif={folder}
+      aktif={terbaru ? '\u0000' : folder}
       onPilih={(p) => {
         buka(p);
         setPanelPohon(false);
       }}
-      akarLabel={samping ? 'Semua berkas' : judul}
+      akarLabel="Semua berkas"
       akarInfo={ringkas ? String(ringkas.total_berkas) : undefined}
       onLepas={(t, e) => void lepasKe(t, e)}
       bisaLepas={(e) => (seretDalam(e) && bolehKelola) || (seretFile(e) && bolehUnggah)}
@@ -1760,11 +2069,272 @@ export function ManajerBerkas({
     }
   };
 
+  const opsiSamping: OpsiSampingBerkas = {
+    ringkas: ikonSaja,
+    terbaru: { aktif: terbaru, onPilih: () => (pergi({ folder: akarBagi, terbaru: true }), setPanelPohon(false)) },
+    lepasKeRuang: (t, e) => void lepasKeRuang(t, e),
+    bisaLepas: bisaLepasRuang,
+  };
+  const isiPohon = pohonQ.loading && !pohonQ.data ? pohonMuat : pohonEl;
+  const isiSamping = (laci: boolean) =>
+    samping ? (
+      samping(isiPohon, laci ? { ...opsiSamping, ringkas: false } : opsiSamping)
+    ) : (
+      <>
+        <div className="u-mb-bagian">
+          <h4 className="u-mb-bagian-judul">Pintasan</h4>
+          <button type="button" className="u-mb-pintas" aria-current={terbaru ? 'page' : undefined} title="Terbaru" onClick={opsiSamping.terbaru.onPilih}>
+            <Clock aria-hidden />
+            <span>Terbaru</span>
+          </button>
+        </div>
+        <div className="u-mb-bagian">
+          <h4 className="u-mb-bagian-judul">{judul}</h4>
+          {isiPohon}
+        </div>
+      </>
+    );
+
+  // Kolom (Miller): folder leluhur sampai folder aktif; kolom terakhir berisi subfolder dan berkas.
+  const jalurKolom: Array<string | null> = terbaru || mencari ? [] : [akarBagi, ...jejak.map((j) => j.path)];
+  const ringkasKaki = memuat && !isi.length ? 'Memuat…' : `${subfolder.length ? `${subfolder.length} folder · ` : ''}${total} berkas${folderIni ? ` · ${formatBytes(folderIni.ukuran)}` : ringkas && !folder && !terbaru ? ` · ${formatBytes(ringkas.ukuran)}` : ''}`;
+  const judulKelompok = (label: string, n: number) => (
+    <h3 className="u-mb-judul-bagian">
+      {label} <small>{n}</small>
+    </h3>
+  );
+  const kepalaKolom = (k: KunciUrut, label: string, cls?: string) => (
+    <span role="columnheader" className={cls} aria-sort={urut.kunci === k ? (urut.arah === 'naik' ? 'ascending' : 'descending') : 'none'}>
+      <button type="button" className="u-mb-kolom-urut" data-aktif={urut.kunci === k ? '' : undefined} onClick={() => setUrut((u) => klikKolom(u, k))}>
+        {label}
+        {urut.kunci === k ? urut.arah === 'naik' ? <ChevronUp aria-hidden /> : <ChevronDown aria-hidden /> : null}
+      </button>
+    </span>
+  );
+  const centangSemua =
+    pilih !== 'satu' && isi.length > 0 ? (
+      <span
+        className="u-mb-cek"
+        role="checkbox"
+        tabIndex={0}
+        aria-checked={terpilih.size === isi.length ? true : terpilih.size ? 'mixed' : false}
+        aria-label="Pilih semua berkas"
+        onClick={() => setTerpilih(terpilih.size === isi.length ? new Set() : new Set(semuaId))}
+        onKeyDown={(e) => (e.key === ' ' || e.key === 'Enter') && (e.preventDefault(), setTerpilih(terpilih.size === isi.length ? new Set() : new Set(semuaId)))}
+      >
+        {terpilih.size === isi.length ? <Check aria-hidden /> : terpilih.size ? <span className="u-mb-cek-sebagian" /> : null}
+      </span>
+    ) : null;
+  const muatLagi = adaLagi && !memuat && (
+    <Button variant="ghost" size="sm" className="u-mb-lagi" onClick={() => setHalaman((h) => h + 1)}>
+      Muat lebih banyak ({isi.length} dari {total})
+      <ChevronDown aria-hidden />
+    </Button>
+  );
+
+  const viewIkon = (
+    <div data-mb-navigasi="">
+      {kelompokEfektif === 'tidak' ? (
+        <div className="u-mb-kisi" role="grid" aria-label="Folder dan berkas" aria-multiselectable={pilih !== 'satu'}>
+          <div role="row" className="u-mb-kisi-baris">
+            {subfolder.map((f) => kartuFolder(f, 'ikon'))}
+            {isiTampil.map((b) => kartuBerkas(b, 'ikon'))}
+            {memuat && Array.from({ length: isi.length ? 4 : 10 }, (_, i) => <KartuMuat key={`m${i}`} />)}
+          </div>
+        </div>
+      ) : (
+        <>
+          {subfolder.length > 0 && (
+            <section>
+              {judulKelompok('Folder', subfolder.length)}
+              <div className="u-mb-kisi" role="grid" aria-label="Folder">
+                <div role="row" className="u-mb-kisi-baris">
+                  {subfolder.map((f) => kartuFolder(f, 'ikon'))}
+                </div>
+              </div>
+            </section>
+          )}
+          {kelompokIsi.map((k) => (
+            <section key={k.kunci}>
+              {judulKelompok(k.label, k.isi.length)}
+              <div className="u-mb-kisi" role="grid" aria-label={k.label} aria-multiselectable={pilih !== 'satu'}>
+                <div role="row" className="u-mb-kisi-baris">
+                  {k.isi.map((b) => kartuBerkas(b, 'ikon'))}
+                </div>
+              </div>
+            </section>
+          ))}
+          {memuat && (
+            <div className="u-mb-kisi">
+              <div className="u-mb-kisi-baris">{Array.from({ length: isi.length ? 4 : 10 }, (_, i) => <KartuMuat key={`m${i}`} />)}</div>
+            </div>
+          )}
+        </>
+      )}
+      {muatLagi}
+    </div>
+  );
+
+  const viewDaftar = (
+    <div className="u-mb-tabel" role="grid" aria-label="Folder dan berkas" aria-multiselectable={pilih !== 'satu'} data-mb-navigasi="" data-pemilik={adaPemilik ? '' : undefined}>
+      <div role="row" className="u-mb-baris u-mb-baris-kepala">
+        <span role="columnheader" className="u-mb-baris-cek">
+          {centangSemua}
+        </span>
+        {kepalaKolom('nama', 'Nama')}
+        {kepalaKolom('tanggal', 'Tanggal diubah', 'u-mb-baris-tgl')}
+        {kepalaKolom('ukuran', 'Ukuran', 'u-mb-baris-ukuran')}
+        {kepalaKolom('jenis', 'Jenis', 'u-mb-baris-info')}
+        {adaPemilik && (
+          <span role="columnheader" className="u-mb-baris-pemilik">
+            Pemilik
+          </span>
+        )}
+        <span role="columnheader">
+          <span className="u-sr-only">Aksi</span>
+        </span>
+      </div>
+      {kelompokEfektif !== 'tidak' && subfolder.length > 0 && (
+        <div role="row" className="u-mb-baris-grup">
+          <span role="gridcell">
+            Folder <small>{subfolder.length}</small>
+          </span>
+        </div>
+      )}
+      {subfolder.map((f) => kartuFolder(f, 'daftar'))}
+      {kelompokIsi.map((k) => (
+        <React.Fragment key={k.kunci}>
+          {k.label && (
+            <div role="row" className="u-mb-baris-grup">
+              <span role="gridcell">
+                {k.label} <small>{k.isi.length}</small>
+              </span>
+            </div>
+          )}
+          {k.isi.map((b) => kartuBerkas(b, 'daftar'))}
+        </React.Fragment>
+      ))}
+      {memuat && Array.from({ length: isi.length ? 2 : 6 }, (_, i) => <BarisMuat key={`m${i}`} />)}
+      {muatLagi}
+    </div>
+  );
+
+  const viewKolom = (
+    <div className="u-mb-kolom" ref={refKolom} data-mb-navigasi="">
+      {jalurKolom.slice(0, -1).map((p, i) => {
+        const anak = urutkanFolder(
+          daftarFolder.filter((f) => f.induk === p),
+          { kunci: 'nama', arah: 'naik' },
+        );
+        const berikut = jalurKolom[i + 1];
+        return (
+          <div key={p ?? '/'} className="u-mb-kolom-satu" role="listbox" aria-label={p ? namaDari(p) : judul}>
+            {anak.map((f) => kartuFolder(f, 'kolom', f.path === berikut))}
+          </div>
+        );
+      })}
+      <div className="u-mb-kolom-satu" role="listbox" aria-label={terbaru ? 'Terbaru' : folder ? namaDari(folder) : judul} aria-multiselectable={pilih !== 'satu'}>
+        {subfolder.map((f) => kartuFolder(f, 'kolom'))}
+        {isiTampil.map((b) => kartuBerkas(b, 'kolom'))}
+        {memuat && Array.from({ length: 4 }, (_, i) => <span key={i} className="u-skeleton u-mb-kol-muat" />)}
+        {muatLagi}
+      </div>
+      {fokus && terpilih.size === 1 && !panelInfo && (
+        <div className="u-mb-kolom-satu u-mb-kolom-pratinjau">
+          <PanelInfoBerkas b={fokus} judul={judul} buka={() => bukaBerkas(fokus)} unduh={() => void unduh(fokus)} />
+        </div>
+      )}
+    </div>
+  );
+
+  const fokusGaleri = fokus ?? isiTampil[0] ?? null;
+  const viewGaleri = (
+    <div className="u-mb-galeri">
+      <div className="u-mb-galeri-utama">
+        {fokusGaleri ? (
+          <>
+            <GambarBesar b={fokusGaleri} onBuka={() => bukaBerkas(fokusGaleri)} />
+            <div className="u-mb-galeri-ket">
+              <span>
+                <b title={fokusGaleri.nama}>{fokusGaleri.nama}</b>
+                <small>{[jenisAwam(fokusGaleri), formatBytes(fokusGaleri.ukuran), fokusGaleri.dibuat_at ? formatDate(fokusGaleri.dibuat_at, 'short') : null].filter(Boolean).join(' · ')}</small>
+              </span>
+              <Button variant="outline" size="sm" onClick={() => bukaBerkas(fokusGaleri)}>
+                <Eye aria-hidden />
+                Buka
+              </Button>
+              <Button variant="ghost" size="sm" iconOnly aria-label="Unduh" onClick={() => void unduh(fokusGaleri)}>
+                <Download aria-hidden />
+              </Button>
+            </div>
+          </>
+        ) : (
+          <p className="u-mb-galeri-kosong">{memuat ? 'Memuat…' : 'Pilih folder di bawah untuk melihat berkasnya.'}</p>
+        )}
+      </div>
+      <div className="u-mb-galeri-strip" role="grid" aria-label="Folder dan berkas" data-mb-navigasi="">
+        <div role="row" className="u-mb-galeri-baris">
+          {subfolder.map((f) => kartuFolder(f, 'strip'))}
+          {isiTampil.map((b) => kartuBerkas(b, 'strip'))}
+          {adaLagi && !memuat && (
+            <button type="button" className="u-mb-strip-lagi" onClick={() => setHalaman((h) => h + 1)}>
+              +{total - isi.length}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const tombolTampilan: Array<{ v: TampilanBerkas; ikon: React.ReactNode }> = [
+    { v: 'ikon', ikon: <LayoutGrid aria-hidden /> },
+    { v: 'daftar', ikon: <List aria-hidden /> },
+    { v: 'kolom', ikon: <Columns3 aria-hidden /> },
+    { v: 'galeri', ikon: <GalleryHorizontal aria-hidden /> },
+  ];
+  const cekMenu = (aktif: boolean) => (aktif ? <Check aria-hidden /> : <span className="u-mb-ruang-ikon" />);
+  const jumlahSaring = (jenis !== 'semua' ? 1 : 0) + (periode ? 1 : 0);
+  const entriLain: MenuEntry[] = [
+    ...entriBaru,
+    ...(bolehUnggah ? ([{ label: 'Unggah folder', icon: <FolderUp aria-hidden />, onSelect: () => inputFolder.current?.click() }] as MenuEntry[]) : []),
+    ...(entriBaru.length || bolehUnggah ? ([{ type: 'separator' }] as MenuEntry[]) : []),
+    ...(!bagi ? ([{ label: enkripsiEfektif === 'wajib' ? 'Keamanan berkas (terenkripsi)…' : 'Keamanan berkas…', icon: <ShieldCheck aria-hidden />, onSelect: () => setDialog({ jenis: 'kebijakan' }) }] as MenuEntry[]) : []),
+    { label: panelInfo ? 'Sembunyikan panel info' : 'Tampilkan panel info', icon: <Info aria-hidden />, shortcut: '⌘I', onSelect: () => setPanelInfo((x) => !x) },
+    { type: 'separator' },
+    { type: 'label', label: 'Sidebar' },
+    { label: 'Lengkap', icon: cekMenu(modeSamping === 'penuh'), onSelect: () => setModeSamping('penuh') },
+    { label: 'Ikon saja', icon: cekMenu(modeSamping === 'ikon'), onSelect: () => setModeSamping('ikon') },
+    { label: 'Sembunyikan', icon: cekMenu(modeSamping === 'tutup'), onSelect: () => setModeSamping('tutup') },
+    { type: 'separator' },
+    { label: 'Segarkan', icon: <RotateCw aria-hidden />, onSelect: () => aksi.segarkan() },
+  ];
+  const mulaiGeser = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const x0 = e.clientX;
+    const w0 = lebarSamping;
+    const gerak = (ev: PointerEvent) => setLebarSamping(Math.max(180, Math.min(420, w0 + ev.clientX - x0)));
+    const lepas = () => {
+      window.removeEventListener('pointermove', gerak);
+      window.removeEventListener('pointerup', lepas);
+    };
+    window.addEventListener('pointermove', gerak);
+    window.addEventListener('pointerup', lepas);
+  };
+
   return (
     <div
+      ref={refAkar}
       className={cn('u-mb', className)}
-      style={{ height: tinggi }}
+      style={{ height: tinggi, ['--u-mb-lebar' as string]: `${lebarSamping}px` }}
+      data-samping={modeSamping}
+      data-info={panelInfo ? '' : undefined}
       data-seret={seretLuar ? '' : undefined}
+      onKeyDown={(e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'i' && !(e.target as HTMLElement).closest('input, textarea')) {
+          e.preventDefault();
+          setPanelInfo((x) => !x);
+        }
+      }}
       onDragEnter={(e) => {
         if (!seretFile(e) || !bolehUnggah) return;
         hitungSeret.current++;
@@ -1776,43 +2346,77 @@ export function ManajerBerkas({
         if (!hitungSeret.current) setSeretLuar(false);
       }}
     >
-      <aside className="u-mb-samping" aria-label={samping ? 'Drive dan folder' : 'Folder'}>
-        <div className="u-mb-samping-kepala">
-          <span>{samping ? 'Drive' : 'Folder'}</span>
-          {bolehKelola && (
-            <Tooltip content="Folder baru">
-              <Button variant="ghost" size="sm" iconOnly aria-label="Folder baru" onClick={() => setDialog({ jenis: 'folder-baru' })}>
-                <FolderPlus aria-hidden />
-              </Button>
-            </Tooltip>
-          )}
+      <aside className="u-mb-samping" aria-label={samping ? 'Drive dan folder' : 'Folder'} data-mode={ikonSaja ? 'ikon' : 'penuh'}>
+        <div className="u-mb-samping-isi">{isiSamping(false)}</div>
+        <div className="u-mb-samping-kaki">
+          {!ikonSaja &&
+            (info?.kuota && !bagi ? (
+              <KuotaBerkas kuota={info.kuota} unit={unit} ringkas />
+            ) : (
+              ringkas && (
+                <span className="u-mb-penyimpanan" title={info?.penyimpanan?.nama ?? undefined}>
+                  <HardDrive aria-hidden />
+                  <small>
+                    {formatBytes(ringkas.total_ukuran)} · {ringkas.total_berkas} berkas
+                  </small>
+                </span>
+              )
+            ))}
+          <Tooltip content={ikonSaja ? 'Lebarkan sidebar' : 'Ringkas sidebar jadi ikon'} side="right">
+            <Button variant="ghost" size="sm" iconOnly aria-label={ikonSaja ? 'Lebarkan sidebar' : 'Ringkas sidebar jadi ikon'} onClick={() => setModeSamping(ikonSaja ? 'penuh' : 'ikon')}>
+              {ikonSaja ? <PanelLeftOpen aria-hidden /> : <PanelLeftClose aria-hidden />}
+            </Button>
+          </Tooltip>
         </div>
-        <div className="u-mb-samping-isi">
-          {samping ? samping(pohonQ.loading && !pohonQ.data ? pohonMuat : pohonEl) : pohonQ.loading && !pohonQ.data ? pohonMuat : pohonEl}
-        </div>
-        {info?.kuota && !bagi ? (
-          <KuotaBerkas kuota={info.kuota} unit={unit} />
-        ) : ringkas && (
-          <div className="u-mb-penyimpanan">
-            <HardDrive aria-hidden />
-            <span>
-              <b>{formatBytes(ringkas.total_ukuran)}</b>
-              <small>
-                {ringkas.total_berkas} berkas{info?.penyimpanan?.nama ? ` · ${info.penyimpanan.nama}` : ''}
-              </small>
-            </span>
-          </div>
+        {!ikonSaja && (
+          <div
+            className="u-mb-geser"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Ubah lebar sidebar"
+            aria-valuemin={180}
+            aria-valuemax={420}
+            aria-valuenow={lebarSamping}
+            tabIndex={0}
+            onPointerDown={mulaiGeser}
+            onDoubleClick={() => setLebarSamping(PREF_BERKAS_BAWAAN.lebar)}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                setLebarSamping((w) => Math.max(180, Math.min(420, w + (e.key === 'ArrowLeft' ? -16 : 16))));
+              }
+            }}
+          />
         )}
       </aside>
 
-      <section className="u-mb-utama" aria-label={folder ?? judul}>
+      <section className="u-mb-utama" aria-label={terbaru ? 'Terbaru' : (folder ?? judul)}>
         <div className="u-mb-alat">
           <div className="u-mb-jejak">
-            <Tooltip content={samping ? 'Pilih drive dan folder' : 'Lihat semua folder'}>
-              <Button variant="ghost" size="sm" iconOnly className="u-mb-tombol-pohon" aria-label={samping ? 'Pilih drive dan folder' : 'Lihat semua folder'} onClick={() => setPanelPohon(true)}>
-                {samping ? <HardDrive aria-hidden /> : <FolderTree aria-hidden />}
+            <Tooltip content={sempit ? (samping ? 'Drive dan folder' : 'Folder') : modeSamping === 'tutup' ? 'Tampilkan sidebar' : 'Sembunyikan sidebar'}>
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                aria-label={sempit ? (samping ? 'Drive dan folder' : 'Folder') : modeSamping === 'tutup' ? 'Tampilkan sidebar' : 'Sembunyikan sidebar'}
+                aria-pressed={sempit ? undefined : modeSamping !== 'tutup'}
+                onClick={() => (sempit ? setPanelPohon(true) : setModeSamping((m) => (m === 'tutup' ? 'penuh' : 'tutup')))}
+              >
+                <PanelLeft aria-hidden />
               </Button>
             </Tooltip>
+            <span className="u-mb-riwayat">
+              <Tooltip content="Kembali">
+                <Button variant="ghost" size="sm" iconOnly aria-label="Kembali" disabled={!bisaMundur} onClick={() => langkah(-1)}>
+                  <ChevronLeft aria-hidden />
+                </Button>
+              </Tooltip>
+              <Tooltip content="Maju">
+                <Button variant="ghost" size="sm" iconOnly aria-label="Maju" disabled={!bisaMaju} onClick={() => langkah(1)}>
+                  <ChevronRight aria-hidden />
+                </Button>
+              </Tooltip>
+            </span>
             <nav aria-label="Lokasi folder">
               <ol>
                 <li>
@@ -1820,7 +2424,7 @@ export function ManajerBerkas({
                     type="button"
                     aria-current={diAkar ? 'page' : undefined}
                     data-sasaran={sasaranLepas === '' ? '' : undefined}
-                    onClick={() => buka(null)}
+                    onClick={() => buka(akarBagi)}
                     onDragOver={(e) => {
                       if (seretDalam(e) && bolehKelola && !diAkar) {
                         e.preventDefault();
@@ -1837,31 +2441,40 @@ export function ManajerBerkas({
                     {judul}
                   </button>
                 </li>
-                {jejak.map((j, i) => (
-                  <li key={j.path}>
+                {terbaru ? (
+                  <li>
                     <ChevronRight aria-hidden />
-                    <button
-                      type="button"
-                      aria-current={i === jejak.length - 1 ? 'page' : undefined}
-                      data-sasaran={sasaranLepas === j.path ? '' : undefined}
-                      onClick={() => buka(j.path)}
-                      onDragOver={(e) => {
-                        if (seretDalam(e) && bolehKelola && i < jejak.length - 1) {
-                          e.preventDefault();
-                          setSasaranLepas(j.path);
-                        }
-                      }}
-                      onDragLeave={() => setSasaranLepas(null)}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        void lepasKe(j.path, e);
-                      }}
-                    >
-                      {j.label}
+                    <button type="button" aria-current="page">
+                      Terbaru
                     </button>
                   </li>
-                ))}
+                ) : (
+                  jejak.map((j, i) => (
+                    <li key={j.path}>
+                      <ChevronRight aria-hidden />
+                      <button
+                        type="button"
+                        aria-current={i === jejak.length - 1 ? 'page' : undefined}
+                        data-sasaran={sasaranLepas === j.path ? '' : undefined}
+                        onClick={() => buka(j.path)}
+                        onDragOver={(e) => {
+                          if (seretDalam(e) && bolehKelola && i < jejak.length - 1) {
+                            e.preventDefault();
+                            setSasaranLepas(j.path);
+                          }
+                        }}
+                        onDragLeave={() => setSasaranLepas(null)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void lepasKe(j.path, e);
+                        }}
+                      >
+                        {j.label}
+                      </button>
+                    </li>
+                  ))
+                )}
               </ol>
             </nav>
             <span className="u-mb-spasi" />
@@ -1882,9 +2495,9 @@ export function ManajerBerkas({
             )}
             {enkripsiEfektif === 'wajib' && (
               <Tooltip content="Semua berkas baru di ruang ini disimpan terenkripsi">
-                <span className="u-mb-enkripsi" data-aktif="">
+                <span className="u-mb-enkripsi" data-aktif="" aria-label="Terenkripsi">
                   <Lock aria-hidden />
-                  <span className="u-mb-sembunyi-kecil">Terenkripsi</span>
+                  <span className="u-mb-sembunyi-sedang">Terenkripsi</span>
                 </span>
               </Tooltip>
             )}
@@ -1899,16 +2512,16 @@ export function ManajerBerkas({
                   onClick={() => setEnkripsiUnggah((x) => !x)}
                 >
                   {enkripsiUnggah ? <Lock aria-hidden /> : <LockOpen aria-hidden />}
-                  <span className="u-mb-sembunyi-kecil">{enkripsiUnggah ? 'Enkripsi aktif' : 'Enkripsi'}</span>
+                  <span className="u-mb-sembunyi-sedang">{enkripsiUnggah ? 'Enkripsi aktif' : 'Enkripsi'}</span>
                 </button>
               </Tooltip>
             )}
             {entriBaru.length > 0 && (
               <Menu
                 trigger={
-                  <Button variant="outline" size="sm" aria-label="Buat baru">
+                  <Button variant="outline" size="sm" className="u-mb-tombol-baru" aria-label="Buat baru">
                     <Plus aria-hidden />
-                    <span className="u-mb-sembunyi-kecil">Baru</span>
+                    <span className="u-mb-sembunyi-sedang">Baru</span>
                   </Button>
                 }
                 items={[...entriBaru, ...(bolehUnggah ? ([{ label: 'Unggah folder', icon: <FolderUp aria-hidden />, onSelect: () => inputFolder.current?.click() }] as MenuEntry[]) : [])]}
@@ -1920,22 +2533,116 @@ export function ManajerBerkas({
                 <span className="u-mb-sembunyi-kecil">Unggah</span>
               </Button>
             )}
-            {!bagi && (
-              <Tooltip content="Keamanan dan enkripsi">
-                <Button variant="ghost" size="sm" iconOnly aria-label="Keamanan dan enkripsi" onClick={() => setDialog({ jenis: 'kebijakan' })}>
-                  <ShieldCheck aria-hidden />
+            <Menu
+              trigger={
+                <Button variant="ghost" size="sm" iconOnly aria-label="Lainnya">
+                  <Ellipsis aria-hidden />
                 </Button>
-              </Tooltip>
-            )}
+              }
+              items={entriLain}
+            />
           </div>
           <div className="u-mb-kontrol">
+            <div className="u-mb-tampilan" role="radiogroup" aria-label="Tampilan">
+              {tombolTampilan.map((t) => (
+                <Tooltip key={t.v} content={`Tampilan ${LABEL_TAMPILAN[t.v].toLowerCase()}`}>
+                  <button type="button" role="radio" aria-checked={tampilan === t.v} aria-label={`Tampilan ${LABEL_TAMPILAN[t.v].toLowerCase()}`} onClick={() => setTampilan(t.v)}>
+                    {t.ikon}
+                  </button>
+                </Tooltip>
+              ))}
+            </div>
+            <Menu
+              align="start"
+              trigger={
+                <Button variant="ghost" size="sm" className="u-mb-pemicu" data-aktif={kelompok !== 'tidak' ? '' : undefined} aria-label={`Kelompokkan menurut: ${LABEL_KELOMPOK[kelompok]}`}>
+                  <Group aria-hidden />
+                  <span className="u-mb-sembunyi-sedang">{kelompok === 'tidak' ? 'Kelompok' : LABEL_KELOMPOK[kelompok]}</span>
+                  <ChevronDown aria-hidden className="u-mb-pemicu-panah" />
+                </Button>
+              }
+              items={[
+                { type: 'label', label: 'Kelompokkan menurut' },
+                ...(Object.keys(LABEL_KELOMPOK) as KelompokBerkas[])
+                  .filter((k) => k !== 'pemilik' || adaPemilik || kelompok === 'pemilik')
+                  .map((k) => ({ label: LABEL_KELOMPOK[k], icon: cekMenu(kelompok === k), onSelect: () => setKelompok(k) })),
+              ]}
+            />
+            <Menu
+              align="start"
+              trigger={
+                <Button variant="ghost" size="sm" className="u-mb-pemicu" aria-label={`Urutkan menurut: ${LABEL_URUT[urut.kunci]}, ${urut.arah === 'naik' ? 'naik' : 'turun'}`}>
+                  {urut.arah === 'naik' ? <ArrowUpDown aria-hidden /> : <ArrowDownWideNarrow aria-hidden />}
+                  <span className="u-mb-sembunyi-sedang">{LABEL_URUT[urut.kunci]}</span>
+                  <ChevronDown aria-hidden className="u-mb-pemicu-panah" />
+                </Button>
+              }
+              items={[
+                { type: 'label', label: 'Urutkan menurut' },
+                ...(Object.keys(LABEL_URUT) as KunciUrut[]).map((k) => ({
+                  label: LABEL_URUT[k],
+                  icon: cekMenu(urut.kunci === k),
+                  onSelect: () => setUrut((u) => (u.kunci === k ? u : { kunci: k, arah: arahAwal(k) })),
+                })),
+                { type: 'separator' },
+                {
+                  label: urut.kunci === 'tanggal' ? 'Terlama dulu' : urut.kunci === 'ukuran' ? 'Terkecil dulu' : 'A ke Z',
+                  icon: cekMenu(urut.arah === 'naik'),
+                  onSelect: () => setUrut((u) => ({ ...u, arah: 'naik' })),
+                },
+                {
+                  label: urut.kunci === 'tanggal' ? 'Terbaru dulu' : urut.kunci === 'ukuran' ? 'Terbesar dulu' : 'Z ke A',
+                  icon: cekMenu(urut.arah === 'turun'),
+                  onSelect: () => setUrut((u) => ({ ...u, arah: 'turun' })),
+                },
+              ]}
+            />
+            <Menu
+              align="start"
+              trigger={
+                <Button variant="ghost" size="sm" className="u-mb-pemicu" data-aktif={jumlahSaring ? '' : undefined} aria-label={`Saring${jumlahSaring ? ` (${jumlahSaring} aktif)` : ''}`}>
+                  <Filter aria-hidden />
+                  <span className="u-mb-sembunyi-sedang">Saring</span>
+                  {jumlahSaring > 0 && <span className="u-mb-lencana">{jumlahSaring}</span>}
+                </Button>
+              }
+              items={[
+                { type: 'label', label: 'Jenis berkas' },
+                { label: 'Semua jenis', icon: cekMenu(jenis === 'semua'), onSelect: () => setJenis('semua') },
+                ...(Object.entries(JENIS_BERKAS) as Array<[JenisBerkas, { label: string }]>).map(([k, v]) => ({ label: v.label, icon: cekMenu(jenis === k), onSelect: () => setJenis(k) })),
+                ...(tampilPeriode && opsiPeriode.length > 2
+                  ? ([
+                      { type: 'separator' },
+                      { type: 'label', label: 'Periode akademik' },
+                      ...opsiPeriode.map((o) => ({ label: o.label, icon: cekMenu((periode ?? 'semua') === o.value), onSelect: () => setPeriode(o.value === 'semua' ? null : o.value) })),
+                    ] as MenuEntry[])
+                  : []),
+              ]}
+            />
+            {jenis !== 'semua' && (
+              <span className="u-mb-chip">
+                {JENIS_BERKAS[jenis].label}
+                <button type="button" aria-label={`Hapus saringan ${JENIS_BERKAS[jenis].label}`} onClick={() => setJenis('semua')}>
+                  <X aria-hidden />
+                </button>
+              </span>
+            )}
+            {periode && (
+              <span className="u-mb-chip">
+                {periode === 'tanpa' ? 'Tanpa periode' : namaPeriode(periode)}
+                <button type="button" aria-label="Hapus saringan periode" onClick={() => setPeriode(null)}>
+                  <X aria-hidden />
+                </button>
+              </span>
+            )}
+            <span className="u-mb-spasi" />
             <div className="u-mb-cari">
               <Search aria-hidden />
               <input
                 type="search"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder={folder ? `Cari di ${namaDari(folder)}` : 'Cari berkas dan folder'}
+                placeholder={terbaru ? 'Cari di semua berkas' : folder ? `Cari di ${namaDari(folder)}` : 'Cari berkas dan folder'}
                 aria-label="Cari berkas dan folder"
               />
               {q && (
@@ -1944,45 +2651,11 @@ export function ManajerBerkas({
                 </button>
               )}
             </div>
-            {tampilPeriode && opsiPeriode.length > 2 && (
-              <Select<string>
-                aria-label="Periode akademik"
-                size="sm"
-                className="u-mb-filter u-mb-filter-periode"
-                value={periode ?? 'semua'}
-                onValueChange={(v) => setPeriode(!v || v === 'semua' ? null : v)}
-                options={opsiPeriode}
-              />
-            )}
-            <Select<JenisBerkas | 'semua'>
-              aria-label="Filter jenis berkas"
-              size="sm"
-              className="u-mb-filter"
-              value={jenis}
-              onValueChange={(v) => setJenis(v ?? 'semua')}
-              options={[{ value: 'semua', label: 'Semua jenis' }, ...Object.entries(JENIS_BERKAS).map(([k, v]) => ({ value: k as JenisBerkas, label: v.label }))]}
-            />
-            <Menu
-              trigger={
-                <Button variant="outline" size="sm" aria-label={`Urutkan: ${URUT.find((u) => u.value === urut)?.label}`}>
-                  <ArrowUpDown aria-hidden />
-                  <span className="u-mb-sembunyi-kecil">{URUT.find((u) => u.value === urut)?.label}</span>
-                </Button>
-              }
-              items={URUT.map((u) => ({ label: u.label, icon: urut === u.value ? <Check aria-hidden /> : <span className="u-mb-ruang-ikon" />, onSelect: () => setUrut(u.value) }))}
-            />
-            <div className="u-mb-tampilan" role="radiogroup" aria-label="Tampilan">
-              <Tooltip content="Kisi">
-                <button type="button" role="radio" aria-checked={tampilan === 'grid'} aria-label="Tampilan kisi" onClick={() => setTampilan('grid')}>
-                  <LayoutGrid aria-hidden />
-                </button>
-              </Tooltip>
-              <Tooltip content="Daftar">
-                <button type="button" role="radio" aria-checked={tampilan === 'daftar'} aria-label="Tampilan daftar" onClick={() => setTampilan('daftar')}>
-                  <List aria-hidden />
-                </button>
-              </Tooltip>
-            </div>
+            <Tooltip content={panelInfo ? 'Sembunyikan info' : 'Tampilkan info'} shortcut="⌘I">
+              <Button variant="ghost" size="sm" iconOnly className="u-mb-tombol-info" aria-label="Panel info" aria-pressed={panelInfo} data-aktif={panelInfo ? '' : undefined} onClick={() => setPanelInfo((x) => !x)}>
+                <Info aria-hidden />
+              </Button>
+            </Tooltip>
             <input
               ref={inputFile}
               type="file"
@@ -2079,163 +2752,157 @@ export function ManajerBerkas({
           </div>
         )}
 
-        <BaseContextMenu.Root
-          onOpenChange={(o) => {
-            if (o) setMenuSasaran(sasaranMenu.current);
-            else sasaranMenu.current = { jenis: 'kosong' };
-          }}
-        >
-          <BaseContextMenu.Trigger
-            className="u-mb-isi"
-            onKeyDown={(e: React.KeyboardEvent) => dariSini(e) && tombolIsi(e)}
-            onDragOver={(e: React.DragEvent) => {
-              if ((seretFile(e) && bolehUnggah) || (seretDalam(e) && bolehKelola)) e.preventDefault();
-            }}
-            onDrop={(e: React.DragEvent) => {
-              e.preventDefault();
-              void lepasKe(folder, e);
-            }}
-            onClick={(e: React.MouseEvent) => {
-              if (!dariSini(e)) return;
-              if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('u-mb-kisi')) setTerpilih(new Set());
+        <div className="u-mb-badan">
+          <BaseContextMenu.Root
+            onOpenChange={(o) => {
+              if (o) setMenuSasaran(sasaranMenu.current);
+              else sasaranMenu.current = { jenis: 'kosong' };
             }}
           >
-            {mencari && (
-              <p className="u-mb-hasil" aria-live="polite">
-                {memuat ? 'Mencari…' : `${subfolder.length ? `${subfolder.length} folder, ` : ''}${total} berkas cocok dengan “${kata}”${folder ? ` di ${namaDari(folder)}` : ''}.`}
-              </p>
-            )}
-            {galat ? (
-              <div className="u-mb-kosong" role="alert">
-                <CircleAlert aria-hidden />
-                <b>Berkas tidak bisa dimuat</b>
-                <p>{galat}</p>
-                <Button variant="outline" size="sm" onClick={() => setNonce((n) => n + 1)}>
-                  <RotateCw aria-hidden />
-                  Coba lagi
-                </Button>
-              </div>
-            ) : kosong ? (
-              <div className="u-mb-kosong">
-                {mencari || jenis !== 'semua' ? <Search aria-hidden /> : <CloudUpload aria-hidden />}
-                <b>{mencari ? `Tidak ada yang cocok dengan “${kata}”` : jenis !== 'semua' ? `Tidak ada ${JENIS_BERKAS[jenis].label.toLowerCase()} di sini` : 'Folder ini masih kosong'}</b>
-                <p>
-                  {mencari || jenis !== 'semua'
-                    ? 'Coba kata lain atau ubah filter jenis.'
-                    : bolehUnggah
-                      ? 'Seret file atau folder dari komputer ke sini, atau pilih file untuk diunggah.'
-                      : 'Belum ada berkas.'}
+            <BaseContextMenu.Trigger
+              className="u-mb-isi"
+              data-tampilan={tampilan}
+              onKeyDown={(e: React.KeyboardEvent) => dariSini(e) && tombolIsi(e)}
+              onDragOver={(e: React.DragEvent) => {
+                if ((seretFile(e) && bolehUnggah) || (seretDalam(e) && bolehKelola)) e.preventDefault();
+              }}
+              onDrop={(e: React.DragEvent) => {
+                e.preventDefault();
+                void lepasKe(folder, e);
+              }}
+              onClick={(e: React.MouseEvent) => {
+                if (!dariSini(e)) return;
+                const t = e.target as HTMLElement;
+                if (!t.closest('[data-mb-item], button, input, [role="checkbox"], [role="columnheader"]')) setTerpilih(new Set());
+              }}
+            >
+              {mencari && (
+                <p className="u-mb-hasil" aria-live="polite">
+                  {memuat ? 'Mencari…' : `${subfolder.length ? `${subfolder.length} folder, ` : ''}${total} berkas cocok dengan “${kata}”${terbaru ? '' : folder ? ` di ${namaDari(folder)}` : ''}.`}
                 </p>
-                {mencari || jenis !== 'semua' ? (
-                  <Button variant="outline" size="sm" onClick={() => (setQ(''), setJenis('semua'))}>
-                    Hapus pencarian dan filter
+              )}
+              {galat ? (
+                <div className="u-mb-kosong" role="alert">
+                  <CircleAlert aria-hidden />
+                  <b>Berkas tidak bisa dimuat</b>
+                  <p>{galat}</p>
+                  <Button variant="outline" size="sm" onClick={() => setNonce((n) => n + 1)}>
+                    <RotateCw aria-hidden />
+                    Coba lagi
                   </Button>
-                ) : (
-                  bolehUnggah && (
-                    <Button size="sm" onClick={() => inputFile.current?.click()}>
-                      <Upload aria-hidden />
-                      Pilih file
-                    </Button>
-                  )
-                )}
-              </div>
-            ) : tampilan === 'grid' ? (
-              <>
-                {subfolder.length > 0 && (
-                  <>
-                    <h3 className="u-mb-judul-bagian">Folder</h3>
-                    <div className="u-mb-kisi" data-jenis="folder" role="grid" aria-label="Folder">
-                      <div role="row" className="u-mb-kisi-baris">
-                        {subfolder.map(kartuFolder)}
-                      </div>
-                    </div>
-                  </>
-                )}
-                {(isi.length > 0 || memuat) && (
-                  <>
-                    <h3 className="u-mb-judul-bagian">Berkas {total > 0 && <small>{total}</small>}</h3>
-                    <div className="u-mb-kisi" data-jenis="berkas" role="grid" aria-label="Berkas" aria-multiselectable={pilih !== 'satu'}>
-                      <div role="row" className="u-mb-kisi-baris">
-                        {isi.map(kartuBerkas)}
-                        {memuat && Array.from({ length: isi.length ? 4 : 8 }, (_, i) => <KartuMuat key={`m${i}`} />)}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </>
-            ) : (
-              <div className="u-mb-tabel" role="grid" aria-label="Folder dan berkas" aria-multiselectable={pilih !== 'satu'}>
-                <div role="row" className="u-mb-baris u-mb-baris-kepala">
-                  <span role="columnheader" className="u-mb-baris-cek">
-                    {pilih !== 'satu' && isi.length > 0 && (
-                      <span
-                        className="u-mb-cek"
-                        role="checkbox"
-                        tabIndex={0}
-                        aria-checked={terpilih.size === isi.length ? true : terpilih.size ? 'mixed' : false}
-                        aria-label="Pilih semua berkas"
-                        onClick={() => setTerpilih(terpilih.size === isi.length ? new Set() : new Set(semuaId))}
-                        onKeyDown={(e) => (e.key === ' ' || e.key === 'Enter') && (e.preventDefault(), setTerpilih(terpilih.size === isi.length ? new Set() : new Set(semuaId)))}
-                      >
-                        {terpilih.size === isi.length ? <Check aria-hidden /> : terpilih.size ? <span className="u-mb-cek-sebagian" /> : null}
-                      </span>
-                    )}
-                  </span>
-                  <span role="columnheader">Nama</span>
-                  <span role="columnheader" className="u-mb-baris-info">
-                    Jenis
-                  </span>
-                  <span role="columnheader" className="u-mb-baris-ukuran">
-                    Ukuran
-                  </span>
-                  <span role="columnheader" className="u-mb-baris-tgl">
-                    Tanggal
-                  </span>
-                  <span role="columnheader">
-                    <span className="u-sr-only">Aksi</span>
-                  </span>
                 </div>
-                {subfolder.map(kartuFolder)}
-                {isi.map(kartuBerkas)}
-                {memuat && Array.from({ length: isi.length ? 2 : 6 }, (_, i) => <BarisMuat key={`m${i}`} />)}
-              </div>
-            )}
-            {adaLagi && !memuat && (
-              <Button variant="ghost" size="sm" className="u-mb-lagi" onClick={() => setHalaman((h) => h + 1)}>
-                Muat lebih banyak ({isi.length} dari {total})
-                <ChevronDown aria-hidden />
-              </Button>
-            )}
-          </BaseContextMenu.Trigger>
-          <BaseContextMenu.Portal>
-            <BaseContextMenu.Positioner className="u-popup-positioner">
-              <BaseContextMenu.Popup className="u-menu">
-                {entriMenu(menuSasaran).map((it, i) =>
-                  it.type === 'separator' ? (
-                    <BaseContextMenu.Separator key={i} className="u-menu-separator" />
-                  ) : it.type === 'label' ? (
-                    <div key={i} className="u-menu-label">
-                      {it.label}
-                    </div>
+              ) : kosong && tampilan !== 'kolom' ? (
+                <div className="u-mb-kosong">
+                  {mencari || jenis !== 'semua' ? <Search aria-hidden /> : <CloudUpload aria-hidden />}
+                  <b>{mencari ? `Tidak ada yang cocok dengan “${kata}”` : jenis !== 'semua' ? `Tidak ada ${JENIS_BERKAS[jenis].label.toLowerCase()} di sini` : terbaru ? 'Belum ada berkas' : 'Folder ini masih kosong'}</b>
+                  <p>
+                    {mencari || jenis !== 'semua'
+                      ? 'Coba kata lain atau ubah saringan jenis.'
+                      : bolehUnggah
+                        ? 'Seret file atau folder dari komputer ke sini, atau pilih file untuk diunggah.'
+                        : 'Belum ada berkas.'}
+                  </p>
+                  {mencari || jenis !== 'semua' ? (
+                    <Button variant="outline" size="sm" onClick={() => (setQ(''), setJenis('semua'))}>
+                      Hapus pencarian dan saringan
+                    </Button>
                   ) : (
-                    <BaseContextMenu.Item key={i} className="u-menu-item" onClick={it.onSelect} disabled={it.disabled} data-variant={it.destructive ? 'destructive' : undefined}>
-                      {it.icon}
-                      <span>{it.label}</span>
-                      {it.shortcut && <span className="u-menu-shortcut">{it.shortcut}</span>}
-                    </BaseContextMenu.Item>
-                  ),
-                )}
-              </BaseContextMenu.Popup>
-            </BaseContextMenu.Positioner>
-          </BaseContextMenu.Portal>
-        </BaseContextMenu.Root>
+                    bolehUnggah && (
+                      <Button size="sm" onClick={() => inputFile.current?.click()}>
+                        <Upload aria-hidden />
+                        Pilih file
+                      </Button>
+                    )
+                  )}
+                </div>
+              ) : tampilan === 'daftar' ? (
+                viewDaftar
+              ) : tampilan === 'kolom' ? (
+                viewKolom
+              ) : tampilan === 'galeri' ? (
+                viewGaleri
+              ) : (
+                viewIkon
+              )}
+            </BaseContextMenu.Trigger>
+            <BaseContextMenu.Portal>
+              <BaseContextMenu.Positioner className="u-popup-positioner">
+                <BaseContextMenu.Popup className="u-menu">
+                  {entriMenu(menuSasaran).map((it, i) =>
+                    it.type === 'separator' ? (
+                      <BaseContextMenu.Separator key={i} className="u-menu-separator" />
+                    ) : it.type === 'label' ? (
+                      <div key={i} className="u-menu-label">
+                        {it.label}
+                      </div>
+                    ) : (
+                      <BaseContextMenu.Item key={i} className="u-menu-item" onClick={it.onSelect} disabled={it.disabled} data-variant={it.destructive ? 'destructive' : undefined}>
+                        {it.icon}
+                        <span>{it.label}</span>
+                        {it.shortcut && <span className="u-menu-shortcut">{it.shortcut}</span>}
+                      </BaseContextMenu.Item>
+                    ),
+                  )}
+                </BaseContextMenu.Popup>
+              </BaseContextMenu.Positioner>
+            </BaseContextMenu.Portal>
+          </BaseContextMenu.Root>
+
+          {panelInfo && (
+            <aside className="u-mb-info" aria-label="Info">
+              {fokus ? (
+                <PanelInfoBerkas
+                  b={fokus}
+                  judul={judul}
+                  jumlah={terpilih.size}
+                  buka={() => bukaBerkas(fokus)}
+                  unduh={() => void unduh(fokus)}
+                  bagikan={bolehBagikan ? () => setDialog({ jenis: 'bagikan', sasaran: { jenis: 'berkas', b: fokus } }) : undefined}
+                />
+              ) : (
+                <div className="u-mb-info-folder">
+                  <span className="u-mb-info-gambar">{terbaru ? <Clock aria-hidden /> : <IkonFolderWarna warna={folderIni?.warna} />}</span>
+                  <b>{terbaru ? 'Terbaru' : (folderIni?.nama ?? judul)}</b>
+                  <small>{terbaru ? 'Berkas yang terakhir diunggah atau diubah' : 'Folder'}</small>
+                  <dl className="u-mb-detail">
+                    <div>
+                      <dt>Isi</dt>
+                      <dd>{ringkasKaki}</dd>
+                    </div>
+                    {folderIni && (
+                      <div>
+                        <dt>Termasuk subfolder</dt>
+                        <dd>
+                          {folderIni.total_berkas} berkas · {formatBytes(folderIni.total_ukuran)}
+                        </dd>
+                      </div>
+                    )}
+                    {!folder && ringkas && !terbaru && (
+                      <div>
+                        <dt>Semua berkas</dt>
+                        <dd>
+                          {ringkas.total_berkas} berkas · {formatBytes(ringkas.total_ukuran)}
+                        </dd>
+                      </div>
+                    )}
+                    {info?.penyimpanan?.nama && (
+                      <div>
+                        <dt>Disimpan di</dt>
+                        <dd>{info.penyimpanan.nama}</dd>
+                      </div>
+                    )}
+                  </dl>
+                  <p className="u-mb-info-saran">Pilih berkas untuk melihat rinciannya.</p>
+                </div>
+              )}
+            </aside>
+          )}
+        </div>
 
         <div className="u-mb-kaki">
           <span aria-live="polite">
-            {memuat && !isi.length ? 'Memuat…' : <>
-            {subfolder.length > 0 && `${subfolder.length} folder · `}
-            {total} berkas</>}
-            {memuat && !isi.length ? '' : folderIni ? ` · ${formatBytes(folderIni.ukuran)}` : ringkas && !folder ? ` · ${formatBytes(ringkas.ukuran)}` : ''}
+            {terpilih.size > 0 && !memuat ? `${terpilih.size} dari ${total} dipilih · ` : ''}
+            {ringkasKaki}
           </span>
           {bolehUnggah && info && <span className="u-mb-sembunyi-kecil">Maks {formatBytes(info.maks_byte)} per file</span>}
         </div>
@@ -2333,7 +3000,7 @@ export function ManajerBerkas({
       </section>
 
       <Dialog open={panelPohon} onOpenChange={setPanelPohon} title={samping ? 'Drive & folder' : 'Folder'} side="left" size="sm">
-        <div className="u-mb-pohon-panel">{samping ? samping(pohonEl) : pohonEl}</div>
+        <div className="u-mb-pohon-panel">{isiSamping(true)}</div>
       </Dialog>
 
       <DialogNamaFolder
