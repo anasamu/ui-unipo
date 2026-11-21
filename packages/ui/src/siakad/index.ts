@@ -74,6 +74,7 @@ export * from './aturan-kelompok';
 export * from './aturan-sk';
 export * from './aturan-rute';
 export * from './aturan-kanvas';
+export * from './aturan-akibat';
 export * from './biaya';
 export * from './panitia';
 export * from './tema-aplikasi';

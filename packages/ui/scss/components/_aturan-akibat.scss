@@ -1,0 +1,198 @@
+// Kebijakan berakibat: simulasi dampak, penerapan, riwayat penyesuaian (siakad/aturan-akibat.tsx).
+.u-akb,
+.u-akb-panel,
+.u-akb-simulasi {
+  display: grid;
+  gap: 1rem;
+  container-type: inline-size;
+}
+.u-akb-sub {
+  display: block;
+  margin: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    vertical-align: -2px;
+    margin-right: 0.25rem;
+  }
+}
+.u-akb-ketentuan {
+  display: grid;
+  gap: 0.75rem;
+}
+.u-akb-kalimat {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--u-radius-md);
+  background: color-mix(in oklab, var(--u-primary) 6%, var(--u-card));
+  border: 1px solid color-mix(in oklab, var(--u-primary) 20%, var(--u-border));
+  line-height: 1.6;
+}
+.u-akb-tabel {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--u-text-sm);
+  font-variant-numeric: tabular-nums;
+  th,
+  td {
+    padding: 0.4rem 0.6rem;
+    text-align: left;
+    border-bottom: 1px solid var(--u-border);
+    vertical-align: top;
+  }
+  th {
+    color: var(--u-muted-foreground);
+    font-weight: var(--u-weight-medium, 500);
+  }
+  tr[data-dibalik] td {
+    color: var(--u-muted-foreground);
+    text-decoration: line-through;
+  }
+}
+.u-akb-tabel-rinci {
+  margin-top: 0.25rem;
+}
+.u-akb-kartu {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+.u-akb-kartu-kepala {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.u-akb-judul {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-semibold);
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+.u-akb-bilah {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  > .u-field {
+    flex: 1 1 16rem;
+  }
+}
+.u-akb-bilah-isi {
+  display: flex;
+  gap: 0.5rem;
+  input {
+    max-width: 9rem;
+  }
+}
+.u-akb-saklar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--u-text-sm);
+}
+.u-akb-angka-baris {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.5rem;
+}
+.u-akb-angka {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--u-radius-md);
+  border: 1px solid var(--u-border);
+  background: var(--u-card);
+  strong {
+    grid-column: 2;
+    font-size: var(--u-text-lg, 1.125rem);
+    font-variant-numeric: tabular-nums;
+  }
+  &[data-nada='baik'] strong {
+    color: var(--u-success, var(--u-primary));
+  }
+}
+.u-akb-angka-ikon {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--u-radius-sm);
+  background: color-mix(in oklab, var(--u-primary) 10%, var(--u-card));
+  color: var(--u-primary);
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+.u-akb-angka-label {
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs, 0.75rem);
+}
+.u-akb-daftar {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  > li {
+    display: grid;
+    gap: 0.375rem;
+    padding: 0.75rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-md);
+    background: var(--u-card);
+    &[data-memenuhi='tidak'],
+    &[data-status='dibatalkan'] {
+      background: color-mix(in oklab, var(--u-muted) 50%, var(--u-card));
+    }
+  }
+  &.u-akb-daftar-ringkas > li {
+    padding: 0.5rem 0.75rem;
+  }
+}
+.u-akb-daftar-kepala {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  > div {
+    display: grid;
+  }
+}
+.u-akb-sebelum-sesudah {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  s {
+    color: var(--u-muted-foreground);
+  }
+}
+.u-akb-alasan {
+  margin: 0;
+  font-size: var(--u-text-sm);
+}
+.u-akb-lencana,
+.u-akb-aksi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+@container (max-width: 520px) {
+  .u-akb-tabel-rinci {
+    display: block;
+    overflow-x: auto;
+  }
+}

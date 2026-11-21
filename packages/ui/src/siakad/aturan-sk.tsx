@@ -177,8 +177,12 @@ export interface SimulasiRantai {
 export interface SlotTemplat {
   kode: string;
   label: string;
-  tipe: 'angka' | 'uang' | 'tanggal' | 'teks' | 'tabel';
+  tipe: 'angka' | 'uang' | 'tanggal' | 'periode' | 'teks' | 'pilihan' | 'ya_tidak' | 'tabel';
   satuan?: string;
+  /** Pilihan untuk tipe `pilihan`. */
+  opsi?: Array<{ nilai: string; label: string }>;
+  /** Boleh dikosongkan (kolom tabel opsional, mis. masa studi). */
+  opsional?: boolean;
   bawaan?: unknown;
   contoh?: string;
   petunjuk?: string;
@@ -191,6 +195,8 @@ export interface TemplatKasus {
   kode: string;
   judul: string;
   kalimat: string;
+  /** Penjelasan tambahan untuk pejabat (kapan dipakai, apa yang tidak berubah). */
+  keterangan?: string | null;
   slot: SlotTemplat[];
   akibat: string;
   akibat_label: string;
@@ -281,7 +287,10 @@ export function LencanaDasarSk({ dasar, ringkas, className }: { dasar?: DasarSkA
 }
 
 const fmtAngka = (v0: unknown, s?: SlotTemplat) => {
+  if (s?.tipe === 'ya_tidak') return v0 === true || v0 === 'ya' || v0 === '1' ? 'ya' : v0 === false || v0 === 'tidak' || v0 === '0' ? 'tidak' : null;
   if (v0 === null || v0 === undefined || v0 === '') return null;
+  if (s?.tipe === 'pilihan') return s.opsi?.find((o) => o.nilai === v0)?.label ?? String(v0);
+  if (s?.tipe === 'periode' && /^\d{5}$/.test(String(v0))) return `${String(v0).slice(0, 4)}/${Number(String(v0).slice(0, 4)) + 1} ${({ '1': 'Ganjil', '2': 'Genap', '3': 'Pendek' } as Record<string, string>)[String(v0).slice(4)] ?? ''}`.trim();
   // "2.5" / "2,5" diketik pengguna tampil sebagai angka berkoma (2,50).
   const v = typeof v0 === 'string' && (s?.tipe === 'angka' || s?.tipe === 'uang') && /^-?[\d.,]+$/.test(v0.trim()) ? Number(s?.tipe === 'uang' ? v0.replace(/[.,]/g, '') : v0.replace(',', '.')) : v0;
   if (s?.tipe === 'uang' && typeof v === 'number') return `Rp${v.toLocaleString('id-ID')}`;
@@ -1269,7 +1278,7 @@ function IsianSlot({ s, value, onChange }: { s: SlotTemplat; value: unknown; onC
           {rows.map((r, i) => (
             <div role="row" key={i}>
               {s.kolom!.map((k) => (
-                <Input key={k.kode} inputMode="decimal" value={String(r[k.kode] ?? '')} onChange={(e) => setRow(i, { [k.kode]: e.target.value })} placeholder={k.contoh ? `mis. ${k.contoh}` : undefined} aria-label={`${k.label} baris ${i + 1}`} />
+                <Input key={k.kode} inputMode={k.tipe === 'teks' ? 'text' : 'decimal'} value={String(r[k.kode] ?? '')} onChange={(e) => setRow(i, { [k.kode]: e.target.value })} placeholder={k.contoh ? `mis. ${k.contoh}` : k.opsional ? 'boleh kosong' : undefined} aria-label={`${k.label} baris ${i + 1}`} />
               ))}
               <Button variant="ghost" iconOnly size="sm" aria-label={`Hapus baris ${i + 1}`} onClick={() => onChange(rows.filter((_, j) => j !== i))}>
                 <X />
@@ -1277,9 +1286,31 @@ function IsianSlot({ s, value, onChange }: { s: SlotTemplat; value: unknown; onC
             </div>
           ))}
           <Button variant="ghost" size="sm" onClick={() => onChange([...rows, {}])}>
-            <Plus /> Tambah tingkat
+            <Plus /> Tambah baris
           </Button>
         </div>
+      </Field>
+    );
+  }
+  if (s.tipe === 'pilihan') {
+    return (
+      <Field label={s.label} description={s.petunjuk} required>
+        <SegmentedControl options={(s.opsi ?? []).map((o) => ({ value: o.nilai, label: o.label }))} value={String(value ?? '')} onValueChange={(v) => onChange(v)} aria-label={s.label} />
+      </Field>
+    );
+  }
+  if (s.tipe === 'ya_tidak') {
+    const ya = value === true || value === 'ya' || value === '1';
+    return (
+      <Field label={s.label} description={s.petunjuk} required>
+        <SegmentedControl options={[{ value: 'ya', label: 'Ya' }, { value: 'tidak', label: 'Tidak' }]} value={ya ? 'ya' : 'tidak'} onValueChange={(v) => onChange(v === 'ya')} aria-label={s.label} />
+      </Field>
+    );
+  }
+  if (s.tipe === 'periode') {
+    return (
+      <Field label={s.label} description={s.petunjuk ?? 'Tahun + 1 (ganjil) atau 2 (genap), mis. 20261 = 2026/2027 Ganjil.'} required>
+        <Input inputMode="numeric" maxLength={5} value={String(value ?? '')} onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))} placeholder={s.contoh ? `mis. ${s.contoh}` : undefined} />
       </Field>
     );
   }
@@ -1306,10 +1337,18 @@ const cekSlot = (t: TemplatKasus, isian: Record<string, unknown>): string | null
     if (s.tipe === 'tabel') {
       const rows = (v as Array<Record<string, unknown>>) ?? [];
       if (!rows.length) return `${s.label}: isi minimal satu baris.`;
-      for (const [i, r] of rows.entries()) for (const k of s.kolom ?? []) if (Number.isNaN(angka(r[k.kode]))) return `${s.label} baris ${i + 1}: ${k.label} harus angka.`;
+      for (const [i, r] of rows.entries())
+        for (const k of s.kolom ?? []) {
+          const x = r[k.kode];
+          const kosong = x === '' || x === null || x === undefined;
+          if (kosong && !k.opsional) return `${s.label} baris ${i + 1}: ${k.label} wajib diisi.`;
+          if (!kosong && (k.tipe === 'angka' || k.tipe === 'uang') && Number.isNaN(angka(x))) return `${s.label} baris ${i + 1}: ${k.label} harus angka.`;
+        }
       continue;
     }
+    if (s.tipe === 'ya_tidak') continue;
     if (v === '' || v === null || v === undefined) return `${s.label} wajib diisi.`;
+    if (s.tipe === 'periode' && !/^\d{5}$/.test(String(v))) return `${s.label} berupa 5 angka, mis. 20261.`;
     if ((s.tipe === 'angka' || s.tipe === 'uang') && Number.isNaN(angka(v))) return `${s.label} harus angka.`;
     const n = angka(v);
     if (s.tipe === 'angka' && ((s.min !== undefined && n < s.min) || (s.maks !== undefined && n > s.maks))) return `${s.label} harus antara ${s.min} dan ${s.maks}.`;
@@ -1452,6 +1491,7 @@ export function WizardTemplatAturan({
           content: kasus ? (
             <div className="u-ask-form">
               <KalimatTemplat templat={kasus} isian={isian} className="u-ask-kalimat-besar" />
+              {kasus.keterangan && <p className="u-ask-sub">{kasus.keterangan}</p>}
               {kasus.slot.length === 0 && <p className="u-ask-sub">Kasus ini tidak perlu isian.</p>}
               {kasus.slot.map((s) => (
                 <IsianSlot key={s.kode} s={s} value={isian[s.kode]} onChange={(v) => setIsian((x) => ({ ...x, [s.kode]: v }))} />

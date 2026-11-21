@@ -47,6 +47,7 @@ const JENIS_AWAM: Record<JenisAturan, string> = {
   syarat: 'Hanya boleh jika memenuhi kondisi, mis. SKS lulus minimal 100.',
   batas_waktu: 'Hanya boleh pada rentang tanggal tertentu.',
   batas_nilai: 'Angka yang dikirim aplikasi tidak boleh melewati batas, mis. paling banyak 24 SKS.',
+  akibat: 'Kebijakan yang dipakai SIAKAD (tarif, konversi nilai, predikat) atau menyesuaikan tagihan dengan jejak.',
 };
 const LABEL_TIPE_KONTEKS: Record<TipeKonteksTitik, string> = { angka: 'Angka', teks: 'Teks', pilihan: 'Pilihan', benar_salah: 'Ya/tidak' };
 
