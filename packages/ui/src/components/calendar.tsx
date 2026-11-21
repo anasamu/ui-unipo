@@ -48,6 +48,88 @@ export interface CalendarMarker {
 /** Tampilan kalender: grid hari, 12 bulan, atau 12 tahun per halaman. */
 export type TampilanKalender = 'hari' | 'bulan' | 'tahun';
 
+// ---------------------------------------------------------------- sumber data kalender akademik (opsional)
+/** Tahapan/kegiatan beberapa hari (KRS, UTS, perkuliahan, …). Tanggal ISO `YYYY-MM-DD`. */
+export interface TahapanKalender {
+  judul: string;
+  /** Jenis kegiatan: krs, ujian, nilai, perkuliahan, keuangan, wisuda, akademik, … */
+  jenis: string;
+  /** Kode tahapan SIAKAD: krs, perubahan_krs, uts, uas, input_nilai_dosen, … (kolom lama dinormalkan). */
+  tahap?: string | null;
+  mulai: string;
+  selesai: string | null;
+  warna?: string | null;
+  tahunId?: string | null;
+  /** false = tidak digambar sebagai latar (mis. perkuliahan yang sepanjang semester); tetap di tooltip. */
+  latar?: boolean;
+}
+export interface AgendaKalender {
+  judul: string;
+  jenis: string;
+  warna?: string | null;
+}
+export interface DataBulanKalender {
+  /** ISO → nama libur. */
+  libur: Record<string, string>;
+  /** ISO → agenda satu hari (titik). */
+  agenda: Record<string, AgendaKalender[]>;
+  tahapan: TahapanKalender[];
+}
+/**
+ * Sumber data untuk Calendar/DatePicker/DateRangePicker (libur, agenda, tahapan, kunci periode).
+ * Dipasang oleh `KalenderAkademikProvider` (unipo-ui/siakad; otomatis di `UnipoProvider` dengan SDK) atau sendiri.
+ */
+export interface SumberKalenderTanggal {
+  /** Minta data bulan (bulan 0–11); dipanggil Calendar saat bulan tampil berubah. Hasil disimpan per bulan. */
+  muatBulan: (tahun: number, bulan: number) => void;
+  /** Data bulan yang sudah dimuat (null bila belum/galat). */
+  dataBulan: (tahun: number, bulan: number) => DataBulanKalender | null;
+  /** Tahapan periode-periode terbaru (lepas dari bulan tampil) untuk `batasTahapan` dan preset. */
+  tahapan: TahapanKalender[];
+  /** Pesan bila tanggal ISO jatuh di periode yang sudah ditutup (kunci periode), selainnya null. */
+  periodeDitutup: (iso: string) => string | null;
+  /** Preset rentang dari kalender: Semester ini, Periode KRS, Masa UTS, Masa UAS. */
+  preset: PresetRentang[];
+  warna: (jenis: string) => string;
+  label: (jenis: string) => string;
+}
+export const KonteksKalenderTanggal = React.createContext<SumberKalenderTanggal | null>(null);
+/** Sumber kalender akademik terdekat (null tanpa penyedia atau bila `aktif` false). */
+export function useSumberKalenderTanggal(aktif = true): SumberKalenderTanggal | null {
+  const s = React.useContext(KonteksKalenderTanggal);
+  return aktif ? s : null;
+}
+
+/** Kode tahapan kolom lama `m_tahun` → kode tahapan kalender modern. */
+const TAHAP_LAMA: Record<string, string> = {
+  bayar_mulai: 'pembayaran',
+  krs_online_mulai: 'krs',
+  krs_ubah_mulai: 'perubahan_krs',
+  kss_cetak_mulai: 'cetak_krs',
+  akhir_kss: 'cetak_krs',
+  kuliah_mulai: 'perkuliahan',
+  uts_mulai: 'uts',
+  uas_mulai: 'uas',
+  nilai_mulai: 'input_nilai',
+};
+/** Kode tahapan baku (kolom lama dinormalkan). */
+export const kodeTahapan = (t: Pick<TahapanKalender, 'tahap' | 'jenis'>) => {
+  const k = t.tahap ?? '';
+  return TAHAP_LAMA[k] ?? (k || t.jenis);
+};
+/** Tahapan cocok dengan kunci, mis. 'krs' cocok krs/perubahan_krs/cetak_krs, 'nilai' cocok input_nilai_dosen. */
+export function cocokTahapan(t: Pick<TahapanKalender, 'tahap' | 'jenis'>, kunci: string | string[]): boolean {
+  const kode = kodeTahapan(t);
+  return (Array.isArray(kunci) ? kunci : [kunci]).some((k) => kode === k || kode.split('_').includes(k));
+}
+const dalamTahapan = (iso: string, t: TahapanKalender) => t.mulai <= iso && (t.selesai ?? t.mulai) >= iso;
+/** Urutan latar bila beberapa tahapan bertumpuk: yang lebih spesifik di depan. */
+const PRIORITAS_JENIS = ['ujian', 'krs', 'nilai', 'wisuda', 'keuangan', 'akademik', 'kemahasiswaan', 'pmb'];
+const prioritas = (j: string) => {
+  const i = PRIORITAS_JENIS.indexOf(j);
+  return i < 0 ? PRIORITAS_JENIS.length : i;
+};
+
 export interface CalendarProps {
   value?: Date | null;
   onValueChange?: (date: Date) => void;
@@ -78,6 +160,14 @@ export interface CalendarProps {
   libur?: Record<string, string>;
   /** Isi tambahan di kaki kalender (mis. tombol Hapus). */
   kaki?: React.ReactNode;
+  /** Pakai data kalender akademik dari penyedia (libur, agenda, latar tahapan, legenda). Bawaan true; tanpa penyedia tidak berpengaruh. */
+  kalenderAkademik?: boolean;
+  /** Hanya tanggal di tahapan ini yang bisa dipilih, mis. 'krs' atau ['uts', 'uas']. Tanpa data tahapan tidak membatasi. */
+  batasTahapan?: string | string[];
+  /** Tanggal di periode yang sudah ditutup tidak bisa dipilih (bawaan: hanya diberi tanda). */
+  blokirDitutup?: boolean;
+  /** Legenda kecil jenis kegiatan di kaki (bawaan true bila ada data kalender akademik di bulan itu). */
+  legenda?: boolean;
 }
 
 /**
@@ -105,6 +195,10 @@ export function Calendar({
   tombolHariIni,
   libur,
   kaki,
+  kalenderAkademik = true,
+  batasTahapan,
+  blokirDitutup,
+  legenda = true,
 }: CalendarProps) {
   const today = React.useMemo(() => awalHari(new Date()), []);
   const minH = min ? awalHari(min) : null;
@@ -142,7 +236,25 @@ export function Calendar({
 
   const days = monthMatrix(vy, vm);
   const title = `${namaBulan(vm)} ${vy}`;
-  const disabled = (d: Date) => Boolean((minH && d < minH) || (maxH && d > maxH) || isDisabled?.(d));
+
+  // Data kalender akademik (bila ada penyedia): dimuat per bulan tampil.
+  const sumber = useSumberKalenderTanggal(kalenderAkademik);
+  const muatBulan = sumber?.muatBulan;
+  React.useEffect(() => {
+    muatBulan?.(vy, vm);
+  }, [muatBulan, vy, vm]);
+  const dataBulan = sumber?.dataBulan(vy, vm) ?? null;
+  const liburGabung = dataBulan && Object.keys(dataBulan.libur).length ? { ...dataBulan.libur, ...libur } : libur;
+  const tahapBulan = dataBulan?.tahapan ?? [];
+  const tahapBatas = batasTahapan && sumber ? [...sumber.tahapan, ...tahapBulan].filter((t) => cocokTahapan(t, batasTahapan)) : [];
+  const diluarBatas = (iso: string) => tahapBatas.length > 0 && !tahapBatas.some((t) => dalamTahapan(iso, t));
+  const ditutup = (iso: string) => sumber?.periodeDitutup(iso) ?? null;
+  const disabled = (d: Date) => {
+    if ((minH && d < minH) || (maxH && d > maxH) || isDisabled?.(d)) return true;
+    if (!sumber) return false;
+    const iso = toISODate(d);
+    return diluarBatas(iso) || Boolean(blokirDitutup && ditutup(iso));
+  };
   const bulanNonaktif = (y: number, m: number) => Boolean((maxH && new Date(y, m, 1) > maxH) || (minH && new Date(y, m + 1, 0) < minH));
   const tahunNonaktif = (y: number) => Boolean((maxH && y > maxH.getFullYear()) || (minH && y < minH.getFullYear()));
 
@@ -295,9 +407,16 @@ export function Calendar({
             const selected = (value && sameDay(d, value)) || (range?.from && sameDay(d, range.from)) || (range?.to && sameDay(d, range.to));
             const inRange = range?.from && range?.to && d > range.from && d < range.to;
             const weekend = highlightWeekend && (d.getDay() === 0 || d.getDay() === 6);
-            const namaLibur = libur?.[iso];
+            const namaLibur = liburGabung?.[iso];
             const isToday = sameDay(d, today);
-            const m = markers?.[iso];
+            const agenda = dataBulan?.agenda[iso] ?? [];
+            const m = agenda.length
+              ? [...(markers?.[iso] ?? []), ...agenda.map((a) => ({ color: a.warna || sumber!.warna(a.jenis) }))]
+              : markers?.[iso];
+            const tahapHari = tahapBulan.filter((t) => dalamTahapan(iso, t));
+            const latar = tahapHari.filter((t) => t.latar !== false).sort((a, b) => prioritas(a.jenis) - prioritas(b.jenis))[0];
+            const pesanTutup = sumber ? ditutup(iso) : null;
+            const keterangan = [namaLibur && `Libur: ${namaLibur}`, ...tahapHari.map((t) => t.judul), ...agenda.map((a) => a.judul), pesanTutup].filter(Boolean) as string[];
             return (
               <button
                 key={iso}
@@ -311,10 +430,20 @@ export function Calendar({
                 data-in-range={dataFlag(Boolean(inRange))}
                 data-weekend={dataFlag(weekend)}
                 data-holiday={dataFlag(Boolean(namaLibur))}
-                title={namaLibur}
+                data-tahap={latar ? latar.jenis : undefined}
+                data-ditutup={dataFlag(Boolean(pesanTutup))}
+                style={latar ? ({ '--u-cal-tahap': latar.warna || sumber!.warna(latar.jenis) } as React.CSSProperties) : undefined}
+                title={keterangan.length ? keterangan.join('\n') : undefined}
                 aria-selected={Boolean(selected)}
                 aria-current={isToday ? 'date' : undefined}
-                aria-label={formatDate(d, 'full') + (isToday ? ', hari ini' : '') + (namaLibur ? `, libur: ${namaLibur}` : '') + (m?.length ? `, ${m.length} agenda` : '')}
+                aria-label={
+                  formatDate(d, 'full') +
+                  (isToday ? ', hari ini' : '') +
+                  (namaLibur ? `, libur: ${namaLibur}` : '') +
+                  tahapHari.map((t) => `, ${t.judul}`).join('') +
+                  (agenda.length ? agenda.map((a) => `, ${a.judul}`).join('') : m?.length ? `, ${m.length} agenda` : '') +
+                  (pesanTutup ? ', periode ditutup' : '')
+                }
                 tabIndex={sameDay(d, fokus) ? 0 : -1}
                 disabled={disabled(d)}
                 onClick={() => pick(d)}
@@ -418,6 +547,8 @@ export function Calendar({
         </div>
       )}
 
+      {legenda && mode === 'hari' && dataBulan && <LegendaKalender data={dataBulan} sumber={sumber!} ditutup={days.some((d) => !!ditutup(toISODate(d)))} />}
+
       {(tombolHariIni || kaki) && (
         <div className="u-calendar-kaki">
           {tombolHariIni && (
@@ -432,6 +563,31 @@ export function Calendar({
   );
 }
 
+/** Legenda kecil jenis kegiatan di bulan tampil. */
+function LegendaKalender({ data, sumber, ditutup }: { data: DataBulanKalender; sumber: SumberKalenderTanggal; ditutup: boolean }) {
+  const jenis = new Map<string, string>();
+  if (Object.keys(data.libur).length) jenis.set('libur', 'var(--u-danger)');
+  for (const t of [...data.tahapan].filter((t) => t.latar !== false).sort((a, b) => prioritas(a.jenis) - prioritas(b.jenis))) if (!jenis.has(t.jenis)) jenis.set(t.jenis, t.warna || sumber.warna(t.jenis));
+  for (const a of Object.values(data.agenda).flat()) if (!jenis.has(a.jenis)) jenis.set(a.jenis, a.warna || sumber.warna(a.jenis));
+  if (!jenis.size && !ditutup) return null;
+  return (
+    <ul className="u-calendar-legenda" aria-label="Keterangan warna">
+      {[...jenis].map(([j, w]) => (
+        <li key={j} data-jenis={j}>
+          <i style={{ background: w }} aria-hidden />
+          {sumber.label(j)}
+        </li>
+      ))}
+      {ditutup && (
+        <li data-jenis="ditutup">
+          <i data-ditutup="" aria-hidden />
+          Periode ditutup
+        </li>
+      )}
+    </ul>
+  );
+}
+
 // ---------------------------------------------------------------- isian ketik + popup bersama
 interface OpsiIsian {
   value: Date | null | undefined;
@@ -439,10 +595,12 @@ interface OpsiIsian {
   min?: Date;
   max?: Date;
   onGalat?: (pesan: string | null) => void;
+  /** Pemeriksaan tambahan setelah tanggal sah (mis. batas tahapan); kembalikan pesan untuk menolak. */
+  cek?: (d: Date) => string | null;
 }
 
 /** Status satu isian tanggal yang bisa diketik: teks, pratinjau (kalender mengikuti ketikan), galat. */
-function useIsianTanggal({ value, onCommit, min, max, onGalat }: OpsiIsian) {
+function useIsianTanggal({ value, onCommit, min, max, onGalat, cek }: OpsiIsian) {
   const [fokus, setFokus] = React.useState(false);
   const [teks, setTeks] = React.useState('');
   const [galat, setGalatState] = React.useState<string | null>(null);
@@ -462,6 +620,11 @@ function useIsianTanggal({ value, onCommit, min, max, onGalat }: OpsiIsian) {
     }
     if (!h.ok) {
       setGalat(h.pesan);
+      return undefined;
+    }
+    const tolak = cek?.(h.tanggal);
+    if (tolak) {
+      setGalat(tolak);
       return undefined;
     }
     setGalat(null);
@@ -572,8 +735,40 @@ function PopupTanggal({ open, onOpenChange, jangkar, fokusKalender, kembaliKe, j
   );
 }
 
+/** Pemeriksa isian dari batas tahapan / periode ditutup + pesan peringatan periode ditutup. */
+function useAturanAkademik(sumber: SumberKalenderTanggal | null, batasTahapan: string | string[] | undefined, blokirDitutup: boolean | undefined) {
+  return React.useCallback(
+    (d: Date): string | null => {
+      if (!sumber) return null;
+      const iso = toISODate(d);
+      if (batasTahapan) {
+        const t = sumber.tahapan.filter((x) => cocokTahapan(x, batasTahapan));
+        if (t.length && !t.some((x) => dalamTahapan(iso, x))) {
+          const dekat = t.filter((x) => (x.selesai ?? x.mulai) >= toISODate(new Date())).sort((a, b) => a.mulai.localeCompare(b.mulai))[0] ?? t[t.length - 1]!;
+          return `Di luar tahapan yang diizinkan (${dekat.judul}: ${formatDate(dekat.mulai, 'medium')}${dekat.selesai ? ` – ${formatDate(dekat.selesai, 'medium')}` : ''}).`;
+        }
+      }
+      if (blokirDitutup) return sumber.periodeDitutup(iso);
+      return null;
+    },
+    [sumber, batasTahapan, blokirDitutup],
+  );
+}
+
+/** Opsi kalender akademik yang sama untuk DatePicker dan DateRangePicker. */
+export interface OpsiKalenderAkademik {
+  /** Pakai data kalender akademik dari penyedia (bawaan true). false = kalender polos. */
+  kalenderAkademik?: boolean;
+  /** Hanya tanggal di tahapan ini yang boleh, mis. `batasTahapan="krs"`. Tanpa data tahapan tidak membatasi. */
+  batasTahapan?: string | string[];
+  /** Tolak tanggal di periode yang sudah ditutup (bawaan: hanya peringatan). */
+  blokirDitutup?: boolean;
+  /** Legenda warna di kaki kalender (bawaan true). */
+  legenda?: boolean;
+}
+
 // ---------------------------------------------------------------- DatePicker
-export interface DatePickerProps {
+export interface DatePickerProps extends OpsiKalenderAkademik {
   value?: Date | null;
   onValueChange?: (date: Date | null) => void;
   placeholder?: string;
@@ -633,8 +828,14 @@ export function DatePicker({
   onGalat,
   tampilGalat = true,
   size,
+  kalenderAkademik = true,
+  batasTahapan,
+  blokirDitutup,
+  legenda = true,
 }: DatePickerProps) {
   const plat = usePlatform();
+  const sumber = useSumberKalenderTanggal(kalenderAkademik);
+  const cek = useAturanAkademik(sumber, batasTahapan, blokirDitutup);
   const [open, setOpen] = React.useState(false);
   const [bulan, setBulan] = React.useState<Date | undefined>(undefined);
   const jangkar = React.useRef<HTMLDivElement>(null);
@@ -642,8 +843,10 @@ export function DatePicker({
   const fokusKalender = React.useRef(true);
   const kembaliKe = React.useRef<HTMLInputElement | null>(null);
   const idGalat = React.useId();
-  const isian = useIsianTanggal({ value, onCommit: (d) => onValueChange?.(d), min, max, onGalat });
+  const isian = useIsianTanggal({ value, onCommit: (d) => onValueChange?.(d), min, max, onGalat, cek });
   const nilaiKalender = isian.pratinjau ?? value ?? null;
+  const idPeringatan = React.useId();
+  const peringatan = !isian.galat && value && sumber && !blokirDitutup ? sumber.periodeDitutup(toISODate(value)) : null;
 
   React.useEffect(() => {
     if (isian.pratinjau) setBulan(new Date(isian.pratinjau.getFullYear(), isian.pratinjau.getMonth(), 1));
@@ -678,7 +881,7 @@ export function DatePicker({
           readOnly={!bisaDiketik}
           aria-label={ariaLabel}
           aria-invalid={isian.galat ? true : undefined}
-          aria-describedby={cn(ariaDescribedby, isian.galat && tampilGalat && idGalat) || undefined}
+          aria-describedby={cn(ariaDescribedby, isian.galat && tampilGalat && idGalat, peringatan && idPeringatan) || undefined}
           aria-haspopup="dialog"
           aria-expanded={open}
           placeholder={bisaDiketik && isian.fokus ? 'dd/mm/yyyy' : placeholder}
@@ -713,6 +916,11 @@ export function DatePicker({
           {isian.galat}
         </span>
       )}
+      {peringatan && (
+        <span id={idPeringatan} className="u-datepicker-peringatan" role="status">
+          {peringatan}
+        </span>
+      )}
       <PopupTanggal open={open} onOpenChange={(o, kembali) => (o ? setOpen(true) : tutup(kembali))} jangkar={jangkar} fokusKalender={fokusKalender} kembaliKe={kembaliKe} judul="Pilih tanggal">
         <Calendar
           value={nilaiKalender}
@@ -725,6 +933,10 @@ export function DatePicker({
           awal={awal}
           tampilanAwal={value ? 'hari' : tampilanAwal}
           tombolHariIni={tombolHariIni}
+          kalenderAkademik={kalenderAkademik}
+          batasTahapan={batasTahapan}
+          blokirDitutup={blokirDitutup}
+          legenda={legenda}
           onValueChange={pilih}
           kaki={
             bisaDihapus && value ? (
@@ -748,6 +960,8 @@ export interface PresetRentang {
   label: string;
   dari: Date;
   sampai: Date;
+  /** Keterangan (tooltip), mis. "KRS online Ganjil 2026/2027". */
+  keterangan?: string;
 }
 export type KunciPresetRentang = 'hari_ini' | '7_hari' | '30_hari' | 'bulan_ini' | 'bulan_lalu' | 'tahun_ini';
 
@@ -780,7 +994,7 @@ export function presetRentang(
   return out;
 }
 
-export interface DateRangePickerProps {
+export interface DateRangePickerProps extends OpsiKalenderAkademik {
   value: RentangNilai;
   onValueChange: (value: RentangNilai) => void;
   min?: Date;
@@ -790,6 +1004,8 @@ export interface DateRangePickerProps {
   id?: string;
   /** Pilihan cepat di samping kalender (lihat `presetRentang`). */
   preset?: PresetRentang[];
+  /** Tambahkan preset dari kalender akademik (Semester ini, Periode KRS, Masa UTS, Masa UAS) bila ada penyedia. Bawaan true. */
+  presetAkademik?: boolean;
   placeholderDari?: string;
   placeholderSampai?: string;
   tampilanAwal?: TampilanKalender;
@@ -822,8 +1038,16 @@ export function DateRangePicker({
   onGalat,
   tampilGalat = true,
   size,
+  presetAkademik = true,
+  kalenderAkademik = true,
+  batasTahapan,
+  blokirDitutup,
+  legenda = true,
 }: DateRangePickerProps) {
   const plat = usePlatform();
+  const sumber = useSumberKalenderTanggal(kalenderAkademik);
+  const cek = useAturanAkademik(sumber, batasTahapan, blokirDitutup);
+  const presetGabung = [...(preset ?? []), ...(presetAkademik && sumber ? sumber.preset : [])];
   const [open, setOpen] = React.useState(false);
   const [bulan, setBulan] = React.useState<Date | undefined>(undefined);
   const jangkar = React.useRef<HTMLDivElement>(null);
@@ -833,9 +1057,10 @@ export function DateRangePicker({
   const kembaliKe = React.useRef<HTMLInputElement | null>(null);
   const idGalat = React.useId();
   const urut = (r: RentangNilai): RentangNilai => (r.from && r.to && r.from > r.to ? { from: r.to, to: r.from } : r);
-  const dari = useIsianTanggal({ value: value.from, onCommit: (d) => onValueChange(urut({ from: d, to: value.to })), min, max, onGalat });
-  const sampai = useIsianTanggal({ value: value.to, onCommit: (d) => onValueChange(urut({ from: value.from, to: d })), min, max, onGalat });
+  const dari = useIsianTanggal({ value: value.from, onCommit: (d) => onValueChange(urut({ from: d, to: value.to })), min, max, onGalat, cek });
+  const sampai = useIsianTanggal({ value: value.to, onCommit: (d) => onValueChange(urut({ from: value.from, to: d })), min, max, onGalat, cek });
   const galat = dari.galat ?? sampai.galat;
+  const peringatan = !galat && sumber && !blokirDitutup ? ((value.from && sumber.periodeDitutup(toISODate(value.from))) || (value.to && sumber.periodeDitutup(toISODate(value.to))) || null) : null;
   const pratinjau = dari.pratinjau ?? sampai.pratinjau;
 
   React.useEffect(() => {
@@ -907,14 +1132,19 @@ export function DateRangePicker({
           {galat}
         </span>
       )}
+      {peringatan && (
+        <span className="u-datepicker-peringatan" role="status">
+          {peringatan}
+        </span>
+      )}
       <PopupTanggal open={open} onOpenChange={(o, kembali) => (o ? setOpen(true) : tutup(kembali))} jangkar={jangkar} fokusKalender={fokusKalender} kembaliKe={kembaliKe} judul="Pilih rentang tanggal">
-        <div className="u-daterangepicker-isi" data-preset={dataFlag(Boolean(preset?.length))}>
-          {preset && preset.length > 0 && (
+        <div className="u-daterangepicker-isi" data-preset={dataFlag(presetGabung.length > 0)}>
+          {presetGabung.length > 0 && (
             <div className="u-daterangepicker-preset" role="group" aria-label="Rentang cepat">
-              {preset.map((p) => {
+              {presetGabung.map((p, i) => {
                 const aktif = sama(value.from, p.dari) && sama(value.to, p.sampai);
                 return (
-                  <button key={p.label} type="button" className="u-facet-preset" data-active={dataFlag(aktif)} aria-pressed={aktif} onClick={() => terapkanRentang({ from: p.dari, to: p.sampai }, true)}>
+                  <button key={`${p.label}-${i}`} type="button" className="u-facet-preset" data-active={dataFlag(aktif)} aria-pressed={aktif} title={p.keterangan ?? `${formatDate(p.dari, 'medium')} – ${formatDate(p.sampai, 'medium')}`} onClick={() => terapkanRentang({ from: p.dari, to: p.sampai }, true)}>
                     {p.label}
                   </button>
                 );
@@ -933,6 +1163,10 @@ export function DateRangePicker({
             awal={awal}
             tampilanAwal={value.from ? 'hari' : tampilanAwal}
             tombolHariIni={tombolHariIni}
+            kalenderAkademik={kalenderAkademik}
+            batasTahapan={batasTahapan}
+            blokirDitutup={blokirDitutup}
+            legenda={legenda}
             kaki={
               value.from || value.to ? (
                 <Button variant="ghost" size="xs" onClick={() => terapkanRentang({ from: null, to: null }, false)}>

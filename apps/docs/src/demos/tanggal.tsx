@@ -1,5 +1,7 @@
 import * as React from 'react';
 import { Calendar, DatePicker, DateRangePicker, Dropzone, Field, FileList, presetRentang, toISODate, useToast, type RentangNilai, type UploadedFile } from 'unipo-ui';
+import { Siakad } from 'unipo-siakad-sdk';
+import { UnipoProvider } from 'unipo-ui/siakad';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
@@ -10,6 +12,8 @@ export const meta: DemoMeta = {
   importLine: "import { Calendar, DatePicker, DateRangePicker, presetRentang, uraiTanggal, Dropzone, FileList } from 'unipo-ui';",
   demos: {
     Pemilih: 'DatePicker: ketik atau pilih',
+    Akademik: 'Terintegrasi kalender akademik',
+    TanpaData: 'Tanpa kalender akademik / API gagal',
     TanggalLahir: 'Tanggal lahir: buka di tampilan tahun',
     PemilihRentang: 'DateRangePicker dengan preset',
     Bulanan: 'Kalender dengan penanda & libur',
@@ -26,10 +30,15 @@ export const meta: DemoMeta = {
     ['onGalat / tampilGalat', '(pesan | null) => void / boolean', 'Pesan galat ketikan; bawaan tampil di bawah isian.'],
     ['DateRangePicker.value', '{ from: Date | null; to: Date | null }', 'Tanggal awal & akhir, keduanya bisa diketik.'],
     ['DateRangePicker.preset', 'PresetRentang[]', "Pilihan cepat. presetRentang(['hari_ini', '7_hari', 'bulan_ini'], { semester }) — Semester ini hanya bila datanya ada."],
+    ['kalenderAkademik', 'boolean = true', 'Libur merah + tooltip, titik agenda, latar tahapan (KRS, UTS, …), legenda, preset akademik. Data dari KalenderAkademikProvider (otomatis di UnipoProvider dengan SDK). Tanpa penyedia/API gagal: kalender polos.'],
+    ['batasTahapan', "string | string[]", "Hanya tanggal di tahapan itu yang bisa dipilih, mis. 'krs', 'uts', ['uts','uas'], 'nilai'. Tanpa data tahapan tidak membatasi."],
+    ['blokirDitutup', 'boolean', 'Tolak tanggal di periode yang sudah ditutup (kunci periode). Bawaan hanya peringatan di bawah isian.'],
+    ['presetAkademik', 'boolean = true', 'DateRangePicker: tambah preset Semester ini, Periode KRS, Masa UTS, Masa UAS dari kalender.'],
     ['uraiTanggal(teks, { min, max })', '{ ok, tanggal } | { ok: false, pesan } | null', 'Pengurai yang dipakai isian, bisa dipakai sendiri.'],
   ],
   notes: [
     'Keyboard di kalender: panah antar hari, PageUp/PageDown bulan, Shift+PageUp/PageDown tahun, Home/End awal/akhir minggu, Enter memilih, Esc kembali dari tampilan bulan/tahun lalu menutup. Di isian: panah bawah membuka kalender.',
+    'Kalender akademik: <UnipoProvider siakad={…}> sudah memasang KalenderAkademikProvider (GET /v1/kalender/terpadu per bulan, /v1/kalender/tahun, /v1/kalender/kunci; dimuat saat kalender pertama tampil, di-cache per bulan). Matikan untuk semua dengan <UnipoProvider kalenderAkademik={false}>, atau per komponen dengan kalenderAkademik={false}. Data sendiri: <KonteksKalenderTanggal.Provider value={…}>.',
     'Contoh lompat ke 20 Juli 2018 dari November 2026: klik "2026" → klik "2018" → klik "Jul" → klik 20. Atau ketik 20/07/2018 lalu Enter.',
   ],
 };
@@ -44,6 +53,53 @@ export function Pemilih() {
       <p style={{ marginTop: 8, fontSize: 12, color: 'var(--u-muted-foreground)' }} data-nilai-demo>
         Nilai: {d ? toISODate(d) : 'kosong'}
       </p>
+    </div>
+  );
+}
+
+export function Akademik() {
+  const [krs, setKrs] = React.useState<Date | null>(null);
+  const [lama, setLama] = React.useState<Date | null>(() => {
+    const k = new Date();
+    return new Date(k.getFullYear(), k.getMonth(), k.getDate() - 200);
+  });
+  const [r, setR] = React.useState<RentangNilai>({ from: null, to: null });
+  return (
+    <div style={{ display: 'grid', gap: 16, width: 360 }}>
+      <Field label="Tanggal pengisian KRS" description='batasTahapan="krs": hanya tanggal di tahapan KRS yang bisa dipilih.'>
+        <DatePicker value={krs} onValueChange={setKrs} batasTahapan="krs" placeholder="Tanggal KRS" />
+      </Field>
+      <Field label="Tanggal nilai susulan" description="Periode Genap 2025/2026 sudah ditutup: diberi peringatan, tidak diblokir.">
+        <DatePicker value={lama} onValueChange={setLama} />
+      </Field>
+      <Field label="Rentang laporan" description="Preset Semester ini, Periode KRS, Masa UTS, Masa UAS dari kalender akademik.">
+        <DateRangePicker value={r} onValueChange={setR} />
+      </Field>
+      <p style={{ fontSize: 12, color: 'var(--u-muted-foreground)' }} data-nilai-demo>
+        KRS: {krs ? toISODate(krs) : 'kosong'} · Rentang: {r.from ? toISODate(r.from) : '…'} s.d. {r.to ? toISODate(r.to) : '…'}
+      </p>
+    </div>
+  );
+}
+
+// SDK yang selalu gagal (500): komponen tanggal tetap jalan tanpa penanda dan tanpa galat.
+const siakadGagal = new Siakad({ baseUrl: 'https://api.contoh.invalid', accessToken: 'x', fetch: async () => new Response(JSON.stringify({ error: { message: 'Galat server' } }), { status: 500, headers: { 'content-type': 'application/json' } }) });
+
+export function TanpaData() {
+  const [a, setA] = React.useState<Date | null>(null);
+  const [b, setB] = React.useState<Date | null>(null);
+  return (
+    <div style={{ display: 'grid', gap: 16, width: 300 }}>
+      <Field label="kalenderAkademik={false}">
+        <DatePicker value={a} onValueChange={setA} kalenderAkademik={false} />
+      </Field>
+      <UnipoProvider siakad={siakadGagal} withProviders={false} laporGalat={false}>
+        <div data-api-gagal>
+          <Field label="API kalender gagal (500)">
+            <DatePicker value={b} onValueChange={setB} batasTahapan="krs" />
+          </Field>
+        </div>
+      </UnipoProvider>
     </div>
   );
 }

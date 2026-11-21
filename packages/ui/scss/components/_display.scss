@@ -1222,6 +1222,48 @@ button.u-step-marker {
   color: var(--u-danger-text);
   font-weight: 700;
 }
+// Kalender akademik: latar lembut untuk tahapan (KRS, UTS, …), garis miring tipis untuk periode ditutup.
+.u-calendar-day[data-tahap]:not([data-selected]):not([data-in-range]) {
+  background: color-mix(in oklab, var(--u-cal-tahap, var(--u-primary)) 16%, transparent);
+  &:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--u-cal-tahap, var(--u-primary)) 28%, transparent);
+  }
+}
+.u-calendar-day[data-ditutup]:not([data-selected])::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in oklab, var(--u-muted-foreground) 18%, transparent) 4px 5px);
+  pointer-events: none;
+}
+.u-calendar-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  max-width: calc(7 * var(--u-cal-cell, 2.25rem) + 12px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  i {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 3px;
+    flex: none;
+    &[data-ditutup] {
+      background: repeating-linear-gradient(135deg, transparent 0 2px, var(--u-muted-foreground) 2px 3px);
+      outline: 1px solid var(--u-border);
+    }
+  }
+}
+
 // Tampilan 12 bulan / 12 tahun: lebar sama dengan grid hari.
 .u-calendar-pilihan {
   display: grid;
@@ -1313,6 +1355,10 @@ button.u-step-marker {
   color: var(--u-danger-text);
   font-size: var(--u-text-xs);
 }
+.u-datepicker-peringatan {
+  color: var(--u-warning-text, var(--u-warning));
+  font-size: var(--u-text-xs);
+}
 .u-datepicker-popup {
   --u-popover-w: auto;
   padding: 0.25rem;
@@ -1352,6 +1398,9 @@ button.u-step-marker {
   .u-calendar-pilihan {
     width: 100%;
     min-height: 18rem;
+  }
+  .u-calendar-legenda {
+    max-width: none;
   }
   .u-calendar-sel {
     min-height: 3rem;
