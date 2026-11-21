@@ -168,6 +168,45 @@ export interface JurnalDetail extends JurnalRingkas {
 export function useKeuanganSaya() {
   return useSiakadQuery<KeuanganSaya>(['keuangan', 'saya'], (s, signal) => s.request({ method: 'GET', path: '/v1/keuangan/saya' }, { signal }), { staleTime: 15_000 });
 }
+/** Baris hasil cari loket (GET /v1/keuangan/loket/mahasiswa). */
+export interface MahasiswaLoket {
+  nim: string;
+  nama: string;
+  kode_prodi: string;
+  nama_prodi?: string | null;
+  status_aktif?: string | null;
+  status_label?: string | null;
+  bisa_diproses?: boolean;
+  alasan?: string | null;
+  tunggakan?: number;
+}
+/** Tagihan untuk loket: boleh/alasan dari aturan kasir.terima + jadwal (loket) atau kosong (pengelola keuangan). */
+export interface TagihanLoket {
+  tahun_id: string;
+  kode_biaya: string | number;
+  jenis_biaya: string;
+  tagihan: number;
+  dibayar: number;
+  potongan?: number;
+  sisa: number;
+  tunggakan?: boolean;
+  boleh?: boolean;
+  alasan?: string | null;
+}
+export interface DataLoketMahasiswa {
+  mahasiswa: { nim: string; nama: string; kode_prodi: string; status_label?: string; bisa_diproses?: boolean };
+  tahun_aktif: string;
+  tagihan: TagihanLoket[];
+  total: { tagihan: number; dibayar: number; sisa: number };
+}
+/** Tagihan mahasiswa untuk jenis biaya terbitan unit petugas kasir (izin kasir.terima, baca saja). */
+export function useLoketMahasiswa(nim: string | null | undefined) {
+  return useSiakadQuery<DataLoketMahasiswa>(
+    ['keuangan', 'loket', nim],
+    (s, signal) => s.request({ method: 'GET', path: `/v1/keuangan/loket/mahasiswa/${encodeURIComponent(nim ?? '')}` }, { signal }),
+    { enabled: Boolean(nim), staleTime: 10_000 },
+  );
+}
 export function useKeuanganMahasiswa(nim: string | null | undefined, tahunId?: string) {
   return useSiakadQuery<KeuanganMahasiswaData>(
     ['keuangan', 'mahasiswa', nim, tahunId],
@@ -658,7 +697,11 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
   const loket = useLoketKasir();
   const [nim, setNim] = React.useState<string | null>(null);
   const [namaPembayar, setNamaPembayar] = React.useState<string>('');
-  const keu = useKeuanganMahasiswa(pmb ? null : nim);
+  const sayaKeu = useKeuanganSaya();
+  // Petugas kasir (izin kasir.terima): data loket dari jalur Kasir (lingkup unit penerbit, tanda aturan kasir.terima).
+  const modeLoket = !pmb && Boolean(sayaKeu.data?.kasir?.terima);
+  const keu = useKeuanganMahasiswa(pmb || modeLoket || sayaKeu.loading ? null : nim);
+  const loketMhs = useLoketMahasiswa(modeLoket ? nim : null);
   const [keranjang, setKeranjang] = React.useState<ButirKeranjang[]>([]);
   const [metode, setMetode] = React.useState('tunai');
   const [diterima, setDiterima] = React.useState('');
@@ -682,7 +725,13 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
       .slice(0, 5);
   }, [total]);
 
-  const tagihanMhs = (keu.data?.periode ?? []).flatMap((per) => per.item.filter((it) => it.sisa > 0).map((it) => ({ per: per.tahun_id, it })));
+  const tagihanMhs: Array<{ per: string; it: TagihanLoket }> = modeLoket
+    ? (loketMhs.data?.tagihan ?? []).filter((t) => t.sisa > 0).map((t) => ({ per: t.tahun_id, it: t }))
+    : (keu.data?.periode ?? []).flatMap((per) => per.item.filter((it) => it.sisa > 0).map((it) => ({ per: per.tahun_id, it: { ...it, tahun_id: per.tahun_id } })));
+  const dataMhs = modeLoket ? loketMhs : keu;
+  const ringkas = modeLoket
+    ? loketMhs.data && { dibayar: loketMhs.data.total.dibayar, potongan: loketMhs.data.tagihan.reduce((a, t) => a + (t.potongan ?? 0), 0), sisa: loketMhs.data.total.sisa }
+    : keu.data?.ringkasan;
   const ada = (k: string) => keranjang.some((b) => b.kunci === k);
   const alih = (b: ButirKeranjang) => setKeranjang((x) => (x.some((y) => y.kunci === b.kunci) ? x.filter((y) => y.kunci !== b.kunci) : [...x, b]));
 
@@ -816,44 +865,73 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
                 )}
               />
             ) : (
-              <PilihEntitas
-                jenis="mahasiswa"
-                value={nim}
-                query={{ prodi: kodeProdi, kode_fakultas: kodeFakultas }}
-                onValueChange={(v, r) => {
-                  setNim(v);
-                  setNamaPembayar(String(r?.nama ?? ''));
-                  setKeranjang((x) => x.filter((b) => b.sumber.jenis !== 'mhs' || b.sumber.nim === v));
-                }}
-              />
+              modeLoket ? (
+                <Combobox<MahasiswaLoket>
+                  placeholder="NIM atau nama (min. 3 huruf)"
+                  icon={<Search />}
+                  loadItems={async (q, signal) => {
+                    if (q.trim().length < 3) return [];
+                    const r = await siakad.request<MahasiswaLoket[]>({ method: 'GET', path: '/v1/keuangan/loket/mahasiswa', query: { q: q.trim() } }, { signal });
+                    return Array.isArray(r.data) ? r.data : [];
+                  }}
+                  value={null}
+                  onValueChange={(m) => {
+                    if (!m) return;
+                    setNim(m.nim);
+                    setNamaPembayar(m.nama);
+                    setKeranjang((x) => x.filter((b) => b.sumber.jenis !== 'mhs' || b.sumber.nim === m.nim));
+                  }}
+                  itemToString={(m) => `${m.nama} (${m.nim})`}
+                  itemKey={(m) => m.nim}
+                  emptyText="Tidak ada mahasiswa dengan jenis biaya terbitan unit Anda."
+                  renderItem={(m) => (
+                    <OptionContent
+                      title={`${m.nama} · ${m.nim}`}
+                      meta={`${m.nama_prodi ?? m.kode_prodi} · ${m.status_label ?? m.status_aktif}${m.bisa_diproses ? '' : ` · ${m.alasan ?? 'tidak ada yang bisa diproses'}`}`}
+                    />
+                  )}
+                />
+              ) : (
+                <PilihEntitas
+                  jenis="mahasiswa"
+                  value={nim}
+                  query={{ prodi: kodeProdi, kode_fakultas: kodeFakultas }}
+                  onValueChange={(v, r) => {
+                    setNim(v);
+                    setNamaPembayar(String(r?.nama ?? ''));
+                    setKeranjang((x) => x.filter((b) => b.sumber.jenis !== 'mhs' || b.sumber.nim === v));
+                  }}
+                />
+              )
             )}
           </Field>
-          {!pmb && nim && keu.error && <GalatApi error={keu.error} onRetry={keu.refetch} />}
-          {!pmb && nim && keu.data && (
+          {!pmb && nim && dataMhs.error && <GalatApi error={dataMhs.error} onRetry={dataMhs.refetch} message={pesanGalatLoket(dataMhs.error)} />}
+          {!pmb && nim && ringkas && (
             <div className="u-kasir-ringkas">
               <ProgressBertumpuk
-                label={`Keuangan ${namaPembayar || nim}`}
+                label={`${modeLoket ? 'Tagihan unit Anda' : 'Keuangan'} ${namaPembayar || nim}`}
                 bagian={[
-                  { label: 'Dibayar', nilai: keu.data.ringkasan.dibayar, tone: 'success' },
-                  { label: 'Potongan', nilai: keu.data.ringkasan.potongan, tone: 'info' },
-                  { label: 'Sisa', nilai: keu.data.ringkasan.sisa, tone: 'warning' },
+                  { label: 'Dibayar', nilai: ringkas.dibayar, tone: 'success' },
+                  { label: 'Potongan', nilai: ringkas.potongan, tone: 'info' },
+                  { label: 'Sisa', nilai: ringkas.sisa, tone: 'warning' },
                 ]}
                 format={(n) => formatRupiah(n)}
               />
             </div>
           )}
-          {!pmb && nim && keu.loading && !keu.data && <Spinner />}
-          {!pmb && nim && keu.data && (
+          {!pmb && nim && dataMhs.loading && !dataMhs.data && <Spinner />}
+          {!pmb && nim && dataMhs.data && (
             <ul className="u-kasir-tagihan" aria-label="Tagihan belum lunas">
               {tagihanMhs.map(({ per, it }) => {
                 const k = `${nim}-${per}-${it.kode_biaya}`;
                 const dipilih = keranjang.find((b) => b.kunci === k);
                 return (
-                  <li key={k} data-pilih={dipilih ? '' : undefined}>
+                  <li key={k} data-pilih={dipilih ? '' : undefined} data-nonaktif={it.boleh === false || undefined}>
                     <label className="u-kasir-tagihan-baris">
                       <input
                         type="checkbox"
                         checked={Boolean(dipilih)}
+                        disabled={it.boleh === false && !dipilih}
                         onChange={() =>
                           alih({ kunci: k, label: it.jenis_biaya, sub: `Periode ${per}`, jumlah: it.sisa, max: it.sisa, sumber: { jenis: 'mhs', nim, tahun_id: per, kode_biaya: it.kode_biaya } })
                         }
@@ -863,7 +941,9 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
                         <small>
                           Periode {per} · tagihan {formatRupiah(it.tagihan)}
                           {it.dibayar ? ` · dibayar ${formatRupiah(it.dibayar)}` : ''}
+                          {it.tunggakan ? ' · tunggakan' : ''}
                         </small>
+                        {it.boleh === false && it.alasan && <small className="u-kasir-tagihan-alasan">{it.alasan}</small>}
                       </span>
                       <b className="u-kasir-tagihan-sisa">{formatRupiah(it.sisa)}</b>
                     </label>
@@ -886,7 +966,13 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
                   </li>
                 );
               })}
-              {!tagihanMhs.length && <Empty title="Tidak ada tagihan tersisa" description="Semua tagihan mahasiswa ini sudah lunas." icon={<CheckCircle2 />} />}
+              {!tagihanMhs.length && (
+                <Empty
+                  title="Tidak ada tagihan tersisa"
+                  description={modeLoket ? 'Tidak ada tagihan jenis biaya terbitan unit Anda yang belum lunas.' : 'Semua tagihan mahasiswa ini sudah lunas.'}
+                  icon={<CheckCircle2 />}
+                />
+              )}
             </ul>
           )}
           {!nim && !pmb && <Empty title="Pilih mahasiswa" description="Ketik NIM atau nama untuk melihat tagihan yang belum lunas." icon={<Search />} />}

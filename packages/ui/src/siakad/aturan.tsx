@@ -62,7 +62,7 @@ import { useAkunSaya } from './akun';
 import { PilihTahunAkademik } from './cari';
 import { GalatApi } from './galat';
 import { AlurPemeriksa, LabelPemeriksa, type TahapPemeriksa } from './pemeriksa';
-import { PilihUnit, useUnitSdm } from './pilih-unit';
+import { PilihUnit, useUnitSdm, useUnitSumber } from './pilih-unit';
 import { PilihEntitas } from './pilih';
 import { PilihBerkas } from './pilih-berkas';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
@@ -382,6 +382,8 @@ export interface TitikAturan {
   aktif?: boolean;
   bawaan?: boolean;
   kustom?: boolean;
+  /** Aturan berlingkup unit penerbit jenis biaya (cakupan.unit), mis. kasir.terima. Pengatur unit wajib memilih unitnya. */
+  cakupan_unit_penerbit?: boolean;
 }
 export interface OpsiIndikatorAturan {
   nilai: string;
@@ -1966,6 +1968,21 @@ interface IsiAturan {
   pemenuhan: ParameterPemenuhan | null;
 }
 
+/** Pilih unit penerbit biaya (kode induk_unit) untuk cakupan titik berlingkup unit penerbit (kasir.terima). */
+function PilihUnitPenerbitAturan({ value, onValueChange }: { value: string[]; onValueChange: (kode: string[]) => void }) {
+  const unit = useUnitSumber('induk');
+  return (
+    <PilihUnit
+      id="aturan-unit-penerbit"
+      multiple
+      value={value.map((k) => unit.data?.find((u) => u.kode === k)?.id ?? k)}
+      onValueChange={(_, units) => onValueChange(units.map((u) => u.kode || String(u.id)))}
+      placeholder="Semua unit penerbit"
+      aria-label="Unit penerbit biaya"
+    />
+  );
+}
+
 /** Isian cakupan untuk titik bersubjek pegawai (sdm.*): jenis, kategori, status kepegawaian, dan unit SDM. */
 function CakupanPegawai({ isi, set, galat }: { isi: IsiAturan; set: <K extends keyof IsiAturan>(k: K, v: IsiAturan[K]) => void; galat: Record<string, string> }) {
   const unit = useUnitSdm();
@@ -2995,6 +3012,16 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
               </Field>
             )}
           </>
+        )}
+        {t?.cakupan_unit_penerbit && (
+          <Field
+            label="Unit penerbit biaya"
+            optional
+            description="Aturan hanya mengenai jenis biaya terbitan unit ini (dan unit di bawahnya). Kosong = semua unit penerbit (hanya pengatur universitas)."
+            error={galat['cakupan.unit'] || undefined}
+          >
+            <PilihUnitPenerbitAturan value={isi.unit} onValueChange={(v) => set('unit', v)} />
+          </Field>
         )}
         {t?.subjek === 'pegawai' ? (
           <CakupanPegawai isi={isi} set={set} galat={galat} />

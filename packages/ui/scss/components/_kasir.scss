@@ -103,7 +103,15 @@
       border-color: var(--u-primary);
       box-shadow: 0 0 0 3px color-mix(in oklab, var(--u-primary) 15%, transparent);
     }
+    // Tagihan yang ditolak aturan penerimaan (kasir.terima) atau jadwal: tampil redup, alasan tetap terbaca.
+    &[data-nonaktif] .u-kasir-tagihan-baris {
+      cursor: not-allowed;
+      opacity: 0.75;
+    }
   }
+}
+.u-kasir-tagihan-teks small.u-kasir-tagihan-alasan {
+  color: var(--u-warning-text);
 }
 .u-kasir-tagihan-baris {
   display: flex;
