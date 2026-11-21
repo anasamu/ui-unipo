@@ -292,9 +292,20 @@ export function KartuKelas({ kelas: k, progres, href, onPilih, className }: Kart
     );
   if (onPilih)
     return (
-      <button type="button" className={cn('u-lms-kelas', className)} onClick={() => onPilih(k)}>
+      <div
+        role="button"
+        tabIndex={0}
+        className={cn('u-lms-kelas', className)}
+        onClick={() => onPilih(k)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onPilih(k);
+          }
+        }}
+      >
         {isi}
-      </button>
+      </div>
     );
   return <div className={cn('u-lms-kelas', className)}>{isi}</div>;
 }

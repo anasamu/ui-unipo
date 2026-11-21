@@ -1693,7 +1693,7 @@ video.u-lmsb-video {
     @extend %u-lmsb-daftar;
     gap: 0.125rem;
   }
-  button {
+  > ul a {
     @extend %u-lmsb-baris-tautan;
     box-sizing: border-box;
     width: 100%;
@@ -1760,5 +1760,67 @@ video.u-lmsb-video {
   }
   .u-lmsb-kartu-aktivitas:is(a):hover {
     transform: none;
+  }
+}
+
+// Tugas & kuis lintas kelas: kelompok tenggat (judul + jumlah kiri, keterangan di bawah).
+.u-lmsb-kelompok {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u-space-3);
+}
+.u-lmsb-kelompok-kepala {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--u-space-3);
+  row-gap: 0.125rem;
+  .u-lmsb-subjudul {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  small {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
+  }
+}
+// Daftar utas forum: bilah cari/urut di atas, halaman di bawah.
+.u-lmsb-utas-alat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--u-space-2);
+}
+// Kemajuan belajar per kelas (beranda): angka rata-rata lalu bilah per kelas.
+.u-lmsb-kemajuan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u-space-3);
+  > ul {
+    @extend %u-lmsb-daftar;
+    gap: 0.125rem;
+  }
+  > ul a {
+    @extend %u-lmsb-baris-tautan;
+    display: block;
+    padding: 0.5rem;
+  }
+}
+.u-lmsb-kemajuan-ringkas {
+  display: flex;
+  align-items: baseline;
+  gap: var(--u-space-2);
+  margin: 0;
+  b {
+    font-size: var(--u-text-2xl, 1.5rem);
+    font-weight: var(--u-weight-semibold);
+    font-variant-numeric: tabular-nums;
+  }
+  small {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
   }
 }
