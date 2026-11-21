@@ -9,6 +9,7 @@ import {
   CreditCard,
   Landmark,
   LockKeyhole,
+  MonitorSmartphone,
   Plus,
   Printer,
   Receipt,
@@ -39,6 +40,7 @@ import { PilihEntitas, type SumberEntitas } from './pilih';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import type { KeuanganMahasiswaData } from './profil-modul';
 import { KwitansiResmi, type KwitansiResmiData } from './kwitansi';
+import { buktiPeramban, namaPerambanBawaan, useDaftarPerambanKasir, usePerambanKasir, type SesiPerambanKasir } from './kasir-peramban';
 
 // Kasir modern (keuangan, fakultas, PMB), riwayat pembayaran mahasiswa, buku kas unit, dan jurnal umum.
 // Endpoint: /v1/keuangan (tagihan, transaksi, kasir, kwitansi), /v1/pmb/admin/tagihan, /v1/keu/kas, /v1/keu/jurnal.
@@ -50,7 +52,9 @@ export interface KeuanganSaya {
   mahasiswa?: string | null;
   prodi: string[];
   tahun_aktif?: string | null;
-  kasir_terbuka?: { id: number; loket?: string | null; dibuka_at: string } | null;
+  kasir_terbuka?: { id: number; loket?: string | null; dibuka_at: string; perangkat_id?: number | null } | null;
+  /** Loket web: izin kasir.terima (unit penerbit) dan peramban wajib disetujui. */
+  kasir?: { terima: boolean; peramban_wajib?: boolean };
 }
 export interface TransaksiKeuangan {
   id: number;
@@ -204,22 +208,73 @@ const labelMetode = (m: string) => METODE.find((x) => x.value === m)?.label ?? m
 const angka = (s: string) => Number(String(s).replace(/[^\d]/g, '')) || 0;
 
 // ================================================================ Sesi kasir
-/** Bilah sesi kasir: buka (saldo awal, loket) dan tutup (setoran, selisih, rekap per metode). */
+/** Pesan galat loket: pesan server yang sudah awam (izin, peramban, sesi, aturan penerimaan) ditampilkan apa adanya. */
+export function pesanGalatLoket(e: unknown): string {
+  const err = e as { status?: number; code?: string; message?: string; details?: Record<string, unknown> } | null;
+  if (err?.status === 422 && err.code === 'validation_failed' && err.details) {
+    const isi = Object.values(err.details).filter((v): v is string => typeof v === 'string');
+    if (isi.length) return isi.map((v) => v.charAt(0).toUpperCase() + v.slice(1)).join('. ') + '.';
+  }
+  if (err && err.message && err.status && [403, 409, 422].includes(err.status)) return err.message;
+  return pesanGalat(e);
+}
+
+/** Kirim permintaan loket bertanda peramban (bukti di query, lihat kasir-peramban.ts). */
+async function kirimLoket<T>(siakad: ReturnType<typeof useSiakad>, path: string, body: Record<string, unknown>) {
+  return siakad.request<T>({ method: 'POST', path, body, query: await buktiPeramban('POST', path, body) });
+}
+
+export interface KeadaanLoketKasir {
+  /** Siap menerima pembayaran: izin, peramban disetujui, sesi terbuka di peramban ini. */
+  siap: boolean;
+  /** Alasan belum siap dalam bahasa awam. */
+  alasan: string | null;
+  memuat: boolean;
+}
+
+/** Keadaan loket web: izin kasir.terima, peramban disetujui, sesi kasir terbuka di peramban ini. */
+export function useLoketKasir(): KeadaanLoketKasir {
+  const saya = useKeuanganSaya();
+  const terima = Boolean(saya.data?.kasir?.terima);
+  const pr = usePerambanKasir(terima);
+  if (saya.loading && !saya.data) return { siap: false, alasan: null, memuat: true };
+  if (!terima) return { siap: false, alasan: 'Akun Anda belum punya izin menerima pembayaran (kasir.terima) untuk unit penerbit biaya.', memuat: false };
+  if (pr.loading && !pr.data) return { siap: false, alasan: null, memuat: true };
+  const d = pr.data;
+  if (!d) return { siap: false, alasan: 'Status peramban loket belum dapat dimuat.', memuat: false };
+  if (!d.didukung) return { siap: false, alasan: 'Peramban ini tidak mendukung tanda tangan loket. Pakai Chrome, Edge, Firefox, atau Safari terbaru lewat alamat https.', memuat: false };
+  if (!d.terdaftar || !d.perangkat) return { siap: false, alasan: 'Peramban ini belum didaftarkan sebagai loket kasir.', memuat: false };
+  if (d.perangkat.status !== 'disetujui' || !d.perangkat.aktif) return { siap: false, alasan: 'Peramban loket ini belum disetujui penyetuju perangkat kasir.', memuat: false };
+  const sesi = saya.data?.kasir_terbuka;
+  if (!sesi || sesi.perangkat_id !== d.perangkat.id) return { siap: false, alasan: 'Buka sesi kasir di peramban ini dulu.', memuat: false };
+  return { siap: true, alasan: null, memuat: false };
+}
+
+/**
+ * Bilah sesi kasir loket web: daftar peramban loket (persetujuan seperti komputer UNIPO Kasir), buka sesi (saldo awal), dan
+ * tutup sesi (uang fisik, setoran, selisih, rekap per metode). Tampil untuk pemegang izin kasir.terima.
+ */
 export function SesiKasir({ className }: { className?: string }) {
   const siakad = useSiakad();
   const toast = useToast();
   const saya = useKeuanganSaya();
+  const terima = Boolean(saya.data?.kasir?.terima);
+  const pr = usePerambanKasir(terima);
+  const daftar = useDaftarPerambanKasir();
   const sesi = saya.data?.kasir_terbuka;
+  const perangkat = pr.data?.perangkat ?? null;
   const [buka, setBuka] = React.useState(false);
   const [tutup, setTutup] = React.useState(false);
+  const [form, setForm] = React.useState<null | 'daftar' | 'ulang'>(null);
+  const [nama, setNama] = React.useState('');
   const [saldo, setSaldo] = React.useState('');
-  const [loket, setLoket] = React.useState('');
+  const [fisik, setFisik] = React.useState('');
   const [setoran, setSetoran] = React.useState('');
   const [catatan, setCatatan] = React.useState('');
-  const [hasil, setHasil] = React.useState<SesiKasirTutup | null>(null);
+  const [hasil, setHasil] = React.useState<SesiPerambanKasir | null>(null);
   const [sibuk, setSibuk] = React.useState(false);
   const [galat, setGalat] = React.useState<unknown>(null);
-  if (!saya.data?.pengelola) return null;
+  if (!saya.data?.pengelola && !terima) return null;
   const kirim = async (fn: () => Promise<void>) => {
     setSibuk(true);
     setGalat(null);
@@ -232,24 +287,139 @@ export function SesiKasir({ className }: { className?: string }) {
       setSibuk(false);
     }
   };
+  const lama = Boolean(sesi && sesi.perangkat_id == null);
+  const diSini = Boolean(sesi && perangkat && sesi.perangkat_id === perangkat.id);
+  const kasLaci = pr.data?.sesi_saya && diSini ? pr.data.sesi_saya.kas_seharusnya ?? pr.data.sesi_saya.saldo_awal + pr.data.sesi_saya.total_tunai : null;
+
+  let ikon: React.ReactNode = <LockKeyhole />;
+  let judul: React.ReactNode = 'Sesi kasir belum dibuka';
+  let ket: React.ReactNode = 'Buka sesi dengan saldo awal laci sebelum melayani.';
+  let aksi: React.ReactNode = null;
+  if (!terima) {
+    judul = 'Loket hanya untuk petugas kasir';
+    ket = 'Akun Anda belum punya izin menerima pembayaran (kasir.terima). Minta peran kasir untuk unit penerbit biaya ke Pustikom.';
+  } else if (pr.loading && !pr.data) {
+    ikon = <Spinner size="sm" />;
+    judul = 'Menyiapkan loket…';
+    ket = 'Memeriksa peramban ini.';
+  } else if (pr.error) {
+    judul = 'Status loket belum dapat dimuat';
+    ket = pesanGalatLoket(pr.error);
+    aksi = (
+      <Button size="sm" variant="outline" onClick={() => pr.refetch()}>
+        Coba lagi
+      </Button>
+    );
+  } else if (pr.data && !pr.data.didukung) {
+    ikon = <MonitorSmartphone />;
+    judul = 'Peramban tidak didukung';
+    ket = 'Loket web memerlukan peramban terbaru (Chrome, Edge, Firefox, Safari) lewat alamat https.';
+  } else if (!perangkat) {
+    ikon = <MonitorSmartphone />;
+    judul = 'Peramban ini belum terdaftar sebagai loket';
+    ket = 'Daftarkan sekali; penyetuju perangkat kasir (Kepala BAUK atau Pustikom) menyetujui sebelum loket bisa dipakai.';
+    aksi = (
+      <Button size="sm" onClick={() => (setNama(namaPerambanBawaan()), setCatatan(''), setForm('daftar'))}>
+        <MonitorSmartphone /> Daftarkan peramban
+      </Button>
+    );
+  } else if (perangkat.status === 'menunggu') {
+    ikon = <MonitorSmartphone />;
+    judul = (
+      <>
+        {perangkat.nama} <Badge variant="warning">Menunggu persetujuan</Badge>
+      </>
+    );
+    ket = `Kode loket ${perangkat.kode}${perangkat.sidik_kunci ? ` · kode verifikasi ${perangkat.sidik_kunci}` : ''}. Sampaikan kode ini ke penyetuju perangkat kasir.`;
+    aksi = (
+      <Button size="sm" variant="outline" onClick={() => pr.refetch()}>
+        Periksa lagi
+      </Button>
+    );
+  } else if (perangkat.status !== 'disetujui' || !perangkat.aktif) {
+    ikon = <MonitorSmartphone />;
+    judul = (
+      <>
+        {perangkat.nama} <Badge variant="danger">{perangkat.status === 'disetujui' ? 'Diblokir' : perangkat.status_label}</Badge>
+      </>
+    );
+    ket = perangkat.alasan ? `Alasan: ${perangkat.alasan}` : 'Peramban ini tidak bisa dipakai sebagai loket.';
+    aksi =
+      perangkat.status === 'ditolak' ? (
+        <Button size="sm" variant="outline" onClick={() => (setNama(perangkat.nama), setCatatan(''), setForm('ulang'))}>
+          Ajukan ulang
+        </Button>
+      ) : null;
+  } else if (sesi && !diSini && !lama) {
+    judul = 'Sesi Anda terbuka di loket lain';
+    ket = `${sesi.loket ?? 'Loket lain'} sejak ${formatDate(sesi.dibuka_at, 'short')}. Tutup sesi itu di perangkatnya sebelum melayani di sini.`;
+  } else if (sesi) {
+    ikon = <Unlock />;
+    judul = lama ? 'Sesi lama tanpa peramban masih terbuka' : `Sesi kasir terbuka · ${sesi.loket ?? perangkat.nama}`;
+    ket = lama
+      ? 'Tutup sesi ini dengan setoran, lalu buka sesi baru di peramban yang disetujui.'
+      : `Sejak ${formatDate(sesi.dibuka_at, 'short')} ${new Date(sesi.dibuka_at.replace(' ', 'T')).toTimeString().slice(0, 5)}${kasLaci != null ? ` · kas laci seharusnya ${formatRupiah(kasLaci)}` : ''}`;
+    aksi = (
+      <Button size="sm" variant="outline" onClick={() => (setFisik(''), setSetoran(''), setCatatan(''), setHasil(null), setTutup(true))}>
+        <LockKeyhole /> Tutup sesi
+      </Button>
+    );
+  } else if (perangkat.sesi_aktif) {
+    judul = 'Peramban ini sedang dipakai petugas lain';
+    ket = `Sesi ${perangkat.sesi_aktif.kasir} masih terbuka di loket ini. Minta petugas itu menutup sesinya.`;
+  } else {
+    judul = `Sesi kasir belum dibuka · ${perangkat.nama}`;
+    ket = `Loket ${perangkat.unit ? perangkat.unit.singkatan || perangkat.unit.nama : 'semua unit'}. Hitung uang di laci lalu buka sesi.`;
+    aksi = (
+      <Button size="sm" onClick={() => (setSaldo(''), setCatatan(''), setBuka(true))}>
+        <Unlock /> Buka sesi
+      </Button>
+    );
+  }
+
+  const nilaiFisik = fisik ? angka(fisik) : 0;
+  const setoranLebih = !lama && Boolean(setoran) && angka(setoran) > nilaiFisik;
   return (
-    <div className={cn('u-kasir-sesi', className)} data-buka={sesi ? '' : undefined}>
+    <div className={cn('u-kasir-sesi', className)} data-buka={diSini || lama ? '' : undefined}>
       <span className="u-kasir-sesi-ikon" aria-hidden>
-        {sesi ? <Unlock /> : <LockKeyhole />}
+        {ikon}
       </span>
       <span className="u-kasir-sesi-teks">
-        <b>{sesi ? `Sesi kasir terbuka${sesi.loket ? ` · ${sesi.loket}` : ''}` : 'Sesi kasir belum dibuka'}</b>
-        <small>{sesi ? `Sejak ${formatDate(sesi.dibuka_at, 'short')} ${new Date(sesi.dibuka_at).toTimeString().slice(0, 5)}` : 'Pembayaran tunai dicatat ke sesi kasir yang terbuka.'}</small>
+        <b>{judul}</b>
+        <small>{ket}</small>
       </span>
-      {sesi ? (
-        <Button size="sm" variant="outline" onClick={() => setTutup(true)}>
-          <LockKeyhole /> Tutup sesi
-        </Button>
-      ) : (
-        <Button size="sm" onClick={() => setBuka(true)}>
-          <Unlock /> Buka sesi
-        </Button>
-      )}
+      {aksi}
+      <Dialog
+        side="right"
+        open={form !== null}
+        onOpenChange={(o) => !o && setForm(null)}
+        title={form === 'ulang' ? 'Ajukan ulang peramban loket' : 'Daftarkan peramban sebagai loket'}
+        description="Peramban ini membuat kunci rahasia yang tidak bisa disalin ke komputer lain. Loket bisa dipakai setelah disetujui penyetuju perangkat kasir."
+        footer={
+          <Button
+            loading={sibuk}
+            onClick={() =>
+              kirim(async () => {
+                const r = await daftar({ nama, catatan, ajukanUlang: form === 'ulang' });
+                setForm(null);
+                toast.add({ title: 'Peramban didaftarkan', description: `Kode loket ${r.kode}. Menunggu persetujuan.` });
+              })
+            }
+          >
+            {form === 'ulang' ? 'Ajukan ulang' : 'Daftarkan'}
+          </Button>
+        }
+      >
+        <div className="u-kasir-form">
+          <Field label="Nama loket" description="Mis. Loket 1 BAUK, lantai 1.">
+            <Input value={nama} onChange={(e) => setNama(e.target.value)} maxLength={100} />
+          </Field>
+          <Field label="Catatan untuk penyetuju" optional>
+            <Textarea value={catatan} onChange={(e) => setCatatan(e.target.value)} rows={2} maxLength={255} placeholder="Mis. komputer meja kasir BAUK" />
+          </Field>
+          {galat != null && <GalatApi error={galat} title="Peramban belum terdaftar" message={pesanGalatLoket(galat)} />}
+        </div>
+      </Dialog>
       <Dialog
         side="right"
         open={buka}
@@ -261,7 +431,7 @@ export function SesiKasir({ className }: { className?: string }) {
             loading={sibuk}
             onClick={() =>
               kirim(async () => {
-                await siakad.request({ method: 'POST', path: '/v1/keuangan/kasir/buka', body: { saldo_awal: angka(saldo), loket: loket || undefined } });
+                await kirimLoket(siakad, '/v1/keuangan/kasir/buka', { saldo_awal: angka(saldo), catatan: catatan || undefined });
                 setBuka(false);
                 toast.add({ title: 'Sesi kasir dibuka' });
               })
@@ -275,10 +445,10 @@ export function SesiKasir({ className }: { className?: string }) {
           <Field label="Saldo awal laci">
             <Input inputMode="numeric" value={saldo ? formatRupiah(angka(saldo)) : ''} onChange={(e) => setSaldo(e.target.value)} placeholder="Rp0" />
           </Field>
-          <Field label="Loket" optional>
-            <Input value={loket} onChange={(e) => setLoket(e.target.value)} placeholder="mis. Loket 1 BAUK" />
+          <Field label="Catatan" optional>
+            <Textarea value={catatan} onChange={(e) => setCatatan(e.target.value)} rows={2} maxLength={1000} />
           </Field>
-          {galat != null && <GalatApi error={galat} title="Sesi belum dibuka" />}
+          {galat != null && <GalatApi error={galat} title="Sesi belum dibuka" message={pesanGalatLoket(galat)} />}
         </div>
       </Dialog>
       <Dialog
@@ -289,16 +459,20 @@ export function SesiKasir({ className }: { className?: string }) {
           if (!o) setHasil(null);
         }}
         title={hasil ? 'Sesi kasir ditutup' : 'Tutup sesi kasir'}
-        description={hasil ? undefined : 'Masukkan uang tunai yang disetor. Selisih dihitung dari saldo awal + penerimaan tunai.'}
+        description={hasil ? undefined : 'Hitung uang tunai di laci. Selisih = uang fisik − (saldo awal + penerimaan tunai).'}
         footer={
           hasil ? (
             <Button onClick={() => (setTutup(false), setHasil(null))}>Selesai</Button>
           ) : (
             <Button
               loading={sibuk}
+              disabled={(!lama && !fisik) || setoranLebih}
               onClick={() =>
                 kirim(async () => {
-                  const r = await siakad.request<SesiKasirTutup>({ method: 'POST', path: `/v1/keuangan/kasir/${sesi!.id}/tutup`, body: { setoran: angka(setoran), catatan: catatan || undefined } });
+                  const body = lama
+                    ? { setoran: angka(setoran || fisik), catatan: catatan || undefined }
+                    : { uang_fisik: nilaiFisik, setoran: setoran ? angka(setoran) : nilaiFisik, catatan: catatan || undefined };
+                  const r = await kirimLoket<SesiPerambanKasir>(siakad, `/v1/keuangan/kasir/${sesi!.id}/tutup`, body);
                   setHasil(r.data);
                 })
               }
@@ -312,12 +486,13 @@ export function SesiKasir({ className }: { className?: string }) {
           <div className="u-kasir-form">
             <StatGrid min={140}>
               <StatCard label="Saldo awal" value={formatRupiah(hasil.saldo_awal)} />
-              <StatCard label="Setoran" value={formatRupiah(hasil.setoran)} />
+              {hasil.uang_fisik != null && <StatCard label="Uang fisik" value={formatRupiah(hasil.uang_fisik)} />}
+              <StatCard label="Setoran" value={formatRupiah(hasil.setoran ?? 0)} />
               <StatCard
                 label="Selisih"
-                value={formatRupiah(hasil.selisih)}
-                tone={hasil.selisih === 0 ? 'success' : 'danger'}
-                hint={hasil.selisih === 0 ? 'Cocok' : hasil.selisih > 0 ? 'Lebih' : 'Kurang'}
+                value={formatRupiah(hasil.selisih ?? 0)}
+                tone={!hasil.selisih ? 'success' : 'danger'}
+                hint={!hasil.selisih ? 'Cocok' : (hasil.selisih ?? 0) > 0 ? 'Lebih' : 'Kurang'}
               />
             </StatGrid>
             {hasil.per_metode?.length ? (
@@ -326,17 +501,25 @@ export function SesiKasir({ className }: { className?: string }) {
                 bagian={hasil.per_metode.map((m) => ({ label: `${labelMetode(m.metode)} (${m.transaksi})`, nilai: Number(m.jumlah) }))}
                 format={(n) => formatRupiah(n)}
               />
-            ) : null}
+            ) : (
+              <p className="u-kasir-catatan">Tidak ada pembayaran di sesi ini.</p>
+            )}
           </div>
         ) : (
           <div className="u-kasir-form">
-            <Field label="Uang tunai disetor">
-              <Input inputMode="numeric" value={setoran ? formatRupiah(angka(setoran)) : ''} onChange={(e) => setSetoran(e.target.value)} placeholder="Rp0" />
+            {kasLaci != null && <Alert variant="info">Kas laci seharusnya {formatRupiah(kasLaci)} (saldo awal + penerimaan tunai).</Alert>}
+            <Field label={lama ? 'Uang tunai disetor' : 'Uang fisik di laci'}>
+              <Input inputMode="numeric" value={fisik ? formatRupiah(angka(fisik)) : ''} onChange={(e) => setFisik(e.target.value)} placeholder="Rp0" />
             </Field>
+            {!lama && (
+              <Field label="Disetor ke bendahara" optional description="Kosong = semua uang fisik disetor." error={setoranLebih ? 'Setoran tidak boleh melebihi uang fisik di laci.' : undefined}>
+                <Input inputMode="numeric" value={setoran ? formatRupiah(angka(setoran)) : ''} onChange={(e) => setSetoran(e.target.value)} placeholder={formatRupiah(nilaiFisik)} />
+              </Field>
+            )}
             <Field label="Catatan" optional>
-              <Textarea value={catatan} onChange={(e) => setCatatan(e.target.value)} rows={2} />
+              <Textarea value={catatan} onChange={(e) => setCatatan(e.target.value)} rows={2} maxLength={1000} />
             </Field>
-            {galat != null && <GalatApi error={galat} title="Sesi belum ditutup" />}
+            {galat != null && <GalatApi error={galat} title="Sesi belum ditutup" message={pesanGalatLoket(galat)} />}
           </div>
         )}
       </Dialog>
@@ -444,6 +627,8 @@ interface ButirKeranjang {
   jumlah: number;
   max: number;
   sumber: { jenis: 'mhs'; nim: string; tahun_id: string; kode_biaya: string | number } | { jenis: 'pmb'; id: number };
+  /** ID transaksi loket (idempoten): tetap sama bila pembayaran butir ini dikirim ulang. */
+  uuid?: string;
 }
 
 export interface KasirProps {
@@ -470,7 +655,7 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
   const toast = useToast();
   const p = usePlatform();
   const pmb = konteks === 'pmb';
-  const saya = useKeuanganSaya();
+  const loket = useLoketKasir();
   const [nim, setNim] = React.useState<string | null>(null);
   const [namaPembayar, setNamaPembayar] = React.useState<string>('');
   const keu = useKeuanganMahasiswa(pmb ? null : nim);
@@ -480,7 +665,7 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
   const [catatan, setCatatan] = React.useState('');
   const [sibuk, setSibuk] = React.useState(false);
   const [galat, setGalat] = React.useState<unknown>(null);
-  const [hasil, setHasil] = React.useState<{ transaksi: TransaksiKeuangan[]; pmb: TagihanPmbAdmin[]; diterima: number; total: number } | null>(null);
+  const [hasil, setHasil] = React.useState<{ transaksi: TransaksiKeuangan[]; pmb: TagihanPmbAdmin[]; diterima: number; total: number; peringatan: string[] } | null>(null);
   const [lembarBayar, setLembarBayar] = React.useState(false);
 
   const total = keranjang.reduce((a, b) => a + b.jumlah, 0);
@@ -507,14 +692,16 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
     const tr: TransaksiKeuangan[] = [];
     const tp: TagihanPmbAdmin[] = [];
     const awal = Date.now().toString(36);
+    const peringatan: string[] = [];
     try {
       for (const [i, b] of keranjang.entries()) {
         if (b.sumber.jenis === 'mhs') {
-          const r = await siakad.request<TransaksiKeuangan>({
-            method: 'POST',
-            path: '/v1/keuangan/transaksi',
-            body: { nim: b.sumber.nim, tahun_id: b.sumber.tahun_id, kode_biaya: b.sumber.kode_biaya, jumlah: b.jumlah, metode, referensi: `kasir-${awal}-${i}`, keterangan: catatan || undefined },
+          // Loket web = jalur Kasir (peramban disetujui, sesi, aturan kasir.terima); uuid membuat kirim ulang tidak dobel.
+          b.uuid ??= typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${awal}-${i}-${Math.random().toString(36).slice(2, 10)}`;
+          const r = await kirimLoket<TransaksiKeuangan & { peringatan?: Array<{ pesan: string }> }>(siakad, '/v1/keuangan/transaksi', {
+            uuid: b.uuid, nim: b.sumber.nim, tahun_id: b.sumber.tahun_id, kode_biaya: b.sumber.kode_biaya, jumlah: b.jumlah, metode, referensi: `kasir-${awal}-${i}`, keterangan: catatan || undefined,
           });
+          r.data.peringatan?.forEach((x) => !peringatan.includes(x.pesan) && peringatan.push(x.pesan));
           tr.push(r.data);
         } else {
           const r = await siakad.request<TagihanPmbAdmin>({
@@ -525,7 +712,7 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
           tp.push(r.data);
         }
       }
-      setHasil({ transaksi: tr, pmb: tp, diterima: uang, total });
+      setHasil({ transaksi: tr, pmb: tp, diterima: uang, total, peringatan });
       setKeranjang([]);
       setDiterima('');
       setCatatan('');
@@ -579,13 +766,11 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
       <Field label="Catatan" optional>
         <Input value={catatan} onChange={(e) => setCatatan(e.target.value)} placeholder={metode === 'transfer' ? 'No. referensi transfer' : 'Opsional'} />
       </Field>
-      {galat != null && <GalatApi error={galat} title="Pembayaran gagal dicatat" />}
-      <Button size="lg" fullWidth loading={sibuk} disabled={!keranjang.length || kurang} onClick={bayar}>
+      {galat != null && <GalatApi error={galat} title="Pembayaran gagal dicatat" message={pesanGalatLoket(galat)} />}
+      <Button size="lg" fullWidth loading={sibuk} disabled={!keranjang.length || kurang || (!pmb && !loket.siap)} onClick={bayar}>
         <Receipt /> Bayar {keranjang.length ? formatRupiah(total) : ''}
       </Button>
-      {!pmb && saya.data?.pengelola && !saya.data.kasir_terbuka && metode === 'tunai' && (
-        <small className="u-kasir-catatan">Sesi kasir belum dibuka: pembayaran tetap tercatat tetapi tidak masuk rekap laci.</small>
-      )}
+      {!pmb && !loket.siap && !loket.memuat && loket.alasan && <small className="u-kasir-catatan">{loket.alasan}</small>}
     </div>
   );
 
@@ -760,6 +945,15 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
               <b>{formatRupiah(hasil.total)}</b>
               {hasil.diterima > hasil.total && <span>Kembalian {formatRupiah(hasil.diterima - hasil.total)}</span>}
             </div>
+            {hasil.peringatan.length > 0 && (
+              <Alert variant="warning" title="Catatan aturan penerimaan">
+                {hasil.peringatan.map((x) => (
+                  <span key={x} style={{ display: 'block' }}>
+                    {x}
+                  </span>
+                ))}
+              </Alert>
+            )}
             {hasil.transaksi.map((t) => (
               <KwitansiPembayaran key={t.id} transaksiId={t.id} urlVerifikasi={urlVerifikasi} />
             ))}
