@@ -537,9 +537,9 @@ export function LogAktivitas({ username, clientId, grup, perPage = 30, saringan 
                       <>
                         {' · '}
                         {onPilihPengguna ? (
-                          <button type="button" className="u-audit-user" onClick={() => onPilihPengguna(r.username)}>
+                          <Button variant="link" size="sm" className="u-audit-user" onClick={() => onPilihPengguna(r.username)}>
                             {r.username}
-                          </button>
+                          </Button>
                         ) : (
                           <span className="u-audit-user">{r.username}</span>
                         )}

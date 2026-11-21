@@ -67,9 +67,9 @@ export function RiwayatSK({ sk, onBuka }: { sk: Pick<DetailSK, 'mengubah' | 'diu
       <span>
         {arah === 'keluar' ? (x.jenis === 'mencabut' ? 'Mencabut' : 'Mengubah') : x.jenis === 'mencabut' ? 'Dicabut oleh' : 'Diubah oleh'}{' '}
         {onBuka ? (
-          <button type="button" className="u-sk-tautan" onClick={() => onBuka(x.id)}>
+          <Button variant="link" size="sm" className="u-sk-tautan" onClick={() => onBuka(x.id)}>
             {x.nomor}
-          </button>
+          </Button>
         ) : (
           <strong>{x.nomor}</strong>
         )}

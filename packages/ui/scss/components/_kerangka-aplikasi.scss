@@ -1502,31 +1502,7 @@
   }
 }
 .u-pin-tombol {
-  display: inline-grid;
-  place-items: center;
-  width: 1.625rem;
-  height: 1.625rem;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  background: none;
   color: var(--u-muted-foreground);
-  cursor: pointer;
-  svg {
-    width: 0.875rem;
-    height: 0.875rem;
-  }
-  &:hover:not(:disabled) {
-    background: var(--u-active);
-    color: var(--u-foreground);
-  }
-  &:disabled {
-    opacity: 0.35;
-    cursor: default;
-  }
-  &:focus-visible {
-    @include focus-ring;
-  }
 }
 @media (hover: none) {
   .u-pin-aksi,

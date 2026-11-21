@@ -771,9 +771,9 @@ export function DetailSuratArsip({ uuid, onClose, onSunting }: DetailSuratArsipP
                         {tujuan.map((t) => (
                           <Badge key={t} variant="secondary">
                             {t}{' '}
-                            <button type="button" aria-label={`Hapus ${t}`} className="u-psu-hapus" onClick={() => setTujuan(tujuan.filter((x) => x !== t))}>
+                            <Button variant="ghost" size="xs" iconOnly aria-label={`Hapus ${t}`} className="u-psu-hapus" onClick={() => setTujuan(tujuan.filter((x) => x !== t))}>
                               ×
-                            </button>
+                            </Button>
                           </Badge>
                         ))}
                       </div>

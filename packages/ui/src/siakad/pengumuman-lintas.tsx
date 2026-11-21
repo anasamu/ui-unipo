@@ -322,9 +322,9 @@ export function BannerPengumuman({ p, onTutup, className }: { p: PengumumanTayan
         {p.tautan && <Tautan p={p} className="u-button u-pgm-cta" />}
       </div>
       {onTutup && p.dapat_ditutup && (
-        <button type="button" className="u-pgm-tutup" aria-label="Tutup pengumuman" onClick={onTutup}>
+        <Button variant="ghost" size="xs" iconOnly className="u-pgm-tutup" aria-label="Tutup pengumuman" onClick={onTutup}>
           <X />
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -349,9 +349,9 @@ export function ToastPengumuman({ p, onTutup, bawah, className }: { p: Pengumuma
         <Tautan p={p} className="u-pgm-tautan" />
       </div>
       {onTutup && (
-        <button type="button" className="u-pgm-tutup" aria-label="Tutup pengumuman" onClick={onTutup}>
+        <Button variant="ghost" size="xs" iconOnly className="u-pgm-tutup" aria-label="Tutup pengumuman" onClick={onTutup}>
           <X />
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -748,9 +748,9 @@ function PilihTautan({ f }: { f: StateForm }) {
     );
   }
   const kePilihManual = manualBoleh ? (
-    <button type="button" className="u-pgm-tautan-ganti" onClick={() => (setManual(true), pilih(null))}>
+    <Button variant="link" size="sm" className="u-pgm-tautan-ganti" onClick={() => (setManual(true), pilih(null))}>
       Tautan lain (URL)
-    </button>
+    </Button>
   ) : null;
   return (
     <Field

@@ -282,9 +282,9 @@ export function DaftarAturanKelompok({
           <strong>{d.data ? ringkas.butuh : '–'}</strong>
           <span>butuh SK</span>
           {ringkas.butuh ? (
-            <button type="button" className="u-ak-tautan" onClick={() => setStatus('butuh_sk')}>
+            <Button variant="link" size="sm" className="u-ak-tautan" onClick={() => setStatus('butuh_sk')}>
               Lihat
-            </button>
+            </Button>
           ) : null}
         </div>
         {!fakultas && ringkas.fakultas ? (

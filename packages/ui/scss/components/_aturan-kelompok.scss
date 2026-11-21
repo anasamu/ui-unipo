@@ -39,17 +39,9 @@
   }
 }
 .u-ak-tautan {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--u-primary);
-  font: inherit;
+  justify-content: flex-start;
+  text-align: start;
   font-size: var(--u-text-xs);
-  font-weight: var(--u-weight-semibold);
-  cursor: pointer;
-  &:hover {
-    text-decoration: underline;
-  }
 }
 .u-ak-massal {
   margin-inline-start: auto;

@@ -329,9 +329,9 @@ export function BerkasLppm({ entitas, entitasId, jenis = BERKAS_USULAN_LPPM, bol
                   {ada.map((f) => (
                     <li key={f.id}>
                       <FileText aria-hidden />
-                      <button type="button" className="u-lppm-tautan" onClick={() => void lihat(f, true)}>
+                      <Button variant="link" size="sm" className="u-lppm-tautan" onClick={() => void lihat(f, true)}>
                         {f.nama}
-                      </button>
+                      </Button>
                       <span className="u-lppm-redup">
                         {ukuran(f.ukuran)}
                         {f.diunggah_pada || f.created_at ? ` · ${tgl(f.diunggah_pada ?? f.created_at, true)}` : ''}

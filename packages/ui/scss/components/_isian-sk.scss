@@ -247,14 +247,9 @@
   }
 }
 .u-sk-tautan {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--u-primary);
-  font: inherit;
+  justify-content: flex-start;
+  text-align: start;
   font-weight: 600;
-  text-decoration: underline;
-  cursor: pointer;
 }
 .u-isian-ttd {
   display: grid;

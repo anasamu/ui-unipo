@@ -345,14 +345,14 @@ function IsiPintasan({ pin, activeKey, renderLink, onTutup }: { pin: PintasanMen
                   </TautanPintasan>
                   <span className="u-pin-aksi">
                     <Tooltip content="Naikkan">
-                      <button type="button" className="u-pin-tombol" aria-label={`Naikkan ${it.teks}`} disabled={i === 0} onClick={() => pin.pindah(it.key, -1)}>
+                      <Button variant="ghost" size="xs" iconOnly className="u-pin-tombol" aria-label={`Naikkan ${it.teks}`} disabled={i === 0} onClick={() => pin.pindah(it.key, -1)}>
                         <ArrowUp aria-hidden />
-                      </button>
+                      </Button>
                     </Tooltip>
                     <Tooltip content="Turunkan">
-                      <button type="button" className="u-pin-tombol" aria-label={`Turunkan ${it.teks}`} disabled={i === pin.disematkan.length - 1} onClick={() => pin.pindah(it.key, 1)}>
+                      <Button variant="ghost" size="xs" iconOnly className="u-pin-tombol" aria-label={`Turunkan ${it.teks}`} disabled={i === pin.disematkan.length - 1} onClick={() => pin.pindah(it.key, 1)}>
                         <ArrowDown aria-hidden />
-                      </button>
+                      </Button>
                     </Tooltip>
                   </span>
                   <BintangPintasan pin={pin} item={it} />
@@ -376,9 +376,9 @@ function IsiPintasan({ pin, activeKey, renderLink, onTutup }: { pin: PintasanMen
                     </TautanPintasan>
                     <span className="u-pin-aksi">
                       <Tooltip content="Sembunyikan dari Sering dibuka">
-                        <button type="button" className="u-pin-tombol" aria-label={`Sembunyikan ${it.teks} dari Sering dibuka`} onClick={() => pin.sembunyikan(it.key)}>
+                        <Button variant="ghost" size="xs" iconOnly className="u-pin-tombol" aria-label={`Sembunyikan ${it.teks} dari Sering dibuka`} onClick={() => pin.sembunyikan(it.key)}>
                           <EyeOff aria-hidden />
-                        </button>
+                        </Button>
                       </Tooltip>
                     </span>
                     <BintangPintasan pin={pin} item={it} />
