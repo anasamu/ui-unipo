@@ -40,6 +40,9 @@ export interface VersiAturanRow {
   diterbitkan_at: string | null;
   jumlah_periode?: number;
   sk?: { id: string; nomor: string; tanggal?: string | null; perihal?: string | null } | null;
+  /** Draf yang sudah diajukan terbit dan menunggu rantai validator selesai (gerbang kebijakan SIAKAD). */
+  menunggu_validasi?: boolean;
+  validasi?: { tahap_ke: number | null; jumlah_tahap: number } | null;
 }
 
 const STATUS_VERSI: Record<VersiAturanRow['status'], [string, React.ComponentProps<typeof Badge>['variant']]> = {
@@ -49,8 +52,8 @@ const STATUS_VERSI: Record<VersiAturanRow['status'], [string, React.ComponentPro
 };
 export const labelStatusVersi = (s: VersiAturanRow['status']) => STATUS_VERSI[s]?.[0] ?? s;
 
-export function LencanaStatusVersi({ status, children }: { status: VersiAturanRow['status']; children?: React.ReactNode }) {
-  const [l, v] = STATUS_VERSI[status] ?? [status, 'neutral'];
+export function LencanaStatusVersi({ status, menunggu, children }: { status: VersiAturanRow['status']; /** Menunggu validasi sebelum terbit. */ menunggu?: boolean; children?: React.ReactNode }) {
+  const [l, v] = menunggu && status === 'draf' ? ['Menunggu validasi', 'info' as const] : (STATUS_VERSI[status] ?? [status, 'neutral']);
   return (
     <Badge variant={v} dot>
       {l}
@@ -98,7 +101,7 @@ export function DaftarVersiAturan({ versi, value, onValueChange, satuanPemakai =
         <button key={a.id} type="button" aria-current={a.id === value ? 'true' : undefined} onClick={() => onValueChange(a.id)}>
           <span className="u-bkd-aturan-nama">
             {a.nama}
-            <LencanaStatusVersi status={a.status} />
+            <LencanaStatusVersi status={a.status} menunggu={a.menunggu_validasi} />
           </span>
           <small>
             Versi {a.versi}

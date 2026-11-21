@@ -321,12 +321,12 @@ function RincianAturanDupak({ id, onPilih }: { id: number; onPilih: (id: number 
             </div>
             <div className="u-bkd-kepala-status">
               {a.berlaku_sekarang ? <Badge variant="primary">Berlaku sekarang</Badge> : null}
-              <LencanaStatusVersi status={a.status}>{a.diterbitkan_at ? ` ${tgl(a.diterbitkan_at)}` : ''}</LencanaStatusVersi>
+              <LencanaStatusVersi status={a.status} menunggu={a.menunggu_validasi}>{a.diterbitkan_at ? ` ${tgl(a.diterbitkan_at)}` : ''}</LencanaStatusVersi>
             </div>
           </div>
           <DescriptionList
             items={[
-              { label: 'SK/pedoman', value: a.sk ? `${a.sk.nomor}${a.sk.tanggal ? `, ${tgl(a.sk.tanggal)}` : ''}` : <span className="u-bkd-keterangan">Belum dilampirkan (wajib sebelum terbit)</span> },
+              { label: 'SK/pedoman', value: a.sk ? `${a.sk.nomor}${a.sk.tanggal ? `, ${tgl(a.sk.tanggal)}` : ''}` : <span className="u-bkd-keterangan">Belum dilampirkan (tetap bisa terbit dengan peringatan "Perlu SK")</span> },
               { label: 'Berlaku mulai', value: a.berlaku_tanggal ? tgl(a.berlaku_tanggal) : a.status === 'terbit' ? 'Sejak diterbitkan' : 'Diisi sebelum terbit' },
               { label: 'Butir aktif', value: `${semua.filter((b) => b.aktif).length} butir di ${a.isi.unsur.length} unsur` },
               { label: 'Dipakai pengajuan', value: a.periode.length ? `${a.periode.length} DUPAK mengunci versi ini` : 'Belum ada' },
@@ -460,7 +460,7 @@ function RincianAturanDupak({ id, onPilih }: { id: number; onPilih: (id: number 
         description={`${a.nama} v${a.versi} dikunci dan ${a.berlaku_tanggal ? `berlaku untuk DUPAK yang diajukan sejak ${tgl(a.berlaku_tanggal)}` : 'langsung berlaku untuk DUPAK baru'}. DUPAK yang sudah diajukan tetap memakai versi yang dikuncinya; draf yang belum diajukan dihitung ulang dengan versi ini.`}
         confirmLabel="Terbitkan"
         onConfirm={async () => {
-          await aksi('POST', `${BASIS}/${a.id}/terbitkan`, {}, 'Rubrik diterbitkan dan dikunci.');
+          await aksi('POST', `${BASIS}/${a.id}/terbitkan`, {}, 'Rubrik diterbitkan. Bila rantai validator diatur, rubrik berlaku setelah validator terakhir menyetujui.');
           setPanel(null);
         }}
       />
@@ -587,7 +587,7 @@ function PanelUbahAturanDupak({ aturan: a, onOpenChange }: { aturan: AturanDupak
               <Field label="Dasar hukum" description="Nomor, tanggal, dan penerbit peraturan/pedoman PAK.">
                 <Textarea rows={4} value={id.dasar_hukum} onChange={(e) => setId({ ...id, dasar_hukum: e.target.value })} />
               </Field>
-              <PilihSK value={id.sk_id} onValueChange={(v: string | null) => setId({ ...id, sk_id: v })} jenis="aturan" label="SK/pedoman yang dirujuk" description="Dari registri SK; wajib sebelum terbit." />
+              <PilihSK value={id.sk_id} onValueChange={(v: string | null) => setId({ ...id, sk_id: v })} jenis="aturan" label="SK/pedoman yang dirujuk" description="Dari registri SK. Tanpa SK versi tetap bisa terbit dengan peringatan Perlu SK." />
               <Field label="Berlaku mulai tanggal" optional description="DUPAK yang diajukan sejak tanggal ini memakai versi ini. Kosong = sejak diterbitkan.">
                 <IsianTanggal value={id.berlaku_tanggal} onValueChange={(v) => setId({ ...id, berlaku_tanggal: v ?? '' })} />
               </Field>
@@ -679,7 +679,7 @@ function PanelUbahAturanDupak({ aturan: a, onOpenChange }: { aturan: AturanDupak
           content: (
             <WizardReview
               sections={[
-                { title: 'Dasar hukum', items: [{ label: 'Nama', value: id.nama }, { label: 'Dasar hukum', value: id.dasar_hukum || null }, { label: 'SK', value: id.sk_id ? 'Terlampir' : null }, { label: 'Berlaku mulai', value: id.berlaku_tanggal ? tgl(id.berlaku_tanggal) : 'Sejak diterbitkan' }], onEdit: () => setStep(0), missing: id.sk_id ? undefined : 'SK/pedoman wajib dilampirkan sebelum terbit.' },
+                { title: 'Dasar hukum', items: [{ label: 'Nama', value: id.nama }, { label: 'Dasar hukum', value: id.dasar_hukum || null }, { label: 'SK', value: id.sk_id ? 'Terlampir' : null }, { label: 'Berlaku mulai', value: id.berlaku_tanggal ? tgl(id.berlaku_tanggal) : 'Sejak diterbitkan' }], onEdit: () => setStep(0), missing: id.sk_id ? undefined : 'Belum ada SK/pedoman: versi terbit dengan peringatan "Perlu SK".' },
                 ...isi.unsur.map((u, ui) => {
                   const b = u.sub.flatMap((s) => s.butir);
                   const kosong = b.filter((x) => x.aktif && x.ak == null).length;

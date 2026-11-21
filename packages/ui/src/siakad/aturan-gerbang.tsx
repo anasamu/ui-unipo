@@ -5,7 +5,7 @@ import { cn } from '../lib/cn';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, DescriptionList } from '../components/display';
 import { DataTable } from '../components/data-table';
-import { Field, SegmentedControl, Textarea } from '../components/forms';
+import { Field, SegmentedControl, Switch, Textarea } from '../components/forms';
 import { Dialog, useToast } from '../components/overlays';
 import { labelKategoriAturan } from './aturan';
 import { type PenyetujuKategoriAturan } from './aturan-keputusan';
@@ -24,6 +24,7 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
  *   DaftarKerjaPerluSk          daftar kerja "Perlu SK": aturan aktif tanpa SK dasar + kebijakan berlaku tanpa SK,
  *                               jumlah per unit (Pustikom: semua unit; layar unit: `unit`), aksi lampirkan SK.
  *   AntreanValidasiKebijakan    kebijakan yang menunggu validasi saya: setujui, kembalikan, tolak (panel samping).
+ *   PengaturanGerbangKebijakan  Pustikom: per jenis kebijakan, baru berlaku setelah validasi selesai (ya/tidak).
  *
  * Keputusan pemilik 2026-11-21: aturan/kebijakan tanpa SK tetap berlaku dengan peringatan, tidak memblokir.
  */
@@ -493,5 +494,90 @@ function PanelPutusKebijakan({ kebijakan, onOpenChange }: { kebijakan: Kebijakan
         </div>
       )}
     </Dialog>
+  );
+}
+
+// ================================================================ Pengaturan (Pustikom)
+
+export interface PengaturanGerbang {
+  jenis: string;
+  judul: string;
+  unit: string;
+  tunggu_validasi: boolean;
+  bawaan: boolean;
+  bisa_diubah: boolean;
+  tanpa_validator: 'berlaku' | 'tahan';
+  tahap_akhir: string[];
+}
+
+/**
+ * Pengaturan gerbang per jenis kebijakan (GET/POST /v1/aturan/kebijakan/pengaturan): "baru berlaku setelah validasi
+ * selesai". Jenis yang tidak bisa diubah (mis. aturan biaya: penetapan WR II selalu tahap terakhir) tampil terkunci.
+ * Ubah butuh izin aturan.validator.atur; tanpa izin hanya lihat.
+ */
+export function PengaturanGerbangKebijakan({ className }: { className?: string }) {
+  const siakad = useSiakad();
+  const toast = useToast();
+  const q = useSiakadQuery<PengaturanGerbang[]>(['aturan', 'kebijakan', 'pengaturan'], (s, signal) => s.request<PengaturanGerbang[]>({ method: 'GET', path: '/v1/aturan/kebijakan/pengaturan' }, { signal }));
+  const [sibuk, setSibuk] = React.useState<string | null>(null);
+  if (q.error && belumAda(q.error)) return <Alert className={className}>Server SIAKAD ini belum mendukung pengaturan gerbang kebijakan.</Alert>;
+  const ubah = async (r: PengaturanGerbang, v: boolean) => {
+    setSibuk(r.jenis);
+    try {
+      await siakad.request({ method: 'POST', path: '/v1/aturan/kebijakan/pengaturan', body: { jenis: r.jenis, tunggu_validasi: v } });
+      invalidateSiakad('aturan');
+      toast.add({ title: v ? `${r.judul}: berlaku setelah validasi selesai` : `${r.judul}: berlaku langsung saat terbit`, type: 'success' });
+    } catch (e) {
+      toast.add({ title: 'Gagal menyimpan', description: pesanGalat(e), type: 'error' });
+    } finally {
+      setSibuk(null);
+    }
+  };
+  return (
+    <div className={cn('u-agb', className)}>
+      <p className="u-agb-sub">
+        Kebijakan bertanda "Tunggu validasi" tetap draf setelah diterbitkan dan baru berlaku saat validator tahap terakhir menyetujui. Bila rantai validator unitnya belum diatur, kebijakan
+        langsung berlaku dengan peringatan. Kebijakan lain langsung berlaku dan divalidasi sesudahnya.
+      </p>
+      <DataTable
+        rows={q.data}
+        loading={q.loading}
+        error={q.error}
+        onRetry={q.refetch}
+        rowKey={(r) => r.jenis}
+        pagination={false}
+        columnToggle={false}
+        columns={[
+          {
+            key: 'judul',
+            header: 'Jenis kebijakan',
+            mobile: 'title',
+            value: (r) => r.judul,
+            cell: (r) => (
+              <span className="u-agb-nama">
+                <strong>{r.judul}</strong>
+                <span>{r.tahap_akhir.length ? `Tahap terakhir: ${r.tahap_akhir.join(', ')}` : r.bisa_diubah ? (r.bawaan ? 'Bawaan: tunggu validasi' : 'Bawaan: langsung berlaku') : 'Tetap'}</span>
+              </span>
+            ),
+          },
+          { key: 'unit', header: 'Unit pemilik', mobile: 'subtitle', value: (r) => r.unit },
+          {
+            key: 'tunggu',
+            header: 'Tunggu validasi',
+            shrink: true,
+            mobile: 'badge',
+            value: (r) => (r.tunggu_validasi ? 'Ya' : 'Tidak'),
+            cell: (r) => (
+              <Switch
+                checked={r.tunggu_validasi}
+                disabled={!r.bisa_diubah || sibuk !== null}
+                onCheckedChange={(v) => void ubah(r, v)}
+                aria-label={`Tunggu validasi: ${r.judul}`}
+              />
+            ),
+          },
+        ]}
+      />
+    </div>
   );
 }

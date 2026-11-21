@@ -62,6 +62,8 @@ interface AturanBkdRow {
   diterbitkan_at: string | null;
   jumlah_periode?: number;
   sk?: { id: string; nomor: string; tanggal?: string | null; perihal?: string | null } | null;
+  /** Draf yang diajukan terbit dan menunggu validator (gerbang kebijakan). */
+  menunggu_validasi?: boolean;
 }
 interface AturanBkdDetail extends AturanBkdRow {
   isi: IsiAturanBkd;
@@ -135,8 +137,8 @@ function RincianAturanBkd({ id, onPilih }: { id: number; onPilih: (id: number | 
               <h3 className="u-bkd-judul">{a.nama}</h3>
               <p className="u-bkd-keterangan" style={{ whiteSpace: 'pre-line' }}>{a.dasar_hukum ?? 'Dasar hukum belum diisi.'}</p>
             </div>
-            <Badge variant={STATUS[a.status][1]} dot>
-              {STATUS[a.status][0]}
+            <Badge variant={a.menunggu_validasi && a.status === 'draf' ? 'info' : STATUS[a.status][1]} dot>
+              {a.menunggu_validasi && a.status === 'draf' ? 'Menunggu validasi' : STATUS[a.status][0]}
               {a.diterbitkan_at ? ` ${tgl(a.diterbitkan_at)}` : ''}
             </Badge>
           </div>
@@ -184,7 +186,7 @@ function RincianAturanBkd({ id, onPilih }: { id: number; onPilih: (id: number | 
               <GitCompare /> Banding
             </Button>
             {a.status === 'draf' ? (
-              <Button variant="outline" onClick={() => void aksi('POST', `/v1/sdm/bkd/aturan/${a.id}/terbitkan`, {}, 'Versi diterbitkan dan dikunci.')}>
+              <Button variant="outline" onClick={() => void aksi('POST', `/v1/sdm/bkd/aturan/${a.id}/terbitkan`, {}, 'Versi diterbitkan. Bila rantai validator diatur, versi berlaku setelah validator terakhir menyetujui.')}>
                 <FileCheck2 /> Terbitkan
               </Button>
             ) : null}
