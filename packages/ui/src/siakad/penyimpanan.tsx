@@ -11,6 +11,8 @@ import { BarList, DonutChart, GroupedBarChart, LineChart, chartColor } from '../
 import { PanelLangkah } from '../components/panel-langkah';
 import { BatangAlokasi, MeterKuota, SliderNilai, nadaKuota, type BagianAlokasi } from '../components/alokasi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { PanelBatasUnggah, ringkasBatasUnggah, type NilaiBatasUnggah } from './batas-unggah';
+import type { BatasUnggah } from './berkas';
 
 /**
  * Aturan penyimpanan online (API /v1/penyimpanan, docs/PENYIMPANAN.md di siakad_unipo):
@@ -87,6 +89,14 @@ export interface RincianPenyimpanan {
   peran: string[];
   kuota_byte: number | null;
   kuota_sumber: SumberNilai | null;
+  /**
+   * pribadi = kuota pribadi diatur; kolam = tanpa kuota pribadi, dibatasi kolam unit; belum_diatur = tidak ada batas di
+   * tingkat mana pun (Pustikom belum mengisi kebijakan). SIAKAD lama: tidak ada (diturunkan dari kuota_byte & batas).
+   */
+  kuota_status?: 'pribadi' | 'kolam' | 'belum_diatur';
+  /** Tautan "Atur di Pustikom » Penyimpanan" (hanya untuk Pustikom). */
+  atur_url?: string | null;
+  sampah_hari?: number | null;
   terpakai_byte: number;
   jumlah_berkas: number;
   sisa_byte: number | null;
@@ -160,6 +170,8 @@ export interface RincianUnitPenyimpanan extends RingkasUnitPenyimpanan {
   pakai_kelompok: Record<string, { byte: number; orang: number }>;
   komposisi: { modul: Record<string, { byte: number; jumlah: number }>; jenis: Record<string, { byte: number; jumlah: number }> };
   pustikom: boolean;
+  /** Batas unggah unit ini (null = mewarisi induk/bawaan) dan batas efektif ruang bersamanya. SIAKAD lama: tidak ada. */
+  unggahan?: NilaiBatasUnggah & { efektif: BatasUnggah };
 }
 
 export const LABEL_MODUL: Record<string, string> = {
@@ -197,18 +209,18 @@ export function segarkanPenyimpanan() {
 // ---------------------------------------------------------------- tampilan rincian
 
 /** Kebijakan efektif dengan asal setiap nilai. */
-export function DaftarKebijakan({ k }: { k: KebijakanPenyimpanan }) {
+export function DaftarKebijakan({ k, batas }: { k: KebijakanPenyimpanan; batas?: BatasPenyimpanan | null }) {
   const asal = (f: string) => (k.sumber[f] ? <small>{k.sumber[f]!.label}</small> : null);
   return (
     <dl className="u-pny-aturan">
       <dt>Kuota</dt>
       <dd>
-        {k.kuota_byte === null ? 'Tanpa batas' : formatBytes(k.kuota_byte)}
-        {asal('kuota_byte')}
+        {k.kuota_byte !== null ? formatBytes(k.kuota_byte) : batas ? `Belum ada kuota pribadi; mengikuti ${batas.label} (${formatBytes(batas.byte)})` : 'Belum diatur'}
+        {k.kuota_byte !== null && asal('kuota_byte')}
       </dd>
       <dt>Ukuran per berkas</dt>
       <dd>
-        {k.maks_berkas_byte === null ? 'Tanpa batas' : `maks. ${formatBytes(k.maks_berkas_byte)}`}
+        {k.maks_berkas_byte === null ? 'Belum diatur' : `maks. ${formatBytes(k.maks_berkas_byte)}`}
         {asal('maks_berkas_byte')}
       </dd>
       <dt>Jenis berkas</dt>
@@ -225,7 +237,10 @@ export function DaftarKebijakan({ k }: { k: KebijakanPenyimpanan }) {
         </>
       )}
       <dt>Sampah</dt>
-      <dd>{k.sampah_hari === null ? 'Tidak dikosongkan otomatis' : `Dihapus permanen setelah ${k.sampah_hari} hari`}</dd>
+      <dd>
+        Tidak dihapus otomatis
+        <small>Pulihkan atau hapus permanen berkas milik Anda; pengosongan sampah dilakukan admin Pustikom.</small>
+      </dd>
       <dt>Tautan publik</dt>
       <dd>{k.bagi_publik ? (k.tautan_maks_hari ? `Boleh, berlaku paling lama ${k.tautan_maks_hari} hari` : 'Boleh') : 'Tidak diizinkan'}</dd>
       <dt>Enkripsi</dt>
@@ -234,24 +249,68 @@ export function DaftarKebijakan({ k }: { k: KebijakanPenyimpanan }) {
   );
 }
 
+/** Status kuota pengguna: kuota pribadi, hanya kolam unit, atau belum diatur di tingkat mana pun. */
+export function statusKuota(d: Pick<RincianPenyimpanan, 'kuota_status' | 'kuota_byte' | 'batas'>): 'pribadi' | 'kolam' | 'belum_diatur' {
+  return d.kuota_status ?? (d.kuota_byte !== null ? 'pribadi' : d.batas ? 'kolam' : 'belum_diatur');
+}
+
+/**
+ * Meter "Penyimpanan saya" yang sama dengan yang ditegakkan saat unggah: kuota pribadi, atau kolam unit yang mengikat
+ * (bila tidak ada kuota pribadi), atau keterangan jujur "Kuota belum diatur" (bukan "tanpa batas"). Dipakai Penyimpanan
+ * saya, Profil, dan bar kuota Kelola berkas.
+ */
+export function MeterPenyimpananSaya({ data, size = 'md', keterangan }: { data: RincianPenyimpanan; size?: 'sm' | 'md'; keterangan?: string }) {
+  const st = statusKuota(data);
+  if (st === 'belum_diatur') {
+    return (
+      <div className="u-pny-belum" role="status">
+        <div className="u-meter-kuota-kepala">
+          <span>Penyimpanan saya</span>
+          <b>{formatBytes(data.terpakai_byte)} terpakai</b>
+        </div>
+        <p>
+          <b>Kuota belum diatur.</b> Pustikom belum menetapkan kuota untuk Anda atau unit Anda, jadi belum ada batas total. Unggahan tetap dibatasi ukuran dan jenis
+          berkas.
+        </p>
+        {data.atur_url && (
+          <a className="u-pny-atur" href={data.atur_url} target="_blank" rel="noopener">
+            Atur di Pustikom » Penyimpanan
+          </a>
+        )}
+      </div>
+    );
+  }
+  if (st === 'kolam' && data.batas) {
+    return (
+      <MeterKuota
+        size={size}
+        label={`Penyimpanan saya · mengikuti ${data.batas.label}`}
+        terpakai={data.batas.terpakai_byte}
+        kuota={data.batas.byte}
+        keterangan={keterangan ?? `Belum ada kuota pribadi; yang membatasi adalah ${data.batas.label} yang dipakai bersama anggota unit. Berkas Anda ${formatBytes(data.terpakai_byte)}.`}
+      />
+    );
+  }
+  return (
+    <MeterKuota
+      size={size}
+      label={data.kuota_sumber ? `Kuota pribadi · ${data.kuota_sumber.label}` : 'Kuota pribadi'}
+      terpakai={data.terpakai_byte}
+      kuota={data.kuota_byte}
+      keterangan={keterangan}
+    />
+  );
+}
+
 /** Isi rincian penyimpanan seorang pengguna (tanpa pengambilan data). */
 export function RincianPenyimpananPengguna({ data, aksi }: { data: RincianPenyimpanan; aksi?: React.ReactNode }) {
   const jenis = data.per_jenis.map((j, i) => ({ label: LABEL_JENIS_BERKAS[j.kunci] ?? j.kunci, value: j.byte, color: chartColor(i) }));
+  const st = statusKuota(data);
   return (
     <div className="u-pny">
       <section className="u-pny-bagian" aria-label="Kuota">
-        <MeterKuota
-          label={data.kuota_sumber ? `Kuota pribadi · ${data.kuota_sumber.label}` : 'Kuota pribadi'}
-          terpakai={data.terpakai_byte}
-          kuota={data.kuota_byte}
-          keterangan={data.dihitung_at ? `Dihitung ${formatDate(data.dihitung_at)} ${formatTime(data.dihitung_at)}. Sampah tidak mengurangi kuota.` : undefined}
-        />
-        {data.kuota_byte === null && data.batas && (
-          <p className="u-meter-kuota-ket">
-            Tanpa kuota pribadi; dibatasi {data.batas.label} (sisa {formatBytes(data.batas.sisa_byte)}).
-          </p>
-        )}
-        {data.kolam.map((k) => (
+        <MeterPenyimpananSaya data={data} keterangan={st === 'pribadi' && data.dihitung_at ? `Dihitung ${formatDate(data.dihitung_at)} ${formatTime(data.dihitung_at)}. Sampah tidak mengurangi kuota.` : undefined} />
+        {data.kolam.filter((k) => !(st === 'kolam' && data.batas?.kode === k.kode)).map((k) => (
           <MeterKuota key={k.kode} size="sm" label={`Kolam unit ${k.nama}`} terpakai={k.terpakai_byte ?? 0} kuota={k.kolam_byte} keterangan="Dipakai bersama seluruh anggota unit; unggahan ditolak bila kolam penuh." />
         ))}
         {aksi && <div className="u-pny-alat">{aksi}</div>}
@@ -265,7 +324,7 @@ export function RincianPenyimpananPengguna({ data, aksi }: { data: RincianPenyim
         </div>
         <div className="u-pny-angka">
           <span>Sisa</span>
-          <b>{data.batas ? formatBytes(data.batas.sisa_byte) : data.sisa_byte === null ? 'Tanpa batas' : formatBytes(data.sisa_byte)}</b>
+          <b>{data.batas ? formatBytes(data.batas.sisa_byte) : data.sisa_byte === null ? 'Belum diatur' : formatBytes(data.sisa_byte)}</b>
           <small>{data.unit_utama_nama ? `Unit utama: ${data.unit_utama_nama}` : 'Tanpa unit utama'}</small>
         </div>
         <div className="u-pny-angka">
@@ -323,7 +382,7 @@ export function RincianPenyimpananPengguna({ data, aksi }: { data: RincianPenyim
       )}
       <section className="u-pny-bagian">
         <h3>Aturan yang berlaku</h3>
-        <DaftarKebijakan k={data.kebijakan} />
+        <DaftarKebijakan k={data.kebijakan} batas={data.batas} />
       </section>
       {data.permintaan && data.permintaan.length > 0 && (
         <section className="u-pny-bagian">
@@ -601,6 +660,7 @@ export function PanelPenyimpananUnit({ kode, onOpenChange, onPengguna }: PanelPe
   );
   const [bagi, setBagi] = React.useState(false);
   const [minta, setMinta] = React.useState(false);
+  const [aturUnggah, setAturUnggah] = React.useState(false);
   const [pengguna, setPengguna] = React.useState<string | null>(null);
   const d = q.data;
   const bagian = d ? bagianUnit(d) : [];
@@ -650,6 +710,30 @@ export function PanelPenyimpananUnit({ kode, onOpenChange, onPengguna }: PanelPe
                 )}
               </div>
             </section>
+            {d.unggahan && (
+              <section className="u-pny-bagian" aria-label="Unggahan">
+                <h3>Unggahan</h3>
+                <dl className="u-pny-aturan">
+                  <dt>Diatur unit ini</dt>
+                  <dd>{ringkasBatasUnggah(d.unggahan, 'Belum diatur (mengikuti unit induk/bawaan)')}</dd>
+                  <dt>Berlaku di ruang unit</dt>
+                  <dd>
+                    {d.unggahan.efektif.teks}
+                    {d.unggahan.efektif.maks_sumber && <small>Ukuran dari {d.unggahan.efektif.maks_sumber.label}</small>}
+                    {(d.unggahan.efektif.izin ?? []).length > 0 && <small>Jenis dari {(d.unggahan.efektif.izin ?? []).map((c) => c.sumber.label).join(' dan ')}</small>}
+                  </dd>
+                </dl>
+                <p className="u-meter-kuota-ket">Berlaku juga untuk anggota unit dan sub-unit yang tidak mengatur sendiri. Aplikasi yang dipakai mengunggah bisa lebih ketat.</p>
+                {d.pustikom && (
+                  <div className="u-pny-alat">
+                    <Button size="sm" variant="outline" onClick={() => setAturUnggah(true)}>
+                      <Scale aria-hidden />
+                      Atur unggahan
+                    </Button>
+                  </div>
+                )}
+              </section>
+            )}
             <section className="u-pny-bagian">
               <h3>Alokasi vs pemakaian nyata per kelompok</h3>
               <GroupedBarChart
@@ -705,6 +789,17 @@ export function PanelPenyimpananUnit({ kode, onOpenChange, onPengguna }: PanelPe
       </Sheet>
       {bagi && d && <BagiKuotaUnit kode={d.kode} open onOpenChange={setBagi} />}
       {minta && d && <FormMintaKuota open onOpenChange={setMinta} unitAwal={d.kode} unitKelolaan={[{ kode: d.kode, nama: d.nama }]} />}
+      {d?.unggahan && (
+        <PanelBatasUnggah
+          open={aturUnggah}
+          onOpenChange={setAturUnggah}
+          lingkup="unit"
+          kunci={d.kode}
+          nama={d.nama}
+          awal={d.unggahan}
+          keterangan={`Sekarang berlaku di ruang unit: ${d.unggahan.efektif.teks}${d.unggahan.efektif.maks_sumber ? ` (ukuran dari ${d.unggahan.efektif.maks_sumber.label})` : ''}. Nilai unit hanya bisa memperketat bawaan; sub-unit bisa menimpa nilai ini.`}
+        />
+      )}
       {!onPengguna && <PanelPenyimpananPengguna username={pengguna} onOpenChange={(o) => !o && setPengguna(null)} />}
     </>
   );
@@ -1086,7 +1181,7 @@ export function KuotaBerkas({ kuota, unit, ringkas, className }: KuotaBerkasProp
     const pakai = kolamIkat ? kuota.batas!.terpakai_byte : kuota.terpakai_byte;
     const batas = kuota.batas ? kuota.batas.byte : kuota.kuota_byte;
     const persen = batas ? (pakai / batas) * 100 : null;
-    const teks = batas ? `${formatBytes(pakai)} dari ${formatBytes(batas)}` : `${formatBytes(pakai)} · tanpa batas`;
+    const teks = batas ? `${formatBytes(pakai)} dari ${formatBytes(batas)}` : `${formatBytes(pakai)} · kuota belum diatur`;
     const label = kuota.ruang === 'unit' ? 'Ruang bersama unit' : 'Penyimpanan saya';
     const bisaRinci = kuota.ruang === 'pribadi' || kelolaUnit;
     const Isi = bisaRinci ? 'button' : 'span';
@@ -1130,7 +1225,13 @@ export function KuotaBerkas({ kuota, unit, ringkas, className }: KuotaBerkasProp
           label={kuota.ruang === 'unit' ? 'Ruang bersama unit' : 'Penyimpanan saya'}
           terpakai={kuota.terpakai_byte}
           kuota={kuota.batas ? kuota.batas.byte : kuota.kuota_byte}
-          keterangan={kolam && kuota.sisa_kolam_byte !== null ? `Kolam ${kolam.nama}: sisa ${formatBytes(kuota.sisa_kolam_byte)}` : undefined}
+          keterangan={
+            !kuota.batas && kuota.kuota_byte === null
+              ? 'Kuota belum diatur Pustikom.'
+              : kolam && kuota.sisa_kolam_byte !== null
+                ? `Kolam ${kolam.nama}: sisa ${formatBytes(kuota.sisa_kolam_byte)}`
+                : undefined
+          }
         />
       )}
       {kuota.ruang === 'pribadi' ? (

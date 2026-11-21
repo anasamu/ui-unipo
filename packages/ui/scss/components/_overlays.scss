@@ -455,6 +455,22 @@
   font-size: var(--u-text-sm);
   line-height: 1.45;
 }
+.u-toast-aksi {
+  align-self: center;
+  flex: none;
+  margin-inline-end: 1.5rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 6px;
+  color: var(--u-primary);
+  font-size: var(--u-text-sm);
+  font-weight: 600;
+  &:hover {
+    background: color-mix(in oklab, var(--u-primary) 10%, transparent);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--u-ring);
+  }
+}
 .u-toast-close {
   position: absolute;
   top: 0.625rem;

@@ -9,10 +9,11 @@ import { useDibagikanBerkas, type BagiBerkas } from './berkas-ruang';
 import { DaftarDrive, useDriveBerkas, type DriveBerkasData } from './daftar-drive';
 import { Dialog } from '../components/overlays';
 import { ManajerBerkas, useAksiBerkas, type ManajerBerkasProps, type OpsiSampingBerkas } from './manajer-berkas';
+import { DaftarSampah } from './sampah-berkas';
 import { invalidateSiakad, pesanGalat, useSiakad } from './provider';
 
 export interface DriveBerkasProps extends Omit<ManajerBerkasProps, 'unit' | 'bagi' | 'judul'> {
-  /** Ruang yang dibuka pertama kali: "saya", kode unit, id drive (mis. "arsip:univ"), atau "dibagikan". Bawaan unit pertama dari `unitTampil`, selain itu "saya". */
+  /** Ruang yang dibuka pertama kali: "saya", kode unit, id drive (mis. "arsip:univ"), "dibagikan", atau "sampah". Bawaan unit pertama dari `unitTampil`, selain itu "saya". */
   ruangAwal?: string;
   /** Batasi unit yang tampil (mis. ["bauk"] di aplikasi BAUK). Kosong = semua unit yang bisa dibuka pengguna. */
   unitTampil?: string[];
@@ -20,9 +21,11 @@ export interface DriveBerkasProps extends Omit<ManajerBerkasProps, 'unit' | 'bag
   tampilPribadi?: boolean;
   /** Tampilkan "Dibagikan" (bawaan true). */
   tampilDibagikan?: boolean;
+  /** Tampilkan pintasan "Sampah" (bawaan true; tidak tampil bila `bolehHapus` false). */
+  tampilSampah?: boolean;
 }
 
-type Pilihan = { jenis: 'drive'; id: string } | { jenis: 'dibagikan' } | { jenis: 'bagi'; id: string; nama: string };
+type Pilihan = { jenis: 'drive'; id: string } | { jenis: 'dibagikan' } | { jenis: 'sampah' } | { jenis: 'bagi'; id: string; nama: string };
 
 /**
  * Penyimpanan berkas lengkap: berkas pribadi, ruang bersama setiap unit yang bisa dibuka pengguna (universitas, fakultas,
@@ -31,7 +34,7 @@ type Pilihan = { jenis: 'drive'; id: string } | { jenis: 'dibagikan' } | { jenis
  * tertinggi, masing-masing dengan bar pemakaian terhadap batas yang mengikat; folder drive aktif tampil di bawahnya.
  * Di layar sempit sidebar menjadi lembar "Drive & folder". Tiap ruang memakai ManajerBerkas.
  */
-export function DriveBerkas({ ruangAwal, unitTampil, tampilPribadi = true, tampilDibagikan = true, className, tinggi = '40rem', ...props }: DriveBerkasProps) {
+export function DriveBerkas({ ruangAwal, unitTampil, tampilPribadi = true, tampilDibagikan = true, tampilSampah = true, className, tinggi = '40rem', ...props }: DriveBerkasProps) {
   const dq = useDriveBerkas();
   const drive = React.useMemo(() => {
     let d = (dq.drive ?? []).filter((x) => (x.jenis === 'pribadi' ? tampilPribadi : true));
@@ -44,6 +47,8 @@ export function DriveBerkas({ ruangAwal, unitTampil, tampilPribadi = true, tampi
   const awal = (): Pilihan =>
     ruangAwal === 'dibagikan'
       ? { jenis: 'dibagikan' }
+      : ruangAwal === 'sampah'
+        ? { jenis: 'sampah' }
       : ruangAwal && ruangAwal !== 'saya'
         ? { jenis: 'drive', id: ruangAwal.includes(':') ? ruangAwal : `unit:${ruangAwal}` }
         : unitTampil?.[0]
@@ -65,6 +70,15 @@ export function DriveBerkas({ ruangAwal, unitTampil, tampilPribadi = true, tampi
   }, [dq.drive]);
   const aktif = pilih.jenis === 'drive' ? (drive.find((x) => x.id === pilih.id) ?? null) : null;
   const unitAktif = aktif?.ruang.unit ?? (pilih.jenis === 'drive' && pilih.id.startsWith('unit:') ? pilih.id.slice(5) : undefined);
+  // Sampah: Berkas saya + ruang unit tempat pengguna boleh menghapus (pengelola: semua; anggota: unggahannya).
+  const adaSampah = tampilSampah && props.bolehHapus !== false;
+  const ruangSampah = React.useMemo(
+    () => [
+      ...(tampilPribadi ? [{ unit: null, nama: 'Berkas saya' }] : []),
+      ...drive.filter((d) => d.jenis !== 'pribadi' && d.ruang.unit && (d.hak === 'kelola' || d.hak === 'anggota')).map((d) => ({ unit: d.ruang.unit as string, nama: d.singkatan || d.nama })),
+    ],
+    [drive, tampilPribadi],
+  );
 
   const daftar = (folder?: React.ReactNode, opsi?: OpsiSampingBerkas) => (
     <DaftarDrive
@@ -77,20 +91,25 @@ export function DriveBerkas({ ruangAwal, unitTampil, tampilPribadi = true, tampi
       terbaru={opsi?.terbaru}
       onLepas={opsi ? (d, e) => opsi.lepasKeRuang({ unit: d.ruang.unit ?? null, modul: d.ruang.modul ?? undefined, label: d.singkatan || d.nama }, e) : undefined}
       bisaLepas={opsi?.bisaLepas}
-      dibagikan={tampilDibagikan ? { aktif: pilih.jenis !== 'drive', onPilih: () => setPilih({ jenis: 'dibagikan' }) } : undefined}
+      dibagikan={tampilDibagikan ? { aktif: pilih.jenis === 'dibagikan' || pilih.jenis === 'bagi', onPilih: () => setPilih({ jenis: 'dibagikan' }) } : undefined}
+      sampah={adaSampah ? { aktif: pilih.jenis === 'sampah', onPilih: () => setPilih({ jenis: 'sampah' }) } : undefined}
     />
   );
 
   return (
     <div className={cn('u-db', className)}>
-      {pilih.jenis === 'dibagikan' ? (
+      {pilih.jenis === 'dibagikan' || pilih.jenis === 'sampah' ? (
         <div className="u-db-tata" style={{ height: tinggi }}>
           <aside className="u-mb-samping" aria-label="Drive">
             <div className="u-mb-samping-isi">{daftar()}</div>
           </aside>
           <div className="u-db-tata-utama">
             <PemilihDriveSempit drive={drive} onPilih={(d) => setPilih({ jenis: 'drive', id: d.id })} />
-            <DaftarDibagikan bukaFolder={(id, nama) => setPilih({ jenis: 'bagi', id, nama })} />
+            {pilih.jenis === 'sampah' ? (
+              <DaftarSampah ruang={ruangSampah} ruangAwal={unitTampil?.[0] && !tampilPribadi ? unitTampil[0] : null} />
+            ) : (
+              <DaftarDibagikan bukaFolder={(id, nama) => setPilih({ jenis: 'bagi', id, nama })} />
+            )}
           </div>
         </div>
       ) : (

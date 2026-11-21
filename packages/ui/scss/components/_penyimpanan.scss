@@ -467,3 +467,161 @@
     line-height: 1.4;
   }
 }
+
+// "Kuota belum diatur": jujur dan membantu, bukan "tanpa batas".
+.u-pny-belum {
+  display: grid;
+  gap: 0.375rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px dashed color-mix(in oklab, var(--u-warning) 45%, var(--u-border));
+  border-radius: var(--u-radius-md);
+  background: color-mix(in oklab, var(--u-warning) 6%, transparent);
+  p {
+    margin: 0;
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
+    line-height: 1.45;
+    b {
+      color: var(--u-foreground);
+      font-weight: 600;
+    }
+  }
+}
+.u-pny-atur {
+  justify-self: start;
+  color: var(--u-primary);
+  font-size: var(--u-text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Batas unggah per aplikasi/unit (PanelBatasUnggah, PemilihEkstensi)
+.u-bu {
+  display: grid;
+  gap: 1rem;
+}
+.u-bu-ket {
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--u-radius-md);
+  background: var(--u-muted);
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  line-height: 1.45;
+}
+.u-bu-bagian {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+}
+.u-bu-saklar {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  cursor: pointer;
+  > span {
+    display: grid;
+    gap: 0.125rem;
+    line-height: 1.35;
+  }
+  b {
+    font-size: var(--u-text-sm);
+    font-weight: 600;
+  }
+  small {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+  }
+}
+.u-bu-ekstensi {
+  display: grid;
+  gap: 0.625rem;
+}
+.u-bu-preset,
+.u-bu-terpilih {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  > small {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+  }
+}
+.u-bu-preset button.u-tag {
+  cursor: pointer;
+}
+.u-bu-ekstensi[data-nada='larang'] .u-bu-terpilih .u-tag {
+  border-color: color-mix(in oklab, var(--u-danger) 35%, var(--u-border));
+  color: var(--u-danger-text, var(--u-danger));
+}
+.u-bu-ketik {
+  display: flex;
+  gap: 0.5rem;
+  > :first-child {
+    flex: 1;
+  }
+}
+.u-bu-uji {
+  h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0;
+    font-size: var(--u-text-sm);
+    font-weight: 600;
+    svg {
+      width: 1rem;
+      height: 1rem;
+      color: var(--u-muted-foreground);
+    }
+  }
+}
+.u-bu-uji-isian {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 0.5rem;
+}
+.u-bu-uji-hasil {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+  margin: 0;
+  color: var(--u-danger-text, var(--u-danger));
+  font-size: var(--u-text-sm);
+  line-height: 1.45;
+  svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.125rem;
+  }
+  &[data-ok] {
+    color: var(--u-success-text, var(--u-success));
+  }
+}
+.u-bu-kaki {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  > span {
+    margin-inline-end: auto;
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+  }
+}
+@media (max-width: 640px) {
+  .u-bu-uji-isian {
+    grid-template-columns: 1fr;
+  }
+  .u-bu-kaki {
+    flex-wrap: wrap;
+    > span {
+      flex-basis: 100%;
+    }
+  }
+}
