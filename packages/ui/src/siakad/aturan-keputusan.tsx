@@ -13,6 +13,7 @@ import {
   useDaftarAturan,
   useKatalogAturan,
   labelKategoriAturan,
+  labelTitik,
   type Aturan,
   type HasilPeriksaAturan,
   type KategoriAturan,
@@ -36,9 +37,9 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
 
 // ================================================================ Sifat
 export const LABEL_SIFAT_ATURAN: Record<SifatAturan, { label: string; keterangan: string }> = {
-  ketat: { label: 'Ketat', keterangan: 'Tidak bisa dilewati siapa pun, kecuali dispensasi keuangan resmi.' },
+  ketat: { label: 'Tidak bisa dikecualikan', keterangan: 'Tidak bisa dilewati siapa pun, kecuali dispensasi keuangan resmi.' },
   boleh_pengecualian: {
-    label: 'Boleh pengecualian',
+    label: 'Boleh dikecualikan',
     keterangan: 'Orang yang terkena aturan, atau petugas atas namanya, bisa mengajukan pengecualian dengan SK atau dokumen kebijakan. Pengecualian punya masa berlaku dan cakupan.',
   },
 };
@@ -48,11 +49,11 @@ export function SifatAturanBadge({ sifat }: { sifat?: SifatAturan | null }) {
   if (!sifat) return null;
   return sifat === 'ketat' ? (
     <Badge variant="outline" className="u-aturan-sifat" data-sifat="ketat">
-      <Lock aria-hidden /> Ketat
+      <Lock aria-hidden /> Tidak bisa dikecualikan
     </Badge>
   ) : (
     <Badge variant="outline" className="u-aturan-sifat" data-sifat="boleh_pengecualian">
-      <Unlock aria-hidden /> Boleh pengecualian
+      <Unlock aria-hidden /> Boleh dikecualikan
     </Badge>
   );
 }
@@ -399,7 +400,7 @@ export function AktifkanDaruratAturan({
       tampilan="dialog"
       size="lg"
       title="Aktifkan lewat jalur darurat"
-      description={`“${a.nama}” langsung diperiksa di ${a.titik_judul ?? a.titik} tanpa menunggu persetujuan, lalu masuk antrean pengesahan susulan. Penyetuju bisa mengesahkan atau mencabutnya.`}
+      description={`“${a.nama}” langsung diperiksa di ${labelTitik(a.titik, a.titik_judul)} tanpa menunggu persetujuan, lalu masuk antrean pengesahan susulan. Penyetuju bisa mengesahkan atau mencabutnya.`}
       berubah={Boolean(alasan || sk || dokumen)}
       labelSimpan="Aktifkan sekarang"
       onSimpan={async () => {
@@ -873,7 +874,7 @@ export function AntreanDaruratAturan({ kategori, onBuka, className }: { kategori
             </div>
             <strong>{a.nama}</strong>
             <span>
-              {a.titik_judul ?? a.titik} · aktif sejak {formatWaktuAturan(a.darurat_info?.waktu ?? a.diaktifkan_at, { jam: true })}
+              {labelTitik(a.titik, a.titik_judul)} · aktif sejak {formatWaktuAturan(a.darurat_info?.waktu ?? a.diaktifkan_at, { jam: true })}
               {(a.darurat_info?.oleh ?? a.diaktifkan_oleh) ? ` oleh ${a.darurat_info?.oleh ?? a.diaktifkan_oleh}` : ''}
             </span>
             {a.darurat_info?.alasan && <p>Alasan: {a.darurat_info.alasan}</p>}

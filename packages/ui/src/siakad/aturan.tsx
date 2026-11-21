@@ -2,6 +2,11 @@
 import * as React from 'react';
 import {
   AlarmClock,
+  BookOpen,
+  Briefcase,
+  ChevronRight,
+  GraduationCap,
+  Wallet,
   ArchiveRestore,
   ArrowLeft,
   ArrowRight,
@@ -63,7 +68,7 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
 import { IsianSK, PilihSK, type NilaiSK } from './isian-sk';
 import { LinimasaPengajuan } from './pengajuan';
 import { KelolaTitikAturan } from './aturan-titik';
-import { DaftarAturanKelompok } from './aturan-kelompok';
+import { DaftarAturanKelompok, rapikanNamaUnit } from './aturan-kelompok';
 import {
   AjukanPengecualianAturan,
   AktifkanDaruratAturan,
@@ -79,6 +84,8 @@ import {
   type AjukanPengecualianAturanProps,
 } from './aturan-keputusan';
 import { DasarPedoman } from './pedoman';
+import { useFakultasReferensi } from './prodi';
+import { DasarSkAturanDaftar, LencanaDasarSk, PanelAjukanAturan, PanelLampirSkDasar, ValidatorAturan, WizardTemplatAturan, type DasarSkAturan, type UnitRingkas } from './aturan-sk';
 
 /*
  * Aturan akademik, kelulusan, dan keuangan dinamis (/v1/aturan): aturan disusun di satu titik penerapan (langkah
@@ -188,6 +195,8 @@ export interface Aturan {
   /** Aktif lewat jalur darurat, menunggu pengesahan susulan penyetuju. */
   darurat?: boolean;
   darurat_info?: { label?: string | null; alasan?: string | null; oleh?: string | null; waktu?: string | null } | null;
+  /** Dasar SK aturan (SIAKAD docs/ATURAN-SK.md): berlaku, diubah, tidak_berlaku, belum. */
+  dasar_sk?: DasarSkAturan | null;
 }
 export interface LampiranAturan {
   id: string;
@@ -261,6 +270,18 @@ export interface UsulanAturan {
   jumlah_telaah?: number;
   /** Alur pemeriksa (docs/PEMERIKSA.md SIAKAD): pejabat penyetuju lalu telaah SPMI (berjalan bersamaan). */
   pemeriksa?: TahapPemeriksa[];
+  pemeriksa_label?: string | null;
+  /** Rantai validator pengajuan ini (docs/ATURAN-SK.md): posisi, SK dasar, unit pengaju, validator berikutnya. */
+  validasi?: {
+    id: string;
+    status: 'berjalan' | 'disetujui' | 'dikembalikan' | 'ditolak' | 'dibatalkan';
+    tahap_ke: number;
+    jumlah_tahap: number;
+    sk_dasar: { id: string; nomor: string; penerbit?: UnitRingkas | null } | null;
+    unit_pengaju: UnitRingkas | null;
+    pengaturan: string | null;
+    berikutnya: Array<{ username: string; nama: string | null; sebagai: string }>;
+  } | null;
 }
 /** Satu langkah alur persetujuan aturan (diajukan, disetujui, dikembalikan, ditelaah). SIAKAD terbaru. */
 export interface LangkahPersetujuanAturan {
@@ -285,6 +306,10 @@ export interface DetailAturan extends Aturan {
   /** Catatan telaah SPMI (tidak memblokir); SIAKAD terbaru mengirimnya di `usulan.telaah`. */
   telaah?: TelaahAturan[];
   boleh_setujui?: boolean;
+  /** Validator tahap berjalan boleh menolak (rantai validator, docs/ATURAN-SK.md). */
+  boleh_tolak?: boolean;
+  /** Unit pengaju bawaan (unit pemilik aturan) untuk simulasi rantai. */
+  unit_pengaju_bawaan?: UnitRingkas | null;
   boleh_telaah?: boolean;
   boleh_darurat?: boolean;
   /** Pengguna ini boleh mengajukan pengecualian (aturan `boleh_pengecualian`). */
@@ -392,6 +417,10 @@ export interface AturanSaya {
   boleh_darurat?: boolean;
   /** Boleh memutus pengajuan pengecualian di sebagian titik. */
   boleh_pengecualian?: boolean;
+  /** Jumlah pengajuan aturan yang menunggu validasi saya (rantai validator). */
+  validasi_saya?: number;
+  boleh_validator_lihat?: boolean;
+  boleh_validator_atur?: boolean;
   kategori: Array<{ kategori: KategoriAturan; judul: string; boleh_atur: boolean; prodi: string[] | null; semua_prodi: boolean; pengatur?: unknown }>;
 }
 export interface PelanggaranAturan {
@@ -795,7 +824,7 @@ const hurufKecil = (s: string) => (/^[A-ZÀ-Ý][a-zà-ÿ]/.test(s) ? s.charAt(0)
  */
 export function kalimatKondisi(c: KondisiDasar, katalog?: KatalogAturan, opsi: { kecil?: boolean } = {}): string {
   const ind = petaIndikator(katalog).get(c.indikator);
-  const judulAsli = ind?.judul ?? (c.indikator || 'Indikator belum dipilih');
+  const judulAsli = ind?.judul ?? (c.indikator ? namaIndikatorAwam(c.indikator) : 'Indikator belum dipilih');
   const judul = opsi.kecil ? hurufKecil(judulAsli) : judulAsli;
   if (c.op === 'benar') return judul;
   if (c.op === 'salah') return `${opsi.kecil ? 'tidak' : 'Tidak'} ${hurufKecil(judulAsli)}`;
@@ -964,70 +993,271 @@ export function statusTampil(a: Pick<Aturan, 'status' | 'usulan'>): StatusAturan
 /** Lencana mode aturan: blokir (menolak aksi) atau peringatan (hanya memberi tahu). */
 export function ModeAturanBadge({ mode }: { mode: ModeAturan }) {
   return mode === 'blokir' ? (
-    <Badge variant="danger" className="u-aturan-mode">
-      <Ban aria-hidden /> Blokir
+    <Badge variant="outline" className="u-aturan-mode" data-mode="blokir" title="Langkah ditolak bila ketentuan tidak terpenuhi">
+      <Ban aria-hidden /> Menolak bila tidak terpenuhi
     </Badge>
   ) : (
-    <Badge variant="warning" className="u-aturan-mode">
-      <TriangleAlert aria-hidden /> Peringatan
+    <Badge variant="outline" className="u-aturan-mode" data-mode="peringatan" title="Langkah tetap boleh, pengguna melihat peringatan">
+      <TriangleAlert aria-hidden /> Hanya memperingatkan
     </Badge>
   );
 }
-const IKON_JENIS: Record<JenisAturan, React.ReactNode> = { syarat: <ListChecks />, batas_waktu: <CalendarRange />, batas_nilai: <Gauge /> };
+const IKON_JENIS: Record<string, React.ReactNode> = { syarat: <ListChecks />, batas_waktu: <CalendarRange />, batas_nilai: <Gauge /> };
+/** Ikon bawaan per kategori untuk jenis aturan yang tidak dikenal pustaka (mis. jenis akibat baru). */
+const IKON_KATEGORI: Record<string, React.ReactNode> = {
+  akademik: <BookOpen />, kelulusan: <GraduationCap />, keuangan: <Wallet />, kemahasiswaan: <Users />, kepegawaian: <Briefcase />,
+  penelitian: <FlaskConical />, mutu: <BadgeCheck />, akun: <UserCheck />, umum: <Scale />,
+};
+/** Kamus istilah untuk menamai kode titik yang belum punya judul di katalog (mis. titik kustom baru). */
+const KAMUS_TITIK: Record<string, string> = {
+  krs: 'KRS', khs: 'KHS', kkn: 'KKN', uas: 'UAS', uts: 'UTS', ta: 'tugas akhir', pa: 'dosen PA', sdm: 'kepegawaian', lppm: 'penelitian & pengabdian', pmb: 'PMB',
+  spmi: 'mutu', bkd: 'BKD', edom: 'EDOM', mbkm: 'MBKM', rpl: 'RPL', akun: 'akun', ipk: 'IPK', ips: 'IPS', sks: 'SKS', kustom: '',
+};
+/**
+ * Nama awam titik penerapan: judul katalog bila ada; selain itu disusun dari kode dengan kamus istilah, segmen dibalik
+ * ("kelulusan.predikat" → "Predikat kelulusan", "nilai.konversi" → "Konversi nilai"). Kode tidak tampil di permukaan.
+ */
+export function labelTitik(kode: string | null | undefined, judul?: string | null): string {
+  if (judul) return judul;
+  if (!kode) return '—';
+  const kata = kode
+    .split('.')
+    .reverse()
+    .flatMap((s) => s.split('_'))
+    .map((w) => KAMUS_TITIK[w] ?? w)
+    .filter(Boolean)
+    .join(' ');
+  return kata ? kata.charAt(0).toUpperCase() + kata.slice(1) : '—';
+}
+
+/** Nama awam indikator yang tidak ada di katalog: "dosen_jumlah_pa" → "Dosen jumlah PA" (kode tidak tampil mentah). */
+export function namaIndikatorAwam(kode: string): string {
+  const kamus: Record<string, string> = { ...KAMUS_TITIK, pa: 'PA', ta: 'TA', nidn: 'NIDN', nim: 'NIM' };
+  const k = kode.split('_').map((w) => kamus[w] ?? w).filter(Boolean).join(' ');
+  return k ? k.charAt(0).toUpperCase() + k.slice(1) : '—';
+}
+
+/** Ikon aturan: menurut jenis (syarat, batas waktu, batas nilai), lalu kategori, lalu timbangan. */
+export function ikonAturan(a: Pick<Aturan, 'jenis' | 'kategori'>): React.ReactNode {
+  return IKON_JENIS[a.jenis] ?? IKON_KATEGORI[a.kategori] ?? <Scale />;
+}
 
 // ================================================================ Kartu dan daftar
 export interface KartuAturanProps {
   aturan: Aturan;
   katalog?: KatalogAturan;
   onBuka?: (a: Aturan) => void;
+  /** Aksi "Lampirkan SK" bila aturan belum ber-SK dasar (tanpa ini kartu hanya menampilkan penanda). */
+  onLampirkan?: (a: Aturan) => void;
   className?: string;
 }
 
-/** Ringkasan satu aturan: titik, jenis, status, mode, ketentuan dalam kalimat, cakupan, SK. */
-export function KartuAturan({ aturan: a, katalog, onBuka, className }: KartuAturanProps) {
+/**
+ * Keadaan SK aturan dalam SATU penanda untuk kartu: SK dasar (SIAKAD dengan docs/ATURAN-SK.md) atau lampiran SK (lama).
+ * `kurang` = perlu dilampirkan (aturan berlaku tanpa SK dasar/SK, SK dasar dicabut/diubah).
+ */
+export function keadaanSkKartu(a: Aturan): { teks: string; kurang: boolean } | null {
+  const ds = a.dasar_sk;
+  if (ds) {
+    if (ds.status === 'berlaku') return { teks: `SK dasar ${ds.sk?.nomor ?? ''}`.trim(), kurang: false };
+    if (a.usulan?.status === 'diajukan' && a.usulan.validasi?.sk_dasar) return { teks: `SK dasar ${a.usulan.validasi.sk_dasar.nomor} (diajukan)`, kurang: false };
+    if (ds.status === 'belum') return a.status === 'aktif' ? { teks: 'Belum ada SK dasar', kurang: true } : null;
+    return { teks: ds.status === 'tidak_berlaku' ? `SK dasar ${ds.sk?.nomor ?? ''} dicabut` : `SK dasar ${ds.sk?.nomor ?? ''} diubah SK lain`, kurang: !ds.ditinjau };
+  }
+  if (a.sk?.nomor) return { teks: `SK ${a.sk.nomor}`, kurang: false };
+  if (a.jumlah_sk) return { teks: `${a.jumlah_sk} SK`, kurang: false };
+  if (a.jumlah_sk === undefined && !a.perlu_lampir_sk) return null;
+  return a.status === 'aktif' || a.bawaan ? { teks: 'Belum ada SK', kurang: true } : null;
+}
+
+/** Penanda SK tunggal (teks + ikon) untuk kartu dan baris. */
+function PenandaSk({ a, ringkas }: { a: Aturan; ringkas?: boolean }) {
+  const k = keadaanSkKartu(a);
+  if (!k) return null;
+  return (
+    <span className="u-aturan-penanda-sk" data-kurang={k.kurang || undefined} title={k.teks}>
+      {k.kurang ? <TriangleAlert aria-hidden /> : <FileBadge aria-hidden />} {ringkas ? (k.kurang ? 'Tanpa SK' : 'Ber-SK') : k.teks}
+    </span>
+  );
+}
+
+/** Ringkasan satu aturan: judul utuh, status, ketentuan dalam kalimat, cakupan, satu penanda SK + aksi Lampirkan SK. */
+export function KartuAturan({ aturan: a, katalog, onBuka, onLampirkan, className }: KartuAturanProps) {
   const { nama } = useNamaProdi();
   const ketentuan = ringkasKetentuan(a, katalog);
+  const sk = keadaanSkKartu(a);
   return (
     <Card
       interactive={Boolean(onBuka)}
       className={cn('u-aturan-kartu', className)}
       data-status={a.dihapus_at ? 'dihapus' : a.status}
-      render={onBuka ? <button type="button" onClick={() => onBuka(a)} /> : undefined}
+      onClick={onBuka ? () => onBuka(a) : undefined}
     >
       <div className="u-aturan-kartu-kepala">
         <span className="u-aturan-ikon" data-jenis={a.jenis} aria-hidden>
-          {IKON_JENIS[a.jenis]}
+          {ikonAturan(a)}
         </span>
         <div className="u-aturan-kartu-judul">
-          <strong>{a.nama}</strong>
-          <span>{a.titik_judul ?? a.titik}</span>
-        </div>
-        <div className="u-aturan-kartu-lencana">
-          {a.bawaan && <Badge variant="info">Bawaan</Badge>}
-          <StatusAturanBadge status={statusTampil(a)} dihapus={Boolean(a.dihapus_at)} />
-          {a.status === 'aktif' && a.usulan?.status === 'diajukan' && <Badge variant="info">Versi baru diajukan</Badge>}
-          {a.usulan?.status === 'diajukan' && a.usulan.pemeriksa?.length ? <LabelPemeriksa pemeriksa={a.usulan.pemeriksa} /> : null}
+          {onBuka ? (
+            <button
+              type="button"
+              className="u-aturan-kartu-buka"
+              title={a.nama}
+              onClick={(e) => {
+                e.stopPropagation();
+                onBuka(a);
+              }}
+            >
+              {a.nama}
+            </button>
+          ) : (
+            <strong title={a.nama}>{a.nama}</strong>
+          )}
+          <span title={labelTitik(a.titik, a.titik_judul)}>{labelTitik(a.titik, a.titik_judul)}</span>
         </div>
       </div>
-      {ketentuan && <p className="u-aturan-kartu-isi">{ketentuan}</p>}
-      <div className="u-aturan-kartu-meta">
+      <div className="u-aturan-kartu-lencana">
+        <StatusAturanBadge status={statusTampil(a)} dihapus={Boolean(a.dihapus_at)} />
+        {a.bawaan && <Badge variant="info">Bawaan</Badge>}
+        {a.status === 'aktif' && a.usulan?.status === 'diajukan' && <Badge variant="info">Versi baru diajukan</Badge>}
+        {a.usulan?.status === 'diajukan' && a.usulan.pemeriksa?.length ? <LabelPemeriksa pemeriksa={a.usulan.pemeriksa} /> : null}
         <DaruratAturanBadge aturan={a} />
+      </div>
+      <p className="u-aturan-kartu-isi">{ketentuan || '—'}</p>
+      <div className="u-aturan-kartu-meta">
         <ModeAturanBadge mode={a.mode} />
         <SifatAturanBadge sifat={a.sifat} />
-        <Badge variant="outline">{LABEL_KATEGORI_ATURAN[a.kategori] ?? a.kategori}</Badge>
         <span>
-          <Users aria-hidden /> {ringkasCakupan(a.cakupan, nama)}
+          <Users aria-hidden /> {rapikanNamaUnit(ringkasCakupan(a.cakupan, nama))}
         </span>
         <span>
           <CalendarRange aria-hidden /> {formatTahun(a.tahun_id)}
         </span>
-        {(a.jumlah_sk !== undefined || a.sk) && (
-          <span data-kurang={(!a.sk?.nomor && a.jumlah_sk === 0) || undefined}>
-            <FileBadge aria-hidden /> {a.sk?.nomor ? `SK ${a.sk.nomor}` : a.jumlah_sk ? `${a.jumlah_sk} SK` : a.bawaan && a.status !== 'aktif' ? 'Menunggu SK' : 'Belum ada SK'}
+      </div>
+      {sk && (
+        <div className="u-aturan-kartu-kaki">
+          <PenandaSk a={a} />
+          {sk.kurang && onLampirkan && (
+            <Button
+              size="sm"
+              variant="soft"
+              onClick={(e) => {
+                e.stopPropagation();
+                onLampirkan(a);
+              }}
+            >
+              <FileBadge /> Lampirkan SK
+            </Button>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/** Kunci pengelompokan: aturan bawaan/turunan yang sama di beberapa unit (mis. "Syarat dosen PA" tiap fakultas). */
+const kunciKelompok = (a: Aturan) => `${a.nama}|${a.titik}|${a.jenis}|${a.bawaan ? 1 : 0}`;
+
+/** Label unit satu aturan dalam kelompok: fakultas lingkup, prodi/fakultas cakupan, atau "Universitas". */
+function labelUnitAturan(a: Aturan, nama: (k: string) => string, namaFak: (k: string) => string | undefined): string {
+  const x = a as Aturan & { lingkup_fakultas?: string | null };
+  if (a.cakupan?.prodi?.length === 1) return rapikanNamaUnit(nama(a.cakupan.prodi[0]!));
+  const fak = x.lingkup_fakultas ?? (a.cakupan?.fakultas?.length === 1 ? a.cakupan.fakultas[0]! : null);
+  if (fak) return rapikanNamaUnit(namaFak(fak) ?? `Fakultas ${fak}`);
+  return rapikanNamaUnit(ringkasCakupan(a.cakupan, nama));
+}
+
+/** Satu kartu untuk aturan yang sama di banyak unit: ringkasan + daftar per unit (status, SK, buka) yang bisa dibuka. */
+export function KartuAturanKelompok({
+  aturan,
+  katalog,
+  onBuka,
+  onLampirkanBanyak,
+  className,
+}: {
+  aturan: Aturan[];
+  katalog?: KatalogAturan;
+  onBuka?: (a: Aturan) => void;
+  onLampirkanBanyak?: (a: Aturan[]) => void;
+  className?: string;
+}) {
+  const { nama } = useNamaProdi();
+  const fakRef = useFakultasReferensi();
+  const namaFak = (k: string) => fakRef.data?.find((f) => f.kode_fakultas === k)?.nama_fakultas;
+  const [buka, setBuka] = React.useState(false);
+  const a = aturan[0]!;
+  const kurang = aturan.filter((x) => keadaanSkKartu(x)?.kurang);
+  const perStatus = new Map<string, number>();
+  for (const x of aturan) perStatus.set(statusTampil(x), (perStatus.get(statusTampil(x)) ?? 0) + 1);
+  const jenisUnit = aturan.every((x) => (x as Aturan & { lingkup_fakultas?: string | null }).lingkup_fakultas || x.cakupan?.fakultas?.length === 1)
+    ? 'fakultas'
+    : aturan.every((x) => x.cakupan?.prodi?.length === 1)
+      ? 'prodi'
+      : 'unit';
+  return (
+    <Card className={cn('u-aturan-kartu', 'u-aturan-kartu-kelompok', className)} data-status={a.status}>
+      <div className="u-aturan-kartu-kepala">
+        <span className="u-aturan-ikon" data-jenis={a.jenis} aria-hidden>
+          {ikonAturan(a)}
+        </span>
+        <div className="u-aturan-kartu-judul">
+          <button type="button" className="u-aturan-kartu-buka" title={a.nama} aria-expanded={buka} onClick={() => setBuka((v) => !v)}>
+            {a.nama}
+          </button>
+          <span title={labelTitik(a.titik, a.titik_judul)}>{labelTitik(a.titik, a.titik_judul)}</span>
+        </div>
+      </div>
+      <div className="u-aturan-kartu-lencana">
+        <Badge variant="outline">
+          <Users aria-hidden /> {aturan.length} {jenisUnit}
+        </Badge>
+        {[...perStatus].map(([s, n]) => (
+          <Badge key={s} variant={VARIAN_STATUS[s as StatusAturan] ?? 'neutral'} dot>
+            {n} {(LABEL_STATUS_ATURAN[s as StatusAturan] ?? s).toLowerCase()}
+          </Badge>
+        ))}
+        {a.bawaan && <Badge variant="info">Bawaan</Badge>}
+      </div>
+      <p className="u-aturan-kartu-isi">{ringkasKetentuan(a, katalog) || '—'}</p>
+      <div className="u-aturan-kartu-meta">
+        <ModeAturanBadge mode={a.mode} />
+        <SifatAturanBadge sifat={a.sifat} />
+      </div>
+      <div className="u-aturan-kartu-kaki">
+        {kurang.length ? (
+          <span className="u-aturan-penanda-sk" data-kurang>
+            <TriangleAlert aria-hidden /> {kurang.length === aturan.length ? (keadaanSkKartu(kurang[0]!)?.teks ?? 'Belum ada SK') : `${kurang.length} dari ${aturan.length} belum ber-SK`}
+          </span>
+        ) : (
+          <span className="u-aturan-penanda-sk">
+            <FileBadge aria-hidden /> Semua ber-SK
           </span>
         )}
-        {a.perlu_lampir_sk && <LencanaLampirSK />}
+        {kurang.length > 0 && onLampirkanBanyak && (
+          <Button size="sm" variant="soft" onClick={() => onLampirkanBanyak(kurang)}>
+            <FileBadge /> Lampirkan SK
+          </Button>
+        )}
+        <Button size="sm" variant="ghost" aria-expanded={buka} onClick={() => setBuka((v) => !v)}>
+          <ChevronRight className="u-aturan-kelompok-panah" data-buka={buka || undefined} /> {buka ? 'Tutup' : `Lihat ${aturan.length} ${jenisUnit}`}
+        </Button>
       </div>
+      {buka && (
+        <ul className="u-aturan-kelompok-daftar">
+          {aturan.map((x) => (
+            <li key={x.id}>
+              <span className="u-aturan-kelompok-unit">{labelUnitAturan(x, nama, namaFak)}</span>
+              <StatusAturanBadge status={statusTampil(x)} />
+              <PenandaSk a={x} ringkas />
+              {onBuka && (
+                <Button size="sm" variant="ghost" onClick={() => onBuka(x)}>
+                  Buka
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </Card>
   );
 }
@@ -1036,19 +1266,34 @@ export function KartuAturan({ aturan: a, katalog, onBuka, className }: KartuAtur
 export function ringkasKetentuan(a: Pick<Aturan, 'jenis' | 'kondisi' | 'parameter'>, katalog?: KatalogAturan): string {
   const bila = a.kondisi ? ringkasKondisi(a.kondisi, katalog, { kecil: a.jenis !== 'syarat' }) : '';
   if (a.jenis === 'syarat') return bila;
+  if (a.jenis !== 'batas_waktu' && a.jenis !== 'batas_nilai') {
+    // Jenis/akibat baru (mis. `akibat` dari Kebijakan): label tipe akibat, tanpa nilai mentah.
+    const p = (a.parameter ?? {}) as { akibat?: string; bentuk?: string };
+    const lab = LABEL_AKIBAT_RINGKAS[p.akibat ?? ''] ?? LABEL_AKIBAT_RINGKAS[p.bentuk ?? ''] ?? 'Ketentuan khusus';
+    return bila ? `${lab} bila ${bila}` : lab;
+  }
   if (a.jenis === 'batas_waktu') {
     const p = a.parameter as ParameterBatasWaktu | null;
     const w = p ? `${formatWaktuAturan(p.mulai)} – ${formatWaktuAturan(p.selesai)}` : '';
     return bila ? `${w}, bila ${bila}` : w;
   }
   const p = a.parameter as ParameterBatasNilai | null;
-  if (!p) return '';
+  if (!p || !p.target) return bila;
   const ind = petaIndikator(katalog).get(p.target);
   const kata = p.op === '<=' || p.op === '<' ? 'paling banyak' : 'paling sedikit';
-  const tingkat = (p.tabel ?? []).map((b) => `${b.nilai} bila ${ringkasKondisi(b.jika, katalog, { kecil: true })}`);
-  const dasar = p.nilai !== undefined ? `${p.tabel?.length ? 'selain itu ' : ''}${p.nilai}` : '';
-  return `${ind?.judul ?? p.target} ${kata} ${[...tingkat, dasar].filter(Boolean).join('; ')}`;
+  const angka = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : typeof v === 'number' ? v.toLocaleString('id-ID') : String(v));
+  const tingkat = (Array.isArray(p.tabel) ? p.tabel : []).map((b) => `${angka(b?.nilai)}${b?.jika ? ` bila ${ringkasKondisi(b.jika, katalog, { kecil: true })}` : ''}`);
+  const dasar = p.nilai !== undefined && p.nilai !== null ? `${tingkat.length ? 'selain itu ' : ''}${angka(p.nilai)}` : '';
+  const isi = [...tingkat, dasar].filter(Boolean).join('; ');
+  return `${ind?.judul ?? namaIndikatorAwam(p.target)} ${kata} ${isi || '—'}`;
 }
+
+/** Label ringkas tipe akibat (registri SIAKAD Data/akibat.php) untuk kalimat kartu. */
+const LABEL_AKIBAT_RINGKAS: Record<string, string> = {
+  hitung: 'Menghitung nilai', konversi_huruf: 'Mengonversi nilai ke huruf', predikat: 'Menetapkan predikat', ubah_tagihan: 'Mengubah tagihan', tarif: 'Menetapkan tarif',
+  keringanan: 'Memberi keringanan', denda: 'Mengenakan denda', ubah_status: 'Mengubah status', tugaskan: 'Menugaskan', minta_persetujuan: 'Meminta persetujuan',
+  ingatkan: 'Mengirim pengingat', beri_akses: 'Mengatur akses',
+};
 
 export interface DaftarAturanProps {
   /** Saringan tetap, mis. `{ titik: 'krs.ambil' }` untuk halaman KRS. */
@@ -1069,6 +1314,8 @@ export function DaftarAturan({ filter: tetap = {}, onBuka, saring = true, aksi, 
   const [kategori, setKategori] = React.useState<string | null>(null);
   const [status, setStatus] = React.useState<'semua' | StatusAturan>('semua');
   const [perHal, setPerHal] = React.useState(24);
+  const [kelompokkan, setKelompokkan] = React.useState(true);
+  const [lampir, setLampir] = React.useState<{ aturan: string[]; judul: string } | null>(null);
   React.useEffect(() => {
     const t = setTimeout(() => setQ(qTunda.trim()), 300);
     return () => clearTimeout(t);
@@ -1085,7 +1332,7 @@ export function DaftarAturan({ filter: tetap = {}, onBuka, saring = true, aksi, 
   const total = (d.meta as { total?: number } | undefined)?.total ?? d.data?.length ?? 0;
   const opsiTitik = (katalog.data?.titik ?? [])
     .filter((t) => !tetap.kategori || t.kategori.includes(tetap.kategori as KategoriAturan))
-    .map((t) => ({ value: t.kode, label: t.judul, group: labelKategoriAturan(t.kategori[0]) }));
+    .map((t) => ({ value: t.kode, label: labelTitik(t.kode, t.judul), group: t.kelompok ?? labelKategoriAturan(t.kategori[0]) }));
   const disaring = Boolean(q || titik || kategori || status !== 'semua');
 
   return (
@@ -1094,9 +1341,11 @@ export function DaftarAturan({ filter: tetap = {}, onBuka, saring = true, aksi, 
         <div className="u-aturan-saring">
           <div className="u-aturan-cari">
             <Search aria-hidden />
-            <Input value={qTunda} onChange={(e) => setQTunda(e.target.value)} placeholder="Cari nama atau kode aturan" aria-label="Cari aturan" />
+            <Input value={qTunda} onChange={(e) => setQTunda(e.target.value)} placeholder="Cari aturan" aria-label="Cari aturan" />
           </div>
-          {!tetap.titik && <Pilihan tampilan="cari" options={opsiTitik} value={titik} onValueChange={setTitik} placeholder="Semua titik penerapan" aria-label="Titik penerapan" />}
+          {!tetap.titik && (
+            <Pilihan tampilan="cari" className="u-aturan-saring-titik" options={opsiTitik} value={titik} onValueChange={setTitik} placeholder="Semua langkah" aria-label="Langkah tempat aturan diperiksa" />
+          )}
           {!tetap.kategori && (
             <Pilihan
               tampilan="daftar"
@@ -1120,6 +1369,9 @@ export function DaftarAturan({ filter: tetap = {}, onBuka, saring = true, aksi, 
               ]}
             />
           )}
+          <label className="u-aturan-saring-centang">
+            <input type="checkbox" checked={kelompokkan} onChange={(e) => setKelompokkan(e.target.checked)} /> Kelompokkan aturan yang sama
+          </label>
           {aksi && <div className="u-aturan-saring-aksi">{aksi}</div>}
         </div>
       )}
@@ -1156,10 +1408,25 @@ export function DaftarAturan({ filter: tetap = {}, onBuka, saring = true, aksi, 
       ) : (
         <>
           <div className="u-aturan-kisi" aria-busy={d.loading || undefined}>
-            {d.data.map((a) => (
-              <KartuAturan key={a.id} aturan={a} katalog={katalog.data} onBuka={onBuka} />
-            ))}
+            {(() => {
+              // Aturan yang sama di beberapa unit (mis. "Syarat dosen PA" tiap fakultas) menjadi satu kartu kelompok.
+              const grup = new Map<string, Aturan[]>();
+              for (const a of d.data!) {
+                const k = kelompokkan ? kunciKelompok(a) : a.id;
+                grup.set(k, [...(grup.get(k) ?? []), a]);
+              }
+              const lampirkan = (xs: Aturan[]) =>
+                xs[0]?.dasar_sk !== undefined ? setLampir({ aturan: xs.map((x) => x.id), judul: xs.length > 1 ? `${xs[0]!.nama} (${xs.length})` : xs[0]!.nama }) : onBuka?.(xs[0]!);
+              return [...grup.values()].map((xs) =>
+                xs.length > 1 ? (
+                  <KartuAturanKelompok key={xs[0]!.id} aturan={xs} katalog={katalog.data} onBuka={onBuka} onLampirkanBanyak={lampirkan} />
+                ) : (
+                  <KartuAturan key={xs[0]!.id} aturan={xs[0]!} katalog={katalog.data} onBuka={onBuka} onLampirkan={(a) => lampirkan([a])} />
+                ),
+              );
+            })()}
           </div>
+          {lampir && <PanelLampirSkDasar open aturan={lampir.aturan} judul={lampir.judul} onOpenChange={(o) => !o && setLampir(null)} />}
           {total > d.data.length && (
             <div className="u-aturan-lagi">
               <Button variant="outline" loading={d.loading} onClick={() => setPerHal((n) => Math.min(200, n + 24))}>
@@ -1210,7 +1477,7 @@ export function periksaKondisi(g: GrupKondisi | null | undefined, katalog: Katal
     const ind = peta.get(k.indikator);
     if (!k.indikator) return 'Pilih data yang diperiksa untuk setiap kondisi.';
     if (k.op === 'benar' || k.op === 'salah') continue;
-    const judul = ind?.judul ?? k.indikator;
+    const judul = ind?.judul ?? namaIndikatorAwam(k.indikator);
     if (k.op === 'dalam' || k.op === 'bukan_dalam') {
       if (!Array.isArray(k.nilai) || !k.nilai.length) return `${judul}: pilih minimal satu nilai.`;
       if (k.nilai.length > 200) return `${judul}: paling banyak 200 nilai.`;
@@ -1906,7 +2173,7 @@ export function kalimatAturan(a: Pick<Aturan, 'jenis' | 'kondisi' | 'parameter'>
   const p = a.parameter as ParameterBatasNilai | null;
   if (!p?.target) return '';
   const ind = petaIndikator(katalog).get(p.target);
-  const judul = hurufKecil(ind?.judul ?? p.target);
+  const judul = hurufKecil(ind?.judul ?? namaIndikatorAwam(p.target));
   const kata = p.op === '<=' ? 'paling banyak' : p.op === '<' ? 'kurang dari' : p.op === '>=' ? 'paling sedikit' : 'lebih dari';
   const nilai = (n: number) => teksNilai({ indikator: p.target, op: '=', nilai: n }, ind);
   const tingkat = (p.tabel ?? []).map((b, i) => `${i === 0 ? '' : ''}${nilai(b.nilai)} bila ${ringkasKondisi(b.jika, katalog, { kecil: true })}`);
@@ -2066,6 +2333,8 @@ export function AturanDiTitik({ titik, kecuali, className }: { titik: string; ke
 
 /** "SK 12/UNIPO/2026 · 3 Jan 2026" bila server mengirim `sk`, selain itu jumlah SK. */
 function teksSkRingkas(a: Aturan): string {
+  if (a.usulan?.status === 'diajukan' && a.usulan.validasi?.sk_dasar) return `SK dasar ${a.usulan.validasi.sk_dasar.nomor}${a.usulan.validasi.sk_dasar.penerbit ? ` · ${rapikanNamaUnit(a.usulan.validasi.sk_dasar.penerbit.nama)}` : ''}`;
+  if (a.dasar_sk?.sk) return `SK dasar ${a.dasar_sk.sk.nomor}${a.dasar_sk.sk.penerbit ? ` · ${rapikanNamaUnit(a.dasar_sk.sk.penerbit)}` : ''}`;
   if (a.sk?.nomor) return `SK ${a.sk.nomor}${a.sk.tanggal ? ` · ${formatWaktuAturan(a.sk.tanggal)}` : ''}`;
   if (a.jumlah_sk === undefined) return '';
   return a.jumlah_sk ? `${a.jumlah_sk} SK terlampir` : 'Belum ada SK';
@@ -4287,7 +4556,8 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
   const { nama } = useNamaProdi();
   const [tembus, setTembus] = React.useState<TulisTembusAturan | null>(null);
   const [konfirmasi, setKonfirmasi] = React.useState<null | 'aktifkan' | 'nonaktifkan' | 'hapus' | 'ajukan'>(null);
-  const [alur, setAlur] = React.useState<null | 'setujui' | 'kembalikan' | 'telaah' | 'sahkan' | 'cabut'>(null);
+  const [alur, setAlur] = React.useState<null | 'setujui' | 'kembalikan' | 'tolak' | 'telaah' | 'sahkan' | 'cabut'>(null);
+  const [panelAjukan, setPanelAjukan] = React.useState(false);
   const [catatan, setCatatan] = React.useState('');
   const riwayat = useRiwayatAturan(q.data?.boleh_atur || q.data?.boleh_setujui || q.data?.boleh_telaah ? id : null);
   React.useEffect(() => setTembus(null), [id]);
@@ -4299,7 +4569,11 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
   const dihapus = Boolean(a.dihapus_at);
   const usulan = a.usulan ?? null;
   const diajukan = (a.status === 'diajukan' || usulan?.status === 'diajukan') && usulan?.jenis !== 'darurat';
-  const bisaAjukan = (a.status === 'draf' || a.status === 'dikembalikan') && adaSk && !diajukan;
+  // SIAKAD dengan dasar SK (docs/ATURAN-SK.md): SK induk dari Registri SK dipilih saat mengajukan; lampiran SK tidak wajib.
+  const pakaiDasarSk = a.dasar_sk !== undefined;
+  const adaDasar = adaSk || pakaiDasarSk;
+  const bisaAjukan = (a.status === 'draf' || a.status === 'dikembalikan') && adaDasar && !diajukan;
+  const mintaAjukan = () => (pakaiDasarSk ? setPanelAjukan(true) : setKonfirmasi('ajukan'));
   const usulanDraf = a.status === 'aktif' && usulan?.jenis === 'ubah' && usulan.status === 'draf';
   // SIAKAD belum mengirim hak jalur darurat; admin aturan ditampilkan tombolnya dan server yang memutuskan (403 bila tidak berhak).
   const bolehDarurat = Boolean(a.boleh_darurat ?? saya.data?.boleh_darurat ?? (saya.data?.izin?.includes('aturan.darurat') || saya.data?.admin));
@@ -4325,7 +4599,7 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
     });
     if (jenis === 'hapus') onDihapus?.();
   };
-  const kirimAlur = async (jenis: 'setujui' | 'kembalikan' | 'telaah' | 'sahkan' | 'cabut') => {
+  const kirimAlur = async (jenis: 'setujui' | 'kembalikan' | 'tolak' | 'telaah' | 'sahkan' | 'cabut') => {
     // Jalur darurat disahkan lewat /setujui dan dicabut lewat /kembalikan (usulan jenis darurat).
     const path = jenis === 'sahkan' ? 'setujui' : jenis === 'cabut' ? 'kembalikan' : jenis;
     await siakad.request({ method: 'POST', path: `/v1/aturan/${a.id}/${path}`, body: { catatan: catatan.trim() || null } });
@@ -4366,6 +4640,7 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
           <div className="u-aturan-detail-lencana">
             {a.bawaan && <Badge variant="info">Bawaan</Badge>}
             <StatusAturanBadge status={a.status === 'draf' && usulan?.status === 'diajukan' ? 'diajukan' : a.status} dihapus={dihapus} />
+            {a.dasar_sk && (a.dasar_sk.status !== 'belum' || a.status === 'aktif') && <LencanaDasarSk dasar={a.dasar_sk} />}
             {a.status === 'aktif' && usulan?.status === 'diajukan' && <Badge variant="info">Versi baru diajukan</Badge>}
             {usulan?.status === 'dikembalikan' && <Badge variant="danger">Dikembalikan</Badge>}
             <DaruratAturanBadge aturan={a} />
@@ -4376,13 +4651,8 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
           </div>
           <h3>{a.nama}</h3>
           <p>
-            {a.titik_judul ?? a.titik}
-            {a.kode && (
-              <>
-                {' '}
-                · <code>{a.kode}</code>
-              </>
-            )}
+            {labelTitik(a.titik, a.titik_judul)}
+
           </p>
         </div>
       </div>
@@ -4409,6 +4679,11 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
               <Button variant="outline" onClick={() => setAlur('kembalikan')}>
                 <Undo2 /> Kembalikan
               </Button>
+              {a.boleh_tolak && (
+                <Button variant="destructive-soft" onClick={() => setAlur('tolak')}>
+                  <CircleX /> Tolak
+                </Button>
+              )}
             </>
           )}
           {diajukan && hak.telaah && (
@@ -4419,19 +4694,19 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
           {a.boleh_atur && (
             <>
               {usulanDraf ? (
-                <Button onClick={() => setKonfirmasi('ajukan')}>
+                <Button onClick={mintaAjukan}>
                   <Send /> Ajukan versi baru
                 </Button>
               ) : diajukan ? null : a.status === 'draf' || a.status === 'dikembalikan' ? (
-                <Button onClick={() => setKonfirmasi('ajukan')} disabled={!bisaAjukan} title={adaSk ? undefined : 'Lampirkan SK dulu'}>
-                  <Send /> Ajukan untuk disetujui
+                <Button onClick={mintaAjukan} disabled={!bisaAjukan} title={adaDasar ? undefined : 'Lampirkan SK dulu'}>
+                  <Send /> {pakaiDasarSk ? 'Ajukan untuk divalidasi' : 'Ajukan untuk disetujui'}
                 </Button>
               ) : a.status === 'aktif' ? (
                 <Button variant="outline" onClick={() => setKonfirmasi('nonaktifkan')}>
                   <PowerOff /> Nonaktifkan
                 </Button>
               ) : a.status === 'nonaktif' ? (
-                <Button variant="outline" onClick={() => setKonfirmasi('ajukan')} disabled={!adaSk}>
+                <Button variant="outline" onClick={mintaAjukan} disabled={!adaDasar}>
                   <Send /> Ajukan aktif kembali
                 </Button>
               ) : null}
@@ -4485,7 +4760,16 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
           </Button>
         </div>
       )}
-      {!adaSk && (a.status === 'draf' || a.status === 'dikembalikan') && a.boleh_atur && !dihapus && (
+      {a.dasar_sk && (a.dasar_sk.status === 'tidak_berlaku' || a.dasar_sk.status === 'diubah') && a.status === 'aktif' && (
+        <Alert variant={a.dasar_sk.status === 'tidak_berlaku' ? 'danger' : 'warning'} title={a.dasar_sk.status === 'tidak_berlaku' ? 'SK dasar dicabut' : 'SK dasar diubah SK lain'}>
+          SK {a.dasar_sk.sk?.nomor} {a.dasar_sk.status === 'tidak_berlaku' ? 'dicabut atau tidak berlaku' : 'diubah oleh SK lain'}. Aturan tetap berlaku sampai ditinjau ulang
+          {a.dasar_sk.ditinjau ? ` (sudah ditinjau: ${a.dasar_sk.catatan_tinjau ?? ''})` : ': pilih SK pengganti atau nonaktifkan, di tab SK dasar'}.
+        </Alert>
+      )}
+      {a.dasar_sk?.status === 'belum' && a.status === 'aktif' && a.boleh_atur && (
+        <Alert variant="warning" title="Belum ada SK dasar">Aturan ini sudah berlaku sebelum SK dasar diwajibkan. Lampirkan SK dasarnya di tab SK dasar.</Alert>
+      )}
+      {!adaDasar && (a.status === 'draf' || a.status === 'dikembalikan') && a.boleh_atur && !dihapus && (
         <Alert variant="warning" title={a.bawaan ? 'Aturan bawaan menunggu SK' : 'Belum bisa diajukan'}>
           Lampirkan SK di tab “SK”, lalu ajukan untuk disetujui. Tanpa SK aturan tidak diperiksa.
         </Alert>
@@ -4495,7 +4779,15 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
           “{kembali.catatan}”
         </Alert>
       )}
-      {diajukan && (
+      {diajukan && usulan?.validasi && (
+        <Alert variant="info" title={usulan.pemeriksa_label ?? 'Menunggu validasi'}>
+          {a.status === 'aktif' ? 'Versi sekarang tetap berlaku sampai versi baru disetujui semua pemeriksa.' : 'Aturan mulai berlaku setelah semua pemeriksa menyetujui.'} Tahap {usulan.validasi.tahap_ke} dari {usulan.validasi.jumlah_tahap}
+          {usulan.validasi.berikutnya.length ? `: ${usulan.validasi.berikutnya.map((o) => o.nama ?? o.username).join(', ')}` : ''}
+          {usulan.diajukan_at ? ` · diajukan ${formatWaktuAturan(usulan.diajukan_at, { jam: true })}` : ''}. Dasar: SK {usulan.validasi.sk_dasar?.nomor ?? '–'}
+          {usulan.validasi.sk_dasar?.penerbit ? ` (${usulan.validasi.sk_dasar.penerbit.nama})` : ''}.
+        </Alert>
+      )}
+      {diajukan && !usulan?.validasi && (
         <Alert variant="info" title="Menunggu persetujuan">
           {a.status === 'aktif' ? 'Versi sekarang tetap berlaku sampai versi baru disetujui' : 'Aturan belum diperiksa sampai disetujui'}
           {a.penyetuju ? ` oleh ${a.penyetuju.keterangan ?? a.penyetuju.jabatan ?? 'pimpinan bidang'}` : ' pimpinan bidang'}.
@@ -4546,8 +4838,20 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
                 <KetentuanAturan aturan={a} />
                 <DescriptionList
                   items={[
-                    { label: 'Dasar hukum', value: <DasarHukumAturan a={a} /> },
-                    ...(a.penyetuju
+                    ...(pakaiDasarSk
+                      ? [
+                          {
+                            label: 'SK dasar',
+                            value: a.dasar_sk?.sk
+                              ? `${a.dasar_sk.sk.nomor}${a.dasar_sk.sk.penerbit ? ` · ${a.dasar_sk.sk.penerbit}` : ''}${a.dasar_sk.sk.perihal ? ` · ${a.dasar_sk.sk.perihal}` : ''}`
+                              : usulan?.validasi?.sk_dasar
+                                ? `${usulan.validasi.sk_dasar.nomor}${usulan.validasi.sk_dasar.penerbit ? ` · ${usulan.validasi.sk_dasar.penerbit.nama}` : ''} (diajukan)`
+                                : 'Belum ada; pilih saat mengajukan',
+                          },
+                        ]
+                      : []),
+                    ...(adaSk || !pakaiDasarSk ? [{ label: pakaiDasarSk ? 'SK penetapan' : 'Dasar hukum', value: <DasarHukumAturan a={a} /> }] : []),
+                    ...(a.penyetuju && !pakaiDasarSk
                       ? [
                           {
                             label: 'Penyetuju',
@@ -4569,6 +4873,7 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
                     { label: 'Kategori', value: labelKategoriAturan(a.kategori) },
                     { label: 'Pesan', value: a.pesan ?? 'Dibuat otomatis dari kondisi' },
                     { label: 'Prioritas', value: a.prioritas },
+                    ...(a.kode ? [{ label: 'Detail teknis', value: <span className="u-aturan-sub">Kode aturan {a.kode} · langkah {a.titik}</span> }] : []),
                     { label: 'Diaktifkan', value: a.diaktifkan_at ? `${formatWaktuAturan(a.diaktifkan_at, { jam: true })} oleh ${a.diaktifkan_oleh ?? '–'}` : '–' },
                     { label: 'Diubah', value: `${formatWaktuAturan(a.updated_at, { jam: true })} oleh ${a.diubah_oleh ?? a.dibuat_oleh ?? '–'}` },
                   ]}
@@ -4628,7 +4933,7 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
         }
         description={
           konfirmasi === 'aktifkan'
-            ? `Aturan langsung diperiksa di ${a.titik_judul ?? a.titik}${a.mode === 'blokir' ? ' dan langkah yang tidak memenuhi akan ditolak' : ''}.`
+            ? `Aturan langsung diperiksa di ${labelTitik(a.titik, a.titik_judul)}${a.mode === 'blokir' ? ' dan langkah yang tidak memenuhi akan ditolak' : ''}.`
             : konfirmasi === 'ajukan'
               ? 'Pimpinan bidang memeriksa dan menyetujui aturan ini. Aturan mulai diperiksa setelah disetujui.'
               : konfirmasi === 'nonaktifkan'
@@ -4652,6 +4957,7 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
         </Field>
       </ConfirmDialog>
       <DialogAlurAturan jenis={alur} nama={a.nama} catatan={catatan} setCatatan={setCatatan} onTutup={() => setAlur(null)} onKirim={kirimAlur} />
+      {pakaiDasarSk && <PanelAjukanAturan aturan={a} open={panelAjukan} onOpenChange={setPanelAjukan} onSelesai={q.refetch} />}
     </div>
   );
 }
@@ -4659,6 +4965,7 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
 const JUDUL_TOAST_ALUR = {
   setujui: 'Aturan disetujui',
   kembalikan: 'Aturan dikembalikan ke pengusul',
+  tolak: 'Pengajuan aturan ditolak',
   telaah: 'Catatan telaah SPMI terkirim',
   sahkan: 'Jalur darurat disahkan',
   cabut: 'Aturan dicabut',
@@ -4673,16 +4980,16 @@ function DialogAlurAturan({
   onTutup,
   onKirim,
 }: {
-  jenis: null | 'setujui' | 'kembalikan' | 'telaah' | 'sahkan' | 'cabut';
+  jenis: null | 'setujui' | 'kembalikan' | 'tolak' | 'telaah' | 'sahkan' | 'cabut';
   nama: string;
   catatan: string;
   setCatatan: (v: string) => void;
   onTutup: () => void;
-  onKirim: (j: 'setujui' | 'kembalikan' | 'telaah' | 'sahkan' | 'cabut') => Promise<void>;
+  onKirim: (j: 'setujui' | 'kembalikan' | 'tolak' | 'telaah' | 'sahkan' | 'cabut') => Promise<void>;
 }) {
   const toast = useToast();
   const [galat, setGalat] = React.useState('');
-  const wajib = jenis === 'kembalikan' || jenis === 'telaah' || jenis === 'cabut';
+  const wajib = jenis === 'kembalikan' || jenis === 'tolak' || jenis === 'telaah' || jenis === 'cabut';
   return (
     <ConfirmDialog
       open={jenis !== null}
@@ -4697,7 +5004,9 @@ function DialogAlurAturan({
           ? `Setujui “${nama}”?`
           : jenis === 'kembalikan'
             ? `Kembalikan “${nama}”?`
-            : jenis === 'sahkan'
+            : jenis === 'tolak'
+              ? `Tolak “${nama}”?`
+              : jenis === 'sahkan'
               ? `Sahkan “${nama}”?`
               : jenis === 'cabut'
                 ? `Cabut “${nama}”?`
@@ -4708,14 +5017,16 @@ function DialogAlurAturan({
           ? 'Aturan mulai diperiksa setelah disetujui.'
           : jenis === 'kembalikan'
             ? 'Aturan kembali menjadi draf. Tulis apa yang perlu diperbaiki pengusul.'
-            : jenis === 'sahkan'
+            : jenis === 'tolak'
+              ? 'Pengajuan ditolak dan aturan tidak berlaku (versi yang sedang berlaku tetap). Tulis alasannya.'
+              : jenis === 'sahkan'
               ? 'Aturan yang aktif lewat jalur darurat tetap berlaku sebagai aturan yang disetujui biasa.'
               : jenis === 'cabut'
                 ? 'Aturan berhenti diperiksa sekarang dan kembali menjadi draf. Pengaktif dikabari.'
                 : 'Catatan telaah SPMI terlihat oleh pengusul dan penyetuju. Catatan ini tidak menahan persetujuan.'
       }
-      confirmLabel={{ setujui: 'Setujui', kembalikan: 'Kembalikan', telaah: 'Kirim telaah', sahkan: 'Sahkan', cabut: 'Cabut' }[jenis ?? 'setujui']}
-      tone={jenis === 'kembalikan' ? 'warning' : jenis === 'cabut' ? 'danger' : 'primary'}
+      confirmLabel={{ setujui: 'Setujui', kembalikan: 'Kembalikan', tolak: 'Tolak', telaah: 'Kirim telaah', sahkan: 'Sahkan', cabut: 'Cabut' }[jenis ?? 'setujui']}
+      tone={jenis === 'kembalikan' ? 'warning' : jenis === 'cabut' || jenis === 'tolak' ? 'danger' : 'primary'}
       onConfirm={async () => {
         if (!jenis) return;
         if (wajib && !catatan.trim()) {
@@ -4802,7 +5113,7 @@ function AntreanAlurAturan({ antrean, kategori, onBuka, className }: { antrean: 
               <SifatAturanBadge sifat={a.sifat} />
             </div>
             <strong>{a.nama}</strong>
-            <span>{a.titik_judul ?? a.titik}</span>
+            <span>{labelTitik(a.titik, a.titik_judul)}</span>
             <p>{kalimatAturan(a, katalog.data, a.titik_judul ?? undefined) || ringkasKetentuan(a, katalog.data)}</p>
             <span className="u-aturan-di-titik-sk">{teksSkRingkas(a)}</span>
           </div>
@@ -4965,7 +5276,7 @@ export function AturanBawaanPanel({
                   <div>
                     <strong>{a.nama}</strong>
                     <span>
-                      {a.titik_judul ?? a.titik}
+                      {labelTitik(a.titik, a.titik_judul)}
                       {ringkasKetentuan(a, katalog.data) ? ` · ${ringkasKetentuan(a, katalog.data)}` : ''}
                     </span>
                   </div>
@@ -5022,28 +5333,45 @@ export function LencanaLampirSK() {
  * menuju daftar aturan. Diam bila nol atau akun tidak bisa melihat aturan.
  */
 export function PengingatSkAturan({ unit, kategori, href, onBuka, className }: { unit?: string; kategori?: KategoriAturan; href?: string; onBuka?: () => void; className?: string }) {
+  // SIAKAD dengan dasar SK (docs/ATURAN-SK.md): hitung aturan aktif yang belum berdasar SK; selain itu aturan bawaan tanpa lampiran SK.
+  const dasar = useSiakadQuery<{ kelompok: Array<{ nama: string; jumlah: number }> }>(
+    ['aturan', 'dasar-sk', 'pengingat', unit, kategori],
+    (s, signal) => s.request({ method: 'GET', path: '/v1/aturan/dasar-sk', query: { status: 'belum', kategori, unit: unit?.toUpperCase() } }, { signal }),
+  );
+  const pakaiDasar = Boolean(dasar.data);
   const d = useDaftarAturan({ tanpa_sk: true, bawaan: true, unit, kategori, per_page: 100 });
-  const n = d.data?.length ?? 0;
+  // Kelompokkan per nama aturan (aturan bawaan fakultas bernama sama di tiap fakultas): "Syarat dosen PA (6 unit)".
+  const kel = new Map<string, number>();
+  if (pakaiDasar) for (const k of dasar.data!.kelompok) kel.set(k.nama, k.jumlah);
+  else for (const a of d.data ?? []) kel.set(a.nama, (kel.get(a.nama) ?? 0) + 1);
+  const daftar = [...kel.entries()].sort((x, y) => y[1] - x[1]);
+  const n = daftar.reduce((s, [, j]) => s + j, 0);
   if (!n) return null;
   return (
     <Alert
       variant="warning"
       className={className}
-      title={`${n} aturan bawaan aktif belum punya SK`}
+      title={pakaiDasar ? `${n} aturan berlaku belum ada SK dasar` : `${n} aturan bawaan belum punya SK`}
       actions={
         href ? (
           <Button size="sm" render={<a href={href} />}>
-            Lampirkan SK
+            Lampirkan SK dasar
           </Button>
         ) : onBuka ? (
           <Button size="sm" onClick={onBuka}>
-            Lampirkan SK
+            Lampirkan SK dasar
           </Button>
         ) : undefined
       }
     >
-      Aturan ini sudah ditegakkan di aplikasi baru. Lampirkan SK dari registri SK sebagai dasar hukumnya: {d.data!.slice(0, 4).map((a) => a.nama).join('; ')}
-      {n > 4 ? `; dan ${n - 4} lainnya` : ''}.
+      <span className="u-aturan-pengingat-isi">
+        Misalnya{' '}
+        {daftar
+          .slice(0, 3)
+          .map(([nm, j]) => (j > 1 ? `${nm} (${j} unit)` : nm))
+          .join('; ')}
+        {daftar.length > 3 ? `; dan ${daftar.length - 3} jenis lain` : ''}.
+      </span>
     </Alert>
   );
 }
@@ -5070,16 +5398,22 @@ export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik d
     darurat: hakSaya.setujui || jumlahDarurat > 0,
     pengecualian: Boolean(saya.data?.boleh_pengecualian || saya.data?.admin || ajuanPengecualian.data?.length),
   };
-  const [tab, setTab] = React.useState<'aturan' | 'persetujuan' | 'telaah' | 'darurat' | 'pengecualian' | 'sampah' | 'pengatur' | 'penyetuju' | 'titik'>('aturan');
+  const [tab, setTab] = React.useState<'aturan' | 'persetujuan' | 'telaah' | 'darurat' | 'pengecualian' | 'sampah' | 'pengatur' | 'penyetuju' | 'validator' | 'dasar' | 'titik'>('aturan');
+  const [wizardContoh, setWizardContoh] = React.useState(false);
   const [buka, setBuka] = React.useState<string | null>(null);
   const [form, setForm] = React.useState<{ aturan: Aturan | null; langkah?: number } | null>(null);
   const bolehTambah = saya.data ? saya.data.admin || saya.data.kategori.some((k) => k.boleh_atur && (!kategori || k.kategori === kategori)) : false;
   const hitung = (s: StatusAturan) => ringkas.data?.filter((a) => a.status === s).length ?? 0;
   const tanpaSk = ringkas.data?.filter((a) => (a.status === 'draf' || a.status === 'dikembalikan') && !a.jumlah_sk && !a.sk?.nomor).length ?? 0;
   const tombolTambah = bolehTambah ? (
-    <Button onClick={() => setForm({ aturan: null })}>
-      <Plus /> Tambah aturan
-    </Button>
+    <div className="u-aturan-modul-tombol">
+      <Button onClick={() => setWizardContoh(true)}>
+        <Sparkle /> Buat dari contoh
+      </Button>
+      <Button variant="outline" onClick={() => setForm({ aturan: null })}>
+        <Plus /> Susun sendiri
+      </Button>
+    </div>
   ) : null;
   return (
     <div className={cn('u-aturan-modul', className)}>
@@ -5108,7 +5442,7 @@ export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik d
         ))}
       </div>}
       <Tabs
-        value={tab}
+        value={tab === 'persetujuan' && !hak.setujui ? 'aturan' : tab}
         onValueChange={setTab}
         items={[
           {
@@ -5171,14 +5505,25 @@ export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik d
           ...(saya.data?.admin
             ? [{ value: 'sampah' as const, label: 'Sampah', icon: <Trash2 />, content: <DaftarAturan filter={{ kategori, titik, terhapus: true }} onBuka={(a) => setBuka(a.id)} /> }]
             : []),
+          ...(bolehTambah ? [{ value: 'dasar' as const, label: 'SK dasar', icon: <FileBadge />, content: <DasarSkAturanDaftar kategori={kategori} /> }] : []),
           { value: 'pengatur', label: 'Pengatur', icon: <ShieldCheck />, content: <PengaturAturan /> },
           ...(saya.data?.admin ? [{ value: 'penyetuju' as const, label: 'Pejabat penyetuju', icon: <BadgeCheck />, content: <PejabatPenyetujuAturan tautanPejabat={tautanPejabat} /> }] : []),
+          ...(saya.data?.boleh_validator_lihat ? [{ value: 'validator' as const, label: 'Validator aturan', icon: <GitBranch />, content: <ValidatorAturan /> }] : []),
           ...(tampilTitik && saya.data?.admin ? [{ value: 'titik' as const, label: 'Titik penerapan', icon: <Waypoints />, content: <KelolaTitikAturan /> }] : []),
         ]}
       />
       <Dialog open={buka !== null} onOpenChange={(o) => !o && setBuka(null)} side="right" size="lg" title="Detail aturan">
         {buka && <PanelDetailAturan id={buka} onUbah={(a) => setForm({ aturan: a })} onDihapus={() => setBuka(null)} />}
       </Dialog>
+      <WizardTemplatAturan
+        open={wizardContoh}
+        onOpenChange={setWizardContoh}
+        fakultas={fakultas ?? null}
+        onTersimpan={(id) => {
+          setWizardContoh(false);
+          setBuka(id);
+        }}
+      />
       <FormAturan
         open={form !== null}
         onOpenChange={(o) => !o && setForm(null)}

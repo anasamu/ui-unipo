@@ -1,0 +1,555 @@
+// Aturan berdasarkan SK & rantai validator (siakad/aturan-sk.tsx).
+.u-aturan-modul-kepala > .u-aturan-modul-tombol {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.u-aturan-pengingat-isi {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.u-ask {
+  display: grid;
+  gap: 1rem;
+  container-type: inline-size;
+}
+.u-ask-sub {
+  display: block;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+}
+.u-ask-lencana {
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+}
+.u-ask-panel,
+.u-ask-form {
+  display: grid;
+  gap: 1rem;
+}
+.u-ask-judul {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0 0 0.5rem;
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-semibold);
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+.u-ask-pemilih,
+.u-ask-periksa {
+  display: grid;
+  gap: 0.5rem;
+}
+.u-ask-masalah {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.25rem;
+}
+.u-ask-rantai-no {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--u-primary) 14%, var(--u-card));
+  color: var(--u-primary);
+  font-size: var(--u-text-xs);
+  font-weight: var(--u-weight-bold);
+}
+.u-ask-rantai {
+  display: grid;
+  gap: 0.5rem;
+  ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0;
+  }
+  li {
+    position: relative;
+    display: flex;
+    gap: 0.75rem;
+    padding: 0 0 0.875rem;
+    > div {
+      display: grid;
+      gap: 0.125rem;
+      min-width: 0;
+    }
+    &:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: 0.72rem;
+      top: 1.6rem;
+      bottom: 0.1rem;
+      width: 2px;
+      background: var(--u-border);
+    }
+    &[data-tindakan='tahan'] .u-ask-rantai-no {
+      background: color-mix(in oklab, var(--u-danger) 16%, var(--u-card));
+      color: var(--u-danger);
+    }
+    &[data-tindakan='eskalasi'] .u-ask-rantai-no,
+    &[data-tindakan='lewati'] .u-ask-rantai-no {
+      background: var(--u-muted);
+      color: var(--u-muted-foreground);
+    }
+  }
+}
+.u-ask-rantai-asal {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+  margin: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.15rem;
+  }
+}
+.u-ask-orang {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: var(--u-text-sm);
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex: none;
+  }
+  &[data-kosong] {
+    color: var(--u-warning-text);
+  }
+}
+.u-ask-editor {
+  display: grid;
+  gap: 0.75rem;
+}
+.u-ask-tahap {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  transition: box-shadow 0.15s, border-color 0.15s, opacity 0.15s;
+  &[data-seret] {
+    opacity: 0.55;
+  }
+  &[data-atas] {
+    border-color: var(--u-primary);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--u-primary) 25%, transparent);
+  }
+}
+.u-ask-tahap-kepala {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  > .u-input,
+  > input {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+.u-ask-pegangan {
+  display: inline-flex;
+  cursor: grab;
+  color: var(--u-muted-foreground);
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  @media (pointer: coarse) {
+    display: none;
+  }
+}
+.u-ask-validator {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+.u-ask-validator-baris {
+  display: grid;
+  grid-template-columns: minmax(9rem, 12rem) minmax(10rem, 1fr) minmax(10rem, 1fr) auto;
+  gap: 0.5rem;
+  width: 100%;
+  align-items: center;
+  @container (max-width: 40rem) {
+    grid-template-columns: 1fr;
+  }
+}
+.u-ask-tahap-opsi {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+}
+.u-ask-centang {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: var(--u-text-sm);
+  input {
+    margin-top: 0.2rem;
+  }
+}
+.u-ask-daftar {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+  > .u-ask-grid {
+    width: 100%;
+  }
+}
+.u-ask-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 0.75rem;
+}
+.u-ask-kartu {
+  display: grid;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  align-content: start;
+  &[data-nonaktif] {
+    opacity: 0.65;
+  }
+}
+.u-ask-kartu-kepala {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: flex-start;
+  strong {
+    font-weight: var(--u-weight-semibold);
+  }
+}
+.u-ask-lencana-baris {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.u-ask-urutan {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.375rem;
+  font-size: var(--u-text-sm);
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+.u-ask-kartu-aksi {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+.u-ask-riwayat,
+.u-ask-hasil,
+.u-ask-baris {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  font-size: var(--u-text-sm);
+}
+.u-ask-hasil li {
+  display: flex;
+  gap: 0.375rem;
+  align-items: flex-start;
+  svg {
+    width: 1rem;
+    height: 1rem;
+    color: var(--u-danger);
+    flex: none;
+  }
+  &[data-ok] svg {
+    color: var(--u-success);
+  }
+}
+.u-ask-baris li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+  background: var(--u-card);
+  > div {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  @container (max-width: 30rem) {
+    flex-wrap: wrap;
+  }
+}
+.u-ask-simulasi {
+  display: grid;
+  gap: 1rem;
+}
+.u-ask-simulasi-isian {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.75rem;
+}
+.u-ask-kalimat {
+  p {
+    margin: 0;
+    line-height: 1.7;
+  }
+  &.u-ask-kalimat-besar {
+    padding: 0.875rem 1rem;
+    border-radius: var(--u-radius-md);
+    background: color-mix(in oklab, var(--u-primary) 6%, var(--u-card));
+    border: 1px solid color-mix(in oklab, var(--u-primary) 20%, var(--u-border));
+    font-size: var(--u-text-base, 1rem);
+  }
+}
+.u-ask-kalimat-tabel {
+  margin: 0.375rem 0 0;
+  padding-left: 1.1rem;
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+}
+.u-ask-celah {
+  padding: 0 0.3rem;
+  border-radius: var(--u-radius-sm);
+  background: color-mix(in oklab, var(--u-primary) 16%, transparent);
+  color: inherit;
+  font-weight: var(--u-weight-semibold);
+  &[data-kosong] {
+    background: color-mix(in oklab, var(--u-warning) 22%, transparent);
+  }
+}
+.u-ask-jenis,
+.u-ask-kasus {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.625rem;
+}
+.u-ask-kasus {
+  grid-template-columns: 1fr;
+}
+.u-ask-jenis-kartu {
+  display: grid;
+  gap: 0.25rem;
+  justify-items: start;
+  text-align: left;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+  background: var(--u-card);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  > span {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
+  }
+  &:hover:not(:disabled) {
+    border-color: color-mix(in oklab, var(--u-primary) 45%, var(--u-border));
+  }
+  &:focus-visible {
+    outline: 2px solid var(--u-primary);
+    outline-offset: 2px;
+  }
+  &[data-pilih] {
+    border-color: var(--u-primary);
+    box-shadow: 0 0 0 1px var(--u-primary);
+    background: color-mix(in oklab, var(--u-primary) 5%, var(--u-card));
+  }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+.u-ask-tabel {
+  display: grid;
+  gap: 0.375rem;
+  justify-items: stretch;
+  > div {
+    display: grid;
+    grid-template-columns: 1fr 1fr 2rem;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  > .u-button {
+    justify-self: start;
+  }
+}
+.u-ask-tabel-kepala {
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
+  font-weight: var(--u-weight-semibold);
+}
+.u-ask-isian-satuan {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  > span {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-sm);
+  }
+}
+.u-ask-tetap {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--u-radius-md);
+  background: var(--u-muted);
+  font-weight: var(--u-weight-semibold);
+}
+.u-ask-rinci {
+  margin-top: 0.375rem;
+  font-size: var(--u-text-sm);
+  summary {
+    cursor: pointer;
+  }
+}
+@media (max-width: 40rem) {
+  .u-aturan-pengingat-isi {
+    -webkit-line-clamp: 1;
+  }
+}
+
+// Kartu aturan (KartuAturan, KartuAturanKelompok): judul utuh di baris sendiri, lencana di bawahnya, satu penanda SK.
+@container (min-width: 40rem) {
+  .u-aturan-kisi {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  }
+}
+.u-aturan-kartu {
+  position: relative;
+  grid-template-rows: auto auto 1fr auto auto;
+  min-width: 0;
+  cursor: default;
+  &[data-interactive] {
+    cursor: pointer;
+  }
+  .u-aturan-kartu-kepala {
+    min-width: 0;
+  }
+  .u-aturan-kartu-judul {
+    min-width: 0;
+    strong,
+    .u-aturan-kartu-buka {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+      word-break: normal;
+    }
+  }
+  .u-aturan-kartu-lencana {
+    flex: initial;
+    justify-content: flex-start;
+  }
+}
+.u-aturan-kartu-buka {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--u-weight-semibold);
+  line-height: var(--u-leading-snug);
+  text-align: left;
+  cursor: pointer;
+  &:focus-visible {
+    outline: 2px solid var(--u-primary);
+    outline-offset: 2px;
+    border-radius: var(--u-radius-sm);
+  }
+}
+.u-aturan-kartu-kaki {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--u-border);
+}
+.u-aturan-penanda-sk {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  svg {
+    flex: none;
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  &[data-kurang] {
+    color: var(--u-warning-text);
+    font-weight: var(--u-weight-semibold);
+  }
+}
+.u-aturan-mode {
+  &[data-mode='blokir'] svg {
+    color: var(--u-danger);
+  }
+  &[data-mode='peringatan'] svg {
+    color: var(--u-warning);
+  }
+}
+.u-aturan-kelompok-panah {
+  transition: transform 0.15s;
+  &[data-buka] {
+    transform: rotate(90deg);
+  }
+}
+.u-aturan-kelompok-daftar {
+  display: grid;
+  container-type: inline-size;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--u-text-sm);
+  li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0;
+    border-top: 1px dashed var(--u-border);
+  }
+}
+.u-aturan-kelompok-unit {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  font-weight: var(--u-weight-semibold);
+}
+.u-aturan-saring-titik {
+  min-width: min(100%, 14rem);
+  .u-input,
+  input {
+    text-overflow: ellipsis;
+  }
+}
+.u-aturan-saring-centang {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: var(--u-text-sm);
+  white-space: nowrap;
+}
