@@ -1,0 +1,408 @@
+@use '../mixins' as *;
+
+// Komponen isian & aksi G4: IsianAngka/Rupiah/Jam/TanggalWaktu, MultiPilih, BilahAksi, MenuAksiBaris,
+// KonfirmasiAksi, SwitchBaris, PilihIkon, PilihWarna. Semua warna dari token tema (terang/gelap otomatis).
+
+// ---------------------------------------------------------------- pesan & kerangka bersama
+.u-isian-pesan {
+  display: block;
+  margin-top: 0.375rem;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  line-height: 1.4;
+  &[data-tone='danger'] {
+    color: var(--u-danger-text, var(--u-danger));
+  }
+}
+.u-isian-kerangka {
+  display: block;
+  width: 100%;
+  height: 2.25rem;
+  border-radius: var(--u-radius);
+  &[data-size='sm'] {
+    height: 2rem;
+  }
+  &[data-size='lg'] {
+    height: 2.75rem;
+  }
+}
+.u-input-group[data-readonly] {
+  background: var(--u-surface);
+  box-shadow: none;
+}
+
+// ---------------------------------------------------------------- IsianAngka / IsianRupiah
+.u-isian-angka,
+.u-isian-jam {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  .u-input[data-align='end'] {
+    text-align: right;
+  }
+  .u-input {
+    font-variant-numeric: tabular-nums;
+  }
+}
+.u-isian-awalan,
+.u-isian-satuan {
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.u-isian-terbilang {
+  font-style: italic;
+}
+
+// ---------------------------------------------------------------- IsianTanggalWaktu
+.u-isian-tanggal-waktu {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+.u-isian-tanggal-waktu-baris {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7.5rem;
+  gap: 0.5rem;
+  @media (max-width: 420px) {
+    grid-template-columns: minmax(0, 1fr) 6.5rem;
+  }
+}
+
+// ---------------------------------------------------------------- MultiPilih
+.u-multi-pilih {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+.u-multi-pilih-kotak {
+  @include control-surface;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 2.25rem;
+  padding: 0.1875rem 2rem 0.1875rem 0.25rem;
+  position: relative;
+  cursor: text;
+  &:hover:not(:focus-within) {
+    border-color: var(--u-border-strong);
+  }
+  &:focus-within {
+    @include control-focus;
+  }
+  &[data-invalid] {
+    @include control-invalid;
+  }
+  &[data-size='sm'] {
+    min-height: 2rem;
+  }
+  &[data-size='lg'] {
+    min-height: 2.75rem;
+  }
+  .u-multi-pilih[data-readonly] & {
+    background: var(--u-surface);
+    box-shadow: none;
+    padding-right: 0.25rem;
+    cursor: default;
+  }
+  .u-multi-pilih[data-disabled] & {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+.u-multi-pilih-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  max-width: 100%;
+  height: 1.625rem;
+  padding-inline: 0.5rem 0.125rem;
+  border-radius: calc(var(--u-radius) - 2px);
+  background: color-mix(in oklab, var(--u-primary) 10%, var(--u-background));
+  color: var(--u-foreground);
+  font-size: var(--u-text-sm);
+  font-weight: 500;
+  outline: none;
+  .u-multi-pilih[data-readonly] & {
+    padding-inline: 0.5rem;
+  }
+  &:focus-visible,
+  &[data-highlighted] {
+    @include focus-ring(1px);
+  }
+}
+.u-multi-pilih-chip-teks {
+  @include truncate;
+  max-width: 16rem;
+}
+.u-multi-pilih-chip-hapus {
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--u-muted-foreground);
+  cursor: pointer;
+  svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+  &:hover {
+    background: color-mix(in oklab, var(--u-foreground) 10%, transparent);
+    color: var(--u-foreground);
+  }
+}
+.u-multi-pilih-input {
+  flex: 1 1 6rem;
+  min-width: 6rem;
+  height: 1.75rem;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--u-foreground);
+  font: inherit;
+  font-size: var(--u-text-sm);
+  padding-inline: 0.375rem;
+  &::placeholder {
+    color: var(--u-muted-foreground);
+  }
+}
+.u-multi-pilih-ujung {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+}
+.u-multi-pilih-kosong {
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  padding-inline: 0.375rem;
+}
+.u-multi-pilih-popup {
+  min-width: var(--anchor-width);
+}
+.u-multi-pilih-centang {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid var(--u-input);
+  border-radius: 4px;
+  background: var(--u-background);
+  svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    opacity: 0;
+  }
+  &[data-checked] {
+    background: var(--u-primary);
+    border-color: var(--u-primary);
+    color: var(--u-primary-foreground);
+    svg {
+      opacity: 1;
+    }
+  }
+}
+.u-pilih-entitas-butir {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+// ---------------------------------------------------------------- BilahAksi / MenuAksiBaris / KonfirmasiAksi
+.u-bilah-aksi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  &[data-rata='awal'] {
+    justify-content: flex-start;
+  }
+}
+.u-bilah-aksi-bungkus {
+  display: inline-flex;
+  border-radius: var(--u-radius);
+  &:focus-visible {
+    @include focus-ring;
+  }
+  > .u-button {
+    pointer-events: none;
+  }
+}
+.u-bilah-aksi-lipat {
+  display: none;
+}
+@media (max-width: 640px) {
+  .u-bilah-aksi-lebar {
+    display: none !important;
+  }
+  .u-bilah-aksi-lipat {
+    display: inline-flex;
+  }
+  .u-bilah-aksi[data-penuh-ponsel] {
+    flex-wrap: nowrap;
+    > .u-button,
+    > .u-bilah-aksi-bungkus {
+      flex: 1;
+    }
+  }
+}
+.u-menu-aksi-baris {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.u-konfirmasi-isi {
+  display: grid;
+  gap: 0.75rem;
+}
+
+// ---------------------------------------------------------------- SwitchBaris
+.u-switch-baris {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  & + & {
+    border-top: 1px solid var(--u-border);
+  }
+  &[data-disabled] .u-switch-baris-teks {
+    opacity: 0.65;
+  }
+}
+.u-switch-baris-teks {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+  cursor: pointer;
+  .u-switch-baris[data-readonly] &,
+  .u-switch-baris[data-disabled] & {
+    cursor: default;
+  }
+}
+.u-switch-baris-label {
+  color: var(--u-foreground);
+  font-size: var(--u-text-sm);
+  font-weight: 600;
+}
+.u-switch-baris-ket {
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  &[data-tone='muted'] {
+    font-style: italic;
+  }
+}
+.u-switch-baris-kontrol {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: none;
+  padding-top: 0.125rem;
+}
+
+// ---------------------------------------------------------------- PilihIkon
+.u-pilih-ikon-pemicu {
+  justify-content: flex-start;
+  gap: 0.5rem;
+  &[data-readonly] {
+    background: var(--u-surface);
+    box-shadow: none;
+  }
+}
+.u-pilih-ikon-kini {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: calc(var(--u-radius) - 2px);
+  background: color-mix(in oklab, var(--u-primary) 12%, transparent);
+  color: var(--u-primary);
+  &:empty {
+    background: var(--u-muted);
+  }
+}
+.u-pilih-ikon-placeholder {
+  color: var(--u-muted-foreground);
+}
+.u-pilih-ikon-popup {
+  display: grid;
+  gap: 0.5rem;
+}
+.u-pilih-ikon-kisi {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.5rem, 1fr));
+  gap: 0.25rem;
+  max-height: 15rem;
+  overflow-y: auto;
+  padding: 0.125rem;
+}
+.u-pilih-ikon-butir {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border: 1px solid transparent;
+  border-radius: calc(var(--u-radius) - 2px);
+  background: transparent;
+  color: var(--u-foreground);
+  cursor: pointer;
+  &:hover {
+    background: var(--u-muted);
+  }
+  &:focus-visible {
+    @include focus-ring(1px);
+  }
+  &[aria-pressed='true'] {
+    border-color: var(--u-primary);
+    background: color-mix(in oklab, var(--u-primary) 12%, transparent);
+    color: var(--u-primary);
+  }
+}
+
+// ---------------------------------------------------------------- PilihWarna
+.u-pilih-warna {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  &[data-disabled] {
+    opacity: 0.6;
+  }
+}
+.u-pilih-warna-butir {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--u-background);
+  border-radius: 999px;
+  background: var(--u-warna);
+  box-shadow: 0 0 0 1px var(--u-border);
+  color: #fff;
+  cursor: pointer;
+  transition: transform var(--u-duration-fast);
+  svg {
+    width: 1rem;
+    height: 1rem;
+    filter: drop-shadow(0 0 1px rgb(0 0 0 / 0.6));
+  }
+  &:hover:not(:disabled) {
+    transform: scale(1.08);
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+  &[aria-checked='true'] {
+    box-shadow: 0 0 0 2px var(--u-foreground);
+  }
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
