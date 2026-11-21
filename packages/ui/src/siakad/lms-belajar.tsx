@@ -59,7 +59,7 @@ import { StatCard, StatGrid } from '../components/charts';
 import { KodeLaporan } from '../components/galat';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakadQuery, type QueryState } from './provider';
 import { NavigasiSoal, SoalCbt, TimerUjian, type JawabanCbt, type SoalCbtData } from './cbt';
-import { HADIR_MIN_BAWAAN, SampulKelas, nadaNilaiLms, sisaTenggat, type KelasLms } from './lms';
+import { HADIR_MIN_BAWAAN, SampulKelas, nadaNilaiLms, namaKelasRapiLms, sisaTenggat, type KelasLms } from './lms';
 import { KalenderAkademik } from './kalender';
 import type { CalendarEvent } from '../components/schedule';
 import { PenandaKurikulum, SiapkanKelasDariRps } from './kurikulum-aturan';
@@ -805,7 +805,7 @@ export function KepalaKelasLms({ kelasId, nim, aksi, className }: { kelasId: num
               )}
               {k.kelas && <span>Kelas {k.kelas}</span>}
             </p>
-            <h1>{j?.nama_mk ?? k.judul}</h1>
+            <h1>{namaKelasRapiLms(j?.nama_mk ?? k.judul)}</h1>
             <p className="u-lmsb-kepala-info">
               {(j?.nama_dosen || k.pengajar) && (
                 <span>
@@ -1513,7 +1513,7 @@ export function HalamanTugasLms({ tugasId, className }: { tugasId: number; class
     <article className={cn('u-lmsb-halaman', className)}>
       <header className="u-lmsb-judul">
         <a className="u-lmsb-kembali" href={rute.kelas(t.kelas_id, 'tugas')}>
-          <ArrowLeft aria-hidden /> {kelas.data?.judul ?? 'Kembali ke kelas'}
+          <ArrowLeft aria-hidden /> {kelas.data?.judul ? namaKelasRapiLms(kelas.data.judul) : 'Kembali ke kelas'}
         </a>
         <div className="u-lmsb-judul-baris">
           <span className="u-lmsb-item-ikon" data-jenis="tugas" data-besar>
@@ -1755,7 +1755,7 @@ export function HalamanKuisLms({ kuisId, onMulai, className }: { kuisId: number;
     <article className={cn('u-lmsb-halaman', className)}>
       <header className="u-lmsb-judul">
         <a className="u-lmsb-kembali" href={rute.kelas(k.kelas_id, 'kuis')}>
-          <ArrowLeft aria-hidden /> {kelas.data?.judul ?? 'Kembali ke kelas'}
+          <ArrowLeft aria-hidden /> {kelas.data?.judul ? namaKelasRapiLms(kelas.data.judul) : 'Kembali ke kelas'}
         </a>
         <div className="u-lmsb-judul-baris">
           <span className="u-lmsb-item-ikon" data-jenis="kuis" data-besar>
@@ -2388,7 +2388,7 @@ export function UtasForumLms({ forumId, kelasId, onUtasDibuat, className }: { fo
       <header className="u-lmsb-judul">
         {kelasId ? (
           <a className="u-lmsb-kembali" href={rute.kelas(kelasId, 'forum')}>
-            <ArrowLeft aria-hidden /> {kelas.data?.judul ?? 'Kembali ke kelas'}
+            <ArrowLeft aria-hidden /> {kelas.data?.judul ? namaKelasRapiLms(kelas.data.judul) : 'Kembali ke kelas'}
           </a>
         ) : null}
         <div className="u-lmsb-judul-baris">
@@ -2865,7 +2865,7 @@ export function RekapNilaiKelasLms({ kelas, className }: { kelas: KelasLms[] | u
           <li key={k.id}>
             <a href={rute.kelas(k.id, 'nilai')}>
               <span className="u-lmsb-item-teks">
-                <b>{k.judul}</b>
+                <b>{namaKelasRapiLms(k.judul)}</b>
                 <small>
                   {k.kode_mk}
                   {n ? ` · ${dinilai}/${n.item.length} dinilai` : ''}
@@ -3052,7 +3052,7 @@ export function TenggatLms({ batas = 7, className }: { batas?: number; className
               <span className="u-lmsb-item-teks">
                 <b>{x.judul}</b>
                 <small>
-                  {x.kelas.replace(/ - Kelas [A-Z0-9]+$/, '')} · {x.jenis === 'kuis' ? 'ditutup' : 'tenggat'} {waktuLms(x.waktu)}
+                  {namaKelasRapiLms(x.kelas)} · {x.jenis === 'kuis' ? 'ditutup' : 'tenggat'} {waktuLms(x.waktu)}
                 </small>
               </span>
               {x.status && STATUS_JAWABAN[x.status] ? (
@@ -3100,7 +3100,7 @@ export function KelasDaringMendatang({ batas = 3, className }: { batas?: number;
               <small>{waktuLms(a.waktu)}</small>
             </span>
             <b>{a.judul}</b>
-            <small>{a.kelas}</small>
+            <small>{namaKelasRapiLms(a.kelas)}</small>
             <span className="u-lmsb-daring-cta">
               {w === 'berlangsung' ? 'Gabung sekarang' : 'Lihat detail'} <ArrowRight aria-hidden />
             </span>
@@ -3156,7 +3156,7 @@ export function KemajuanBelajarLms({ kelas, nim, batas = 5, className }: { kelas
   const q = useSemuaKelasLms<ProgresKelasDataLms>(ids, 'progres');
   const rute = useRuteLms();
   if (!kelas || muatDari(q)) return <Skeleton className={className} style={{ height: 180 }} />;
-  const nama = new Map(kelas.map((k) => [k.id, k.judul.replace(/ - Kelas [A-Z0-9]+$/, '')]));
+  const nama = new Map(kelas.map((k) => [k.id, namaKelasRapiLms(k.judul)]));
   const baris = (q.data ?? [])
     .map((r) => {
       const m = r.data?.mahasiswa?.find((x) => !nim || x.nim === nim) ?? (r.data?.mahasiswa?.length === 1 ? r.data.mahasiswa[0] : undefined);
@@ -3225,7 +3225,7 @@ export function TugasKuisSayaLms({ kelas, className }: { kelas: KelasLms[] | und
   const rute = useRuteLms();
   const [saring, setSaring] = React.useState<'menunggu' | 'kuis' | 'selesai'>('menunggu');
   const [f, setF] = React.useState<FilterValues>({});
-  const nama = new Map((kelas ?? []).map((k) => [k.id, k.judul.replace(/ - Kelas [A-Z0-9]+$/, '')]));
+  const nama = new Map((kelas ?? []).map((k) => [k.id, namaKelasRapiLms(k.judul)]));
   const kata = String(f.q ?? '').trim().toLowerCase();
   const kelasPilih = f.kelas ? Number(f.kelas) : null;
   const cocok = (kelasId: number, judul: string) => (!kelasPilih || kelasPilih === kelasId) && (!kata || `${judul} ${nama.get(kelasId) ?? ''}`.toLowerCase().includes(kata));

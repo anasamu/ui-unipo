@@ -356,10 +356,15 @@ input.u-lmsb-kode,
   gap: 0.375rem 0.75rem;
   color: var(--u-muted-foreground);
   font-size: var(--u-text-sm);
+  > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
   svg {
+    flex: none;
     width: 0.875rem;
     height: 0.875rem;
-    vertical-align: -0.125em;
   }
 }
 .u-lmsb-kepala-aksi {
