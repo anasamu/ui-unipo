@@ -132,7 +132,14 @@ export function useFilterFields(jenis: FilterPreset): FilterField[] {
       case 'dosen':
         return [
           fProdi,
-          { key: 'status', label: 'Status', type: 'select', options: opt([['A', 'Aktif'], ['T', 'Tugas belajar'], ['C', 'Cuti'], ['K', 'Keluar']]), icon: <CircleDot /> },
+          // SIAKAD /v1/dosen bawaan hanya dosen aktif; nonaktif/semua/kode r_kode 15 hanya untuk pengelola (staf/token aplikasi).
+          {
+            key: 'status',
+            label: 'Status',
+            type: 'select',
+            options: opt([['aktif', 'Aktif'], ['nonaktif', 'Semua nonaktif'], ['semua', 'Semua status'], ['C', 'Cuti'], ['S', 'Studi lanjut'], ['B', 'Tugas belajar'], ['T', 'Tugas di instansi lain'], ['K', 'Keluar'], ['P', 'Pensiun'], ['M', 'Almarhum']]),
+            icon: <CircleDot />,
+          },
         ];
       case 'pegawai':
         return [

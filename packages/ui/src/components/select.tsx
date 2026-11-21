@@ -120,6 +120,11 @@ export interface ComboboxProps<T> {
   renderItem?: (item: T) => React.ReactNode;
   /** Kelompokkan butir statis (`items`) dengan judul kelompok, mis. per unit. Urutan kelompok mengikuti butir pertama. */
   itemGroup?: (item: T) => string | null | undefined;
+  /**
+   * Lencana untuk butir terpilih, tampil di dalam isian (mis. "Nonaktif" untuk nilai lama yang menunjuk dosen yang sudah
+   * keluar). Kembalikan null bila tidak perlu lencana.
+   */
+  lencana?: (item: T) => React.ReactNode;
   value?: T | null;
   defaultValue?: T | null;
   onValueChange?: (value: T | null) => void;
@@ -183,6 +188,7 @@ export function Combobox<T>({
   errorText = 'Data tidak bisa dimuat. Coba lagi.',
   tambah,
   itemGroup,
+  lencana,
   ...rest
 }: ComboboxProps<T>) {
   const initial = value !== undefined ? value : (defaultValue ?? null);
@@ -266,6 +272,10 @@ export function Combobox<T>({
           {icon}
         </span>
         <BaseCombobox.Input placeholder={placeholder} id={id} aria-label={rest['aria-label']} />
+        {selected && lencana && !open ? (() => {
+          const l = lencana(selected);
+          return l == null || l === false ? null : <span className="u-input-addon" data-align="end" data-lencana="">{l}</span>;
+        })() : null}
         <span className="u-input-addon" data-align="end">
           {loading && open ? (
             <Spinner size="sm" />

@@ -122,9 +122,19 @@ export interface DosenOption {
   nama_prodi?: string | null;
   jabatan_akademik?: string | null;
   foto?: string | null;
+  /** false bila dosen tidak aktif (m_dosen.status_aktif bukan A); SIAKAD hanya menawarkan dosen aktif kecuali filter.status. */
+  aktif?: boolean;
+  status_label?: string | null;
   [k: string]: unknown;
 }
-/** Cari dosen berdasarkan NIDN atau nama (SDK: dosen.list). */
+const hurufAwal = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+const lencanaNonaktif = (nonaktif: boolean, ket?: string | null) =>
+  nonaktif ? (
+    <Badge variant="warning" dot title={ket ? hurufAwal(namaRapi(ket.replace(/_/g, ' '))) : undefined}>
+      Nonaktif
+    </Badge>
+  ) : null;
+/** Cari dosen berdasarkan NIDN atau nama (SDK: dosen.list). Bawaan hanya dosen aktif; nilai lama nonaktif berlencana. */
 export function CariDosen({ load, limit, filter, placeholder = 'Cari NIDN atau nama dosen', ...props }: CariProps<DosenOption> & { filter?: { prodi?: string; status?: string } }) {
   const f = JSON.stringify(filter ?? {});
   const loader = useLoader<DosenOption>(async (s, q, signal, per_page) => (await s.dosen.list({ ...JSON.parse(f), q: q || undefined, per_page }, { signal })).data as DosenOption[], load, limit);
@@ -137,10 +147,12 @@ export function CariDosen({ load, limit, filter, placeholder = 'Cari NIDN atau n
       itemToString={(d) => d.nama_lengkap || d.nama}
       itemKey={(d) => d.nidn}
       emptyText="Dosen tidak ditemukan."
+      lencana={(d) => lencanaNonaktif(d.aktif === false, d.status_label)}
       renderItem={(d) => (
         <>
           <Avatar name={d.nama} src={d.foto} size="sm" />
           <OptionContent title={d.nama_lengkap || d.nama} meta={[d.nidn && `NIDN ${d.nidn}`, d.jabatan_akademik, d.nama_prodi].filter(Boolean).join(' · ')} />
+          {lencanaNonaktif(d.aktif === false, d.status_label)}
         </>
       )}
     />
@@ -157,9 +169,13 @@ export interface PegawaiOption {
   nip?: string | null;
   unit_nama?: string | null;
   foto?: string | null;
+  status_aktif?: string | null;
   [k: string]: unknown;
 }
-/** Cari pegawai/tendik/dosen dari modul SDM (SDK: sdm.getPegawai). */
+/** Status SDM yang masih bekerja (Ref::STATUS_BEKERJA SIAKAD). */
+const SDM_BEKERJA = ['aktif', 'cuti', 'tugas_belajar', 'izin_belajar', 'diperbantukan'];
+const pegawaiNonaktif = (p: PegawaiOption) => typeof p.status_aktif === 'string' && p.status_aktif !== '' && !SDM_BEKERJA.includes(p.status_aktif);
+/** Cari pegawai/tendik/dosen dari modul SDM (SDK: sdm.getPegawai). Bawaan SIAKAD hanya yang masih bekerja. */
 export function CariPegawai({ load, limit, jenis, placeholder = 'Cari nama, NIP, atau NIDN pegawai', ...props }: CariProps<PegawaiOption> & { jenis?: 'dosen' | 'tendik' }) {
   const loader = useLoader<PegawaiOption>(async (s, q, signal, per_page) => (await s.sdm.getPegawai({ jenis, q: q || undefined, per_page }, { signal })).data as PegawaiOption[], load, limit);
   return (
@@ -171,6 +187,7 @@ export function CariPegawai({ load, limit, jenis, placeholder = 'Cari nama, NIP,
       itemToString={(p) => p.nama_lengkap || p.nama}
       itemKey={(p) => String(p.id)}
       emptyText="Pegawai tidak ditemukan."
+      lencana={(p) => lencanaNonaktif(pegawaiNonaktif(p), p.status_aktif)}
       renderItem={(p) => (
         <>
           <Avatar name={p.nama} src={p.foto} size="sm" />
@@ -178,7 +195,7 @@ export function CariPegawai({ load, limit, jenis, placeholder = 'Cari nama, NIP,
             <span>{p.nama_lengkap || p.nama}</span>
             <span className="u-option-meta">{[p.nip && `NIP ${p.nip}`, p.unit_nama].filter(Boolean).join(' · ')}</span>
           </span>
-          {p.jenis && <Badge variant={p.jenis === 'dosen' ? 'primary' : 'secondary'}>{p.jenis === 'dosen' ? 'Dosen' : 'Tendik'}</Badge>}
+          {pegawaiNonaktif(p) ? lencanaNonaktif(true, p.status_aktif) : p.jenis && <Badge variant={p.jenis === 'dosen' ? 'primary' : 'secondary'}>{p.jenis === 'dosen' ? 'Dosen' : 'Tendik'}</Badge>}
         </>
       )}
     />

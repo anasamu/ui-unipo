@@ -344,7 +344,16 @@ export const TabelMahasiswa = makeTabel<Row>({
 });
 
 // ================================================================ Dosen
-/** Tabel dosen (dosen.list) dengan saringan prodi dan status. */
+/** Status dosen r_kode 15 SIAKAD (cadangan bila respons belum membawa `status_label`). */
+const STATUS_DOSEN: Record<string, string> = { A: 'Aktif', C: 'Cuti', S: 'Studi lanjut', B: 'Tugas belajar', T: 'Tugas di instansi lain', K: 'Keluar', P: 'Pensiun', M: 'Almarhum', G: 'Ganti NIDN', H: 'NIDN dihapus' };
+const toneStatusDosen = (v: unknown): Tone => (v === 'A' || v === 'aktif' ? 'success' : v === 'C' || v === 'S' || v === 'B' || v === 'T' ? 'info' : 'neutral');
+const labelStatusDosen = (r: Row): string => {
+  const v = String(r.status_aktif ?? r.status ?? '');
+  if (STATUS_DOSEN[v]) return STATUS_DOSEN[v];
+  const l = typeof r.status_label === 'string' ? r.status_label.toLowerCase() : '';
+  return l ? l.charAt(0).toUpperCase() + l.slice(1) : v;
+};
+/** Tabel dosen (dosen.list) dengan saringan prodi dan status. Bawaan SIAKAD hanya dosen aktif. */
 export const TabelDosen = makeTabel<Row>({
   name: 'TabelDosen',
   key: 'tabel-dosen',
@@ -367,11 +376,7 @@ export const TabelDosen = makeTabel<Row>({
           </>
         }
         prodi={r.kode_prodi || r.nama_prodi ? <LabelProdi kode={r.kode_prodi} nama={r.nama_prodi} /> : undefined}
-        badge={
-          <StatusBadge tone={v === 'A' || v === 'aktif' ? 'success' : v === 'T' ? 'info' : 'neutral'}>
-            {({ A: 'Aktif', T: 'Tugas belajar', C: 'Cuti', K: 'Keluar' } as Record<string, string>)[v] ?? v}
-          </StatusBadge>
-        }
+        badge={<StatusBadge tone={toneStatusDosen(v)}>{labelStatusDosen(r)}</StatusBadge>}
         meta={[meta('Jabatan', r.jabatan_akademik ?? 'Belum ada'), meta('Pendidikan', r.pendidikan)]}
       />
     );
@@ -405,11 +410,7 @@ export const TabelDosen = makeTabel<Row>({
       value: (r) => r.status_aktif ?? r.status,
       cell: (r) => {
         const v = r.status_aktif ?? r.status;
-        return (
-          <StatusBadge tone={v === 'A' || v === 'aktif' ? 'success' : v === 'T' ? 'info' : 'neutral'}>
-            {({ A: 'Aktif', T: 'Tugas belajar', C: 'Cuti', K: 'Keluar' } as Record<string, string>)[v] ?? v}
-          </StatusBadge>
-        );
+        return <StatusBadge tone={toneStatusDosen(v)}>{labelStatusDosen(r)}</StatusBadge>;
       },
     },
   ],

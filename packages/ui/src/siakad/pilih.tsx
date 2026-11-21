@@ -4,6 +4,7 @@ import { BookOpen, Briefcase, Building2, GraduationCap, Landmark, Network, UserR
 import { Combobox, OptionContent } from '../components/select';
 import type { ControlSize } from '../components/forms';
 import { Avatar } from '../components/display';
+import { Badge } from '../components/actions';
 import { Dialog } from '../components/overlays';
 import { useOptionalSiakad } from './provider';
 import { PilihUnit } from './pilih-unit';
@@ -12,6 +13,16 @@ import { BarisProdi, LogoFakultas, judulProdi, namaRapi, type ProdiReferensi } f
 type Baris = Record<string, unknown>;
 const teks = (v: unknown) => (v == null ? '' : String(v));
 const gabung = (...xs: unknown[]) => xs.filter((x) => x != null && x !== '').join(' · ');
+/** Status SDM yang masih bekerja (Ref::STATUS_BEKERJA SIAKAD); selain ini = keluar/nonaktif. */
+const SDM_BEKERJA = ['aktif', 'cuti', 'tugas_belajar', 'izin_belajar', 'diperbantukan'];
+/** Dosen tidak aktif: SIAKAD mengirim `aktif: false` (m_dosen.status_aktif bukan A) dan `status_label` dari r_kode 15. */
+const dosenNonaktif = (r: Baris) => r.aktif === false || (typeof r.status_aktif === 'string' && r.status_aktif !== '' && r.status_aktif !== 'A' && r.aktif === undefined);
+const pegawaiNonaktif = (r: Baris) => typeof r.status_aktif === 'string' && r.status_aktif !== '' && !SDM_BEKERJA.includes(r.status_aktif);
+/** "KELUAR" / "tugas_belajar" → "Keluar" / "Tugas belajar". */
+const labelStatus = (v: unknown) => {
+  const t = namaRapi(teks(v).replace(/_/g, ' '));
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
 
 /**
  * Sumber data untuk {@link PilihEntitas}: endpoint daftar (dengan pencarian `q`), kolom yang menjadi nilai
@@ -43,6 +54,11 @@ export interface SumberEntitas {
   tampil?: (r: Baris) => React.ReactNode;
   /** Saring baris hasil server sebelum ditampilkan (mis. hanya surat yang sudah bernomor). */
   saring?: (r: Baris) => boolean;
+  /**
+   * Teks lencana untuk satu baris (mis. "Nonaktif"), tampil di daftar dan di isian bila baris itu terpilih. Dipakai agar
+   * nilai lama yang menunjuk data nonaktif tetap terbaca tetapi jelas statusnya.
+   */
+  lencana?: (r: Baris) => string | null;
 }
 
 /** Sumber bawaan. Kunci objek ini dipakai sebagai `jenis` di <PilihEntitas jenis="mahasiswa" />. */
@@ -60,11 +76,13 @@ export const SUMBER_ENTITAS = {
   },
   dosen: {
     nama: 'dosen',
+    // SIAKAD hanya menawarkan dosen aktif (bawaan /v1/dosen); nilai lama tetap terbaca lewat `satu` dengan lencana Nonaktif.
     path: '/v1/dosen',
     kunci: 'nidn',
     satu: '/v1/dosen/{id}',
     judul: (r) => teks(r.nama_lengkap || r.nama),
-    meta: (r) => gabung(r.nidn && `NIDN ${r.nidn}`, r.jabatan_akademik, namaRapi(teks(r.nama_prodi))),
+    meta: (r) => gabung(r.nidn && `NIDN ${r.nidn}`, r.jabatan_akademik, namaRapi(teks(r.nama_prodi)), dosenNonaktif(r) && labelStatus(r.status_label)),
+    lencana: (r) => (dosenNonaktif(r) ? 'Nonaktif' : null),
     avatar: true,
     ikon: <UserRound />,
     placeholder: 'Cari NIDN atau nama dosen',
@@ -74,8 +92,10 @@ export const SUMBER_ENTITAS = {
     path: '/v1/sdm/pegawai',
     kunci: 'id',
     satu: '/v1/sdm/pegawai/{id}',
+    // SIAKAD bawaan hanya pegawai yang masih bekerja; pegawai keluar/nonaktif yang sudah tersimpan tampil berlencana.
     judul: (r) => teks(r.nama_lengkap || r.nama),
-    meta: (r) => gabung(r.nip && `NIP ${r.nip}`, r.nidn && `NIDN ${r.nidn}`, r.unit_nama),
+    meta: (r) => gabung(r.nip && `NIP ${r.nip}`, r.nidn && `NIDN ${r.nidn}`, r.unit_nama, pegawaiNonaktif(r) && labelStatus(r.status_aktif)),
+    lencana: (r) => (pegawaiNonaktif(r) ? 'Nonaktif' : null),
     avatar: true,
     ikon: <Users />,
     placeholder: 'Cari nama, NIP, atau NIDN pegawai',
@@ -380,6 +400,7 @@ function PilihEntitasDasar({ jenis, value, defaultValue, onValueChange, query, l
         }}
         itemToString={label}
         itemKey={kunciDari}
+        lencana={src.lencana ? (r) => (!r.__stub && src.lencana?.(r) ? <Badge variant="warning" dot>{src.lencana(r)}</Badge> : null) : undefined}
         emptyText={`Tidak ada ${src.nama} yang cocok.`}
         renderItem={(r) =>
           src.tampil && !r.__stub ? (
@@ -394,6 +415,11 @@ function PilihEntitasDasar({ jenis, value, defaultValue, onValueChange, query, l
                 </span>
               )}
               <OptionContent title={label(r)} meta={src.meta?.(r)} />
+              {!r.__stub && src.lencana?.(r) && (
+                <Badge variant="warning" dot>
+                  {src.lencana(r)}
+                </Badge>
+              )}
             </>
           )
         }
