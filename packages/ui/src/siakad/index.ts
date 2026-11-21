@@ -46,6 +46,7 @@ export * from './akun';
 export * from './manajer-berkas';
 export * from './berkas-ruang';
 export * from './drive-berkas';
+export * from './daftar-drive';
 export * from './penyimpanan';
 export * from './profil-kampus';
 export * from './obrolan';

@@ -1673,3 +1673,270 @@
     }
   }
 }
+
+// ---------------------------------------------------------------- DriveBerkas: daftar drive berjenjang (DaftarDrive)
+.u-db-tata {
+  display: grid;
+  grid-template-columns: 17.5rem minmax(0, 1fr);
+  min-height: 22rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card, var(--u-background));
+  overflow: hidden;
+  container-type: inline-size;
+  container-name: dbtata;
+}
+.u-db-tata-utama {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.75rem;
+  > .u-db-bagi {
+    border: 0;
+  }
+}
+.u-db-pemilih-sempit {
+  display: none;
+}
+@container dbtata (max-width: 640px) {
+  .u-db-tata > .u-mb-samping {
+    display: none;
+  }
+  .u-db-tata-utama {
+    grid-column: 1 / -1;
+  }
+  .u-db-pemilih-sempit {
+    display: block;
+  }
+}
+// Sidebar drive lebih lebar dari sidebar folder biasa.
+.u-db .u-mb {
+  grid-template-columns: 17.5rem minmax(0, 1fr);
+}
+
+.u-dd {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  li > ul {
+    margin-inline-start: 0.875rem;
+    padding-inline-start: 0.25rem;
+    border-inline-start: 1px dashed color-mix(in srgb, var(--u-border) 80%, transparent);
+  }
+}
+.u-dd-lain {
+  margin-top: 0.375rem !important;
+  padding-top: 0.375rem !important;
+  border-top: 1px solid var(--u-border);
+}
+.u-dd-baris {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  border-radius: var(--u-radius-md);
+  &[data-aktif] {
+    background: var(--u-primary-soft, color-mix(in srgb, var(--u-primary) 12%, transparent));
+    color: var(--u-primary-soft-foreground, var(--u-foreground));
+    box-shadow: inset 3px 0 0 var(--u-primary);
+  }
+}
+.u-dd-lipat {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--u-radius-sm);
+  color: var(--u-muted-foreground);
+  cursor: pointer;
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    transition: transform var(--u-duration-fast) var(--u-ease-out);
+    &[data-buka] {
+      transform: rotate(90deg);
+    }
+  }
+  &:is(button):hover {
+    background: var(--u-muted);
+    color: var(--u-foreground);
+  }
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--u-ring);
+  }
+}
+span.u-dd-lipat {
+  cursor: default;
+}
+.u-dd-drive {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0.375rem 0.5rem 0.375rem 0.25rem;
+  border-radius: var(--u-radius-md);
+  cursor: pointer;
+  &:hover {
+    background: var(--u-hover, var(--u-muted));
+  }
+  .u-dd-baris[data-aktif] &:hover {
+    background: transparent;
+  }
+  &:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--u-ring);
+  }
+}
+.u-dd-ikon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--u-radius-md);
+  border: 1px solid var(--u-border);
+  background: linear-gradient(180deg, var(--u-card, var(--u-background)), color-mix(in srgb, var(--u-muted) 70%, var(--u-card, var(--u-background))));
+  color: var(--u-muted-foreground);
+  svg {
+    width: 1.05rem;
+    height: 1.05rem;
+  }
+  .u-dd-baris[data-jenis='pribadi'] & {
+    color: var(--u-primary);
+  }
+  .u-dd-baris[data-jenis='arsip'] & {
+    color: var(--u-warning);
+    background: color-mix(in srgb, var(--u-warning) 10%, var(--u-card, var(--u-background)));
+  }
+  .u-dd-baris[data-aktif] & {
+    border-color: color-mix(in srgb, var(--u-primary) 45%, var(--u-border));
+    color: var(--u-primary);
+  }
+}
+.u-dd-teks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+}
+.u-dd-nama {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  min-width: 0;
+  font-size: var(--u-text-sm);
+  b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--u-weight-medium, 500);
+  }
+  small {
+    flex: none;
+    font-size: 0.6875rem;
+    color: var(--u-muted-foreground);
+  }
+}
+.u-dd-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  --u-meter-warna: var(--u-success);
+  &[data-nada='hampir'] {
+    --u-meter-warna: var(--u-warning);
+  }
+  &[data-nada='kritis'],
+  &[data-nada='penuh'] {
+    --u-meter-warna: var(--u-danger);
+  }
+  small {
+    font-size: 0.6875rem;
+    line-height: 1.2;
+    color: var(--u-muted-foreground);
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  &[data-nada='kritis'] small,
+  &[data-nada='penuh'] small {
+    color: var(--u-danger);
+  }
+}
+.u-dd-trek {
+  display: block;
+  height: 0.25rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--u-muted-foreground) 18%, transparent);
+  overflow: hidden;
+  i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--u-meter-warna);
+  }
+}
+.u-dd-jalur {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 0.3rem 0.5rem 0.3rem 0.25rem;
+  font-size: var(--u-text-xs);
+  color: var(--u-muted-foreground);
+  opacity: 0.8;
+  cursor: default;
+  svg {
+    flex: none;
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+.u-dd-folder {
+  margin: 0.125rem 0 0.375rem 1.5rem;
+  padding-inline-start: 0.25rem;
+  border-inline-start: 2px solid color-mix(in srgb, var(--u-primary) 35%, transparent);
+}
+.u-dd-muat {
+  display: grid;
+  gap: 0.625rem;
+  padding: 0.5rem;
+  > span {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+  i:first-child {
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--u-radius-md);
+  }
+  i:last-child {
+    height: 0.75rem;
+    border-radius: 999px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .u-dd-lipat svg {
+    transition: none;
+  }
+}

@@ -1,16 +1,18 @@
 'use client';
 import * as React from 'react';
-import { Building2, CopyPlus, Download, FolderOpen, Globe, HardDrive, Inbox, Share2, Trash2, UserRound, Users } from 'lucide-react';
+import { Building2, CopyPlus, Download, FolderOpen, Globe, HardDrive, Inbox, Share2, Trash2, UserRound } from 'lucide-react';
 import { Badge, Button } from '../components/actions';
 import { SegmentedControl } from '../components/forms';
 import { cn } from '../lib/cn';
 import { formatBytes, formatDate } from '../lib/format';
-import { useDibagikanBerkas, useUnitBerkas, type BagiBerkas } from './berkas-ruang';
+import { useDibagikanBerkas, type BagiBerkas } from './berkas-ruang';
+import { DaftarDrive, useDriveBerkas, type DriveBerkasData } from './daftar-drive';
+import { Dialog } from '../components/overlays';
 import { ManajerBerkas, useAksiBerkas, type ManajerBerkasProps } from './manajer-berkas';
 import { invalidateSiakad, pesanGalat, useSiakad } from './provider';
 
 export interface DriveBerkasProps extends Omit<ManajerBerkasProps, 'unit' | 'bagi' | 'judul'> {
-  /** Ruang yang dibuka pertama kali: "saya", kode unit, atau "dibagikan". Bawaan unit pertama dari `unitTampil`, selain itu "saya". */
+  /** Ruang yang dibuka pertama kali: "saya", kode unit, id drive (mis. "arsip:univ"), atau "dibagikan". Bawaan unit pertama dari `unitTampil`, selain itu "saya". */
   ruangAwal?: string;
   /** Batasi unit yang tampil (mis. ["bauk"] di aplikasi BAUK). Kosong = semua unit yang bisa dibuka pengguna. */
   unitTampil?: string[];
@@ -20,56 +22,74 @@ export interface DriveBerkasProps extends Omit<ManajerBerkasProps, 'unit' | 'bag
   tampilDibagikan?: boolean;
 }
 
-type Pilihan = { jenis: 'saya' } | { jenis: 'unit'; kode: string } | { jenis: 'dibagikan' } | { jenis: 'bagi'; id: string; nama: string };
+type Pilihan = { jenis: 'drive'; id: string } | { jenis: 'dibagikan' } | { jenis: 'bagi'; id: string; nama: string };
 
 /**
- * Penyimpanan berkas lengkap: berkas pribadi, ruang bersama setiap unit yang bisa dibuka pengguna (BAAK, BAUK, SDM, LPM,
- * PMB, LPPM, fakultas, ...), dan berkas/folder yang dibagikan ke pengguna. Tiap ruang memakai ManajerBerkas.
+ * Penyimpanan berkas lengkap: berkas pribadi, ruang bersama setiap unit yang bisa dibuka pengguna (universitas, fakultas,
+ * prodi, BAAK, BAUK, SDM, LPM, PMB, LPPM, ...), ruang arsip institusi, dan berkas/folder yang dibagikan ke pengguna.
+ * Ruang tampil sebagai DAFTAR DRIVE berjenjang di sidebar (GET /v1/berkas/drive): Berkas saya, lalu pohon unit dari unit
+ * tertinggi, masing-masing dengan bar pemakaian terhadap batas yang mengikat; folder drive aktif tampil di bawahnya.
+ * Di layar sempit sidebar menjadi lembar "Drive & folder". Tiap ruang memakai ManajerBerkas.
  */
 export function DriveBerkas({ ruangAwal, unitTampil, tampilPribadi = true, tampilDibagikan = true, className, tinggi = '40rem', ...props }: DriveBerkasProps) {
-  const unitQ = useUnitBerkas(false);
-  const unit = (unitQ.data?.unit ?? []).filter((u) => !unitTampil?.length || unitTampil.includes(u.kode));
+  const dq = useDriveBerkas();
+  const drive = React.useMemo(() => {
+    let d = (dq.drive ?? []).filter((x) => (x.jenis === 'pribadi' ? tampilPribadi : true));
+    if (unitTampil?.length) {
+      // Aplikasi bagian (mis. BAUK): hanya unit yang diminta, tanpa pohon.
+      d = d.filter((x) => x.jenis === 'pribadi' || (x.unit_id && unitTampil.includes(x.unit_id) && x.hak !== null)).map((x) => ({ ...x, induk: null, tingkat: 0 }));
+    }
+    return d;
+  }, [dq.drive, unitTampil, tampilPribadi]);
   const awal = (): Pilihan =>
-    ruangAwal === 'dibagikan' ? { jenis: 'dibagikan' } : ruangAwal && ruangAwal !== 'saya' ? { jenis: 'unit', kode: ruangAwal } : unitTampil?.[0] ? { jenis: 'unit', kode: unitTampil[0] } : { jenis: 'saya' };
+    ruangAwal === 'dibagikan'
+      ? { jenis: 'dibagikan' }
+      : ruangAwal && ruangAwal !== 'saya'
+        ? { jenis: 'drive', id: ruangAwal.includes(':') ? ruangAwal : `unit:${ruangAwal}` }
+        : unitTampil?.[0]
+          ? { jenis: 'drive', id: `unit:${unitTampil[0]}` }
+          : tampilPribadi
+            ? { jenis: 'drive', id: 'pribadi' }
+            : { jenis: 'dibagikan' };
   const [pilih, setPilih] = React.useState<Pilihan>(awal);
-  // Bila unit yang diminta tidak bisa dibuka pengguna, kembali ke ruang pribadi.
+  // Bila drive yang diminta tidak bisa dibuka pengguna, kembali ke ruang pribadi (atau drive pertama).
   React.useEffect(() => {
-    if (pilih.jenis === 'unit' && unitQ.data && !unit.some((u) => u.kode === pilih.kode)) setPilih(tampilPribadi ? { jenis: 'saya' } : { jenis: 'dibagikan' });
+    if (pilih.jenis !== 'drive' || !dq.drive) return;
+    if (!drive.some((x) => x.id === pilih.id && x.hak !== null)) {
+      const pertama = drive.find((x) => x.hak !== null);
+      setPilih(pertama ? { jenis: 'drive', id: pertama.id } : { jenis: 'dibagikan' });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unitQ.data]);
-  const kunci = pilih.jenis === 'unit' ? `unit:${pilih.kode}` : pilih.jenis === 'bagi' ? `bagi:${pilih.id}` : pilih.jenis;
+  }, [dq.drive]);
+  const aktif = pilih.jenis === 'drive' ? (drive.find((x) => x.id === pilih.id) ?? null) : null;
+  const unitAktif = aktif?.ruang.unit ?? (pilih.jenis === 'drive' && pilih.id.startsWith('unit:') ? pilih.id.slice(5) : undefined);
+
+  const daftar = (folder?: React.ReactNode) => (
+    <DaftarDrive
+      drive={drive}
+      aktif={pilih.jenis === 'drive' ? pilih.id : null}
+      memuat={dq.loading}
+      onPilih={(d) => setPilih({ jenis: 'drive', id: d.id })}
+      folder={folder}
+      dibagikan={tampilDibagikan ? { aktif: pilih.jenis !== 'drive', onPilih: () => setPilih({ jenis: 'dibagikan' }) } : undefined}
+    />
+  );
 
   return (
     <div className={cn('u-db', className)}>
-      <nav className="u-db-ruang" aria-label="Ruang berkas">
-        {tampilPribadi && (
-          <button type="button" aria-current={pilih.jenis === 'saya' ? 'page' : undefined} onClick={() => setPilih({ jenis: 'saya' })}>
-            <HardDrive aria-hidden />
-            Berkas saya
-          </button>
-        )}
-        {unit.map((u) => (
-          <button key={u.kode} type="button" aria-current={pilih.jenis === 'unit' && pilih.kode === u.kode ? 'page' : undefined} onClick={() => setPilih({ jenis: 'unit', kode: u.kode })} title={u.nama}>
-            <Building2 aria-hidden />
-            {u.singkatan || u.nama}
-            {u.akses === 'kelola' && <small>pengelola</small>}
-          </button>
-        ))}
-        {unitQ.loading && !unitQ.data && (
-          <span className="u-db-ruang-muat" role="status" aria-label="Memuat unit">
-            <i className="u-skeleton" />
-            <i className="u-skeleton" />
-          </span>
-        )}
-        {tampilDibagikan && (
-          <button type="button" aria-current={pilih.jenis === 'dibagikan' || pilih.jenis === 'bagi' ? 'page' : undefined} onClick={() => setPilih({ jenis: 'dibagikan' })}>
-            <Users aria-hidden />
-            Dibagikan
-          </button>
-        )}
-      </nav>
       {pilih.jenis === 'dibagikan' ? (
-        <DaftarDibagikan bukaFolder={(id, nama) => setPilih({ jenis: 'bagi', id, nama })} />
+        <div className="u-db-tata" style={{ height: tinggi }}>
+          <aside className="u-mb-samping" aria-label="Drive">
+            <div className="u-mb-samping-kepala">
+              <span>Drive</span>
+            </div>
+            <div className="u-mb-samping-isi">{daftar()}</div>
+          </aside>
+          <div className="u-db-tata-utama">
+            <PemilihDriveSempit drive={drive} onPilih={(d) => setPilih({ jenis: 'drive', id: d.id })} />
+            <DaftarDibagikan bukaFolder={(id, nama) => setPilih({ jenis: 'bagi', id, nama })} />
+          </div>
+        </div>
       ) : (
         <>
           {pilih.jenis === 'bagi' && (
@@ -81,15 +101,42 @@ export function DriveBerkas({ ruangAwal, unitTampil, tampilPribadi = true, tampi
             </div>
           )}
           <ManajerBerkas
-            key={kunci}
+            key={pilih.jenis === 'bagi' ? `bagi:${pilih.id}` : pilih.id}
             {...props}
+            modul={aktif?.ruang.modul ?? props.modul}
             tinggi={tinggi}
-            unit={pilih.jenis === 'unit' ? pilih.kode : undefined}
+            unit={pilih.jenis === 'drive' ? (unitAktif ?? undefined) : undefined}
             bagi={pilih.jenis === 'bagi' ? pilih.id : undefined}
-            judul={pilih.jenis === 'bagi' ? pilih.nama : undefined}
+            judul={pilih.jenis === 'bagi' ? pilih.nama : aktif && aktif.jenis !== 'pribadi' ? aktif.nama : undefined}
+            samping={daftar}
           />
         </>
       )}
+    </div>
+  );
+}
+
+/** Pemilih drive untuk layar sempit saat sidebar tersembunyi (tampilan Dibagikan). */
+function PemilihDriveSempit({ drive, onPilih }: { drive: DriveBerkasData[]; onPilih: (d: DriveBerkasData) => void }) {
+  const [buka, setBuka] = React.useState(false);
+  return (
+    <div className="u-db-pemilih-sempit">
+      <Button variant="outline" size="sm" onClick={() => setBuka(true)}>
+        <HardDrive aria-hidden />
+        Pilih drive
+      </Button>
+      <Dialog open={buka} onOpenChange={setBuka} title="Drive" side="left" size="sm">
+        <div className="u-mb-pohon-panel">
+          <DaftarDrive
+            drive={drive}
+            aktif={null}
+            onPilih={(d) => {
+              setBuka(false);
+              onPilih(d);
+            }}
+          />
+        </div>
+      </Dialog>
     </div>
   );
 }

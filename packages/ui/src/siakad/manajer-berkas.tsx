@@ -937,6 +937,11 @@ export interface ManajerBerkasProps {
   judul?: string;
   /** Tinggi komponen (bawaan 36rem). */
   tinggi?: number | string;
+  /**
+   * Isi panel samping pengganti judul "Folder", mis. daftar drive di DriveBerkas. Menerima pohon folder ruang aktif
+   * untuk ditaruh di bawah drive terpilih. Di layar sempit tampil di lembar "Drive & folder".
+   */
+  samping?: (folder: React.ReactNode) => React.ReactNode;
   className?: string;
 }
 
@@ -967,6 +972,7 @@ export function ManajerBerkas({
   onBuka,
   judul: judulProp,
   tinggi = '36rem',
+  samping,
   className,
 }: ManajerBerkasProps) {
   const siakad = useSiakad();
@@ -1715,11 +1721,22 @@ export function ManajerBerkas({
         buka(p);
         setPanelPohon(false);
       }}
-      akarLabel={judul}
+      akarLabel={samping ? 'Semua berkas' : judul}
       akarInfo={ringkas ? String(ringkas.total_berkas) : undefined}
       onLepas={(t, e) => void lepasKe(t, e)}
       bisaLepas={(e) => (seretDalam(e) && bolehKelola) || (seretFile(e) && bolehUnggah)}
     />
+  );
+
+  const pohonMuat = (
+    <div className="u-mb-pohon-muat" role="status" aria-label="Memuat folder">
+      {[0.7, 0.55, 0.8, 0.5, 0.65].map((w, i) => (
+        <span key={i}>
+          <i className="u-skeleton" />
+          <i className="u-skeleton" style={{ width: `${w * 100}%` }} />
+        </span>
+      ))}
+    </div>
   );
 
   const jalankanHapus = async () => {
@@ -1759,9 +1776,9 @@ export function ManajerBerkas({
         if (!hitungSeret.current) setSeretLuar(false);
       }}
     >
-      <aside className="u-mb-samping" aria-label="Folder">
+      <aside className="u-mb-samping" aria-label={samping ? 'Drive dan folder' : 'Folder'}>
         <div className="u-mb-samping-kepala">
-          <span>Folder</span>
+          <span>{samping ? 'Drive' : 'Folder'}</span>
           {bolehKelola && (
             <Tooltip content="Folder baru">
               <Button variant="ghost" size="sm" iconOnly aria-label="Folder baru" onClick={() => setDialog({ jenis: 'folder-baru' })}>
@@ -1771,18 +1788,7 @@ export function ManajerBerkas({
           )}
         </div>
         <div className="u-mb-samping-isi">
-          {pohonQ.loading && !pohonQ.data ? (
-            <div className="u-mb-pohon-muat" role="status" aria-label="Memuat folder">
-              {[0.7, 0.55, 0.8, 0.5, 0.65].map((w, i) => (
-                <span key={i}>
-                  <i className="u-skeleton" />
-                  <i className="u-skeleton" style={{ width: `${w * 100}%` }} />
-                </span>
-              ))}
-            </div>
-          ) : (
-            pohonEl
-          )}
+          {samping ? samping(pohonQ.loading && !pohonQ.data ? pohonMuat : pohonEl) : pohonQ.loading && !pohonQ.data ? pohonMuat : pohonEl}
         </div>
         {info?.kuota && !bagi ? (
           <KuotaBerkas kuota={info.kuota} unit={unit} />
@@ -1802,9 +1808,9 @@ export function ManajerBerkas({
       <section className="u-mb-utama" aria-label={folder ?? judul}>
         <div className="u-mb-alat">
           <div className="u-mb-jejak">
-            <Tooltip content="Lihat semua folder">
-              <Button variant="ghost" size="sm" iconOnly className="u-mb-tombol-pohon" aria-label="Lihat semua folder" onClick={() => setPanelPohon(true)}>
-                <FolderTree aria-hidden />
+            <Tooltip content={samping ? 'Pilih drive dan folder' : 'Lihat semua folder'}>
+              <Button variant="ghost" size="sm" iconOnly className="u-mb-tombol-pohon" aria-label={samping ? 'Pilih drive dan folder' : 'Lihat semua folder'} onClick={() => setPanelPohon(true)}>
+                {samping ? <HardDrive aria-hidden /> : <FolderTree aria-hidden />}
               </Button>
             </Tooltip>
             <nav aria-label="Lokasi folder">
@@ -2326,8 +2332,8 @@ export function ManajerBerkas({
         )}
       </section>
 
-      <Dialog open={panelPohon} onOpenChange={setPanelPohon} title="Folder" side="left" size="sm">
-        <div className="u-mb-pohon-panel">{pohonEl}</div>
+      <Dialog open={panelPohon} onOpenChange={setPanelPohon} title={samping ? 'Drive & folder' : 'Folder'} side="left" size="sm">
+        <div className="u-mb-pohon-panel">{samping ? samping(pohonEl) : pohonEl}</div>
       </Dialog>
 
       <DialogNamaFolder
