@@ -16,6 +16,7 @@ import { useUnggahBerkas } from './berkas';
 import { useProdiOptions, useTahunOptions } from './filter-presets';
 import { AlurPemeriksa, LabelPemeriksa, PratinjauPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import { invalidateSiakad, pesanGalat, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
+import { IsianTanggal } from '../components/formulir';
 
 /*
  * Validasi syarat keuangan (SIAKAD /v1/syarat-keuangan, docs/VALIDASI_SYARAT_KEUANGAN.md di siakad_unipo).
@@ -805,7 +806,7 @@ export function PanelValidasiSyarat({ baris, jenisAwal = 'validasi', pengaturan,
               content: (
                 <div className="u-syk-form">
                   <Field label="Berlaku sampai" required>
-                    <Input type="date" value={sampai} min={hariIni()} onChange={(e) => setSampai(e.target.value)} />
+                    <IsianTanggal value={sampai} min={hariIni()} onValueChange={(v) => setSampai(v)} />
                   </Field>
                   <Field label="Alasan" required>
                     <Textarea rows={3} value={alasan} onChange={(e) => setAlasan(e.target.value)} placeholder="Mis. menunggu pencairan beasiswa daerah" />
@@ -814,7 +815,7 @@ export function PanelValidasiSyarat({ baris, jenisAwal = 'validasi', pengaturan,
                     <div className="u-syk-janji">
                       {janji.map((j, i) => (
                         <div key={i} className="u-syk-janji-baris">
-                          <Input type="date" value={j.tanggal} onChange={(e) => setJanji((x) => x.map((y, k) => (k === i ? { ...y, tanggal: e.target.value } : y)))} aria-label="Tanggal janji" />
+                          <IsianTanggal value={j.tanggal} aria-label="Tanggal janji" onValueChange={(v) => setJanji((x) => x.map((y, k) => (k === i ? { ...y, tanggal: v } : y)))} />
                           <Input inputMode="numeric" value={j.jumlah} placeholder="Jumlah" onChange={(e) => setJanji((x) => x.map((y, k) => (k === i ? { ...y, jumlah: e.target.value.replace(/[^\d]/g, '') } : y)))} aria-label="Jumlah janji" />
                           <Button size="xs" variant="ghost" onClick={() => setJanji((x) => x.filter((_, k) => k !== i))} aria-label="Hapus janji">
                             <Trash2 />

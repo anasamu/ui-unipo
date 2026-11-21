@@ -45,6 +45,7 @@ import { namaRapi } from './prodi';
 import { PerangkatKasir } from './perangkat-kasir';
 import { DaftarAturan, FormAturan as FormAturanUmum, type Aturan } from './aturan';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { IsianJam } from '../components/isian-angka';
 
 // Pengaturan kasir per unit penerbit (SIAKAD /v1/kasir/kelola, docs/KASIR.md "Pengaturan di aplikasi unit"): jenis
 // biaya, loket, aturan penerimaan per status akademik, jadwal aktif pembayaran, dan templat laporan kasir. Dipasang di
@@ -880,10 +881,10 @@ function FormJadwal({ awal, onOpenChange, saya, unitId, jenis }: { awal: IsianJa
             <div className="u-ksu-isian">
               <div className="u-ksu-dua">
                 <Field label="Jam mulai" optional error={jamSalah(v.jam_mulai)}>
-                  <Input type="time" value={v.jam_mulai} onChange={(e) => set({ jam_mulai: e.target.value })} />
+                  <IsianJam value={v.jam_mulai || null} onValueChange={(v) => set({ jam_mulai: v ?? '' })} />
                 </Field>
                 <Field label="Jam selesai" optional error={jamSalah(v.jam_selesai)}>
-                  <Input type="time" value={v.jam_selesai} onChange={(e) => set({ jam_selesai: e.target.value })} />
+                  <IsianJam value={v.jam_selesai || null} onValueChange={(v) => set({ jam_selesai: v ?? '' })} />
                 </Field>
               </div>
               <Field label="Hari layanan" optional description="Kosong = setiap hari.">

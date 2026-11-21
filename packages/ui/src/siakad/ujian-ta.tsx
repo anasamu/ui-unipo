@@ -36,6 +36,9 @@ import { PilihSK } from './isian-sk';
 import { PilihEntitas } from './pilih';
 import { invalidateSiakad, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
 import { SUMBER_DOSEN_TA } from './tugas-akhir';
+import { IsianAngka, IsianJam } from '../components/isian-angka';
+import { IsianTanggal } from '../components/formulir';
+import { keAngka, teksAngka } from '../lib/angka';
 
 /*
  * Ujian tugas akhir (/v1/ta/ujian, SIAKAD docs/UJIAN-TA.md): ujian proposal, seminar hasil, sidang skripsi dalam satu
@@ -716,7 +719,7 @@ function NilaiDialog({ u, open, onOpenChange }: { u: UjianTa; open: boolean; onO
       <div className="u-ujta-form">
         {rubrik.map((b) => (
           <Field key={b.kode} label={`${b.label} (${b.bobot}%)`} required>
-            <Input type="number" min={0} max={100} value={r[b.kode] ?? ''} onChange={(e) => setR((o) => ({ ...o, [b.kode]: e.target.value }))} />
+            <IsianAngka value={keAngka(r[b.kode])} min={0} max={100} onValueChange={(n) => setR((o) => ({ ...o, [b.kode]: teksAngka(n) }))} />
           </Field>
         ))}
         <p>
@@ -764,7 +767,7 @@ function PutuskanDialog({ u, open, onOpenChange }: { u: UjianTa; open: boolean; 
               <Textarea rows={4} value={cat} onChange={(e) => setCat(e.target.value)} />
             </Field>
             <Field label="Batas revisi" optional description="Kosong = sesuai pengaturan prodi.">
-              <Input type="date" value={batas} onChange={(e) => setBatas(e.target.value)} />
+              <IsianTanggal value={batas} onValueChange={(v) => setBatas(v)} />
             </Field>
           </>
         )}
@@ -1037,13 +1040,13 @@ export function FormJadwalUjianTa({ u, open, onOpenChange }: { u: UjianTa | null
           </Field>
           <div className="u-form-kisi" data-kolom="3">
             <Field label="Tanggal" required>
-              <Input type="date" value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} />
+              <IsianTanggal value={f.tanggal} onValueChange={(v) => set('tanggal', v)} />
             </Field>
             <Field label="Mulai" required>
-              <Input type="time" value={f.mulai} onChange={(e) => set('mulai', e.target.value)} />
+              <IsianJam value={f.mulai || null} onValueChange={(v) => set('mulai', v ?? '')} />
             </Field>
             <Field label="Selesai" required>
-              <Input type="time" value={f.selesai} onChange={(e) => set('selesai', e.target.value)} />
+              <IsianJam value={f.selesai || null} onValueChange={(v) => set('selesai', v ?? '')} />
             </Field>
           </div>
           <label className="u-ujta-centang">
@@ -1721,7 +1724,7 @@ export function AntreanPlagiasi() {
             <>
               <div className="u-form-kisi" data-kolom="2">
                 <Field label="Similarity (%)" required>
-                  <Input type="number" min={0} max={100} step="0.01" value={isi.skor} onChange={(e) => setIsi((o) => ({ ...o, skor: e.target.value }))} />
+                  <IsianAngka value={keAngka(isi.skor)} desimal={2} langkah={0.01} min={0} max={100} onValueChange={(n) => setIsi((o) => ({ ...o, skor: teksAngka(n) }))} />
                 </Field>
                 <Field label="Alat" required>
                   <Input value={isi.alat} onChange={(e) => setIsi((o) => ({ ...o, alat: e.target.value }))} />

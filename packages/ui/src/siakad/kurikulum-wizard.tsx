@@ -8,6 +8,8 @@ import { Field, Input, SegmentedControl, Textarea } from '../components/forms';
 import { Select } from '../components/select';
 import { useSiakad, useSiakadQuery } from './provider';
 import type { AturanKurikulumRow, DefinisiKerangka, IsiAturanKurikulum, IsianKerangka } from './kurikulum-aturan';
+import { IsianAngka } from '../components/isian-angka';
+import { keAngka } from '../lib/angka';
 
 /*
  * Bahan bersama wizard kurikulum (identitas kurikulum, mata kuliah, peninjauan). Langkah dan isian wajib dibaca dari
@@ -204,7 +206,7 @@ export function IsianKerangkaDinamis({ isian, nilai, onChange, rujukan, galat = 
         if (i.jenis === 'angka')
           return (
             <Field {...umum}>
-              <Input type="number" inputMode="decimal" min={i.min ?? undefined} max={i.maks ?? undefined} disabled={disabled} value={v == null ? '' : String(v)} onChange={(e) => onChange(i.kode, e.target.value === '' ? null : Number(e.target.value))} />
+              <IsianAngka value={keAngka(v)} desimal={2} min={i.min ?? undefined} max={i.maks ?? undefined} disabled={disabled} onValueChange={(n) => onChange(i.kode, n)} />
             </Field>
           );
         if (i.jenis === 'pilihan')

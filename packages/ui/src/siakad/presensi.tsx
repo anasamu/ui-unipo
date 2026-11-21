@@ -44,6 +44,8 @@ import { PilihBerkas } from './pilih-berkas';
 import { KodeQrSiakad } from './qr';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { PilihLokasiPeta, titikDariTeks } from '../components/peta';
+import { IsianJam, IsianAngka } from '../components/isian-angka';
+import { keAngka, teksAngka } from '../lib/angka';
 
 /*
  * Presensi QR (/v1/presensi) untuk mahasiswa (kuliah), dosen (mengajar dan kerja), tendik (kerja), dan kegiatan.
@@ -1327,10 +1329,10 @@ export function FormSesiPresensi({ open, onOpenChange, trigger, sesi, jenis: jen
             </Field>
             <div className="u-presensi-form-baris">
               <Field label="Mulai" optional>
-                <Input type="time" value={f.mulai} onChange={(e) => set('mulai', e.target.value)} />
+                <IsianJam value={f.mulai || null} onValueChange={(v) => set('mulai', v ?? '')} />
               </Field>
               <Field label="Selesai" optional description="Pindaian berhenti setelah jam ini.">
-                <Input type="time" value={f.selesai} onChange={(e) => set('selesai', e.target.value)} />
+                <IsianJam value={f.selesai || null} onValueChange={(v) => set('selesai', v ?? '')} />
               </Field>
             </div>
             {!ubah && (
@@ -1417,7 +1419,7 @@ export function FormSesiPresensi({ open, onOpenChange, trigger, sesi, jenis: jen
           {f.lokasi && (
             <div className="u-presensi-form-baris">
               <Field label="Radius (meter)">
-                <Input type="number" min={10} max={5000} value={f.radius_m} onChange={(e) => set('radius_m', e.target.value)} />
+                <IsianAngka value={keAngka(f.radius_m)} min={10} max={5000} onValueChange={(n) => set('radius_m', teksAngka(n))} />
               </Field>
               <Field label="Wajib di lokasi" description="Tolak pindaian tanpa lokasi atau di luar radius.">
                 <Switch checked={f.wajib_lokasi} onCheckedChange={(v) => set('wajib_lokasi', v)} />
@@ -1426,10 +1428,10 @@ export function FormSesiPresensi({ open, onOpenChange, trigger, sesi, jenis: jen
           )}
           <div className="u-presensi-form-baris">
             <Field label="Terlambat setelah (menit)" optional>
-              <Input type="number" min={0} max={240} value={f.terlambat_menit} onChange={(e) => set('terlambat_menit', e.target.value)} />
+              <IsianAngka value={keAngka(f.terlambat_menit)} min={0} max={240} onValueChange={(n) => set('terlambat_menit', teksAngka(n))} />
             </Field>
             <Field label="QR berganti tiap (detik)">
-              <Input type="number" min={10} max={300} value={f.interval_detik} onChange={(e) => set('interval_detik', e.target.value)} />
+              <IsianAngka value={keAngka(f.interval_detik)} min={10} max={300} onValueChange={(n) => set('interval_detik', teksAngka(n))} />
             </Field>
           </div>
           <Field label="Kode cadangan 6 huruf" description="Untuk peserta yang kameranya bermasalah.">
@@ -2155,7 +2157,7 @@ export function FormTitikPresensi({ open, onOpenChange, titik, onSimpan }: { ope
         </Field>
         <div className="u-presensi-form-baris">
           <Field label="QR berganti tiap (detik)">
-            <Input type="number" min={10} max={300} value={f.interval_detik} onChange={(e) => set('interval_detik', e.target.value)} />
+            <IsianAngka value={keAngka(f.interval_detik)} min={10} max={300} onValueChange={(n) => set('interval_detik', teksAngka(n))} />
           </Field>
         </div>
         <Field label="Wajib di lokasi" description="Tolak pindaian tanpa lokasi atau di luar radius.">

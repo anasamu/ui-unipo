@@ -43,6 +43,7 @@ import { GalatApi } from './galat';
 import { FormPanitia, useDaftarPanitia, useTugasPanitiaSaya, type PenugasanPanitia } from './panitia';
 import { KameraPindaiQr } from './presensi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { IsianJam } from '../components/isian-angka';
 
 /*
  * Acara wisuda (/v1/acara-wisuda, docs/ACARA-WISUDA.md di SIAKAD). Satu set komponen untuk BAAK, Pustikom, dan Tugas
@@ -389,10 +390,10 @@ export function FormAcaraWisuda({ acara, open, onOpenChange, onTersimpan }: Form
                   <IsianTanggal value={isi.tanggal || null} onValueChange={(v) => set('tanggal', v ?? '')} />
                 </Field>
                 <Field label="Jam mulai" optional error={galat.jam_mulai || undefined}>
-                  <Input type="time" value={isi.jam_mulai} onChange={(e) => set('jam_mulai', e.target.value)} />
+                  <IsianJam value={isi.jam_mulai || null} onValueChange={(v) => set('jam_mulai', v ?? '')} />
                 </Field>
                 <Field label="Jam selesai" optional error={galat.jam_selesai || undefined}>
-                  <Input type="time" value={isi.jam_selesai} onChange={(e) => set('jam_selesai', e.target.value)} />
+                  <IsianJam value={isi.jam_selesai || null} onValueChange={(v) => set('jam_selesai', v ?? '')} />
                 </Field>
               </BagianForm>
               <BagianForm judul="Gladi bersih" kolom={2} keterangan="Opsional. Ikut diumumkan ke wisudawan.">
@@ -400,7 +401,7 @@ export function FormAcaraWisuda({ acara, open, onOpenChange, onTersimpan }: Form
                   <IsianTanggal value={isi.gladi_tanggal || null} max={isi.tanggal || undefined} onValueChange={(v) => set('gladi_tanggal', v ?? '')} />
                 </Field>
                 <Field label="Jam gladi" optional error={galat.gladi_jam || undefined}>
-                  <Input type="time" value={isi.gladi_jam} onChange={(e) => set('gladi_jam', e.target.value)} />
+                  <IsianJam value={isi.gladi_jam || null} onValueChange={(v) => set('gladi_jam', v ?? '')} />
                 </Field>
                 <Field label="Tempat gladi" optional className="u-form-lebar">
                   <Input value={isi.gladi_tempat} maxLength={200} placeholder="Sama dengan tempat acara bila kosong" onChange={(e) => set('gladi_tempat', e.target.value)} />

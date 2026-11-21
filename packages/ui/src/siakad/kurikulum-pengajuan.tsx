@@ -14,6 +14,9 @@ import { PanelLangkah } from '../components/panel-langkah';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { PilihSK } from './isian-sk';
 import { AlurPemeriksa, LabelPemeriksa, type TahapPemeriksa } from './pemeriksa';
+import { IsianTanggal } from '../components/formulir';
+import { IsianAngka } from '../components/isian-angka';
+import { keAngka, teksAngka } from '../lib/angka';
 
 /*
  * Pengajuan kurikulum baru dari Fakultas dan validasi administrasinya di BAAK (SIAKAD /v1/kurikulum-aturan/pengajuan,
@@ -241,6 +244,7 @@ export function WizardKurikulumBaru({ open, onOpenChange, kodeProdi, pilihanProd
   const kurSumber = a?.kurikulum.find((k) => String(k.id) === sumberKur) ?? null;
   const semSumber = a?.semester_lama.find((s) => s.tahun_id === sumberTahun) ?? null;
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF((x) => ({ ...x, [k]: e.target.value }));
+  const setN = (k: keyof typeof f) => (n: number | null) => setF((x) => ({ ...x, [k]: teksAngka(n) }));
   const nomor = (s: string) => (s.trim() === '' ? null : Number(s.replace(',', '.')));
   const pakaiCpl = !!kr?.cpl;
   const pakaiBk = !!kr?.bahan_kajian;
@@ -324,7 +328,7 @@ export function WizardKurikulumBaru({ open, onOpenChange, kodeProdi, pilihanProd
               <Input value={f.kode} onChange={set('kode')} placeholder="K2026" />
             </Field>
             <Field label="Tahun berlaku" required>
-              <Input type="number" inputMode="numeric" value={f.tahun_berlaku} onChange={set('tahun_berlaku')} />
+              <IsianAngka ribuan={false} value={keAngka(f.tahun_berlaku)} onValueChange={setN('tahun_berlaku')} />
             </Field>
           </FormGrid>
           <Field label="Nama kurikulum" required error={galat.nama}>
@@ -335,7 +339,7 @@ export function WizardKurikulumBaru({ open, onOpenChange, kodeProdi, pilihanProd
               <Input value={f.nama_en} onChange={set('nama_en')} />
             </Field>
             <Field label="Angkatan pertama" required description="Penetapan angkatan dilakukan setelah disahkan.">
-              <Input type="number" inputMode="numeric" value={f.angkatan_mulai} onChange={set('angkatan_mulai')} />
+              <IsianAngka ribuan={false} value={keAngka(f.angkatan_mulai)} onValueChange={setN('angkatan_mulai')} />
             </Field>
           </FormGrid>
           <fieldset className="u-kk-fieldset">
@@ -343,19 +347,19 @@ export function WizardKurikulumBaru({ open, onOpenChange, kodeProdi, pilihanProd
             <p className="u-bkd-keterangan">Kosongkan untuk memakai ketentuan jenjang{sumber !== 'kosong' ? ' atau nilai dari sumber struktur' : ''}.</p>
             <div className="u-bkd-grid-3">
               <Field label="SKS lulus" error={galat['sks_lulus']} description={sksMin ? `Minimal ${sksMin}` : undefined}>
-                <Input type="number" inputMode="numeric" value={f.sks_lulus} onChange={set('sks_lulus')} />
+                <IsianAngka value={keAngka(f.sks_lulus)} onValueChange={setN('sks_lulus')} />
               </Field>
               <Field label="SKS wajib">
-                <Input type="number" inputMode="numeric" value={f.sks_wajib} onChange={set('sks_wajib')} />
+                <IsianAngka value={keAngka(f.sks_wajib)} onValueChange={setN('sks_wajib')} />
               </Field>
               <Field label="SKS pilihan">
-                <Input type="number" inputMode="numeric" value={f.sks_pilihan} onChange={set('sks_pilihan')} />
+                <IsianAngka value={keAngka(f.sks_pilihan)} onValueChange={setN('sks_pilihan')} />
               </Field>
               <Field label="Masa tempuh (semester)">
-                <Input type="number" inputMode="numeric" value={f.masa_tempuh} onChange={set('masa_tempuh')} placeholder={a?.jenjang?.masa_tempuh ? String(a.jenjang.masa_tempuh) : ''} />
+                <IsianAngka value={keAngka(f.masa_tempuh)} onValueChange={setN('masa_tempuh')} placeholder={a?.jenjang?.masa_tempuh ? String(a.jenjang.masa_tempuh) : ''} />
               </Field>
               <Field label="IPK minimal lulus">
-                <Input type="number" inputMode="decimal" step="0.01" value={f.ipk_min_lulus} onChange={set('ipk_min_lulus')} placeholder={a?.jenjang?.ipk_min ? String(a.jenjang.ipk_min) : ''} />
+                <IsianAngka desimal={2} langkah={0.01} value={keAngka(f.ipk_min_lulus)} onValueChange={setN('ipk_min_lulus')} placeholder={a?.jenjang?.ipk_min ? String(a.jenjang.ipk_min) : ''} />
               </Field>
             </div>
           </fieldset>
@@ -830,7 +834,7 @@ export function PanelPengajuanKurikulum({ evaluasiId, onOpenChange, labelSetuju,
                       <Input value={sk.no_sk} onChange={(e) => setSk({ ...sk, no_sk: e.target.value })} />
                     </Field>
                     <Field label="Tanggal SK" optional>
-                      <Input type="date" value={sk.tanggal_sk} onChange={(e) => setSk({ ...sk, tanggal_sk: e.target.value })} />
+                      <IsianTanggal value={sk.tanggal_sk} onValueChange={(v) => setSk({ ...sk, tanggal_sk: v })} />
                     </Field>
                   </FormGrid>
                 </div>

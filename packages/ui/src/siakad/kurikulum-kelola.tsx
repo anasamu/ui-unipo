@@ -89,6 +89,9 @@ import {
   type Rps,
   type StatusKurikulum,
 } from './kurikulum';
+import { IsianAngka } from '../components/isian-angka';
+import { IsianTanggal } from '../components/formulir';
+import { keAngka, teksAngka } from '../lib/angka';
 
 /*
  * Kelola Kurikulum OBE (/v1/kurikulum-obe, Permendiktisaintek 39/2025) untuk prodi, fakultas, dan BAAK:
@@ -463,7 +466,7 @@ export function FormKurikulumObe({ open, onOpenChange, kurikulum, kodeProdi, pil
               <Input value={f.kode} disabled={terkunci} onChange={(e) => set('kode')(e.target.value)} placeholder="K2026" />
             </Field>
             <Field label="Tahun mulai berlaku" error={kolom.tahun_berlaku} description="Menentukan versi aturan kurikulum yang diikuti.">
-              <Input type="number" inputMode="numeric" value={f.tahun_berlaku} onChange={(e) => set('tahun_berlaku')(e.target.value)} />
+              <IsianAngka ribuan={false} value={keAngka(f.tahun_berlaku)} onValueChange={(n) => set('tahun_berlaku')(teksAngka(n))} />
             </Field>
           </div>
           <Field label="Nama kurikulum" required error={kolom.nama}>
@@ -487,22 +490,22 @@ export function FormKurikulumObe({ open, onOpenChange, kurikulum, kodeProdi, pil
         <div className="u-kk-form">
           <div className="u-kk-grid u-kk-grid-3">
             <Field label="SKS untuk lulus" error={kolom.sks_lulus} description={sksMin ? `Minimal ${sksMin} SKS ${sumberBatas}.` : 'Kosongkan = minimal jenjang.'}>
-              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.sks_lulus} onChange={(e) => set('sks_lulus')(e.target.value)} placeholder={sksMin ? String(sksMin) : undefined} />
+              <IsianAngka value={keAngka(f.sks_lulus)} disabled={terkunci} placeholder={sksMin ? String(sksMin) : undefined} onValueChange={(n) => set('sks_lulus')(teksAngka(n))} />
             </Field>
             <Field label="SKS mata kuliah wajib" error={kolom.sks_wajib}>
-              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.sks_wajib} onChange={(e) => set('sks_wajib')(e.target.value)} />
+              <IsianAngka value={keAngka(f.sks_wajib)} disabled={terkunci} onValueChange={(n) => set('sks_wajib')(teksAngka(n))} />
             </Field>
             <Field label="SKS mata kuliah pilihan" error={kolom.sks_pilihan}>
-              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.sks_pilihan} onChange={(e) => set('sks_pilihan')(e.target.value)} />
+              <IsianAngka value={keAngka(f.sks_pilihan)} disabled={terkunci} onValueChange={(n) => set('sks_pilihan')(teksAngka(n))} />
             </Field>
             <Field label="Masa tempuh normal (semester)" error={kolom.masa_tempuh}>
-              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.masa_tempuh} onChange={(e) => set('masa_tempuh')(e.target.value)} placeholder={tempuhNormal ? String(tempuhNormal) : undefined} />
+              <IsianAngka value={keAngka(f.masa_tempuh)} disabled={terkunci} placeholder={tempuhNormal ? String(tempuhNormal) : undefined} onValueChange={(n) => set('masa_tempuh')(teksAngka(n))} />
             </Field>
             <Field label="Masa studi paling lama" error={kolom.masa_studi_maks} description={studiMaks ? `Paling lama ${studiMaks} semester ${sumberBatas}.` : 'Paling lama 2× masa tempuh.'}>
-              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.masa_studi_maks} onChange={(e) => set('masa_studi_maks')(e.target.value)} placeholder={studiMaks ? String(studiMaks) : undefined} />
+              <IsianAngka value={keAngka(f.masa_studi_maks)} disabled={terkunci} placeholder={studiMaks ? String(studiMaks) : undefined} onValueChange={(n) => set('masa_studi_maks')(teksAngka(n))} />
             </Field>
             <Field label="IPK minimal lulus" error={kolom.ipk_min_lulus} description={ipkMin ? `Aturan: ${ipkMin}` : undefined}>
-              <Input type="number" inputMode="decimal" step="0.01" disabled={terkunci} value={f.ipk_min_lulus} onChange={(e) => set('ipk_min_lulus')(e.target.value)} placeholder={ipkMin ? String(ipkMin) : undefined} />
+              <IsianAngka value={keAngka(f.ipk_min_lulus)} desimal={2} langkah={0.01} disabled={terkunci} placeholder={ipkMin ? String(ipkMin) : undefined} onValueChange={(n) => set('ipk_min_lulus')(teksAngka(n))} />
             </Field>
           </div>
           {a.pasal('struktur') ? <p className="u-kw-bantuan">Dasar: {a.pasal('struktur')}</p> : null}
@@ -992,7 +995,7 @@ function DialogSahkan({ open, onOpenChange, k }: { open: boolean; onOpenChange: 
           <PilihNomorSK value={sk.no_sk} onValueChange={(v) => setSk((s) => ({ ...s, no_sk: v }))} />
         </Field>
         <Field label="Tanggal SK" optional>
-          <Input type="date" value={sk.tanggal_sk} onChange={(e) => setSk((s) => ({ ...s, tanggal_sk: e.target.value }))} />
+          <IsianTanggal value={sk.tanggal_sk} onValueChange={(v) => setSk((s) => ({ ...s, tanggal_sk: v }))} />
         </Field>
         {galatValidasi?.length ? (
           <label className="u-kk-centang">
@@ -1088,7 +1091,7 @@ function DialogRevisi({ open, onOpenChange, k, onSelesai }: { open: boolean; onO
             <Input value={f.kode} onChange={(e) => setF({ ...f, kode: e.target.value })} />
           </Field>
           <Field label="Tahun berlaku">
-            <Input type="number" value={f.tahun_berlaku} onChange={(e) => setF({ ...f, tahun_berlaku: e.target.value })} />
+            <IsianAngka ribuan={false} value={keAngka(f.tahun_berlaku)} onValueChange={(n) => setF({ ...f, tahun_berlaku: teksAngka(n) })} />
           </Field>
         </div>
         <Field label="Nama">
@@ -1370,7 +1373,7 @@ function FormButir({ kurikulumId, jenis, awal, onTutup }: { kurikulumId: number 
               <Select value={f.sumber} onValueChange={(v) => setF({ ...f, sumber: v ?? '' })} options={SUMBER_CPL} />
             </Field>
             <Field label="Target capaian" optional description="Skor 0–100" error={kolom.target}>
-              <Input type="number" min={0} max={100} value={f.target} onChange={(e) => setF({ ...f, target: e.target.value })} placeholder="70" />
+              <IsianAngka value={keAngka(f.target)} min={0} max={100} placeholder="70" onValueChange={(n) => setF({ ...f, target: teksAngka(n) })} />
             </Field>
           </div>
         )}
@@ -1759,16 +1762,16 @@ function FormMk({ kurikulumId, awal, onTutup }: { kurikulumId: number | string; 
             </legend>
             <div className="u-kk-grid u-kk-grid-4">
               <Field label="Tatap muka" error={kolom.sks_tatap_muka}>
-                <Input type="number" step="0.5" min={0} value={f.sks_tatap_muka} onChange={(e) => setF({ ...f, sks_tatap_muka: e.target.value })} />
+                <IsianAngka value={keAngka(f.sks_tatap_muka)} desimal={1} langkah={0.5} min={0} onValueChange={(n) => setF({ ...f, sks_tatap_muka: teksAngka(n) })} />
               </Field>
               <Field label="Praktikum">
-                <Input type="number" step="0.5" min={0} value={f.sks_praktikum} onChange={(e) => setF({ ...f, sks_praktikum: e.target.value })} />
+                <IsianAngka value={keAngka(f.sks_praktikum)} desimal={1} langkah={0.5} min={0} onValueChange={(n) => setF({ ...f, sks_praktikum: teksAngka(n) })} />
               </Field>
               <Field label="Praktik lapangan">
-                <Input type="number" step="0.5" min={0} value={f.sks_praktik_lapangan} onChange={(e) => setF({ ...f, sks_praktik_lapangan: e.target.value })} />
+                <IsianAngka value={keAngka(f.sks_praktik_lapangan)} desimal={1} langkah={0.5} min={0} onValueChange={(n) => setF({ ...f, sks_praktik_lapangan: teksAngka(n) })} />
               </Field>
               <Field label="Simulasi">
-                <Input type="number" step="0.5" min={0} value={f.sks_simulasi} onChange={(e) => setF({ ...f, sks_simulasi: e.target.value })} />
+                <IsianAngka value={keAngka(f.sks_simulasi)} desimal={1} langkah={0.5} min={0} onValueChange={(n) => setF({ ...f, sks_simulasi: teksAngka(n) })} />
               </Field>
             </div>
           </fieldset>
@@ -1784,7 +1787,7 @@ function FormMk({ kurikulumId, awal, onTutup }: { kurikulumId: number | string; 
             )
           ) : null}
           <Field label="Jumlah pertemuan" required={wajib.pertemuan} optional={!wajib.pertemuan} error={kolom.pertemuan} description={bantuWajib('pertemuan', pertemuanMin ? `Paling sedikit ${pertemuanMin} pertemuan.` : undefined)}>
-            <Input type="number" min={1} max={32} value={f.pertemuan} onChange={(e) => setF({ ...f, pertemuan: e.target.value })} />
+            <IsianAngka value={keAngka(f.pertemuan)} min={1} max={32} onValueChange={(n) => setF({ ...f, pertemuan: teksAngka(n) })} />
           </Field>
         </div>
       ),
@@ -2310,7 +2313,7 @@ function FormCpmk({ mkId, kurikulumId, awal, onTutup }: { mkId: number | string;
             <Input value={f.kode} onChange={(e) => setF({ ...f, kode: e.target.value })} />
           </Field>
           <Field label="Target capaian" optional description="Skor 0–100">
-            <Input type="number" min={0} max={100} value={f.target} onChange={(e) => setF({ ...f, target: e.target.value })} />
+            <IsianAngka value={keAngka(f.target)} min={0} max={100} onValueChange={(n) => setF({ ...f, target: teksAngka(n) })} />
           </Field>
         </div>
         <Field label="Rumusan CPMK" required error={kolom.deskripsi}>
@@ -2337,7 +2340,7 @@ function FormCpmk({ mkId, kurikulumId, awal, onTutup }: { mkId: number | string;
                     <span className="u-kur-code">{c.kode}</span>
                     <span className="u-kk-teks">{c.deskripsi}</span>
                   </label>
-                  {on && <Input size="sm" type="number" min={0} step="0.5" value={peta[c.id]} onChange={(e) => setPeta({ ...peta, [c.id]: e.target.value })} aria-label={`Bobot ${c.kode}`} />}
+                  {on && <IsianAngka value={keAngka(peta[c.id])} desimal={1} langkah={0.5} size="sm" min={0} aria-label={`Bobot ${c.kode}`} onValueChange={(n) => setPeta({ ...peta, [c.id]: teksAngka(n) })} />}
                 </li>
               );
             })}
@@ -2736,10 +2739,10 @@ function EditorPertemuan({ r }: { r: Rps }) {
               {baris.map((b, i) => (
                 <tr key={b._k} data-ujian={dataFlag(!!b.ujian)}>
                   <td>
-                    <Input size="sm" type="number" min={1} value={b.pertemuan_ke ?? ''} onChange={(e) => set(i, { pertemuan_ke: Number(e.target.value) })} aria-label="Pertemuan ke" />
+                    <IsianAngka value={keAngka(b.pertemuan_ke)} size="sm" min={1} aria-label="Pertemuan ke" onValueChange={(n) => set(i, { pertemuan_ke: n ?? 0 })} />
                   </td>
                   <td>
-                    <Input size="sm" type="number" min={1} value={b.sampai_ke ?? ''} onChange={(e) => set(i, { sampai_ke: e.target.value ? Number(e.target.value) : null })} aria-label="Sampai pertemuan" />
+                    <IsianAngka value={keAngka(b.sampai_ke)} size="sm" min={1} aria-label="Sampai pertemuan" onValueChange={(n) => set(i, { sampai_ke: n })} />
                   </td>
                   <td>
                     <Select size="sm" value={b.sub_cpmk_id != null ? String(b.sub_cpmk_id) : ''} onValueChange={(v) => set(i, { sub_cpmk_id: v ? Number(v) : null })} options={[{ value: '', label: '–' }, ...sub]} aria-label="Sub-CPMK" />
@@ -2755,10 +2758,10 @@ function EditorPertemuan({ r }: { r: Rps }) {
                     <Select size="sm" value={b.modalitas ?? 'luring'} onValueChange={(v) => set(i, { modalitas: v })} options={MODALITAS} aria-label="Modalitas" />
                   </td>
                   <td>
-                    <Input size="sm" type="number" min={0} value={b.waktu_menit ?? ''} onChange={(e) => set(i, { waktu_menit: e.target.value ? Number(e.target.value) : null })} aria-label="Menit" />
+                    <IsianAngka value={keAngka(b.waktu_menit)} size="sm" min={0} aria-label="Menit" onValueChange={(n) => set(i, { waktu_menit: n })} />
                   </td>
                   <td>
-                    <Input size="sm" type="number" min={0} max={100} value={b.bobot ?? ''} onChange={(e) => set(i, { bobot: e.target.value === '' ? null : Number(e.target.value) })} aria-label="Bobot" />
+                    <IsianAngka value={keAngka(b.bobot)} size="sm" min={0} max={100} aria-label="Bobot" onValueChange={(n) => set(i, { bobot: n })} />
                   </td>
                   <td data-tengah>
                     <Checkbox checked={!!b.ujian} onCheckedChange={(v) => set(i, { ujian: !!v })} aria-label="Ujian" />
@@ -2896,7 +2899,7 @@ function EditorEvaluasi({ r }: { r: Rps }) {
                       <Input size="sm" value={b.nama} onChange={(e) => set(i, { nama: e.target.value })} placeholder="mis. UTS" aria-label="Nama evaluasi" />
                     </td>
                     <td>
-                      <Input size="sm" type="number" min={0} max={100} value={b.bobot ?? ''} onChange={(e) => set(i, { bobot: Number(e.target.value) })} aria-label="Bobot" />
+                      <IsianAngka value={keAngka(b.bobot)} size="sm" min={0} max={100} aria-label="Bobot" onValueChange={(n) => set(i, { bobot: n ?? 0 })} />
                     </td>
                     <td>
                       <Select size="sm" value={b.komponen_siakad ?? ''} onValueChange={(v) => set(i, { komponen_siakad: v || null })} options={KOMPONEN_SIAKAD} aria-label="Komponen SIAKAD" />
@@ -3256,7 +3259,7 @@ function FormEkuivalensi({ kurikulumId, awal, onTutup }: { kurikulumId: number |
             <Input value={f.nama_mk_lama} onChange={(e) => setF({ ...f, nama_mk_lama: e.target.value })} />
           </Field>
           <Field label="SKS lama" optional>
-            <Input type="number" value={f.sks_lama} onChange={(e) => setF({ ...f, sks_lama: e.target.value })} />
+            <IsianAngka value={keAngka(f.sks_lama)} onValueChange={(n) => setF({ ...f, sks_lama: teksAngka(n) })} />
           </Field>
         </div>
         <Field label="Hubungan" required>
@@ -3543,7 +3546,7 @@ function FormPeninjauan({ kurikulumId, awal, onTutup }: { kurikulumId: number | 
               <Select value={f.jenis} onValueChange={(v) => setF({ ...f, jenis: v ?? 'lainnya' })} options={JENIS_TINJAU} placeholder="Pilih…" />
             </Field>
             <Field label="Tanggal" error={kolom.tanggal}>
-              <Input type="date" value={f.tanggal} onChange={(e) => setF({ ...f, tanggal: e.target.value })} />
+              <IsianTanggal value={f.tanggal} onValueChange={(v) => setF({ ...f, tanggal: v })} />
             </Field>
             <Field label="Status">
               <Select value={f.status} onValueChange={(v) => setF({ ...f, status: (v ?? 'rencana') as 'rencana' })} options={STATUS_TINJAU} placeholder="Pilih…" />

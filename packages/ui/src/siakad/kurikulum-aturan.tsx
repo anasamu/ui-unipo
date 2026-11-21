@@ -16,6 +16,7 @@ import { PilihSK } from './isian-sk';
 import { PilihBerkas } from './pilih-berkas';
 import { AlurPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import { DaftarPerubahanAturan, DaftarVersiAturan, LencanaStatusVersi, PanelBandingAturan, type PerubahanAturan, type VersiAturanRow } from './aturan-versi';
+import { IsianTanggal } from '../components/formulir';
 
 /*
  * Aturan kurikulum BERVERSI (SIAKAD /v1/kurikulum-aturan, docs/KURIKULUM.md "Aturan kurikulum berversi"). Mekanisme versi
@@ -1840,7 +1841,7 @@ function PanelEvaluasi({ id, onOpenChange }: { id: number; onOpenChange: (o: boo
                   <PilihSK value={sk.sk_id} onValueChange={(v: string | null) => setSk({ ...sk, sk_id: v })} jenis="kurikulum" label="SK dari registri" />
                   <div className="u-bkd-grid-3">
                     <Field label="Nomor SK" optional><Input value={sk.no_sk} onChange={(e) => setSk({ ...sk, no_sk: e.target.value })} /></Field>
-                    <Field label="Tanggal SK" optional><Input type="date" value={sk.tanggal_sk} onChange={(e) => setSk({ ...sk, tanggal_sk: e.target.value })} /></Field>
+                    <Field label="Tanggal SK" optional><IsianTanggal value={sk.tanggal_sk} onValueChange={(v) => setSk({ ...sk, tanggal_sk: v })} /></Field>
                   </div>
                 </div>
               </CardContent>

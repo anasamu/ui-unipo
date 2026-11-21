@@ -36,6 +36,8 @@ import { GalatApi } from './galat';
 import { PilihSK, type SKRegistri } from './isian-sk';
 import { useFakultasReferensi, useProdiReferensi } from './prodi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { IsianAngka } from '../components/isian-angka';
+import { keAngka } from '../lib/angka';
 
 /*
  * Aturan berdasarkan SK dan rantai validator per unit (SIAKAD docs/ATURAN-SK.md). Keluarga komponen yang dipakai ulang
@@ -712,7 +714,7 @@ export function EditorRantaiValidator({ value, onChange, katalog, galat }: { val
               />
             </Field>
             <Field label="Batas waktu (hari)" optional description="Lewat batas, validator dan pengaju diingatkan setiap hari.">
-              <Input type="number" min={1} max={90} value={t.batas_hari ?? ''} onChange={(e) => ubah(i, { batas_hari: e.target.value ? Number(e.target.value) : null })} placeholder="mis. 3" />
+              <IsianAngka value={keAngka(t.batas_hari)} min={1} max={90} placeholder="mis. 3" onValueChange={(n) => ubah(i, { batas_hari: n })} />
             </Field>
           </div>
         </Card>

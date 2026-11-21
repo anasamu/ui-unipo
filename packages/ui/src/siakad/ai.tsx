@@ -14,6 +14,9 @@ import type { JenisSoalCbt, OpsiSoal } from './cbt';
 import { GalatApi } from './galat';
 import { PilihEntitas, type SumberEntitas } from './pilih';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { IsianAngka } from '../components/isian-angka';
+import { IsianTanggal } from '../components/formulir';
+import { keAngka } from '../lib/angka';
 
 // ================================================================ Kontrak API (/v1/integrasi/ai)
 
@@ -1704,10 +1707,10 @@ export function BuatSoalAi({ tujuan = 'cbt', ujianId: ujianAwal, kodeMk: mkAwal,
       </Field>
       <div className="u-ai-form" data-kolom="4">
         <Field label="Jumlah">
-          <Input type="number" min={1} max={30} value={jumlah} onChange={(e) => setJumlah(Math.max(1, Math.min(30, Number(e.target.value) || 1)))} />
+          <IsianAngka value={keAngka(jumlah)} min={1} max={30} onValueChange={(n) => setJumlah(Math.max(1, Math.min(30, n || 1)))} />
         </Field>
         <Field label="Poin per soal">
-          <Input type="number" min={0} max={1000} step="0.5" value={poin} onChange={(e) => setPoin(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))} />
+          <IsianAngka value={keAngka(poin)} desimal={1} langkah={0.5} min={0} max={1000} onValueChange={(n) => setPoin(Math.max(0, Math.min(1000, n || 0)))} />
         </Field>
         <Field label="Tingkat">
           <Select<'campuran' | 'mudah' | 'sedang' | 'sulit'>
@@ -2032,8 +2035,8 @@ export function PemakaianAi({ klienId, className }: { klienId?: string; classNam
           </div>
         </div>
         <div className="u-ai-alat">
-          <Input type="date" aria-label="Dari tanggal" value={dari} max={sampai} onChange={(e) => e.target.value && setDari(e.target.value)} />
-          <Input type="date" aria-label="Sampai tanggal" value={sampai} min={dari} onChange={(e) => e.target.value && setSampai(e.target.value)} />
+          <IsianTanggal value={dari} aria-label="Dari tanggal" max={sampai} onValueChange={(v) => v && setDari(v)} />
+          <IsianTanggal value={sampai} aria-label="Sampai tanggal" min={dari} onValueChange={(v) => v && setSampai(v)} />
         </div>
       </header>
       {q.error ? (

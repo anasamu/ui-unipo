@@ -35,6 +35,8 @@ import { PilihUnit } from './pilih-unit';
 import { PilihBerkas } from './pilih-berkas';
 import { idPerangkatPresensi } from './presensi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { IsianJam, IsianAngka } from '../components/isian-angka';
+import { keAngka, teksAngka } from '../lib/angka';
 
 /*
  * Presensi kerja berbasis lokasi (/v1/sdm/presensi) untuk dosen dan tendik: layar presensi hari ini (peta, jam
@@ -1438,9 +1440,9 @@ export function FormJadwalKerja({ open, onOpenChange, jadwal, onSimpan }: { open
                   <Switch size="sm" checked={h.aktif} onCheckedChange={(v) => setHari(i, { aktif: v })} aria-label={`${NAMA_HARI[Number(i) - 1]} hari kerja`} />
                   {NAMA_HARI[Number(i) - 1]}
                 </label>
-                <Input type="time" value={h.masuk} disabled={!h.aktif} onChange={(e) => setHari(i, { masuk: e.target.value })} aria-label={`Masuk ${NAMA_HARI[Number(i) - 1]}`} />
+                <IsianJam value={h.masuk || null} disabled={!h.aktif} aria-label={`Masuk ${NAMA_HARI[Number(i) - 1]}`} onValueChange={(v) => setHari(i, { masuk: v ?? '' })} />
                 <span aria-hidden>–</span>
-                <Input type="time" value={h.pulang} disabled={!h.aktif} onChange={(e) => setHari(i, { pulang: e.target.value })} aria-label={`Pulang ${NAMA_HARI[Number(i) - 1]}`} />
+                <IsianJam value={h.pulang || null} disabled={!h.aktif} aria-label={`Pulang ${NAMA_HARI[Number(i) - 1]}`} onValueChange={(v) => setHari(i, { pulang: v ?? '' })} />
               </div>
             ))}
           </div>
@@ -1448,18 +1450,18 @@ export function FormJadwalKerja({ open, onOpenChange, jadwal, onSimpan }: { open
         <div className="u-presensi-form-baris">
           {f.jenis === 'fleksibel' ? (
             <Field label="Lama kerja minimal (menit)" error={galat.min_kerja_menit}>
-              <Input type="number" min={30} max={1440} value={f.min_kerja_menit} onChange={(e) => set('min_kerja_menit', e.target.value)} />
+              <IsianAngka value={keAngka(f.min_kerja_menit)} min={30} max={1440} onValueChange={(n) => set('min_kerja_menit', teksAngka(n))} />
             </Field>
           ) : (
             <Field label="Toleransi terlambat (menit)">
-              <Input type="number" min={0} max={240} value={f.toleransi_terlambat_menit} onChange={(e) => set('toleransi_terlambat_menit', e.target.value)} />
+              <IsianAngka value={keAngka(f.toleransi_terlambat_menit)} min={0} max={240} onValueChange={(n) => set('toleransi_terlambat_menit', teksAngka(n))} />
             </Field>
           )}
           <Field label="Masuk dibuka (menit sebelum)">
-            <Input type="number" min={0} max={720} value={f.buka_masuk_menit} onChange={(e) => set('buka_masuk_menit', e.target.value)} />
+            <IsianAngka value={keAngka(f.buka_masuk_menit)} min={0} max={720} onValueChange={(n) => set('buka_masuk_menit', teksAngka(n))} />
           </Field>
           <Field label="Pulang ditutup (menit setelah)">
-            <Input type="number" min={0} max={1080} value={f.batas_pulang_menit} onChange={(e) => set('batas_pulang_menit', e.target.value)} />
+            <IsianAngka value={keAngka(f.batas_pulang_menit)} min={0} max={1080} onValueChange={(n) => set('batas_pulang_menit', teksAngka(n))} />
           </Field>
         </div>
         <div className="u-presensi-kerja-saklar-grid">
@@ -1971,10 +1973,10 @@ export function FormKoreksiPresensi({ open, onOpenChange, kejadian, tanggal, onS
         </div>
         <div className="u-presensi-form-baris">
           <Field label="Jam masuk" optional error={galat.jam}>
-            <Input type="time" value={f.jam_masuk} onChange={(e) => set('jam_masuk', e.target.value)} />
+            <IsianJam value={f.jam_masuk || null} onValueChange={(v) => set('jam_masuk', v ?? '')} />
           </Field>
           <Field label="Jam pulang" optional>
-            <Input type="time" value={f.jam_pulang} onChange={(e) => set('jam_pulang', e.target.value)} />
+            <IsianJam value={f.jam_pulang || null} onValueChange={(v) => set('jam_pulang', v ?? '')} />
           </Field>
         </div>
         <label className="u-presensi-kerja-saklar">

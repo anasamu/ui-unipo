@@ -73,6 +73,8 @@ export interface IsianAngkaProps extends IsianDasarProps {
   formatPesan?: (n: number) => string;
   /** Rata kanan (bawaan untuk uang). */
   rataKanan?: boolean;
+  /** Titik pemisah ribuan (bawaan true). false untuk tahun, angkatan, atau nomor urut: "2026", bukan "2.026". */
+  ribuan?: boolean;
 }
 
 /**
@@ -95,6 +97,7 @@ export function IsianAngka({
   info,
   formatPesan,
   rataKanan,
+  ribuan = true,
   id,
   name,
   placeholder,
@@ -113,7 +116,7 @@ export function IsianAngka({
   const terkendali = value !== undefined;
   const [dalam, setDalam] = React.useState<number | null>(defaultValue);
   const nilai = terkendali ? (value ?? null) : dalam;
-  const [teks, setTeks] = React.useState(() => formatRibuan(nilai, desimal));
+  const [teks, setTeks] = React.useState(() => formatRibuan(nilai, desimal, ribuan));
   const [fokus, setFokus] = React.useState(false);
   const [galat, setGalat] = React.useState<string | null>(null);
   const ref = React.useRef<HTMLInputElement>(null);
@@ -122,7 +125,7 @@ export function IsianAngka({
 
   // Nilai dari luar berubah saat tidak sedang diketik: samakan teks.
   React.useEffect(() => {
-    if (!fokus) setTeks(formatRibuan(nilai, desimal));
+    if (!fokus) setTeks(formatRibuan(nilai, desimal, ribuan));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nilai, desimal]);
 
@@ -134,11 +137,11 @@ export function IsianAngka({
     if (!terkendali) setDalam(n);
     if (n !== nilai) onValueChange?.(n);
   };
-  const batas = (n: number | null) => periksaBatasAngka(n, { min, max, wajib: required, fmt: formatPesan });
+  const batas = (n: number | null) => periksaBatasAngka(n, { min, max, wajib: required, fmt: formatPesan ?? (ribuan ? undefined : String) });
 
   const ubahTeks = (e: React.ChangeEvent<HTMLInputElement>) => {
     const el = e.target;
-    const r = rapikanKetikan(el.value, el.selectionStart ?? el.value.length, { desimal, negatif: negatifBoleh });
+    const r = rapikanKetikan(el.value, el.selectionStart ?? el.value.length, { desimal, negatif: negatifBoleh, ribuan });
     setTeks(r.teks);
     requestAnimationFrame(() => {
       if (document.activeElement === el) el.setSelectionRange(r.kursor, r.kursor);
@@ -153,7 +156,7 @@ export function IsianAngka({
     setFokus(false);
     const u = uraiAngka(teks, { desimal, negatif: negatifBoleh });
     if (!u.ok) return setGalatDanLapor(u.pesan);
-    setTeks(formatRibuan(u.nilai, desimal));
+    setTeks(formatRibuan(u.nilai, desimal, ribuan));
     terapkan(u.nilai);
     setGalatDanLapor(batas(u.nilai));
   };
@@ -164,7 +167,7 @@ export function IsianAngka({
     if (min !== undefined) n = Math.max(min, n);
     if (max !== undefined) n = Math.min(max, n);
     if (!negatifBoleh) n = Math.max(0, n);
-    setTeks(formatRibuan(n, desimal));
+    setTeks(formatRibuan(n, desimal, ribuan));
     terapkan(n);
     setGalatDanLapor(null);
   };

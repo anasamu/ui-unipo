@@ -9,6 +9,7 @@ import { formatDate } from '../lib/format';
 import type { BerkasManajer, FolderBerkas } from './manajer-berkas';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { PilihUnit, useUnitArsip } from './pilih-unit';
+import { IsianTanggal } from '../components/formulir';
 
 // ================================================================ Tipe (sama dengan /v1/berkas)
 
@@ -482,7 +483,7 @@ export function DialogBagikanBerkas({ sasaran, tutup }: { sasaran: SasaranBagi |
         <label className="u-label" htmlFor="u-mb-bagi-sampai">
           Berlaku sampai <small>(opsional)</small>
         </label>
-        <Input id="u-mb-bagi-sampai" type="date" value={sampai} min={new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)} onChange={(e) => setSampai(e.target.value)} />
+        <IsianTanggal value={sampai} id="u-mb-bagi-sampai" min={new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)} onValueChange={(v) => setSampai(v)} />
         <label className="u-label" htmlFor="u-mb-bagi-pesan">
           Pesan <small>(opsional)</small>
         </label>

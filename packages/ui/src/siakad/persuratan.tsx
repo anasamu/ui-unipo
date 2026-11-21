@@ -34,6 +34,7 @@ import {
   type IsianSurat,
   type TemplatTerpilih,
 } from './surat-galeri';
+import { IsianTanggal } from '../components/formulir';
 
 // ---------------------------------------------------------------- data master arsip
 
@@ -770,7 +771,7 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, gal
               {p2.tipe === 'paragraf' ? (
                 <Textarea rows={3} value={d.data[p2.nama] ?? ''} placeholder={p2.contoh ?? `{{${p2.nama}}}`} onChange={(e) => ubah({ data: { ...d.data, [p2.nama]: e.target.value } })} />
               ) : p2.tipe === 'tanggal' || p2.tipe === 'hari_tanggal' ? (
-                <Input type="date" value={/^\d{4}-\d{2}-\d{2}$/.test(d.data[p2.nama] ?? '') ? d.data[p2.nama] : ''} onChange={(e) => ubah({ data: { ...d.data, [p2.nama]: e.target.value } })} />
+                <IsianTanggal value={/^\d{4}-\d{2}-\d{2}$/.test(d.data[p2.nama] ?? '') ? d.data[p2.nama] : ''} onValueChange={(v) => ubah({ data: { ...d.data, [p2.nama]: v } })} />
               ) : (
                 <Input inputMode={p2.tipe === 'angka' ? 'numeric' : undefined} value={d.data[p2.nama] ?? ''} placeholder={p2.contoh ?? `{{${p2.nama}}}`} onChange={(e) => ubah({ data: { ...d.data, [p2.nama]: e.target.value } })} />
               )}
@@ -797,7 +798,7 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, gal
       </Field>
       <FormGrid>
         <Field label="Tanggal surat">
-          <Input type="date" value={d.tanggal} onChange={(e) => ubah({ tanggal: e.target.value })} />
+          <IsianTanggal value={d.tanggal} onValueChange={(v) => ubah({ tanggal: v })} />
         </Field>
         <Field label="Lampiran" optional>
           <Input value={d.lampiran} onChange={(e) => ubah({ lampiran: e.target.value })} placeholder="1 (satu) berkas" />
@@ -1063,7 +1064,7 @@ export function CatatArsipSurat({ unitId, arahAwal = 'masuk', onSelesai, onBatal
           <Input value={f.nomor} onChange={(e) => ubah({ nomor: e.target.value })} placeholder="012/FIKOM/PP.00.01/III/2024" maxLength={100} />
         </Field>
         <Field label="Tanggal surat" required error={g('tanggalSurat')}>
-          <Input type="date" value={f.tanggalSurat} onChange={(e) => ubah({ tanggalSurat: e.target.value })} />
+          <IsianTanggal value={f.tanggalSurat} onValueChange={(v) => ubah({ tanggalSurat: v })} />
         </Field>
       </FormGrid>
       <Field label="Perihal" required error={g('perihal')}>
@@ -1078,7 +1079,7 @@ export function CatatArsipSurat({ unitId, arahAwal = 'masuk', onSelesai, onBatal
             <Input value={f.pengirimInstansi} onChange={(e) => ubah({ pengirimInstansi: e.target.value })} />
           </Field>
           <Field label="Tanggal diterima">
-            <Input type="date" value={f.tanggalDiterima} onChange={(e) => ubah({ tanggalDiterima: e.target.value })} />
+            <IsianTanggal value={f.tanggalDiterima} onValueChange={(v) => ubah({ tanggalDiterima: v })} />
           </Field>
         </FormGrid>
       ) : (
