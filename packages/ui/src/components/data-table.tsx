@@ -1,12 +1,25 @@
 'use client';
 import * as React from 'react';
-import { AlertTriangle, Columns3, Download, MoreHorizontal, Rows3, SearchX } from 'lucide-react';
+import { AlertTriangle, Columns3, Download, MoreHorizontal, Rows3, SearchX, X } from 'lucide-react';
 import { KodeLaporan } from './galat';
 import { cn, dataFlag } from '../lib/cn';
-import { Button, Skeleton } from './actions';
+import {
+  BATAS_EKSPOR,
+  labelStatus,
+  namaBerkasCsv,
+  nilaiCsv,
+  opsiPerHalaman,
+  rataFormat,
+  susunCsv,
+  teksFormat,
+  type FormatKolom,
+  type HasilAmbilSemua,
+  type PetaStatus,
+} from '../lib/tabel';
+import { Badge, Button, Skeleton, Spinner } from './actions';
 import { Checkbox } from './forms';
 import { Select } from './select';
-import { Menu, Popover, Tooltip, type MenuEntry } from './overlays';
+import { ConfirmDialog, Menu, Popover, Tooltip, type MenuEntry } from './overlays';
 import { Empty, Pagination, SortButton } from './display';
 import { SelPohon, TombolPohon, susunPohon, usePohon, type NodePohon } from './pohon';
 
@@ -34,7 +47,17 @@ export interface DataColumn<T> {
   mobile?: 'title' | 'subtitle' | 'meta' | 'badge' | 'hidden';
   /** Teks header untuk kartu ponsel dan ekspor bila `header` bukan string. */
   label?: string;
+  /**
+   * Format bawaan isi sel bila `cell` tidak diisi: `angka`, `rupiah`, `persen` (rata kanan otomatis), `tanggal`,
+   * `tanggal-waktu`, atau `status` (lencana dari peta `status`). Ekspor CSV memakai nilai mentah (angka tanpa "Rp").
+   */
+  format?: FormatKolom;
+  /** Peta nilai → label (+ nada lencana) untuk `format: 'status'`, mis. { lunas: { label: 'Lunas', tone: 'success' } }. */
+  status?: PetaStatus;
 }
+
+/** Ambil semua baris sesuai saringan aktif dari server untuk ekspor (lihat `ambilSemuaHalaman`). */
+export type AmbilSemuaBaris<T> = (opsi: { signal: AbortSignal; batas: number; onProgress: (terambil: number, total: number | null) => void }) => Promise<HasilAmbilSemua<T>>;
 
 export type SortState = { key: string; dir: 'asc' | 'desc' } | null;
 
@@ -77,8 +100,22 @@ export interface DataTableProps<T> {
   /** Tombol ubah kerapatan (bawaan true). */
   densityToggle?: boolean;
   defaultDensity?: 'comfortable' | 'compact';
-  /** Unduh CSV dari baris yang tampil; isi string untuk nama berkas. */
+  /**
+   * Tombol unduh CSV; isi string untuk nama berkas. Data lokal: semua baris (sesuai urutan). Data ber-paging server:
+   * isi juga `exportAll` agar SEMUA baris sesuai saringan diambil dari server (useSiakadTable/TabelSumber sudah
+   * mengisinya). Tanpa `exportAll` tombol jelas bertuliskan "halaman ini saja".
+   */
   exportCsv?: boolean | string;
+  /** Ambil semua baris sesuai saringan dari server untuk ekspor (paging berulang ber-batas). */
+  exportAll?: AmbilSemuaBaris<T>;
+  /** Batas baris ekspor (bawaan 10.000). Di atas batas, pengguna diperingatkan dan berkas ditandai "sebagian". */
+  exportLimit?: number;
+  /**
+   * Header menempel saat isi tabel digulir (bawaan true): tabel diberi tinggi maksimum setinggi layar (dikurangi
+   * `--u-dt-sticky-offset`, bawaan 10rem) sehingga baris digulir di dalam tabel dan gulir horizontal tetap jalan.
+   * `false` = tinggi bebas (tabel kecil di panel/cetak).
+   */
+  stickyHeader?: boolean;
   /** Tampilan saat tidak ada data sama sekali. */
   empty?: { icon?: React.ReactNode; title: React.ReactNode; description?: React.ReactNode; action?: React.ReactNode };
   /** Tampilan saat saringan/pencarian tidak menemukan apa pun. Isi `filtered` agar dipakai. */
@@ -86,7 +123,7 @@ export interface DataTableProps<T> {
   filtered?: boolean;
   /** Tampilan di bawah 640 px: kartu bertumpuk (bawaan) atau tabel geser. */
   mobile?: 'cards' | 'scroll';
-  /** Tinggi maksimum isi tabel; header tetap menempel saat digulir. */
+  /** Tinggi maksimum isi tabel (mengganti tinggi bawaan `stickyHeader`); header tetap menempel saat digulir. */
   maxHeight?: number | string;
   striped?: boolean;
   caption?: string;
@@ -124,13 +161,40 @@ function compare(a: unknown, b: unknown): number {
   return String(a).localeCompare(String(b), 'id', { numeric: true, sensitivity: 'base' });
 }
 
-function toCsv<T>(cols: DataColumn<T>[], rows: T[]): string {
-  const esc = (v: unknown) => {
-    const s = v == null ? '' : String(v);
-    return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  return [cols.map((c) => esc(labelOf(c))).join(','), ...rows.map((r) => cols.map((c) => esc(raw(c, r))).join(','))].join('\n');
+/** Isi CSV: angka/uang tetap angka mentah, status berlabel awam, sel dinetralkan dari injeksi rumus. */
+export function toCsv<T>(cols: DataColumn<T>[], rows: T[]): string {
+  return susunCsv(
+    cols.map((c) => labelOf(c)),
+    rows.map((r) => cols.map((c) => nilaiCsv(raw(c, r), c.format, c.status))),
+  );
 }
+
+function unduhCsv(nama: string, isi: string) {
+  const blob = new Blob(['\ufeff' + isi], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nama;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 0);
+}
+
+/** Isi sel bawaan: `cell`, atau nilai berformat (`format`), atau teks mentah. */
+function isiSel<T>(c: DataColumn<T>, row: T, i: number, kosong = ''): React.ReactNode {
+  if (c.cell) return c.cell(row, i);
+  const v = raw(c, row);
+  if (c.format === 'status') {
+    if (v == null || v === '') return '–';
+    const st = labelStatus(v, c.status);
+    return (
+      <Badge variant={st.tone} dot>
+        {st.label}
+      </Badge>
+    );
+  }
+  if (c.format && c.format !== 'teks') return teksFormat(v, c.format, c.status);
+  return String(v ?? kosong);
+}
+const alignOf = <T,>(c: DataColumn<T>) => c.align ?? rataFormat(c.format);
 
 function useStored<V>(key: string | undefined, init: V): [V, (v: V) => void] {
   const [v, setV] = React.useState<V>(() => {
@@ -202,6 +266,9 @@ export function DataTable<T>(props: DataTableProps<T>) {
     densityToggle = true,
     defaultDensity = 'comfortable',
     exportCsv,
+    exportAll,
+    exportLimit = BATAS_EKSPOR,
+    stickyHeader = true,
     empty,
     emptyFiltered,
     filtered,
@@ -293,15 +360,48 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const isEmpty = !firstLoad && !hasError && shown.length === 0;
   const colSpan = visible.length + (selectable ? 1 : 0) + (rowActions ? 1 : 0);
 
-  const downloadCsv = () => {
-    const name = typeof exportCsv === 'string' ? exportCsv : 'data';
-    const blob = new Blob(['﻿' + toCsv(visible, tree ? nodes.map((n) => n.row) : sorted)], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = name.endsWith('.csv') ? name : `${name}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+  // ---- ekspor CSV
+  const namaCsv = (typeof exportCsv === 'string' ? exportCsv : 'data').replace(/\.csv$/i, '');
+  /** Hanya halaman aktif yang bisa diekspor: paging server tanpa `exportAll`. */
+  const eksporHalamanSaja = serverPage && pagination && !exportAll;
+  const [ekspor, setEkspor] = React.useState<{ terambil: number; total: number | null } | null>(null);
+  const [galatEkspor, setGalatEkspor] = React.useState<string | null>(null);
+  const [konfirmasiEkspor, setKonfirmasiEkspor] = React.useState(false);
+  const batalEkspor = React.useRef<AbortController | null>(null);
+  React.useEffect(() => () => batalEkspor.current?.abort(), []);
+
+  const eksporServer = async () => {
+    if (!exportAll) return;
+    const ac = new AbortController();
+    batalEkspor.current = ac;
+    setGalatEkspor(null);
+    setEkspor({ terambil: 0, total: totalProp ?? null });
+    try {
+      const hasil = await exportAll({ signal: ac.signal, batas: exportLimit, onProgress: (terambil, t) => setEkspor({ terambil, total: t ?? totalProp ?? null }) });
+      if (ac.signal.aborted) return;
+      const nama = namaBerkasCsv(namaCsv, hasil.terpotong ? { diambil: hasil.rows.length, total: hasil.total } : undefined);
+      unduhCsv(nama, toCsv(visible, hasil.rows));
+    } catch (e) {
+      if (!ac.signal.aborted) setGalatEkspor(e instanceof Error && e.message ? e.message : 'Data tidak bisa diambil dari server.');
+    } finally {
+      if (batalEkspor.current === ac) batalEkspor.current = null;
+      setEkspor(null);
+    }
   };
+
+  const downloadCsv = () => {
+    if (serverPage && exportAll) {
+      if (totalProp != null && totalProp > exportLimit) setKonfirmasiEkspor(true);
+      else void eksporServer();
+      return;
+    }
+    if (eksporHalamanSaja) {
+      unduhCsv(namaBerkasCsv(`${namaCsv}-halaman-${page}`), toCsv(visible, shown));
+      return;
+    }
+    unduhCsv(namaBerkasCsv(namaCsv), toCsv(visible, tree ? nodes.map((n) => n.row) : sorted));
+  };
+  const labelUnduh = eksporHalamanSaja ? 'Unduh CSV halaman ini saja' : serverPage ? 'Unduh CSV semua data sesuai saringan' : 'Unduh CSV';
 
   // ---- bilah alat
   const tools = (
@@ -351,13 +451,68 @@ export function DataTable<T>(props: DataTableProps<T>) {
         </Popover>
       )}
       {exportCsv && (
-        <Tooltip content="Unduh CSV">
-          <Button variant="outline" size="sm" iconOnly aria-label="Unduh CSV" onClick={downloadCsv} disabled={!sorted.length}>
-            <Download />
+        <Tooltip content={labelUnduh}>
+          <Button variant="outline" size="sm" iconOnly aria-label={labelUnduh} onClick={downloadCsv} disabled={!sorted.length || Boolean(ekspor)} loading={Boolean(ekspor)}>
+            {!ekspor && <Download />}
           </Button>
         </Tooltip>
       )}
     </>
+  );
+
+  const nf = (n: number) => n.toLocaleString('id-ID');
+  const statusEkspor = (ekspor || galatEkspor) && (
+    <div className="u-dt-export" role="status" aria-live="polite" data-tone={galatEkspor ? 'danger' : undefined}>
+      {ekspor ? (
+        <>
+          <Spinner size="sm" label="Menyiapkan CSV" />
+          <span>
+            Menyiapkan CSV: <strong>{nf(ekspor.terambil)}</strong>
+            {ekspor.total != null && (
+              <>
+                {' '}
+                dari <strong>{nf(Math.min(ekspor.total, exportLimit))}</strong>
+              </>
+            )}{' '}
+            baris
+          </span>
+          {ekspor.total != null && ekspor.total > 0 && (
+            <progress className="u-dt-export-bar" value={ekspor.terambil} max={Math.min(ekspor.total, exportLimit)} aria-hidden />
+          )}
+          <Button variant="ghost" size="xs" onClick={() => batalEkspor.current?.abort()}>
+            Batalkan
+          </Button>
+        </>
+      ) : (
+        <>
+          <AlertTriangle aria-hidden />
+          <span>Unduh CSV gagal: {galatEkspor}</span>
+          <Button variant="ghost" size="xs" iconOnly aria-label="Tutup pesan" onClick={() => setGalatEkspor(null)}>
+            <X />
+          </Button>
+        </>
+      )}
+    </div>
+  );
+  const dialogEkspor = exportAll && (
+    <ConfirmDialog
+      open={konfirmasiEkspor}
+      onOpenChange={setKonfirmasiEkspor}
+      tone="warning"
+      title="Data terlalu besar untuk diunduh lengkap"
+      description={
+        <>
+          Saringan ini berisi {nf(totalProp ?? 0)} baris, melebihi batas unduh {nf(exportLimit)} baris. Persempit saringan (mis. per periode atau per unit) agar
+          berkasnya lengkap. Bila tetap diunduh, berkas hanya berisi {nf(exportLimit)} baris pertama dan namanya ditandai &ldquo;sebagian&rdquo;.
+        </>
+      }
+      confirmLabel={`Unduh ${nf(exportLimit)} baris pertama`}
+      cancelLabel="Persempit saringan"
+      onConfirm={() => {
+        setKonfirmasiEkspor(false);
+        void eksporServer();
+      }}
+    />
   );
 
   const bulk = selectable && selected.length > 0 && (
@@ -507,16 +662,16 @@ export function DataTable<T>(props: DataTableProps<T>) {
                   )}
                   <div className="u-dt-card-title">
                     {by('title').map((c, ti) => (
-                      <div key={c.key}>{ti === 0 ? treeCell(row, c.cell ? c.cell(row, i) : String(raw(c, row) ?? '')) : c.cell ? c.cell(row, i) : String(raw(c, row) ?? '')}</div>
+                      <div key={c.key}>{ti === 0 ? treeCell(row, isiSel(c, row, i)) : isiSel(c, row, i)}</div>
                     ))}
                     {by('subtitle').map((c) => (
                       <div key={c.key} className="u-dt-card-subtitle">
-                        {c.cell ? c.cell(row, i) : String(raw(c, row) ?? '')}
+                        {isiSel(c, row, i)}
                       </div>
                     ))}
                   </div>
                   {by('badge').map((c) => (
-                    <div key={c.key}>{c.cell ? c.cell(row, i) : String(raw(c, row) ?? '')}</div>
+                    <div key={c.key}>{isiSel(c, row, i)}</div>
                   ))}
                   <span onClick={(e) => e.stopPropagation()}>{menuCell(row)}</span>
                 </div>
@@ -525,7 +680,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                     {by('meta').map((c) => (
                       <div key={c.key}>
                         <dt>{labelOf(c)}</dt>
-                        <dd>{c.cell ? c.cell(row, i) : String(raw(c, row) ?? '–')}</dd>
+                        <dd>{isiSel(c, row, i, '–')}</dd>
                       </div>
                     ))}
                   </dl>
@@ -535,7 +690,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
           }))}
     </div>
   ) : (
-    <div className="u-table-wrap u-dt-scroll" style={maxHeight ? { maxHeight, overflowY: 'auto' } : undefined}>
+    <div className="u-table-wrap u-dt-scroll" data-sticky={dataFlag(stickyHeader && !maxHeight)} style={maxHeight ? { maxHeight, overflowY: 'auto' } : undefined}>
       <table className="u-table" role={tree ? 'treegrid' : undefined} data-tree={dataFlag(Boolean(tree))} data-density={density} data-striped={dataFlag(striped)} aria-busy={loading || undefined}>
         {caption && <caption className="u-sr-only">{caption}</caption>}
         <thead>
@@ -548,7 +703,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
             {visible.map((c) => (
               <th
                 key={c.key}
-                data-align={c.align}
+                data-align={alignOf(c)}
                 data-shrink={c.shrink ? '' : undefined}
                 style={c.width ? { width: c.width } : undefined}
                 aria-sort={sort?.key === c.key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
@@ -580,7 +735,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                 <tr key={i}>
                   {selectable && <td />}
                   {visible.map((c, j) => (
-                    <td key={c.key} data-align={c.align}>
+                    <td key={c.key} data-align={alignOf(c)}>
                       <Skeleton style={{ height: 12, width: j === 0 ? '70%' : `${40 + ((i * 17 + j * 11) % 40)}%`, display: 'inline-block' }} />
                     </td>
                   ))}
@@ -606,8 +761,8 @@ export function DataTable<T>(props: DataTableProps<T>) {
                       </td>
                     )}
                     {visible.map((c, ci) => (
-                      <td key={c.key} data-align={c.align} data-shrink={c.shrink ? '' : undefined}>
-                        {ci === 0 ? treeCell(row, c.cell ? c.cell(row, i) : String(raw(c, row) ?? '')) : c.cell ? c.cell(row, i) : String(raw(c, row) ?? '')}
+                      <td key={c.key} data-align={alignOf(c)} data-shrink={c.shrink ? '' : undefined}>
+                        {ci === 0 ? treeCell(row, isiSel(c, row, i)) : isiSel(c, row, i)}
                       </td>
                     ))}
                     {rowActions && (
@@ -632,6 +787,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
           <div className="u-dt-toolbar-end">{tools}</div>
         </div>
       )}
+      {statusEkspor}
       {bulk}
       {cards && loading && rows && <div className="u-dt-progress-bar" aria-hidden />}
       {body}
@@ -651,7 +807,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                   setInnerPage(1);
                   onPageChange?.(1);
                 }}
-                options={perPageOptions.map((n) => ({ value: n, label: String(n) }))}
+                options={opsiPerHalaman(perPageOptions, perPage).map((n) => ({ value: n, label: String(n) }))}
               />
             </label>
           ) : (
@@ -670,6 +826,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
           />
         </div>
       )}
+      {dialogEkspor}
     </div>
   );
 }

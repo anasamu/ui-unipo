@@ -9,7 +9,8 @@ import { SegmentedControl } from '../components/forms';
 import { filterToQuery, useFilterParams, type FilterField, type FilterValues } from '../components/filter';
 import type { MenuEntry } from '../components/overlays';
 import { formatDate } from '../lib/format';
-import { useSiakadQuery } from './provider';
+import { useOptionalSiakad, useSiakadQuery } from './provider';
+import { ambilSemuaHalaman } from '../lib/tabel';
 import { LabelProdi } from './prodi';
 import { SheetDetailDosen, SheetDetailMahasiswa, SheetDetailMataKuliah } from './akademik';
 import {
@@ -63,6 +64,22 @@ export function useSiakadTable<T>({ key, fetch, initialFilter = {}, fields, perP
   const [perPage, setPerPage] = React.useState(perPageInit);
   const query = { ...filterToQuery(filter, fields), page, per_page: perPage };
   const q = useSiakadQuery([key, query], (s, signal) => fetch(s, query, signal), { staleTime: 15_000 });
+  const siakad = useOptionalSiakad();
+  /** Ekspor CSV: ambil SEMUA halaman sesuai saringan aktif (bukan hanya halaman tampil), maksimal `batas` baris. */
+  const exportAll: DataTableProps<T>['exportAll'] = siakad
+    ? ({ signal, batas, onProgress }) => {
+        const saringan = filterToQuery(filter, fields);
+        return ambilSemuaHalaman<T>({
+          signal,
+          batas,
+          onProgress,
+          ambil: async (p, per, sig) => {
+            const r = await fetch(siakad, { ...saringan, page: p, per_page: per }, sig);
+            return { data: r.data, meta: r.meta };
+          },
+        });
+      }
+    : undefined;
   const setFilter = (v: FilterValues) => {
     setFilterRaw(v);
     setPage(1);
@@ -89,6 +106,7 @@ export function useSiakadTable<T>({ key, fetch, initialFilter = {}, fields, perP
       },
       filtered,
       emptyFiltered: { onReset: () => setFilter({}) },
+      exportAll,
     } satisfies Partial<DataTableProps<T>>,
   };
 }

@@ -47,17 +47,27 @@ export function Select<V = string>({ options, placeholder = 'Pilih…', size, cl
     return [...map.entries()];
   }, [options]);
   // Base UI menganggap nilai '' sebagai "belum memilih" sehingga opsi seperti { value: '', label: 'Semua status' } tampil
-  // sebagai placeholder "Pilih…". Nilai '' diganti penanda internal lalu dikembalikan ke '' saat berubah.
-  const enc = (v: V | null | undefined) => (v === ('' as unknown as V) ? (KOSONG as unknown as V) : v);
+  // sebagai placeholder "Pilih…". Nilai '' diganti penanda internal lalu dikembalikan ke '' saat berubah, TETAPI hanya
+  // bila memang ada opsi bernilai ''. Tanpa opsi itu, '' berarti "belum diisi" (mis. isian formulir kosong) dan harus
+  // menampilkan placeholder, bukan teks penanda internal.
+  const adaKosong = options.some((o) => o.value === ('' as unknown as V));
+  const enc = (v: V | null | undefined) => (v === ('' as unknown as V) ? (adaKosong ? (KOSONG as unknown as V) : null) : v);
   const dec = (v: V | null) => (v === (KOSONG as unknown as V) ? ('' as unknown as V) : v);
+  // Input tersembunyi Base UI akan mengirim penanda internal; bila ada opsi '', nilai formulir dikirim sendiri.
+  const [nilaiAwal, setNilaiForm] = React.useState<V | null | undefined>(defaultValue);
+  const nilaiForm = value !== undefined ? value : nilaiAwal;
   return (
     <BaseSelect.Root<V>
       items={options.map((o) => ({ value: enc(o.value) as V, label: o.label }))}
       value={value === undefined ? undefined : (enc(value) ?? null)}
-      defaultValue={defaultValue === undefined ? undefined : enc(defaultValue)}
-      onValueChange={(v) => onValueChange?.(dec(v as V | null))}
+      defaultValue={defaultValue === undefined ? undefined : (enc(defaultValue) ?? null)}
+      onValueChange={(v) => {
+        const d = dec(v as V | null);
+        setNilaiForm(d);
+        onValueChange?.(d);
+      }}
       disabled={props.disabled}
-      name={props.name}
+      name={adaKosong ? undefined : props.name}
       required={props.required}
     >
       <BaseSelect.Trigger className={cn('u-select-trigger', className)} data-size={size} id={props.id} aria-label={props['aria-label']}>
@@ -90,6 +100,7 @@ export function Select<V = string>({ options, placeholder = 'Pilih…', size, cl
           </BaseSelect.Popup>
         </BaseSelect.Positioner>
       </BaseSelect.Portal>
+      {adaKosong && props.name && <input type="hidden" name={props.name} value={nilaiForm == null ? '' : String(nilaiForm)} disabled={props.disabled} />}
     </BaseSelect.Root>
   );
 }
