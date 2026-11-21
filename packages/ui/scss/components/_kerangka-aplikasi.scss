@@ -42,6 +42,36 @@
     font-size: var(--u-text-xs);
   }
 }
+.u-kerangka-judul-pendek {
+  display: none;
+}
+@media (max-width: 639px) {
+  .u-kerangka-judul:has(.u-kerangka-judul-pendek) {
+    .u-kerangka-judul-penuh {
+      display: none;
+    }
+    .u-kerangka-judul-pendek {
+      display: block;
+    }
+  }
+}
+// Deret tab halaman bertab (TabHalaman) di atas isi halaman: tab berupa tautan, garis bawah tab aktif.
+.u-tab-halaman {
+  margin-block-end: 1rem;
+  .u-tabs-list {
+    border-bottom: 1px solid var(--u-border);
+    gap: 1.25rem;
+  }
+  .u-tab {
+    padding-inline: 0.125rem;
+    height: 2.5rem;
+    border-radius: 0;
+    text-decoration: none;
+    &[data-active] {
+      box-shadow: inset 0 -2px 0 var(--u-primary);
+    }
+  }
+}
 .u-kerangka-kiri {
   display: flex;
   align-items: center;
