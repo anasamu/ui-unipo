@@ -11,7 +11,7 @@ declare const process: { env: { NODE_ENV?: string } };
 // Satu definisi menu per aplikasi (semua peran sekaligus). `susunMenu`/`useMenuAplikasi` menyaring izin, membuang induk
 // dan kategori kosong, meratakan induk beranak satu, mengurutkan kategori standar, lalu menghitung menu aktif, judul
 // halaman, dan data Cari fitur. `periksaMenu` menolak duplikat (rute, label, kunci, salinan bilah atas/menu akun) dan
-// pelanggaran aturan menu (kategori > 7 item, induk beranak satu, induk berlabel sama dengan kategorinya, label sidebar
+// pelanggaran aturan menu (kategori > 6 item, induk beranak satu, induk berlabel sama dengan kategorinya, label sidebar
 // lebih dari 22 huruf).
 //
 // Halaman bertab: item boleh berisi `tab` (halaman berkaitan yang digabung menjadi satu menu). Tiap tab punya rute
@@ -168,7 +168,7 @@ export interface MasalahMenu {
 export interface OpsiPeriksaMenu {
   menuAkun?: readonly string[];
   bilahAtas?: readonly string[];
-  /** Maksimal item tingkat atas per kategori. Bawaan 7. */
+  /** Maksimal item tingkat atas per kategori. Bawaan `MAKS_ITEM` (6; keputusan Anas 2026-11-22). */
   maksItem?: number;
   /**
    * Maksimal huruf label sidebar (item, submenu, judul kategori) sebelum terpotong di lebar sidebar standar. Bawaan
@@ -280,6 +280,9 @@ export const MAKS_BAWAH = 4;
 
 /** Panjang label sidebar yang masih muat di lebar sidebar standar tanpa terpotong (diukur di Chrome 1440 px). */
 export const MAKS_LABEL = 22;
+
+/** Maksimal item tingkat atas per kategori sidebar (keputusan Anas 2026-11-22: sidebar ringkas, wajib di semua aplikasi). */
+export const MAKS_ITEM = 6;
 
 /** Label yang tampil di sidebar: `pendek` bila label terlalu panjang dan `pendek` diisi. */
 export function labelSidebar(it: Pick<ItemMenuDef, 'label' | 'pendek'>): string {
@@ -538,7 +541,7 @@ export function useMenuAplikasi(def: DefinisiMenu, opsi: OpsiSusunMenu & { konte
  * Pakai di uji aplikasi: `expect(periksaMenu(MENU)).toEqual([])`.
  */
 export function periksaMenu(def: DefinisiMenu, opsi: OpsiPeriksaMenu = {}): MasalahMenu[] {
-  const maks = opsi.maksItem ?? 7;
+  const maks = opsi.maksItem ?? MAKS_ITEM;
   const maksLabel = opsi.maksLabel ?? MAKS_LABEL;
   const kategori = opsi.konteks ? saring(def, opsi.konteks) : def.kategori;
   const masalah: MasalahMenu[] = [];

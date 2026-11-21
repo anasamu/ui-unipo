@@ -304,3 +304,12 @@ describe('halaman bertab: tautan item', () => {
     expect(periksaMenu(d, { konteks: { izin: [] } })).toEqual([]);
   });
 });
+
+describe('batas item per kategori', () => {
+  it('bawaan 6 item tingkat atas (MAKS_ITEM)', () => {
+    const isi = (n: number) => definisiMenu([{ kategori: 'bidang', judul: 'X', item: Array.from({ length: n }, (_, i) => ({ label: `M${i}`, ke: `/m${i}` })) }], { periksa: false });
+    expect(periksaMenu(isi(6))).toEqual([]);
+    expect(periksaMenu(isi(7)).map((m) => m.jenis)).toEqual(['kategori-penuh']);
+    expect(periksaMenu(isi(7), { maksItem: 7 })).toEqual([]);
+  });
+});

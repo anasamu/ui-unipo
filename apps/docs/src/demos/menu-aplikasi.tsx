@@ -28,7 +28,7 @@ export const meta: DemoMeta = {
     ['NavItem keterangan / kataKunci / luar / baru', 'string / string[] / boolean / boolean', 'Tooltip + Cari fitur, penanda tautan keluar (tab baru), lencana Baru.'],
   ],
   notes: [
-    'Aturan menu (rencana/menu-sidebar.md): Beranda selalu pertama tanpa judul; Pengaturan selalu terakhir dengan Tema tampilan sebagai item terakhir; maksimal 7 item tingkat atas per kategori; submenu satu tingkat, minimal 2 anak; induk tidak berlabel sama dengan kategorinya; satu fungsi = satu tempat menu.',
+    'Aturan menu (rencana/menu-sidebar.md): Beranda selalu pertama tanpa judul; Pengaturan selalu terakhir dengan Tema tampilan sebagai item terakhir; maksimal 6 item tingkat atas per kategori (MAKS_ITEM; halaman berkaitan dijadikan tab); submenu satu tingkat, minimal 2 anak; induk tidak berlabel sama dengan kategorinya; satu fungsi = satu tempat menu.',
     'Notifikasi, Berkas, Obrolan, dan Pintasan sudah ada di bilah atas (BILAH_ATAS_BAWAAN) sehingga ditolak bila diulang di sidebar. Isi menu akun dicantumkan di opsi menuAkun.',
     'Izin di menu hanya menyembunyikan menu yang pasti ditolak; server tetap pemeriksa akhir.',
   ],
