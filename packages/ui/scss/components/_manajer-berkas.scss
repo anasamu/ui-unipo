@@ -3063,3 +3063,15 @@ span.u-dd-lipat {
     }
   }
 }
+.u-sampah-teks .u-sampah-alasan {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--u-warning-text, var(--u-warning));
+  white-space: normal;
+  svg {
+    flex: none;
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+}

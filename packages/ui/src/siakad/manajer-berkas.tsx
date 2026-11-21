@@ -1142,8 +1142,8 @@ export function ManajerBerkas({
   const saya = useAkunSaya({ foto: false }).data?.akun?.username ?? null;
   const bisaHapus = (b: BerkasManajer) => bolehHapus && (akses === 'pemilik' || akses === 'kelola' || (akses === 'anggota' && !!saya && b.pemilik === saya));
   const bolehDihapus = (daftar: BerkasManajer[]) => daftar.filter(bisaHapus);
-  const masaSampah = info?.batas_unggah?.sampah_hari ?? null;
-  const teksMasaSampah = masaSampah ? ` selama ${masaSampah} hari` : '';
+  // Sampah tidak dihapus otomatis (keputusan 2026-11-21).
+  const teksMasaSampah = '';
   const bolehBagikan = bolehBagikanProp && !bagi && !pembaca;
   // Atur siapa yang bisa melihat: pengelola unit (semua pilihan) dan staf unit (pengelola/staf saja).
   const bolehAturLihat = Boolean(unit) && !bagi && (akses === 'kelola' || akses === 'anggota');

@@ -238,8 +238,8 @@ export function DaftarKebijakan({ k, batas }: { k: KebijakanPenyimpanan; batas?:
       )}
       <dt>Sampah</dt>
       <dd>
-        {k.sampah_hari === null ? 'Tidak dikosongkan otomatis' : `Dihapus permanen setelah ${k.sampah_hari} hari`}
-        {k.sampah_hari !== null && asal('sampah_hari')}
+        Tidak dihapus otomatis
+        <small>Pulihkan atau hapus permanen berkas milik Anda; pengosongan sampah dilakukan admin Pustikom.</small>
       </dd>
       <dt>Tautan publik</dt>
       <dd>{k.bagi_publik ? (k.tautan_maks_hari ? `Boleh, berlaku paling lama ${k.tautan_maks_hari} hari` : 'Boleh') : 'Tidak diizinkan'}</dd>

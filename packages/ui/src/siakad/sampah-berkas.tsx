@@ -1,28 +1,33 @@
 'use client';
 import * as React from 'react';
-import { Clock, RotateCcw, Trash2 } from 'lucide-react';
-import { Badge, Button } from '../components/actions';
+import { Lock, RotateCcw, Trash2 } from 'lucide-react';
+import { Button } from '../components/actions';
 import { Checkbox } from '../components/forms';
+import { Tooltip } from '../components/overlays';
 import { ConfirmDialog } from '../components/overlays';
 import { Select } from '../components/select';
 import { formatBytes, formatDate } from '../lib/format';
 import { IkonBerkasManajer, type BerkasManajer } from './manajer-berkas';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { useAkunSaya } from './akun';
+import { SegmentedControl } from '../components/forms';
 
 /** Berkas di sampah (GET /v1/berkas/sampah). */
 export interface BerkasSampah extends BerkasManajer {
   dihapus_at?: string | null;
   dihapus_oleh?: string | null;
-  /** Kapan dihapus permanen otomatis (dari masa simpan sampah aturan penyimpanan); null = tidak otomatis. */
-  hapus_otomatis_at?: string | null;
+  /** Boleh dihapus permanen pemanggil? Tidak untuk arsip institusi, berkas yang masih dirujuk modul, dan berkas sensitif. */
+  permanen?: { boleh: boolean; alasan: string | null };
 }
 
 export interface MetaSampah {
   total: number;
-  /** Masa simpan sampah (hari) ruang ini; null = tidak dikosongkan otomatis. */
-  sampah_hari: number | null;
   ukuran_total: number;
   unit: string | null;
+  /** Sampah tidak pernah dihapus otomatis. */
+  hapus_otomatis?: boolean;
+  /** Admin Pustikom: boleh mengosongkan sampah. */
+  boleh_kosongkan?: boolean;
 }
 
 /** Isi sampah ruang pribadi (`unit` kosong) atau ruang unit (pengelola: semua; anggota: yang ia unggah). */
@@ -41,8 +46,10 @@ export interface DaftarSampahProps {
 }
 
 /**
- * Sampah berkas: berkas yang dipindahkan ke Sampah dari ruang pribadi atau ruang unit. Pulihkan (kembali ke folder
- * asalnya), hapus permanen (konfirmasi tegas), atau kosongkan sampah. Keterangan masa simpan dari aturan penyimpanan.
+ * Sampah berkas: berkas yang dipindahkan ke Sampah dari ruang pribadi atau ruang unit. Tidak dihapus otomatis.
+ * Pulihkan (kembali ke folder asalnya) atau hapus permanen berkas milik sendiri (konfirmasi tegas); arsip institusi dan
+ * berkas sensitif/masih dirujuk modul tidak bisa dihapus permanen (alasannya tampil). Mengosongkan sampah hanya admin
+ * Pustikom (ruang ini atau seluruh sampah).
  */
 export function DaftarSampah({ ruang, ruangAwal = null }: DaftarSampahProps) {
   const siakad = useSiakad();
@@ -50,6 +57,8 @@ export function DaftarSampah({ ruang, ruangAwal = null }: DaftarSampahProps) {
   const q = useSampahBerkas(unit);
   const [pilih, setPilih] = React.useState<Set<string>>(() => new Set());
   const [tanya, setTanya] = React.useState<null | { jenis: 'permanen'; berkas: BerkasSampah[] } | { jenis: 'kosongkan' }>(null);
+  const [cakupan, setCakupan] = React.useState<'ruang' | 'semua'>('ruang');
+  const saya = useAkunSaya({ foto: false }).data?.akun?.username ?? null;
   const [pesan, setPesan] = React.useState<{ nada: 'sukses' | 'galat'; teks: string } | null>(null);
   const [sibuk, setSibuk] = React.useState(false);
   const daftar = q.data ?? [];
@@ -82,9 +91,15 @@ export function DaftarSampah({ ruang, ruangAwal = null }: DaftarSampahProps) {
   const hapusPermanen = (id: string[]) =>
     jalankan('/v1/berkas/sampah/hapus-permanen', { id }, (d) => `${(d.dihapus as string[]).length} berkas dihapus permanen.`);
   const kosongkan = () =>
-    jalankan('/v1/berkas/sampah/kosongkan', unit ? { unit } : {}, (d) => `Sampah dikosongkan: ${d.dihapus as number} berkas (${formatBytes(Number(d.ukuran ?? 0))}).`);
+    jalankan(
+      '/v1/berkas/sampah/kosongkan',
+      cakupan === 'semua' ? { semua: true } : unit ? { unit } : { pemilik: saya ?? '' },
+      (d) => `Sampah dikosongkan: ${d.dihapus as number} berkas (${formatBytes(Number(d.ukuran ?? 0))})${Number(d.dilewati ?? 0) ? `; ${d.dilewati as number} dilewati (arsip atau masih dipakai)` : ''}.`,
+    );
 
   const terpilih = daftar.filter((b) => pilih.has(b.id));
+  const bolehPermanen = (b: BerkasSampah) => b.permanen?.boleh !== false;
+  const terpilihPermanen = terpilih.filter(bolehPermanen);
   const alih = (id: string) =>
     setPilih((p) => {
       const n = new Set(p);
@@ -100,12 +115,7 @@ export function DaftarSampah({ ruang, ruangAwal = null }: DaftarSampahProps) {
           <Trash2 aria-hidden />
           <div>
             <h3>Sampah</h3>
-            <p>
-              {meta?.sampah_hari
-                ? `Berkas di Sampah dihapus permanen otomatis setelah ${meta.sampah_hari} hari.`
-                : 'Berkas di Sampah tidak dihapus otomatis. Hapus permanen untuk mengosongkan ruang.'}{' '}
-              Sampah tidak mengurangi kuota.
-            </p>
+            <p>Berkas di sampah tidak dihapus otomatis. Pulihkan atau hapus permanen berkas milik Anda; pengosongan sampah dilakukan admin Pustikom.</p>
           </div>
         </div>
         <div className="u-sampah-alat">
@@ -118,10 +128,12 @@ export function DaftarSampah({ ruang, ruangAwal = null }: DaftarSampahProps) {
               onValueChange={(v) => setUnit(v ? v : null)}
             />
           )}
-          <Button variant="outline" size="sm" className="u-mb-bahaya" disabled={!daftar.length || sibuk} onClick={() => setTanya({ jenis: 'kosongkan' })}>
-            <Trash2 aria-hidden />
-            Kosongkan sampah
-          </Button>
+          {meta?.boleh_kosongkan && (
+            <Button variant="outline" size="sm" className="u-mb-bahaya" disabled={sibuk} onClick={() => (setCakupan('ruang'), setTanya({ jenis: 'kosongkan' }))}>
+              <Trash2 aria-hidden />
+              Kosongkan sampah
+            </Button>
+          )}
         </div>
       </div>
 
@@ -132,9 +144,16 @@ export function DaftarSampah({ ruang, ruangAwal = null }: DaftarSampahProps) {
             <RotateCcw aria-hidden />
             Pulihkan
           </Button>
-          <Button variant="ghost" size="sm" className="u-mb-bahaya" disabled={sibuk} onClick={() => setTanya({ jenis: 'permanen', berkas: terpilih })}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="u-mb-bahaya"
+            disabled={sibuk || !terpilihPermanen.length}
+            title={terpilihPermanen.length < terpilih.length ? `${terpilih.length - terpilihPermanen.length} berkas tidak bisa dihapus permanen (lihat alasannya di daftar)` : undefined}
+            onClick={() => setTanya({ jenis: 'permanen', berkas: terpilihPermanen })}
+          >
             <Trash2 aria-hidden />
-            Hapus permanen
+            Hapus permanen{terpilihPermanen.length && terpilihPermanen.length < terpilih.length ? ` (${terpilihPermanen.length})` : ''}
           </Button>
         </div>
       )}
@@ -180,20 +199,28 @@ export function DaftarSampah({ ruang, ruangAwal = null }: DaftarSampahProps) {
                       .filter(Boolean)
                       .join(' · ')}
                   </small>
+                  {!bolehPermanen(b) && b.permanen?.alasan && (
+                    <small className="u-sampah-alasan">
+                      <Lock aria-hidden />
+                      {b.permanen.alasan}
+                    </small>
+                  )}
                 </span>
-                {b.hapus_otomatis_at && (
-                  <Badge variant="neutral" title="Dihapus permanen otomatis pada tanggal ini">
-                    <Clock aria-hidden />
-                    {formatDate(b.hapus_otomatis_at, 'short')}
-                  </Badge>
-                )}
                 <Button variant="ghost" size="sm" disabled={sibuk} onClick={() => void pulihkan([b.id])}>
                   <RotateCcw aria-hidden />
                   Pulihkan
                 </Button>
-                <Button variant="ghost" size="sm" iconOnly className="u-mb-bahaya" aria-label={`Hapus permanen ${b.nama}`} title="Hapus permanen" disabled={sibuk} onClick={() => setTanya({ jenis: 'permanen', berkas: [b] })}>
-                  <Trash2 aria-hidden />
-                </Button>
+                {bolehPermanen(b) ? (
+                  <Button variant="ghost" size="sm" iconOnly className="u-mb-bahaya" aria-label={`Hapus permanen ${b.nama}`} title="Hapus permanen" disabled={sibuk} onClick={() => setTanya({ jenis: 'permanen', berkas: [b] })}>
+                    <Trash2 aria-hidden />
+                  </Button>
+                ) : (
+                  <Tooltip content={b.permanen?.alasan ?? 'Tidak bisa dihapus permanen'}>
+                    <Button variant="ghost" size="sm" iconOnly aria-label={`Hapus permanen ${b.nama} tidak tersedia: ${b.permanen?.alasan ?? ''}`} disabled>
+                      <Trash2 aria-hidden />
+                    </Button>
+                  </Tooltip>
+                )}
               </li>
             ))}
           </ul>
@@ -217,17 +244,31 @@ export function DaftarSampah({ ruang, ruangAwal = null }: DaftarSampahProps) {
         }
         description={
           tanya?.jenis === 'kosongkan'
-            ? `Semua ${meta?.total ?? daftar.length} berkas di Sampah${unit ? ` ${ruang.find((r) => r.unit === unit)?.nama ?? ''}` : ''} (${formatBytes(meta?.ukuran_total ?? 0)}) dihapus selamanya beserta isinya. Tindakan ini tidak bisa dibatalkan.`
+            ? cakupan === 'semua'
+              ? 'SELURUH sampah semua pengguna dan unit dihapus selamanya beserta isinya, kecuali arsip institusi dan berkas yang masih dipakai modul. Tindakan ini tidak bisa dibatalkan dan tercatat di log.'
+              : `Semua ${meta?.total ?? daftar.length} berkas di Sampah ${ruang.find((r) => r.unit === unit)?.nama ?? 'ruang ini'} (${formatBytes(meta?.ukuran_total ?? 0)}) dihapus selamanya beserta isinya, kecuali arsip institusi dan berkas yang masih dipakai modul. Tindakan ini tidak bisa dibatalkan dan tercatat di log.`
             : 'Isi berkas ikut dihapus dari penyimpanan dan tidak bisa dipulihkan lagi. Tindakan ini tidak bisa dibatalkan.'
         }
-        confirmLabel={tanya?.jenis === 'kosongkan' ? 'Kosongkan sampah' : 'Hapus permanen'}
+        confirmLabel={tanya?.jenis === 'kosongkan' ? (cakupan === 'semua' ? 'Kosongkan seluruh sampah' : 'Kosongkan sampah') : 'Hapus permanen'}
         onConfirm={async () => {
           const t = tanya;
           setTanya(null);
           if (t?.jenis === 'kosongkan') await kosongkan();
           else if (t?.jenis === 'permanen') await hapusPermanen(t.berkas.map((b) => b.id));
         }}
-      />
+      >
+        {tanya?.jenis === 'kosongkan' && (
+          <SegmentedControl<'ruang' | 'semua'>
+            aria-label="Cakupan pengosongan"
+            value={cakupan}
+            onValueChange={setCakupan}
+            options={[
+              { value: 'ruang', label: `Sampah ${ruang.find((r) => r.unit === unit)?.nama ?? 'ruang ini'}` },
+              { value: 'semua', label: 'Seluruh sampah' },
+            ]}
+          />
+        )}
+      </ConfirmDialog>
     </section>
   );
 }
