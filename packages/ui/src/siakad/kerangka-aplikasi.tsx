@@ -9,6 +9,7 @@ import { AppShell, SearchTrigger, Sidebar, type NavGroup, type NavItem, type Sid
 import { Tooltip } from '../components/overlays';
 import { fiturDariMenu, labelPintasanCari, PencarianFitur, usePintasanCari, type ItemFitur } from '../components/pencarian-fitur';
 import type { HasilMenu } from '../components/menu-aplikasi';
+import { PenyediaMenuHalaman, TabMenuHalaman } from '../components/tab-halaman';
 import { NavigasiBawah, type ItemNavigasiBawah } from '../components/platform';
 import { cn } from '../lib/cn';
 import { MenuAkunSiakad, useAkunSaya } from './akun';
@@ -46,7 +47,8 @@ export interface KerangkaAplikasiProps {
   /** Tautan menu, mis. `(item, p) => <Link to={item.href!} {...p} />`. Juga dipakai logo. */
   renderLink?: SidebarProps['renderLink'];
   /** Navigasi dari kode (pencarian, notifikasi), mis. `useNavigate()`. Bawaan `location.assign`. */
-  onNavigasi?: (href: string) => void;
+  /** Pindah alamat di dalam aplikasi, mis. `navigate` react-router (opsi `replace` dipakai `TabMenuHalaman` saat mengalihkan). */
+  onNavigasi?: (href: string, opsi?: { replace?: boolean }) => void;
   /** Judul halaman di bilah atas. Bawaan label menu aktif. */
   judul?: React.ReactNode;
   /** Baris kecil di atas judul (mis. kelompok menu atau peran). */
@@ -135,6 +137,11 @@ export interface KerangkaAplikasiProps {
   pengumuman?: boolean | { aplikasi?: string };
   /** Timpa efek memuat dari tema (`tata.muat_awal`, `tata.muat_pindah`); `false` mematikan semuanya. */
   muat?: false | { awal?: GayaMuatAwal; pindah?: GayaMuatPindah };
+  /**
+   * Deret tab halaman bertab (`ItemMenuDef.tab`) dipasang otomatis di atas isi halaman bila menu aktif bertab. Bawaan
+   * true; false bila halaman memasang `TabMenuHalaman` sendiri.
+   */
+  tabHalaman?: boolean;
   children: React.ReactNode;
   className?: string;
 }
@@ -207,6 +214,7 @@ export function KerangkaAplikasi({
   tataMuat,
   muat,
   pengumuman = true,
+  tabHalaman = true,
   children,
   className,
 }: KerangkaAplikasiProps) {
@@ -234,15 +242,17 @@ export function KerangkaAplikasi({
   const [palet, setPalet] = React.useState(false);
 
   const navigasi = React.useCallback(
-    (href: string) => {
-      if (onNavigasi) onNavigasi(href);
-      else if (typeof window !== 'undefined') window.location.assign(href);
+    (href: string, opsiNav?: { replace?: boolean }) => {
+      if (onNavigasi) onNavigasi(href, opsiNav);
+      else if (typeof window !== 'undefined') (opsiNav?.replace ? window.location.replace : window.location.assign).call(window.location, href);
     },
     [onNavigasi],
   );
 
   const opsiCari = typeof cari === 'object' ? cari : {};
-  const fitur = React.useMemo(() => [...fiturDariMenu(groups), ...(opsiCari.tambahan ?? [])], [groups, opsiCari.tambahan]);
+  // Dari definisi menu: `menu.fitur` (termasuk tab halaman bertab); cara lama: ratakan `groups`.
+  const fiturMenu = !groupsProp && menu ? menu.fitur : undefined;
+  const fitur = React.useMemo(() => [...(fiturMenu ?? fiturDariMenu(groups)), ...(opsiCari.tambahan ?? [])], [fiturMenu, groups, opsiCari.tambahan]);
   const bukaCari = opsiCari.onBuka ?? (() => setPalet(true));
   usePintasanCari(bukaCari, cari !== false && !opsiCari.onBuka);
 
@@ -251,6 +261,9 @@ export function KerangkaAplikasi({
   const brand = renderLink ? renderLink({ key: '__beranda', label: nama ?? kode, href: beranda }, { ...brandProps, href: beranda }) : <a {...brandProps} href={beranda} />;
 
   const judulTampil = judul ?? (activeKeyProp === undefined ? menu?.judul : undefined) ?? cariLabel(groups, activeKey) ?? nama ?? kode;
+  // Judul ponsel memakai label singkat menu (`pendek`) agar tidak terpotong; judul penuh tetap di tooltip.
+  const judulDariMenu = (judul === undefined || judul === menu?.judul) && (activeKeyProp === undefined || activeKeyProp === menu?.activeKey);
+  const judulPendek = judulDariMenu && menu?.judulPendek && menu.judulPendek !== menu.judul ? menu.judulPendek : undefined;
   const kelompokAktif = t.headerJudul === 'breadcrumb' && !subjudul ? (menu?.kelompok ?? cariKelompok(groups, activeKey)) : undefined;
   const sidebarKelas = cn(
     t.sidebarGaya === 'gelap' && 'dark u-sb-gelap',
@@ -394,7 +407,14 @@ export function KerangkaAplikasi({
           {t.headerJudul !== 'tanpa' && (
             <div className="u-kerangka-judul">
               {(subjudul ?? kelompokAktif) && <small>{subjudul ?? kelompokAktif}</small>}
-              <span>{judulTampil}</span>
+              <span className={judulPendek ? 'u-kerangka-judul-penuh' : undefined} title={typeof judulTampil === 'string' ? judulTampil : undefined}>
+                {judulTampil}
+              </span>
+              {judulPendek && (
+                <span className="u-kerangka-judul-pendek" aria-hidden>
+                  {judulPendek}
+                </span>
+              )}
             </div>
           )}
           {topbarKiri && <div className="u-kerangka-kiri">{topbarKiri}</div>}
@@ -421,7 +441,9 @@ export function KerangkaAplikasi({
     >
       <div ref={isiRef} className="u-kerangka-isi" data-nav-bawah={navBawahTampil.length ? '' : undefined} aria-busy={muatTerlihat || undefined}>
         {kodePengumuman && siakad && <PengumumanTampil aplikasi={kodePengumuman} bagian={['isi']} />}
-        {children}
+        <PenyediaMenuHalaman menu={menu} navigasi={navigasi} renderLink={renderLink}>
+          {tabHalaman && menu?.tab ? <TabMenuHalaman>{children}</TabMenuHalaman> : children}
+        </PenyediaMenuHalaman>
         {tutupAda && (
           <div className="u-mh-tutup" data-keluar={tutupTampil ? undefined : ''}>
             <MuatHalaman gaya={muatAwal} tata={tataMuatTampil} logo={brandIsi} />

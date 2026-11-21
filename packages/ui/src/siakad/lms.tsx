@@ -28,6 +28,8 @@ export interface KelasLms {
   kode_mk?: string | null;
   kelas?: string | null;
   judul: string;
+  /** Nama pendek MK dari prodi (≤ 22 huruf, akademik_mk_nama_pendek); null = aplikasi meringkas judul. */
+  nama_pendek?: string | null;
   ringkasan?: string | null;
   format?: 'mingguan' | 'topik';
   status: 'draf' | 'aktif' | 'selesai' | 'arsip';

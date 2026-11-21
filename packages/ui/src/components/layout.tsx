@@ -191,12 +191,23 @@ function bacaLipatan(kunci?: string): Record<string, boolean> {
   }
 }
 
+/** Label sidebar berbeda dari label penuh (mis. `pendek` menu yang labelnya panjang). */
+const labelDisingkat = (item: NavItem): boolean => Boolean(item.labelTeks && typeof item.label === 'string' && item.label !== item.labelTeks);
+
+/** Teks yang terpotong (elipsis) diberi judul penuh saat disorot, supaya tetap terbaca. */
+export function judulBilaTerpotong(e: React.MouseEvent<HTMLElement>) {
+  const el = e.currentTarget;
+  if (el.scrollWidth > el.clientWidth + 1) {
+    if (!el.title) el.title = el.textContent ?? '';
+  } else if (el.title) el.removeAttribute('title');
+}
+
 /** Isi tooltip item: label tebal + keterangan. */
 function isiTip(item: NavItem, denganLabel: boolean): React.ReactNode {
-  if (!item.keterangan) return item.label;
+  if (!item.keterangan) return labelDisingkat(item) ? item.labelTeks : item.label;
   return (
     <span className="u-nav-tip">
-      {denganLabel && <strong>{item.label}</strong>}
+      {(denganLabel || labelDisingkat(item)) && <strong>{labelDisingkat(item) ? item.labelTeks : item.label}</strong>}
       <span>{item.keterangan}</span>
     </span>
   );
@@ -206,7 +217,9 @@ function NavLink({ item, active, collapsed, renderLink, depth, aksiItem, menuIte
   const content = (
     <>
       {depth === 0 && <span className="u-nav-icon">{item.icon}</span>}
-      <span className="u-nav-label">{item.label}</span>
+      <span className="u-nav-label" title={labelDisingkat(item) && !item.keterangan ? item.labelTeks : undefined} onMouseEnter={labelDisingkat(item) || item.keterangan ? undefined : judulBilaTerpotong}>
+        {item.label}
+      </span>
       {item.luar && <ExternalLink className="u-nav-luar" aria-label="(tab baru)" />}
       {item.baru && <span className="u-nav-baru">Baru</span>}
       {item.badge != null && <span className="u-nav-badge">{item.badge}</span>}
@@ -237,7 +250,7 @@ function NavLink({ item, active, collapsed, renderLink, depth, aksiItem, menuIte
     );
   if (item.keterangan)
     el = (
-      <Tooltip content={isiTip(item, false)} side="right" delay={700}>
+      <Tooltip content={isiTip(item, (item.labelTeks ?? (typeof item.label === "string" ? item.label : "")).length > 20)} side="right" delay={700}>
         {el}
       </Tooltip>
     );

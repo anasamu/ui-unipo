@@ -170,3 +170,146 @@ describe('navigasi bawah', () => {
   });
 });
 
+
+describe('label panjang', () => {
+  it('label sidebar dan judul kategori > 22 huruf ditandai; pendek tampil di sidebar dengan label penuh untuk judul', () => {
+    const d = definisiMenu(
+      [
+        { kategori: 'beranda', item: [{ label: 'Beranda', ke: '/' }] },
+        {
+          kategori: 'bidang',
+          judul: 'Pengendalian & peningkatan',
+          item: [
+            { label: 'Penyusunan (CPL, MK, CPMK, RPS)', ke: '/kurikulum' },
+            { label: 'Pemutakhiran rekening & pajak', ke: '/rekening', pendek: 'Rekening' },
+            { label: 'Induk', anak: [{ label: 'Anak dengan label yang terlalu panjang', ke: '/anak' }, { label: 'Pendek', ke: '/p' }] },
+          ],
+        },
+      ],
+      { periksa: false },
+    );
+    const m = periksaMenu(d).filter((x) => x.jenis === 'label-panjang');
+    expect(m.map((x) => x.pesan)).toEqual([
+      expect.stringContaining('judul kategori "Pengendalian & peningkatan" 26 huruf'),
+      expect.stringContaining('"Penyusunan (CPL, MK, CPMK, RPS)" 31 huruf'),
+      expect.stringContaining('"Anak dengan label yang terlalu panjang"'),
+    ]);
+    expect(periksaMenu(d, { maksLabel: 40 }).filter((x) => x.jenis === 'label-panjang')).toEqual([]);
+    const h = susunMenu(d, {}, { path: '/rekening' });
+    const rek = h.groups[1]!.items[1]!;
+    expect(rek.label).toBe('Rekening');
+    expect(rek.labelTeks).toBe('Pemutakhiran rekening & pajak');
+    expect(h.judul).toBe('Pemutakhiran rekening & pajak');
+    expect(h.judulPendek).toBe('Rekening');
+    expect(h.fitur.find((f) => f.key === '/rekening')!.label).toBe('Pemutakhiran rekening & pajak');
+  });
+});
+
+describe('halaman bertab', () => {
+  const d = () =>
+    definisiMenu(
+      [
+        { kategori: 'beranda', item: [{ label: 'Beranda', ke: '/' }] },
+        {
+          kategori: 'bidang',
+          judul: 'Akun & akses',
+          item: [
+            {
+              label: 'Akun pengguna',
+              ke: '/akun',
+              ket: 'Kelola akun',
+              tab: [
+                { kunci: 'daftar', label: 'Daftar akun', ke: '/akun' },
+                { kunci: 'riwayat', label: 'Riwayat masuk', ke: '/akun/riwayat', izin: 'akun:audit', kata: 'login log' },
+                { kunci: 'sesi', label: 'Sesi aktif', ke: '/akun?tab=sesi', izin: 'akun:sesi' },
+              ],
+            },
+            { label: 'Hanya admin', ke: '/admin', tab: [{ label: 'A', ke: '/admin', izin: 'x' }, { label: 'B', ke: '/admin/b', izin: 'x' }] },
+          ],
+        },
+      ],
+      { periksa: false },
+    );
+  it('satu item sidebar; tab disaring izin; item tanpa tab terlihat disembunyikan', () => {
+    const h = susunMenu(d(), { izin: ['akun:audit'] }, { path: '/akun/riwayat' });
+    expect(h.groups[1]!.items.map((i) => i.label)).toEqual(['Akun pengguna']);
+    expect(h.activeKey).toBe('/akun');
+    expect(h.judul).toBe('Akun pengguna');
+    expect(h.tab).toMatchObject({ induk: '/akun', judul: 'Akun pengguna', aktif: 'riwayat' });
+    expect(h.tab!.items.map((t) => t.label)).toEqual(['Daftar akun', 'Riwayat masuk']);
+  });
+  it('tab ber-?tab= dan alamat dasar', () => {
+    const k = { superadmin: true };
+    expect(susunMenu(d(), k, { path: '/akun?tab=sesi' }).tab!.aktif).toBe('sesi');
+    expect(susunMenu(d(), k, { path: '/akun' }).tab!.aktif).toBe('daftar');
+    expect(susunMenu(d(), k, { path: '/akun/12' }).tab!.aktif).toBe('daftar');
+  });
+  it('alamat tab terlarang ditandai agar dialihkan', () => {
+    const h = susunMenu(d(), { izin: [] }, { path: '/akun/riwayat' });
+    expect(h.tab!.terlarang).toBe(true);
+    expect(susunMenu(d(), { izin: [] }, { path: '/akun' }).tab!.terlarang).toBeUndefined();
+    // Alamat tab terlarang di luar alamat dasar item tetap mengaktifkan halamannya.
+    const d2 = definisiMenu([{ kategori: 'bidang', judul: 'X', item: [{ label: 'Pegawai', ke: '/pegawai', tab: [{ label: 'Aktif', ke: '/pegawai' }, { label: 'Nonaktif', ke: '/pegawai-keluar', izin: 'x' }] }] }], { periksa: false });
+    expect(susunMenu(d2, { izin: [] }, { path: '/pegawai-keluar' })).toMatchObject({ activeKey: '/pegawai', tab: { terlarang: true } });
+  });
+  it('Cari fitur menemukan tiap tab yang terlihat', () => {
+    const f = susunMenu(d(), { izin: ['akun:audit'] }).fitur;
+    expect(f.map((x) => x.key)).toEqual(['/', '/akun', 'tab:riwayat']);
+    expect(f[2]).toMatchObject({ label: 'Riwayat masuk', href: '/akun/riwayat', kelompok: 'Akun & akses › Akun pengguna', kataKunci: ['login', 'log'] });
+  });
+  it('lencana induk = jumlah lencana tab', () => {
+    const h = susunMenu(d(), { superadmin: true }, { lencana: { riwayat: 2, sesi: 3 } });
+    expect(h.groups[1]!.items[0]!.badge).toBe(5);
+  });
+  it('periksaMenu: tab bersih; rute tab ganda, tab tunggal, label tab ganda', () => {
+    expect(periksaMenu(d())).toEqual([]);
+    const buruk = definisiMenu(
+      [
+        {
+          kategori: 'bidang',
+          judul: 'X',
+          item: [
+            { label: 'Riwayat', ke: '/akun/riwayat' },
+            { label: 'Akun', ke: '/akun', tab: [{ label: 'Daftar', ke: '/akun' }, { label: 'Riwayat', ke: '/akun/riwayat' }, { label: 'riwayat', ke: '/akun/r2' }] },
+            { label: 'Tunggal', ke: '/t', tab: [{ label: 'T', ke: '/t' }] },
+          ],
+        },
+      ],
+      { periksa: false },
+    );
+    const m = periksaMenu(buruk);
+    expect(m.some((x) => x.jenis === 'rute-ganda' && x.pesan.includes('/akun/riwayat'))).toBe(true);
+    expect(m.some((x) => x.jenis === 'tab' && x.pesan.includes('hanya punya 1 tab'))).toBe(true);
+    expect(m.some((x) => x.jenis === 'tab' && x.pesan.includes('ganda di halaman "Akun"'))).toBe(true);
+  });
+});
+
+describe('halaman bertab: tautan item', () => {
+  it('sidebar, Cari fitur, dan navigasi bawah menuju tab pertama yang terlihat bila tab di alamat item terlarang', () => {
+    const d = definisiMenu(
+      [
+        {
+          kategori: 'bidang',
+          judul: 'X',
+          item: [{ label: 'Akun', ke: '/akun', ikon: 'A', bawah: true, tab: [{ label: 'Daftar', ke: '/akun', izin: 'a' }, { label: 'Sesi', ke: '/sesi', izin: 'b' }, { label: 'Log', ke: '/log' }] }],
+        },
+      ],
+      { periksa: false },
+    );
+    const h = susunMenu(d, { izin: ['b'] });
+    expect(h.groups[0]!.items[0]!.href).toBe('/sesi');
+    expect(h.groups[0]!.items[0]!.key).toBe('/akun');
+    expect(h.navBawah[0]!.href).toBe('/sesi');
+    expect(h.fitur.map((f) => f.href)).toEqual(['/sesi', '/log']);
+    expect(periksaMenu(d, { konteks: { izin: [] } })).toEqual([]);
+  });
+});
+
+describe('batas item per kategori', () => {
+  it('bawaan 6 item tingkat atas (MAKS_ITEM)', () => {
+    const isi = (n: number) => definisiMenu([{ kategori: 'bidang', judul: 'X', item: Array.from({ length: n }, (_, i) => ({ label: `M${i}`, ke: `/m${i}` })) }], { periksa: false });
+    expect(periksaMenu(isi(6))).toEqual([]);
+    expect(periksaMenu(isi(7)).map((m) => m.jenis)).toEqual(['kategori-penuh']);
+    expect(periksaMenu(isi(7), { maksItem: 7 })).toEqual([]);
+  });
+});

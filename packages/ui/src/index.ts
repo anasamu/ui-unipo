@@ -67,4 +67,5 @@ export * from './components/dua-langkah';
 export * from './components/peta';
 export * from './components/pencarian-fitur';
 export * from './components/menu-aplikasi';
+export * from './components/tab-halaman';
 export * from './components/alokasi';

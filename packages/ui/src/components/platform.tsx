@@ -42,7 +42,9 @@ export function NavigasiBawah({ items, activeKey, renderLink, className }: { ite
               {it.icon}
               {it.badge != null && <span className="u-nav-bawah-badge">{it.badge}</span>}
             </span>
-            <span className="u-nav-bawah-label">{it.label}</span>
+            <span className="u-nav-bawah-label" title={it.label.length > 12 ? it.label : undefined}>
+              {it.label}
+            </span>
           </>
         );
         const props = { className: 'u-nav-bawah-item', 'aria-current': it.key === activeKey ? ('page' as const) : undefined };
