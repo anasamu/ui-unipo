@@ -8,24 +8,45 @@ const d = (n: number, h?: number) => {
   const s = `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
   return h == null ? s : `${s} ${String(h).padStart(2, '0')}:00:00`;
 };
-const awal = (n: number) => d(n - now.getDate() + 1);
 
 // ---------------------------------------------------------------- Kalender terpadu
+// Periode akademik + tahapan (bentuk GET /v1/kalender/tahun; kal_tahapan: jenis = kode tahapan).
+const JENIS_TAHAP: Record<string, string> = { pembayaran: 'keuangan', krs: 'krs', perkuliahan: 'perkuliahan', uts: 'ujian', uas: 'ujian', input_nilai_dosen: 'nilai', wisuda: 'wisuda' };
+const JUDUL_TAHAP: Record<string, string> = { pembayaran: 'Pembayaran', krs: 'KRS', perkuliahan: 'Perkuliahan', uts: 'UTS', uas: 'UAS', input_nilai_dosen: 'Input nilai dosen', wisuda: 'Wisuda' };
+const periode = (tahun_id: string, nama: string, aktif: boolean, tahap: Array<[string, number, number]>) => ({
+  tahun_id,
+  tahun: tahun_id.slice(0, 4),
+  semester: Number(tahun_id.slice(4)),
+  nama,
+  aktif,
+  tahap: tahap.map(([kode, a, b]) => ({ sumber: 'tahun', jenis: JENIS_TAHAP[kode] ?? 'akademik', tahap: kode, judul: `${JUDUL_TAHAP[kode]} ${nama}`, mulai: d(a), selesai: d(b), tahun_id, aktif })),
+});
+export const PERIODE_DEMO = [
+  periode('20262', 'Genap 2026/2027', false, [['krs', 30, 37], ['perkuliahan', 70, 190]]),
+  periode('20261', 'Ganjil 2026/2027', true, [['pembayaran', -110, -96], ['krs', -95, -81], ['perkuliahan', -80, 45], ['uts', -9, -4], ['uas', 44, 52], ['input_nilai_dosen', 50, 60]]),
+  periode('20252', 'Genap 2025/2026', false, [['krs', -270, -256], ['perkuliahan', -250, -130], ['uts', -190, -184], ['uas', -135, -128], ['input_nilai_dosen', -127, -112]]),
+];
+const KUNCI_DEMO = PERIODE_DEMO.map((p) => ({
+  tahun_id: p.tahun_id,
+  nama: p.nama,
+  aktif: p.aktif,
+  ditutup: p.tahun_id === '20252',
+  keadaan: p.aktif ? 'aktif' : p.tahun_id === '20252' ? 'ditutup' : 'dibuka',
+  sejak: p.tahun_id === '20252' ? d(-100) : null,
+  oleh: null,
+  alasan: null,
+  sumber: p.tahun_id === '20252' ? 'otomatis' : 'bawaan',
+  buka_kembali: [],
+  dibuka_kembali_sampai: null,
+}));
+tambahRute(/\/v1\/kalender\/tahun$/, () => ({ data: PERIODE_DEMO }));
+tambahRute(/\/v1\/kalender\/kunci$/, () => ({ data: KUNCI_DEMO, meta: { aktif: '20261' } }));
+const tahunNatal = now.getFullYear();
+
 const KALENDER = [
-  {
-    sumber: 'tahun',
-    jenis: 'perkuliahan',
-    judul: 'Perkuliahan semester ganjil 2026/2027',
-    mulai: awal(-60),
-    selesai: awal(45),
-  },
-  {
-    sumber: 'tahun',
-    jenis: 'ujian',
-    judul: 'Ujian tengah semester',
-    mulai: d(-9),
-    selesai: d(-4),
-  },
+  ...PERIODE_DEMO.flatMap((p) => p.tahap),
+  { sumber: 'libur', jenis: 'cuti_bersama', judul: 'Cuti bersama Natal', mulai: `${tahunNatal}-12-24`, selesai: null, libur: true },
+  { sumber: 'libur', jenis: 'libur', judul: 'Hari Raya Natal', mulai: `${tahunNatal}-12-25`, selesai: null, libur: true },
   {
     sumber: 'batas',
     jenis: 'nilai',
@@ -101,20 +122,6 @@ const KALENDER = [
     mulai: d(22),
     selesai: null,
     lokasi: 'Gedung Serbaguna Pohuwato',
-  },
-  {
-    sumber: 'batas',
-    jenis: 'krs',
-    judul: 'Pengisian KRS semester genap',
-    mulai: d(30),
-    selesai: d(37),
-  },
-  {
-    sumber: 'tahun',
-    jenis: 'ujian',
-    judul: 'Ujian akhir semester',
-    mulai: d(44),
-    selesai: d(52),
   },
   {
     sumber: 'kalender',
