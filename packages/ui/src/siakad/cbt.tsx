@@ -30,6 +30,8 @@ export interface UjianSaya {
   ujian: string;
   jenis: string;
   kode_mk?: string | null;
+  /** Nama mata kuliah (ditampilkan alih-alih kode). */
+  nama_mk?: string | null;
   durasi_menit: number;
   petunjuk?: string | null;
   ujian_status: 'siap' | 'selesai';
@@ -211,7 +213,7 @@ function KartuUjian({ u, onMulai }: { u: UjianSaya; onMulai: (pesertaId: number,
         </Badge>
       </header>
       <h3>{u.ujian}</h3>
-      <p className="u-cbt-ujian-sub">{[u.kode_mk, u.sesi, u.nomor_peserta && `No. ${u.nomor_peserta}`].filter(Boolean).join(' · ')}</p>
+      <p className="u-cbt-ujian-sub">{[u.nama_mk ?? u.kode_mk, u.sesi, u.nomor_peserta && `No. ${u.nomor_peserta}`].filter(Boolean).join(' · ')}</p>
       <dl className="u-cbt-ujian-info">
         <div>
           <dt>
