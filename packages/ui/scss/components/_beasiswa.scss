@@ -269,3 +269,29 @@
     color: var(--u-muted-foreground);
   }
 }
+// Pembebasan biaya (mode keempat penyaluran): komponen berkotak dan pilihan jenis biaya berurutan.
+.u-bsw-komponen-bebas {
+  gap: 0.5rem;
+}
+.u-bsw-urut {
+  display: grid;
+  gap: 0.375rem;
+}
+.u-bsw-urut-daftar {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.125rem 0.25rem 0.125rem 0.625rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-full, 999px);
+    font-size: var(--u-text-sm);
+    background: var(--u-muted, transparent);
+  }
+}
