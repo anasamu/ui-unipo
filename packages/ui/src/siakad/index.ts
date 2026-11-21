@@ -73,6 +73,7 @@ export * from './aturan-keputusan';
 export * from './aturan-fakultas';
 export * from './aturan-kelompok';
 export * from './aturan-sk';
+export * from './aturan-pengatur';
 export * from './biaya';
 export * from './panitia';
 export * from './tema-aplikasi';
