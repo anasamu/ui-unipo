@@ -14,6 +14,7 @@ import { invalidateSiakad, pesanGalat, useOptionalSiakad } from './provider';
 import { waktuRelatif } from './notifikasi';
 import { useAkunSaya } from './akun';
 import { usePilihBerkas } from '../components/pilih-berkas-lokal';
+import { SegmentedControl } from '../components/forms';
 
 /**
  * Kelola berkas cepat dari bilah atas: unggah (tombol atau tarik-lepas), berkas terbaru dengan tombol unduh, dan
@@ -246,13 +247,16 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
             ))}
           </div>
         )}
-        <div className="u-kabar-tab u-berkas-cepat-tab" role="tablist">
-          <button type="button" role="tab" aria-selected={tab === 'terbaru'} onClick={() => setTab('terbaru')}>
-            Terbaru
-          </button>
-          <button type="button" role="tab" aria-selected={tab === 'dibagikan'} onClick={() => setTab('dibagikan')}>
-            Dibagikan dengan saya
-          </button>
+        <div className="u-kabar-tab u-berkas-cepat-tab">
+          <SegmentedControl<typeof tab>
+            aria-label="Daftar berkas"
+            value={tab}
+            onValueChange={setTab}
+            options={[
+              { value: 'terbaru', label: 'Terbaru' },
+              { value: 'dibagikan', label: 'Dibagikan dengan saya' },
+            ]}
+          />
         </div>
         {tab === 'terbaru' ? (
           daftar === null ? (

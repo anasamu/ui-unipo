@@ -196,48 +196,20 @@
 }
 .u-kabar-tab {
   display: flex;
-  gap: 0.25rem;
   padding: 0 1rem 0.5rem;
   border-bottom: 1px solid var(--u-border);
-  button {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    height: 1.75rem;
-    padding-inline: 0.625rem;
-    border: 0;
-    border-radius: 999px;
-    background: none;
-    color: var(--u-muted-foreground);
-    font: inherit;
-    font-size: var(--u-text-xs);
-    font-weight: 500;
-    cursor: pointer;
-    transition:
-      background-color var(--u-duration-fast),
-      color var(--u-duration-fast);
-    &:hover {
-      color: var(--u-foreground);
-    }
-    &[aria-selected='true'] {
-      background: var(--u-active);
-      color: var(--u-foreground);
-    }
-    &:focus-visible {
-      @include focus-ring;
-    }
-    span {
-      min-width: 1.125rem;
-      padding: 0 0.3125rem;
-      border-radius: 999px;
-      background: var(--u-primary);
-      color: var(--u-primary-foreground);
-      font-size: 0.625rem;
-      font-variant-numeric: tabular-nums;
-      line-height: 1.125rem;
-      text-align: center;
-    }
-  }
+}
+.u-kabar-tab-jumlah {
+  min-width: 1.125rem;
+  margin-inline-start: 0.375rem;
+  padding: 0 0.3125rem;
+  border-radius: 999px;
+  background: var(--u-primary);
+  color: var(--u-primary-foreground);
+  font-size: 0.625rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.125rem;
+  text-align: center;
 }
 .u-kabar-daftar {
   display: flex;
