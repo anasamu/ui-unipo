@@ -13,6 +13,7 @@ import { BatangAlokasi, MeterKuota, SliderNilai, nadaKuota, type BagianAlokasi }
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { PanelBatasUnggah, ringkasBatasUnggah, type NilaiBatasUnggah } from './batas-unggah';
 import type { BatasUnggah } from './berkas';
+import { teksKuotaKaki } from './drive-pohon';
 
 /**
  * Aturan penyimpanan online (API /v1/penyimpanan, docs/PENYIMPANAN.md di siakad_unipo):
@@ -1182,6 +1183,7 @@ export function KuotaBerkas({ kuota, unit, ringkas, className }: KuotaBerkasProp
     const batas = kuota.batas ? kuota.batas.byte : kuota.kuota_byte;
     const persen = batas ? (pakai / batas) * 100 : null;
     const teks = batas ? `${formatBytes(pakai)} dari ${formatBytes(batas)}` : `${formatBytes(pakai)} · kuota belum diatur`;
+    const kaki = teksKuotaKaki(formatBytes(pakai), batas ? formatBytes(batas) : null, kolamIkat ? kuota.batas!.label : null);
     const label = kuota.ruang === 'unit' ? 'Ruang bersama unit' : 'Penyimpanan saya';
     const bisaRinci = kuota.ruang === 'pribadi' || kelolaUnit;
     const Isi = bisaRinci ? 'button' : 'span';
@@ -1200,7 +1202,9 @@ export function KuotaBerkas({ kuota, unit, ringkas, className }: KuotaBerkasProp
                 <i style={{ width: `${Math.min(100, Math.max(persen ?? 0, pakai > 0 ? 3 : 0))}%` }} />
               </span>
             ) : null}
-            <small>{teks}</small>
+            {/* Dua baris pendek yang tidak dipotong: "424,1 KB dipakai" + "Kuota belum diatur" / "Mengikuti kolam ...". */}
+            <small className="u-mb-kuota-utama">{kaki.utama}</small>
+            {kaki.ket && <small className="u-mb-kuota-ket">{kaki.ket}</small>}
           </span>
         </Isi>
         {saya && <PanelPenyimpananSaya open onOpenChange={setSaya} />}

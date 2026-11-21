@@ -21,6 +21,8 @@ interface B {
   unit: string | null;
   periode: string | null;
   terenkripsi: boolean;
+  pemilik?: string | null;
+  pemilik_nama?: string | null;
 }
 const uuid = () => '6f1c2d3e-xxxx-4xxx-9xxx-xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
 const MIME: Record<string, string> = {
@@ -56,6 +58,9 @@ const b = (nama: string, ukuran: number, kategori: string, folder: string | null
     unit: null,
     periode: hari > 14 ? '20242' : '20251',
     terenkripsi: false,
+    // Pemilik = username (NIDN untuk dosen); SIAKAD juga mengirim pemilik_nama untuk ditampilkan.
+    pemilik: '0911129201',
+    pemilik_nama: 'Dr. Rahmawati Hasan, M.Kom.',
   };
 };
 let BERKAS: B[] = [
@@ -105,13 +110,15 @@ let FOLDER: F[] = [
 
 // ---------------------------------------------------------------- ruang: pribadi, unit, folder yang dibagikan
 const PEMILIK = ['siti.bauk', 'andi.keu', 'rahma.bauk'];
+const NAMA_PEMILIK: Record<string, string> = { 'siti.bauk': 'Siti Aisyah Pakaya', 'andi.keu': 'Andi Saputra', 'rahma.bauk': 'Rahma Djafar' };
 let nPemilik = 0;
 const unitB = (unit: string, nama: string, ukuran: number, folder: string | null, periode: string, terenkripsi = false): B & { pemilik: string } => ({
   ...b(nama, ukuran, 'dokumen', folder),
   unit,
   periode,
   terenkripsi,
-  pemilik: PEMILIK[nPemilik++ % PEMILIK.length],
+  pemilik: PEMILIK[nPemilik % PEMILIK.length],
+  pemilik_nama: NAMA_PEMILIK[PEMILIK[nPemilik++ % PEMILIK.length]],
 });
 const RUANG: Record<string, { berkas: B[]; folder: F[] }> = {
   u: { berkas: BERKAS, folder: FOLDER },
@@ -213,7 +220,10 @@ async function bacaBody(init?: RequestInit): Promise<Record<string, unknown>> {
 /** Gambar mini tiruan (SVG warna) supaya pratinjau dan kartu gambar tampak hidup. */
 function gambarTiruan(x: B) {
   const hue = [...x.nama].reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${hue} 70% 62%)"/><stop offset="1" stop-color="hsl(${(hue + 50) % 360} 65% 38%)"/></linearGradient></defs><rect width="640" height="480" fill="url(#g)"/><circle cx="470" cy="150" r="60" fill="rgba(255,255,255,.55)"/><path d="M0 400 L180 240 L320 360 L430 280 L640 430 L640 480 L0 480Z" fill="rgba(0,0,0,.28)"/></svg>`;
+  // Pas foto: potret beresolusi tinggi (seperti foto kamera) untuk menguji pratinjau yang tidak boleh meluap.
+  const potret = /pas foto/i.test(x.nama);
+  const [w, h] = potret ? [1200, 1800] : [640, 480];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 640 480" preserveAspectRatio="none"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${hue} 70% 62%)"/><stop offset="1" stop-color="hsl(${(hue + 50) % 360} 65% 38%)"/></linearGradient></defs><rect width="640" height="480" fill="url(#g)"/><circle cx="470" cy="150" r="60" fill="rgba(255,255,255,.55)"/><path d="M0 400 L180 240 L320 360 L430 280 L640 430 L640 480 L0 480Z" fill="rgba(0,0,0,.28)"/></svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
@@ -225,6 +235,8 @@ tambahRute(/^\/v1\/berkas\/info$/, () => ({
     ukuran_potongan: 2 * 1024 * 1024,
     ekstensi: ['pdf', 'jpg', 'jpeg', 'png', 'docx', 'xlsx', 'pptx', 'zip', 'mp4', 'mp3', 'txt'],
     penyimpanan: { driver: 'r2', kode: 'r2', nama: 'Cloudflare R2' },
+    // ?drive=satu|banyak: ruang pribadi tanpa kuota (Pustikom belum mengatur), seperti di server yang belum memasang aturan.
+    ...(RAGAM_DRIVE === 'banyak' || RAGAM_DRIVE === 'satu' ? { kuota: { ruang: 'pribadi', kuota_byte: null, terpakai_byte: 434_278, sisa_kolam_byte: null, kolam: [], batas: null } } : {}),
   },
 }));
 
@@ -510,7 +522,49 @@ const drv = (id: string, nama: string, singkatan: string | null, induk: string |
     batas: batasGb ? { byte: batasGb * GB, terpakai_byte: pakai + Math.round(batasGb * GB * (unit === 'bauk' ? 0.83 : 0.21)), sisa_byte: 0, persen: 0, sumber: 'bersama', kode: unit, label: 'Ruang bersama' } : null,
   };
 };
-tambahRute(/^\/v1\/berkas\/drive$/, () => ({
+// Ragam drive untuk mencoba sidebar: ?drive=banyak (admin dengan semua unit, nama dari arsip_unit) atau ?drive=satu (dosen satu prodi).
+const RAGAM_DRIVE = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('drive');
+const FAKULTAS: Array<[string, string, string, Array<[string, string, string]>]> = [
+  ['fak-04', 'FAKULTAS HUKUM', 'FH', [['prodi-74201', 'Program Studi ILMU HUKUM', 'IH']]],
+  ['fak-01', 'FAKULTAS ILMU KOMPUTER', 'FIK', [['prodi-55201', 'Program Studi INFORMATIKA', 'INF'], ['prodi-57201', 'Program Studi SISTEM INFORMASI', 'SI']]],
+  ['fak-05', 'FAKULTAS ILMU SOSIAL DAN ILMU POLITIK', 'FISIP', [['prodi-65201', 'Program Studi ILMU PEMERINTAHAN', 'IP']]],
+  ['fak-06', 'FAKULTAS KEGURUAN DAN ILMU PENDIDIKAN', 'FKIP', [['prodi-86204', 'Program Studi ADMINISTRASI PENDIDIKAN', 'AP'], ['prodi-88203', 'Program Studi PENDIDIKAN BAHASA INGGRIS', 'PBI'], ['prodi-86206', 'Program Studi PENDIDIKAN GURU SEKOLAH DASAR', 'PGSD'], ['prodi-84202', 'Program Studi PENDIDIKAN MATEMATIKA', 'PM']]],
+  ['fak-03', 'FAKULTAS PERTANIAN DAN ILMU PERIKANAN', 'FPIP', [['prodi-54211', 'Program Studi AGROTEKNOLOGI/AGROEKOTEKNOLOGI', 'AGR'], ['prodi-54250', 'Program Studi AKUAKULTUR', 'AKU']]],
+  ['fak-02', 'FAKULTAS TEKNIK DAN PERENCANAAN', 'FTP', [['prodi-23201', 'Program Studi ARSITEKTUR', 'ARS'], ['prodi-35201', 'Program Studi PERENCANAAN WILAYAH', 'PW'], ['prodi-22201', 'Program Studi TEKNIK SIPIL', 'TS']]],
+];
+const BAGIAN: Array<[string, string, string]> = [
+  ['baak', 'Biro Administrasi Akademik', 'BAAK'],
+  ['bauk', 'Biro Administrasi Umum dan Keuangan', 'BAUK'],
+  ['sdm', 'Biro Sumber Daya Manusia', 'SDM'],
+  ['lpm', 'Lembaga Penjaminan Mutu', 'LPM'],
+  ['lppm', 'Lembaga Penelitian dan Pengabdian kepada Masyarakat', 'LPPM'],
+  ['pmb', 'Panitia Penerimaan Mahasiswa Baru', 'PMB'],
+  ['pustikom', 'UPT Pusat Teknologi Informasi dan Komunikasi', 'PUSTIKOM'],
+];
+function driveRagam(pribadi: Record<string, unknown>) {
+  if (RAGAM_DRIVE === 'satu') {
+    return [
+      pribadi,
+      drv('unit:univ', 'Universitas Pohuwato', 'UNIPO', null, 0, 'univ', 'unit', null, null, 'universitas'),
+      drv('unit:fak-01', 'FAKULTAS ILMU KOMPUTER', 'FIK', 'unit:univ', 1, 'fak-01', 'unit', null, null, 'fakultas'),
+      drv('unit:prodi-55201', 'Program Studi INFORMATIKA', 'INF', 'unit:fak-01', 2, 'prodi-55201', 'unit', 'anggota', 5, 'prodi'),
+    ];
+  }
+  const out = [pribadi, drv('unit:univ', 'Universitas Pohuwato', 'UNIPO', null, 0, 'univ', 'unit', 'kelola', 50, 'universitas')];
+  out.push(drv('arsip:univ', 'Arsip universitas', 'Arsip', 'unit:univ', 1, 'arsip-univ', 'arsip', 'kelola', null, 'arsip'));
+  for (const [k, n, s, prodi] of FAKULTAS) {
+    out.push(drv(`unit:${k}`, n, s, 'unit:univ', 1, k, 'unit', 'kelola', null, 'fakultas'));
+    for (const [pk, pn, ps] of prodi) out.push(drv(`unit:${pk}`, pn, ps, `unit:${k}`, 2, pk, 'unit', pk === 'prodi-55201' ? 'pembaca' : 'kelola', null, 'prodi'));
+  }
+  for (const [k, n, s] of BAGIAN) out.push(drv(`unit:${k}`, n, s, 'unit:univ', 1, k, 'unit', k === 'lppm' ? 'anggota' : 'kelola', k === 'bauk' ? 10 : null));
+  return out;
+}
+tambahRute(/^\/v1\/berkas\/drive$/, () => (RAGAM_DRIVE === 'banyak' || RAGAM_DRIVE === 'satu' ? {
+  data: {
+    penyimpanan: true,
+    drive: driveRagam({ id: 'pribadi', jenis: 'pribadi', unit_id: null, induk: null, tingkat: 0, nama: 'Berkas saya', hak: 'pemilik', ruang: {}, pakai: { byte: 434_278, jumlah: 3 }, batas: null }),
+  },
+} : {
   data: {
     penyimpanan: true,
     drive: [
