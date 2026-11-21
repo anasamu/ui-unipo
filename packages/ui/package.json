@@ -133,7 +133,8 @@
     },
     "./scss": "./dist/scss/index.scss",
     "./package.json": "./package.json",
-    "./registry.json": "./dist/registry.json"
+    "./registry.json": "./dist/registry.json",
+    "./jalur-api": "./cli/jalur-api.mjs"
   },
   "files": [
     "dist",

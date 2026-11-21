@@ -367,6 +367,49 @@ async function tema() {
   ok(`Tema ditulis ke ${c.b(out)} (primer ${primary}, sekunder ${secondary}, radius ${radius}px)`);
 }
 
+// ---------------------------------------------------------------- jalur-bff
+/**
+ * Daftar jalur API yang dipanggil komponen unipo-ui yang diimpor aplikasi, untuk daftar izin BFF.
+ *   npx unipo-ui jalur-bff                                   ringkasan
+ *   npx unipo-ui jalur-bff --tulis bff/lib/izin-komponen.json   tulis berkas izin (dibaca BFF)
+ *   npx unipo-ui jalur-bff --cek bff/lib/izin-komponen.json     gagal (kode 1) bila berkas basi
+ *   --src src (folder sumber aplikasi)  --sdk <index.d.ts unipo-siakad-sdk>  --rinci (asal tiap pola)
+ */
+async function jalurBff() {
+  const { jalurAplikasi, isiBerkasIzin, cariSdkDts } = await import('./jalur-api.mjs');
+  const src = resolve(cwd, typeof flags.src === 'string' ? flags.src : 'src');
+  if (!existsSync(src)) fail(`Folder sumber ${src} tidak ada (atur dengan --src).`);
+  const sdkDts = typeof flags.sdk === 'string' ? resolve(cwd, flags.sdk) : cariSdkDts(cwd);
+  if (!sdkDts) warn('unipo-siakad-sdk tidak ditemukan: panggilan metode SDK (siakad.modul.metode()) tidak ikut dipetakan.');
+  const isi = isiBerkasIzin(src, { sdkDts });
+  if (typeof flags.tulis === 'string') {
+    const out = resolve(cwd, flags.tulis);
+    mkdirSync(dirname(out), { recursive: true });
+    writeFileSync(out, isi);
+    ok(`${JSON.parse(isi).pola.length} pola jalur ditulis ke ${c.b(relative(cwd, out))}`);
+    return;
+  }
+  if (typeof flags.cek === 'string') {
+    const out = resolve(cwd, flags.cek);
+    const lama = existsSync(out) ? readFileSync(out, 'utf8') : '';
+    if (lama !== isi) {
+      const a = new Set(lama ? JSON.parse(lama).pola : []);
+      const b = JSON.parse(isi).pola;
+      const kurang = b.filter((p) => !a.has(p));
+      const lebih = [...a].filter((p) => !b.includes(p));
+      if (kurang.length) console.error(`Belum diizinkan BFF (${kurang.length}):\n  ${kurang.join('\n  ')}`);
+      if (lebih.length) console.error(`Tidak dipakai lagi (${lebih.length}):\n  ${lebih.join('\n  ')}`);
+      fail(`${relative(cwd, out)} basi. Perbarui: npx unipo-ui jalur-bff --tulis ${relative(cwd, out)}`);
+    }
+    ok(`${relative(cwd, out)} sesuai komponen yang dipakai.`);
+    return;
+  }
+  const r = jalurAplikasi(src, { sdkDts });
+  console.log(`${c.b(r.komponen.length)} komponen unipo-ui dipakai, ${c.b(r.pola.length)} pola jalur API:`);
+  for (const p of r.pola) console.log(`  ${p}${flags.rinci ? c.d('  <- ' + r.rinci[p].join(', ')) : ''}`);
+  if (r.tidakTerpetakan.length) warn(`Tidak bisa dipetakan (awalan dinamis):\n  ${r.tidakTerpetakan.join('\n  ')}`);
+}
+
 function help() {
   console.log(`
 ${c.b('unipo-ui')} ${c.d('v' + pkg.version)}  Komponen UI UNIPO
@@ -379,6 +422,8 @@ ${c.b('Perintah')}
   add <Komponen...>    Salin sumber komponen dan dependensinya ke proyek (bisa diubah bebas)
                        --dir src/components/unipo --overwrite
   list [kata]          Daftar komponen per kelompok
+  jalur-bff            Jalur API yang dipanggil komponen unipo-ui yang diimpor aplikasi (izin BFF)
+                       --tulis bff/lib/izin-komponen.json | --cek bff/lib/izin-komponen.json --src src --rinci
   tema                 Tulis ulang berkas tema   --primary --secondary --radius --netral --font --teks
                        --bayangan --gerak --dari "<tautan tema.css dari api.unipo.ac.id/docs/tema>" --out --stdout
 
@@ -396,6 +441,6 @@ Panduan: https://api.unipo.ac.id/docs/panduan/ui
 `);
 }
 
-const run = { init, platform: platformCmd, add, list, tema, theme: tema, help, '--help': help, '-h': help, '--version': () => console.log(pkg.version), '-v': () => console.log(pkg.version) }[cmd];
+const run = { init, platform: platformCmd, add, list, tema, 'jalur-bff': jalurBff, theme: tema, help, '--help': help, '-h': help, '--version': () => console.log(pkg.version), '-v': () => console.log(pkg.version) }[cmd];
 if (!run) fail(`Perintah "${cmd}" tidak dikenal. Lihat \`npx unipo-ui help\`.`);
 await run();
