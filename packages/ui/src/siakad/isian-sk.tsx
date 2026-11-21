@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { Archive, Building2, CircleCheck, ClipboardCheck, FilePlus2, FileText, Hash, Loader2, ScrollText, ShieldCheck, Upload } from 'lucide-react';
+import { Archive, Building2, CircleCheck, ClipboardCheck, FilePlus2, FileText, Hash, Loader2, ScrollText, ShieldCheck, Upload, UsersRound, X } from 'lucide-react';
 import { Combobox, OptionContent, Select } from '../components/select';
 import { DatePicker } from '../components/calendar';
 import { Field, Input, SegmentedControl, Textarea, type ControlSize } from '../components/forms';
@@ -14,6 +14,7 @@ import { formatDate } from '../lib/format';
 import { CariAtauUnggahDokumen } from './cari-dokumen';
 import { pesanGalat, useOptionalSiakad } from './provider';
 import { PilihUnit } from './pilih-unit';
+import { PilihEntitas } from './pilih';
 
 /*
  * Registri SK tunggal (SIAKAD /v1/sk, docs/SK.md). Satu SK dicatat satu kali oleh unit penerbitnya (mis. Rektorat untuk
@@ -638,6 +639,87 @@ function StatusNomorSK({ nomor, memeriksa, cek, onPakai }: { nomor: string; meme
   return null;
 }
 
+/** Orang yang disebut di SK (GET /v1/sk/{id} `pihak`, isian `pihak` di POST /v1/sk). */
+export interface PihakSK {
+  username: string;
+  nama: string | null;
+  keterangan: string | null;
+}
+
+/** Body `pihak` untuk POST /v1/sk dan /v1/sk/{id}. */
+export function bodyPihakSK(p: PihakSK[]): Array<{ username: string; keterangan: string | null }> {
+  return p.map((x) => ({ username: x.username, keterangan: x.keterangan?.trim() || null }));
+}
+
+/**
+ * Daftar orang yang disebut di SK (diangkat, ditugaskan, ditetapkan): dipilih dari akun pegawai, dosen, atau
+ * mahasiswa lewat pemilih (bukan diketik), dengan keterangan peran opsional. Saat SK terbit mereka mendapat kabar.
+ */
+export function IsianPihakSK({ value, onValueChange, disabled }: { value: PihakSK[]; onValueChange: (v: PihakSK[]) => void; disabled?: boolean }) {
+  const [kunci, setKunci] = React.useState(0);
+  const [sumber, setSumber] = React.useState<'pegawai' | 'mahasiswa'>('pegawai');
+  const [galat, setGalat] = React.useState<string | null>(null);
+  const ubah = (i: number, ket: string) => onValueChange(value.map((x, j) => (j === i ? { ...x, keterangan: ket } : x)));
+  return (
+    <div className="u-ajukan-sk">
+      <Field label="Tambah orang" optional error={galat ?? undefined} description="Cari nama, NIP/NIDN, atau NIM. Orang yang dipilih mendapat notifikasi saat SK terbit.">
+        <div className="u-ajukan-sk-penerbit">
+          <SegmentedControl<'pegawai' | 'mahasiswa'>
+            aria-label="Jenis orang"
+            value={sumber}
+            onValueChange={(v) => {
+              setSumber(v);
+              setKunci((k) => k + 1);
+            }}
+            options={[
+              { value: 'pegawai', label: 'Dosen & tendik' },
+              { value: 'mahasiswa', label: 'Mahasiswa' },
+            ]}
+          />
+          <PilihEntitas
+            key={`${sumber}-${kunci}`}
+            jenis={sumber}
+            disabled={disabled}
+            onValueChange={(_, baris) => {
+              if (!baris) return;
+              const u = typeof baris.username === 'string' && baris.username ? baris.username : typeof baris.nim === 'string' ? baris.nim : '';
+              const nama = typeof baris.nama_lengkap === 'string' && baris.nama_lengkap ? baris.nama_lengkap : typeof baris.nama === 'string' ? baris.nama : null;
+              if (!u) {
+                setGalat(`${nama ?? 'Orang ini'} belum punya akun SIAKAD, jadi tidak bisa dikabari.`);
+              } else {
+                setGalat(null);
+                if (!value.some((x) => x.username === u)) onValueChange([...value, { username: u, nama, keterangan: null }]);
+              }
+              setKunci((k) => k + 1);
+            }}
+          />
+        </div>
+      </Field>
+      {value.length === 0 ? (
+        <p className="u-ajukan-sk-bantuan">
+          <UsersRound aria-hidden />
+          <span>Belum ada orang. Boleh dikosongkan bila SK tidak menyebut orang tertentu.</span>
+        </p>
+      ) : (
+        <ul className="u-sk-pihak" aria-label="Orang yang disebut di SK">
+          {value.map((x, i) => (
+            <li key={x.username}>
+              <span className="u-sk-pihak-nama">
+                <strong>{x.nama ?? x.username}</strong>
+                <small>{x.username}</small>
+              </span>
+              <Input size="sm" value={x.keterangan ?? ''} onChange={(e) => ubah(i, e.target.value)} placeholder="Peran di SK (opsional), mis. Ketua" maxLength={150} disabled={disabled} aria-label={`Peran ${x.nama ?? x.username}`} />
+              <Button size="sm" variant="ghost" aria-label={`Hapus ${x.nama ?? x.username}`} disabled={disabled} onClick={() => onValueChange(value.filter((_, j) => j !== i))}>
+                <X aria-hidden />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /**
  * Catat SK ke registri lewat panel samping bertahap (PanelLangkah): (1) berkas SK, (2) identitas dengan cek nomor
  * duplikat langsung, (3) penerbit & penandatangan, (4) tinjau kartu SK + tempat arsip + siapa yang memverifikasi.
@@ -666,6 +748,7 @@ export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor
   const [berkas, setBerkas] = React.useState<string | null>(isian.berkasId ?? null);
   const [namaBerkas, setNamaBerkas] = React.useState<string | null>(null);
   const [daftarPenerbit, setDaftarPenerbit] = React.useState<PenerbitSK[]>([]);
+  const [pihak, setPihak] = React.useState<PihakSK[]>([]);
   const [cek, setCek] = React.useState<PeriksaSK | null>(null);
   const [memeriksa, setMemeriksa] = React.useState(false);
   const [mirip, setMirip] = React.useState(false);
@@ -758,6 +841,7 @@ export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor
         body: {
           nomor: nomor.trim(), tanggal, perihal: perihal.trim() || null, jenis, ...(penerbit === LUAR ? { penerbit_luar: luar.trim() || null } : { penerbit_unit_id: penerbit }),
           ...bodyPenandatangan(ttd), tempat: tempat.trim() || null, berkas_id: berkas, abaikan_mirip: mirip || undefined,
+          ...(pihak.length ? { pihak: bodyPihakSK(pihak) } : {}),
         },
       });
       onTercatat(r.data, r.data.status === 'draf' ? 'Ajuan pencatatan SK terkirim ke unit penerbit untuk diverifikasi. SK ini sudah bisa dirujuk.' : undefined);
@@ -899,6 +983,14 @@ export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor
       ),
     },
     {
+      id: 'pihak',
+      title: 'Orang di SK',
+      icon: <UsersRound />,
+      optional: true,
+      description: 'Orang yang diangkat, ditugaskan, atau ditetapkan dalam SK ini. Mereka mendapat notifikasi saat SK terbit.',
+      content: <IsianPihakSK value={pihak} onValueChange={setPihak} />,
+    },
+    {
       id: 'tinjau',
       title: 'Tinjau',
       icon: <ClipboardCheck />,
@@ -934,6 +1026,11 @@ export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor
                   { label: 'Penandatangan', value: teksTtd || null },
                   { label: 'Ditetapkan di', value: tempat.trim() || tempatBawaan },
                 ],
+              },
+              {
+                title: 'Orang di SK',
+                onEdit: () => setLangkah(3),
+                items: [{ label: `${pihak.length} orang`, value: pihak.length ? pihak.map((x) => (x.keterangan ? `${x.nama ?? x.username} (${x.keterangan})` : (x.nama ?? x.username))).join(', ') : null }],
               },
             ]}
           />
