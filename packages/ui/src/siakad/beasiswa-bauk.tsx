@@ -20,7 +20,8 @@ import { AlurPemeriksa, type TahapPemeriksa } from './pemeriksa';
  * Beasiswa tahap 2 BAUK (SIAKAD /v1/keuangan/beasiswa/*, docs/KEMAHASISWAAN.md "Beasiswa: pencairan BAUK"; keputusan Anas
  * 2026-11-19 07:07-07:14):
  *   BeasiswaBauk           halaman BAUK: Pelacakan (corong, pagu, penerima, riwayat per mahasiswa, ekspor), Penyaluran
- *                          (aturan pencairan, salurkan per periode, timpa per penerima, proses sisa), Berkas pencairan
+ *                          (aturan pencairan, salurkan per periode, timpa per penerima, proses sisa; mode "Pembebasan biaya"
+ *                          untuk beasiswa tanpa dana masuk: pratinjau, bebaskan, batalkan; keputusan Anas 2026-11-22), Berkas pencairan
  *                          (rekening dari Profil, persetujuan berjenjang, ekspor bank, cair/gagal/retur), Dana & deposit
  *                          (dana masuk kolektif, deposit menunggu periode), Rekonsiliasi & SPJ (XLSX/CSV, cetak PDF).
  *   IsianAturanPencairan   isian aturan pencairan (dipakai wizard program BAAK langkah "Pencairan" dan BAUK).
@@ -34,10 +35,15 @@ export interface KomponenDana {
   kode?: string;
   label: string;
   nominal: number | null;
-  tujuan: 'tagihan' | 'mahasiswa' | 'catat';
+  tujuan: 'tagihan' | 'mahasiswa' | 'catat' | 'bebas';
+  /** Komponen dibebaskan: nominal (dipakai berurutan) atau persen dari tiap jenis biaya. */
+  dasar?: 'nominal' | 'persen';
+  persen?: number | null;
+  /** Urutan jenis biaya sasaran (kode biaya); kosong = urutan program, lalu semua tagihan periode itu. */
+  kode_biaya?: string[];
 }
 export interface AturanPencairan {
-  mode: 'ke_mahasiswa' | 'ke_tagihan' | 'campuran';
+  mode: 'ke_mahasiswa' | 'ke_tagihan' | 'campuran' | 'pembebasan';
   komponen: KomponenDana[];
   prioritas: string[];
   lintas_periode: boolean;
@@ -45,6 +51,8 @@ export interface AturanPencairan {
   aturan_lulus: 'kelebihan' | 'transfer' | 'hangus';
   pagu: number | null;
   persetujuan: string[];
+  /** Pembebasan boleh dipasang di atas keringanan lain pada tagihan yang sama (bawaan tidak). */
+  boleh_digabung?: boolean;
   tersimpan?: boolean;
   bawaan?: string | null;
   terpakai?: number;
@@ -54,6 +62,19 @@ interface HakBauk {
   kelola: boolean;
   setujui: boolean;
   wr2: boolean;
+  bebaskan?: boolean;
+}
+
+/** Satu baris keringanan (keu_mhs_potongan) dengan label awam: GET /v1/keuangan/mahasiswa/{nim} dan riwayat BAUK. */
+interface KeringananMhs {
+  id: number;
+  tahun_id: string;
+  kode_biaya: string;
+  jenis_biaya: string | null;
+  sumber: string;
+  label: string;
+  nominal: number;
+  status: string;
 }
 
 const q = <T,>(path: string) => (s: ReturnType<typeof useSiakad>, signal: AbortSignal) => s.request<T>({ method: 'GET', path }, { signal });
@@ -123,12 +144,74 @@ const MODE: SelectOption<string>[] = [
   { value: 'ke_mahasiswa', label: 'Dicairkan ke mahasiswa', description: 'Transfer/tunai lewat pencairan kolektif BAUK' },
   { value: 'ke_tagihan', label: 'Langsung ke pembayaran tagihan', description: 'Melunasi tagihan berurutan prioritas; sisa sesuai aturan' },
   { value: 'campuran', label: 'Campuran', description: 'Per komponen: sebagian ke tagihan, sebagian ke mahasiswa' },
+  { value: 'pembebasan', label: 'Pembebasan biaya', description: 'Tanpa dana masuk: tagihan dibebaskan/dikurangi sebagai keringanan beasiswa' },
 ];
 const TUJUAN: SelectOption<string>[] = [
   { value: 'tagihan', label: 'Ke tagihan' },
   { value: 'mahasiswa', label: 'Ke mahasiswa' },
+  { value: 'bebas', label: 'Dibebaskan dari tagihan' },
   { value: 'catat', label: 'Hanya dicatat' },
 ];
+const DASAR: SelectOption<string>[] = [
+  { value: 'persen', label: 'Persen dari tagihan', description: 'Mis. 100% = bebas penuh, untuk tiap jenis biaya' },
+  { value: 'nominal', label: 'Nominal tetap', description: 'Dipakai berurutan sampai habis' },
+];
+/** Tujuan efektif komponen menurut mode (sama dengan SIAKAD BeasiswaBauk::komponenEfektif). */
+const tujuanEfektif = (mode: AturanPencairan['mode'], k: KomponenDana): KomponenDana['tujuan'] =>
+  k.tujuan === 'catat' ? 'catat' : mode === 'ke_mahasiswa' ? 'mahasiswa' : mode === 'ke_tagihan' ? 'tagihan' : mode === 'pembebasan' ? 'bebas' : k.tujuan;
+const adaBebas = (a: AturanPencairan) => a.komponen.some((k) => tujuanEfektif(a.mode, k) === 'bebas');
+
+interface ItemBiaya {
+  idib: string;
+  item_biaya: string;
+}
+/** Nama jenis biaya (kode biaya SIAKAD -> nama) dari referensi. */
+function useJenisBiaya(): Map<string, string> {
+  const d = useSiakadQuery<ItemBiaya[]>(['referensi', 'item-biaya'], q('/v1/referensi/item-biaya'));
+  return React.useMemo(() => {
+    const m = new Map<string, string>();
+    for (const x of d.data ?? []) if (!m.has(String(x.idib))) m.set(String(x.idib), x.item_biaya);
+    return m;
+  }, [d.data]);
+}
+const namaBiaya = (jenis: Map<string, string>, kode: string[]) => kode.map((k) => jenis.get(k) ?? k).join(' → ');
+function teksKomponen(k: KomponenDana, mode: AturanPencairan['mode'], jenis: Map<string, string>): string {
+  const t = tujuanEfektif(mode, k);
+  if (t === 'bebas') {
+    const nilai = k.dasar === 'persen' ? `${k.persen ?? 0}% tagihan` : k.nominal == null ? 'nominal program' : rp(k.nominal);
+    return `${k.label}: dibebaskan ${nilai}${k.kode_biaya?.length ? ` dari ${namaBiaya(jenis, k.kode_biaya)}` : ''}`;
+  }
+  return `${k.label} ${k.nominal == null ? '(nominal program)' : rp(k.nominal)} → ${String(TUJUAN.find((x) => x.value === t)?.label ?? t).toLowerCase()}`;
+}
+
+/** Pilih jenis biaya berurutan (nama, bukan kode): urutan = urutan pembebasan/pembayaran. */
+function PilihJenisBiayaUrut({ value, onChange, disabled, kosong }: { value: string[]; onChange: (v: string[]) => void; disabled?: boolean; kosong: string }) {
+  const jenis = useJenisBiaya();
+  const sisa = [...jenis.entries()].filter(([k]) => !value.includes(k));
+  return (
+    <div className="u-bsw-urut">
+      {value.length ? (
+        <ol className="u-bsw-urut-daftar">
+          {value.map((k, i) => (
+            <li key={k}>
+              <span>
+                {i + 1}. {jenis.get(k) ?? k}
+              </span>
+              {!disabled && (
+                <Button variant="ghost" size="sm" aria-label={`Hapus ${jenis.get(k) ?? k}`} onClick={() => onChange(value.filter((x) => x !== k))}>
+                  <X />
+                </Button>
+              )}
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="u-bsw-ket">{kosong}</p>
+      )}
+      {!disabled && <Select aria-label="Tambah jenis biaya" placeholder="Tambah jenis biaya…" value={null} onValueChange={(v) => v && onChange([...value, v])} options={sisa.map(([k, n]) => ({ value: k, label: n }))} />}
+    </div>
+  );
+}
 const SISA: SelectOption<string>[] = [
   { value: 'deposit', label: 'Simpan sebagai deposit', description: 'Otomatis dipakai tagihan semester berikutnya' },
   { value: 'transfer', label: 'Transfer ke mahasiswa' },
@@ -160,7 +243,14 @@ export const BAWAAN_KIP_PENCAIRAN: AturanPencairan = {
 };
 export function ringkasAturanPencairan(a: AturanPencairan): string {
   const m = MODE.find((x) => x.value === a.mode)?.label ?? a.mode;
-  const k = a.komponen.map((x) => `${x.label} ${x.nominal == null ? '(nominal diisi BAUK)' : rp(x.nominal)} ${x.tujuan === 'catat' ? 'dicatat' : x.tujuan === 'tagihan' ? 'ke tagihan' : 'ke mahasiswa'}`).join('; ');
+  const k = a.komponen
+    .map((x) => {
+      const t = tujuanEfektif(a.mode, x);
+      if (t === 'bebas') return `${x.label} dibebaskan ${x.dasar === 'persen' ? `${x.persen ?? 0}%` : x.nominal == null ? '(nominal diisi BAUK)' : rp(x.nominal)} dari tagihan`;
+      return `${x.label} ${x.nominal == null ? '(nominal diisi BAUK)' : rp(x.nominal)} ${t === 'catat' ? 'dicatat' : t === 'tagihan' ? 'ke tagihan' : 'ke mahasiswa'}`;
+    })
+    .join('; ');
+  if (a.mode === 'pembebasan') return `${m}. ${k}. ${a.boleh_digabung ? 'Boleh digabung dengan keringanan lain.' : 'Tidak digabung dengan keringanan lain.'}`;
   return `${m}. ${k}. Sisa: ${String(SISA.find((x) => x.value === a.aturan_sisa)?.label ?? a.aturan_sisa).toLowerCase()}.`;
 }
 
@@ -168,63 +258,128 @@ export function ringkasAturanPencairan(a: AturanPencairan): string {
 /** Isian aturan pencairan program: mode, komponen dana, urutan jenis biaya, sisa, sisa saat lulus, pagu, persetujuan. */
 export function IsianAturanPencairan({ value: a, onChange, disabled, jenis }: { value: AturanPencairan; onChange: (a: AturanPencairan) => void; disabled?: boolean; jenis?: string | null }) {
   const set = <K extends keyof AturanPencairan>(k: K, v: AturanPencairan[K]) => onChange({ ...a, [k]: v });
-  const [prioritas, setPrioritas] = React.useState(a.prioritas.join(', '));
+  const bebas = a.mode === 'pembebasan';
+  const ubahK = (i: number, x: Partial<KomponenDana>) => set('komponen', a.komponen.map((k, j) => (j === i ? { ...k, ...x } : k)));
+  const gantiMode = (m: AturanPencairan['mode']) =>
+    onChange({
+      ...a,
+      mode: m,
+      // Pembebasan: komponen (selain hanya dicatat) menjadi "dibebaskan"; keluar dari pembebasan: kembali ke tagihan/mahasiswa.
+      komponen: a.komponen.map((k) =>
+        k.tujuan === 'catat' ? k : m === 'pembebasan' ? { ...k, tujuan: 'bebas', dasar: k.dasar ?? 'persen', persen: k.persen ?? (k.dasar === 'nominal' ? null : 100) } : k.tujuan === 'bebas' && m !== 'campuran' ? { ...k, tujuan: m === 'ke_tagihan' ? 'tagihan' : 'mahasiswa' } : k,
+      ),
+    });
+  const opsiTujuan = bebas ? TUJUAN.filter((t) => t.value === 'bebas' || t.value === 'catat') : TUJUAN;
   return (
     <div className="u-bsw-form">
-      {jenis === 'kip_kuliah' && (
+      {jenis === 'kip_kuliah' && !bebas && (
         <Alert variant="info" actions={!disabled ? <Button size="sm" variant="outline" onClick={() => onChange({ ...BAWAAN_KIP_PENCAIRAN, prioritas: a.prioritas, pagu: a.pagu })}>Pakai bawaan KIP</Button> : undefined}>
           Bawaan KIP Kuliah: biaya pendidikan melunasi UKT lalu jenis biaya yang diizinkan berurutan; sisa menjadi deposit untuk semester berikutnya (setelah UKT habis dialihkan ke proposal, skripsi, wisuda). Nominal diisi BAUK.
         </Alert>
       )}
       <Field label="Mode pencairan" required>
-        <Select options={MODE} value={a.mode} onValueChange={(v) => set('mode', (v ?? 'ke_mahasiswa') as AturanPencairan['mode'])} disabled={disabled} />
+        <Select options={MODE} value={a.mode} onValueChange={(v) => gantiMode((v ?? 'ke_mahasiswa') as AturanPencairan['mode'])} disabled={disabled} />
       </Field>
+      {bebas && (
+        <Alert variant="info" title="Beasiswa tanpa dana masuk">
+          Tagihan penerima pada periode yang disalurkan dikurangi sebagai keringanan beasiswa. Tidak ada dana masuk, deposit, berkas pencairan, atau kwitansi. Bisa dibatalkan (tagihan kembali).
+        </Alert>
+      )}
       <div className="u-bsw-baris-judul">
-        <span>Komponen dana</span>
+        <span>{bebas ? 'Komponen pembebasan' : 'Komponen dana'}</span>
         {!disabled && (
-          <Button variant="ghost" size="sm" onClick={() => set('komponen', [...a.komponen, { label: '', nominal: null, tujuan: a.mode === 'ke_tagihan' ? 'tagihan' : 'mahasiswa' }])}>
+          <Button variant="ghost" size="sm" onClick={() => set('komponen', [...a.komponen, bebas ? { label: '', nominal: null, tujuan: 'bebas', dasar: 'persen', persen: 100, kode_biaya: [] } : { label: '', nominal: null, tujuan: a.mode === 'ke_tagihan' ? 'tagihan' : 'mahasiswa' }])}>
             <Plus /> Tambah komponen
           </Button>
         )}
       </div>
-      {a.komponen.map((k, i) => (
-        <div key={i} className="u-bsw-baris u-bsw-baris-komponen">
-          <Input aria-label="Nama komponen" placeholder="Mis. Biaya pendidikan" value={k.label} onChange={(e) => set('komponen', a.komponen.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} disabled={disabled} />
-          <Input aria-label="Nominal komponen" placeholder="Nominal (Rp)" inputMode="numeric" value={k.nominal == null ? '' : String(k.nominal)} onChange={(e) => set('komponen', a.komponen.map((x, j) => (j === i ? { ...x, nominal: kosongKeNull(e.target.value.replace(/[^\d]/g, '')) } : x)))} disabled={disabled} />
-          <Select aria-label="Tujuan komponen" options={TUJUAN} value={k.tujuan} onValueChange={(v) => set('komponen', a.komponen.map((x, j) => (j === i ? { ...x, tujuan: (v ?? 'mahasiswa') as KomponenDana['tujuan'] } : x)))} disabled={disabled || (a.mode !== 'campuran' && k.tujuan !== 'catat')} />
-          {!disabled && a.komponen.length > 1 && (
-            <Button variant="ghost" size="sm" aria-label="Hapus komponen" onClick={() => set('komponen', a.komponen.filter((_, j) => j !== i))}>
-              <X />
-            </Button>
-          )}
-        </div>
-      ))}
-      <p className="u-bsw-ket">Mode ke mahasiswa/ke tagihan menentukan tujuan semua komponen (kecuali &ldquo;hanya dicatat&rdquo;); mode campuran memakai tujuan per komponen. Nominal kosong = nominal program.</p>
-      <Field label="Urutan jenis biaya sasaran (kode biaya)" optional description="Dipisah koma, berurutan. Mis. kode UKT, lalu proposal, skripsi/TA, wisuda. Kosong = semua tagihan.">
-        <Input value={prioritas} onChange={(e) => setPrioritas(e.target.value)} onBlur={() => set('prioritas', prioritas.split(',').map((x) => x.trim()).filter(Boolean))} disabled={disabled} />
+      {a.komponen.map((k, i) => {
+        const t = tujuanEfektif(a.mode, k);
+        const hapus = !disabled && a.komponen.length > 1 && (
+          <Button variant="ghost" size="sm" aria-label="Hapus komponen" onClick={() => set('komponen', a.komponen.filter((_, j) => j !== i))}>
+            <X />
+          </Button>
+        );
+        if (t === 'bebas') {
+          const persen = (k.dasar ?? 'nominal') === 'persen';
+          return (
+            <div key={i} className="u-bsw-dana u-bsw-komponen-bebas">
+              <div className="u-bsw-baris u-bsw-baris-komponen">
+                <Input aria-label="Nama komponen" placeholder="Mis. Bebas UKT" value={k.label} onChange={(e) => ubahK(i, { label: e.target.value })} disabled={disabled} />
+                <Select aria-label="Cara pembebasan" options={DASAR} value={persen ? 'persen' : 'nominal'} onValueChange={(v) => ubahK(i, v === 'persen' ? { dasar: 'persen', persen: k.persen ?? 100, nominal: null } : { dasar: 'nominal', persen: null })} disabled={disabled} />
+                {persen ? (
+                  <Input aria-label="Persen pembebasan" placeholder="Persen (1-100)" inputMode="numeric" value={k.persen == null ? '' : String(k.persen)} onChange={(e) => ubahK(i, { persen: kosongKeNull(e.target.value.replace(/[^\d,]/g, '')) })} disabled={disabled} />
+                ) : (
+                  <Input aria-label="Nominal pembebasan" placeholder="Nominal (Rp)" inputMode="numeric" value={k.nominal == null ? '' : String(k.nominal)} onChange={(e) => ubahK(i, { nominal: kosongKeNull(e.target.value.replace(/[^\d]/g, '')) })} disabled={disabled} />
+                )}
+                {hapus}
+              </div>
+              <Field label="Jenis biaya yang dibebaskan (berurutan)" optional description={persen ? 'Persen dihitung dari tagihan tiap jenis biaya.' : 'Nominal dipakai berurutan sampai habis.'}>
+                <PilihJenisBiayaUrut value={k.kode_biaya ?? []} onChange={(v) => ubahK(i, { kode_biaya: v })} disabled={disabled} kosong="Belum dipilih: ikut urutan program, atau semua tagihan periode itu." />
+              </Field>
+              {!disabled && (
+                <Field label="Tujuan komponen">
+                  <Select options={opsiTujuan} value="bebas" onValueChange={(v) => v && v !== 'bebas' && ubahK(i, { tujuan: v as KomponenDana['tujuan'] })} disabled={a.mode !== 'campuran' && !bebas} />
+                </Field>
+              )}
+            </div>
+          );
+        }
+        return (
+          <div key={i} className="u-bsw-baris u-bsw-baris-komponen">
+            <Input aria-label="Nama komponen" placeholder="Mis. Biaya pendidikan" value={k.label} onChange={(e) => ubahK(i, { label: e.target.value })} disabled={disabled} />
+            <Input aria-label="Nominal komponen" placeholder="Nominal (Rp)" inputMode="numeric" value={k.nominal == null ? '' : String(k.nominal)} onChange={(e) => ubahK(i, { nominal: kosongKeNull(e.target.value.replace(/[^\d]/g, '')) })} disabled={disabled} />
+            <Select
+              aria-label="Tujuan komponen"
+              options={opsiTujuan}
+              value={t}
+              onValueChange={(v) => ubahK(i, v === 'bebas' ? { tujuan: 'bebas', dasar: 'persen', persen: 100, kode_biaya: [] } : { tujuan: (v ?? 'mahasiswa') as KomponenDana['tujuan'] })}
+              disabled={disabled || (a.mode !== 'campuran' && !bebas && k.tujuan !== 'catat')}
+            />
+            {hapus}
+          </div>
+        );
+      })}
+      <p className="u-bsw-ket">
+        {bebas
+          ? 'Tiap komponen membebaskan persen dari tagihan, atau nominal tetap yang dipakai berurutan. Yang sudah dibayar tidak dikembalikan. "Hanya dicatat" untuk bantuan yang dibayar langsung pemberi.'
+          : 'Mode ke mahasiswa/ke tagihan menentukan tujuan semua komponen (kecuali “hanya dicatat”); mode campuran memakai tujuan per komponen. Nominal kosong = nominal program.'}
+      </p>
+      <Field label={bebas ? 'Urutan jenis biaya program' : 'Urutan jenis biaya sasaran'} optional description={bebas ? 'Dipakai komponen yang belum memilih jenis biaya.' : 'Berurutan, mis. UKT lalu proposal, skripsi/TA, wisuda. Kosong = semua tagihan.'}>
+        <PilihJenisBiayaUrut value={a.prioritas} onChange={(v) => set('prioritas', v)} disabled={disabled} kosong="Belum dipilih: semua tagihan periode itu." />
       </Field>
-      <label className="u-bsw-saklar">
-        <Switch checked={a.lintas_periode} onCheckedChange={(c) => set('lintas_periode', !!c)} disabled={disabled} /> Sisa boleh dipakai tagihan periode lain (lintas periode, termasuk tunggakan)
-      </label>
-      <FormGrid>
-        <Field label="Aturan sisa dana">
-          <Select options={SISA} value={a.aturan_sisa} onValueChange={(v) => set('aturan_sisa', (v ?? 'deposit') as AturanPencairan['aturan_sisa'])} disabled={disabled} />
-        </Field>
-        <Field label="Sisa saat lulus/keluar">
-          <Select options={LULUS} value={a.aturan_lulus} onValueChange={(v) => set('aturan_lulus', (v ?? 'kelebihan') as AturanPencairan['aturan_lulus'])} disabled={disabled} />
-        </Field>
-      </FormGrid>
-      <Field label="Pagu program (Rp)" optional description="Anggaran total; penyaluran ditolak bila melebihi.">
+      {bebas ? (
+        <label className="u-bsw-saklar">
+          <Switch checked={!!a.boleh_digabung} onCheckedChange={(c) => set('boleh_digabung', !!c)} disabled={disabled} /> Boleh digabung dengan keringanan lain pada tagihan yang sama (bawaan: tidak)
+        </label>
+      ) : (
+        <>
+          <label className="u-bsw-saklar">
+            <Switch checked={a.lintas_periode} onCheckedChange={(c) => set('lintas_periode', !!c)} disabled={disabled} /> Sisa boleh dipakai tagihan periode lain (lintas periode, termasuk tunggakan)
+          </label>
+          <FormGrid>
+            <Field label="Aturan sisa dana">
+              <Select options={SISA} value={a.aturan_sisa} onValueChange={(v) => set('aturan_sisa', (v ?? 'deposit') as AturanPencairan['aturan_sisa'])} disabled={disabled} />
+            </Field>
+            <Field label="Sisa saat lulus/keluar">
+              <Select options={LULUS} value={a.aturan_lulus} onValueChange={(v) => set('aturan_lulus', (v ?? 'kelebihan') as AturanPencairan['aturan_lulus'])} disabled={disabled} />
+            </Field>
+          </FormGrid>
+        </>
+      )}
+      <Field label="Pagu program (Rp)" optional description={bebas ? 'Batas total keringanan; pembebasan ditolak bila melebihi.' : 'Anggaran total; penyaluran ditolak bila melebihi.'}>
         <Input inputMode="numeric" value={a.pagu == null ? '' : String(a.pagu)} onChange={(e) => set('pagu', kosongKeNull(e.target.value.replace(/[^\d]/g, '')))} disabled={disabled} />
       </Field>
-      <div className="u-bsw-cek" aria-label="Tahap persetujuan berkas pencairan">
-        <span className="u-bsw-label">Persetujuan pencairan:</span>
-        {TAHAP.map((t) => (
-          <label key={t.kode}>
-            <Checkbox checked={a.persetujuan.includes(t.kode)} disabled={disabled || t.wajib} onCheckedChange={(c) => set('persetujuan', c ? [...new Set([...a.persetujuan, t.kode])] : a.persetujuan.filter((x) => x !== t.kode))} /> {t.label}
-          </label>
-        ))}
-      </div>
+      {!bebas && (
+        <div className="u-bsw-cek" aria-label="Tahap persetujuan berkas pencairan">
+          <span className="u-bsw-label">Persetujuan pencairan:</span>
+          {TAHAP.map((t) => (
+            <label key={t.kode}>
+              <Checkbox checked={a.persetujuan.includes(t.kode)} disabled={disabled || t.wajib} onCheckedChange={(c) => set('persetujuan', c ? [...new Set([...a.persetujuan, t.kode])] : a.persetujuan.filter((x) => x !== t.kode))} /> {t.label}
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -289,7 +444,7 @@ interface ProgramLacak {
   status: string;
   sumber_dana: string | null;
   mode: string;
-  corong: { pendaftar: number; lolos: number; ditetapkan: number; dicairkan: number; nominal_dicairkan: number };
+  corong: { pendaftar: number; lolos: number; ditetapkan: number; dicairkan: number; nominal_dicairkan: number; nominal_dibebaskan?: number };
   pagu: number | null;
   terpakai: number;
   sisa_pagu: number | null;
@@ -308,10 +463,13 @@ interface PenerimaLacak {
   transfer: number;
   rencana_transfer: number;
   deposit: number;
+  /** Keringanan tanpa dana: pembebasan biaya + potongan UKT tahap 1. */
+  dibebaskan?: number;
+  potongan_lama?: number;
   status_pencairan: string;
 }
 interface Pelacakan {
-  total: { pendaftar: number; lolos: number; ditetapkan: number; dicairkan: number; nominal_dicairkan: number };
+  total: { pendaftar: number; lolos: number; ditetapkan: number; dicairkan: number; nominal_dicairkan: number; nominal_dibebaskan?: number };
   program: ProgramLacak[];
   penerima: PenerimaLacak[];
   hak: HakBauk;
@@ -377,7 +535,8 @@ function TabPelacakan({ onProgram }: { onProgram: (id: number) => void }) {
             <StatCard label="Pendaftar" value={t!.pendaftar} icon={<Users />} />
             <StatCard label="Lolos verifikasi" value={t!.lolos} />
             <StatCard label="Ditetapkan" value={t!.ditetapkan} />
-            <StatCard label="Dicairkan" value={t!.dicairkan} hint={rp(t!.nominal_dicairkan)} icon={<Banknote />} />
+            <StatCard label="Dicairkan/dibebaskan" value={t!.dicairkan} hint={`Dana ${rp(t!.nominal_dicairkan)}`} icon={<Banknote />} />
+            <StatCard label="Dibebaskan tanpa dana" value={rp(t!.nominal_dibebaskan ?? 0)} hint="Pembebasan biaya dan potongan UKT" icon={<HandCoins />} />
           </StatGrid>
           <div className="u-bsw-grid">
             {d.data.program.map((p) => (
@@ -385,14 +544,17 @@ function TabPelacakan({ onProgram }: { onProgram: (id: number) => void }) {
                 <CardHeader title={p.nama} description={`${p.kode} · ${p.tahun_id} · ${MODE.find((m) => m.value === p.mode)?.label ?? p.mode}`} />
                 <CardContent>
                   <ol className="u-bsw-corong" aria-label="Corong penerima">
-                    {[['Pendaftar', p.corong.pendaftar], ['Lolos verifikasi', p.corong.lolos], ['Ditetapkan', p.corong.ditetapkan], ['Dicairkan', p.corong.dicairkan]].map(([l, n]) => (
+                    {[['Pendaftar', p.corong.pendaftar], ['Lolos verifikasi', p.corong.lolos], ['Ditetapkan', p.corong.ditetapkan], [p.mode === 'pembebasan' ? 'Dibebaskan' : p.corong.nominal_dibebaskan ? 'Dicairkan/dibebaskan' : 'Dicairkan', p.corong.dicairkan]].map(([l, n]) => (
                       <li key={l as string} style={{ ['--lebar' as string]: `${p.corong.pendaftar ? Math.max(8, ((n as number) / p.corong.pendaftar) * 100) : 0}%` }}>
                         <span>{l}</span>
                         <strong>{n}</strong>
                       </li>
                     ))}
                   </ol>
-                  <p className="u-bsw-ket">Dicairkan {rp(p.corong.nominal_dicairkan)}</p>
+                  <p className="u-bsw-ket">
+                    Dicairkan dari dana {rp(p.corong.nominal_dicairkan)}
+                    {p.corong.nominal_dibebaskan ? ` · dibebaskan tanpa dana ${rp(p.corong.nominal_dibebaskan)}` : ''}
+                  </p>
                   {p.pagu != null && <Progress value={Math.min(100, (p.terpakai / Math.max(1, p.pagu)) * 100)} label={`Pagu ${rp(p.pagu)} · terpakai ${rp(p.terpakai)} · sisa ${rp(p.sisa_pagu)}`} showValue={false} />}
                 </CardContent>
               </Card>
@@ -406,7 +568,8 @@ function TabPelacakan({ onProgram }: { onProgram: (id: number) => void }) {
               { key: 'ke_tagihan', header: 'Ke tagihan', align: 'end', cell: (r) => rp(r.ke_tagihan), value: (r) => r.ke_tagihan },
               { key: 'transfer', header: 'Ditransfer', align: 'end', cell: (r) => rp(r.transfer), value: (r) => r.transfer },
               { key: 'deposit', header: 'Sisa deposit', align: 'end', cell: (r) => rp(r.deposit), value: (r) => r.deposit },
-              { key: 'status_pencairan', header: 'Status', cell: (r) => <Badge variant={r.status === 'dicabut' ? 'danger' : r.status_pencairan === 'tuntas' ? 'success' : r.status_pencairan === 'belum disalurkan' ? 'neutral' : 'warning'}>{r.status === 'dicabut' ? 'dicabut' : r.status_pencairan}</Badge>, value: (r) => r.status_pencairan },
+              { key: 'dibebaskan', header: 'Dibebaskan', align: 'end', cell: (r) => rp(r.dibebaskan ?? 0), value: (r) => r.dibebaskan ?? 0, sortable: true },
+              { key: 'status_pencairan', header: 'Status', cell: (r) => <Badge variant={r.status === 'dicabut' ? 'danger' : ['tuntas', 'dibebaskan'].includes(r.status_pencairan) ? 'success' : r.status_pencairan === 'belum disalurkan' ? 'neutral' : 'warning'}>{r.status === 'dicabut' ? 'dicabut' : r.status_pencairan}</Badge>, value: (r) => r.status_pencairan },
             ]}
             rows={d.data.penerima}
             rowKey={(r) => `${r.program_id}-${r.pendaftar_id}`}
@@ -421,7 +584,7 @@ function TabPelacakan({ onProgram }: { onProgram: (id: number) => void }) {
 }
 
 function PanelRiwayatMahasiswa({ nim, onClose }: { nim: string; onClose: () => void }) {
-  const d = useSiakadQuery<{ nama: string | null; rekening: { bank: string; no_rekening: string; atas_nama: string } | null; pendaftaran: { id: number; program: string; status: string; nomor_penerima: string | null; tahun_id: string }[]; salur: { id: number; program: string; tahun_id: string; label: string; tujuan: string; nominal: number; status: string; catatan: string | null }[]; pencairan: { id: number; program: string; tahun_id: string; nominal: number; status: string; tanggal: string | null; keterangan: string | null }[]; deposit: KartuDeposit }>(['beasiswa', 'bauk', 'mhs', nim], q(`${B}/mahasiswa/${nim}`));
+  const d = useSiakadQuery<{ nama: string | null; rekening: { bank: string; no_rekening: string; atas_nama: string } | null; pendaftaran: { id: number; program: string; status: string; nomor_penerima: string | null; tahun_id: string }[]; salur: { id: number; program: string; tahun_id: string; label: string; tujuan: string; nominal: number; status: string; catatan: string | null }[]; pencairan: { id: number; program: string; tahun_id: string; nominal: number; status: string; tanggal: string | null; keterangan: string | null }[]; deposit: KartuDeposit; keringanan?: KeringananMhs[] }>(['beasiswa', 'bauk', 'mhs', nim], q(`${B}/mahasiswa/${nim}`));
   const r = d.data;
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()} title={r?.nama ?? nim} description={`Riwayat beasiswa ${nim}`} size="lg">
@@ -439,7 +602,23 @@ function PanelRiwayatMahasiswa({ nim, onClose }: { nim: string; onClose: () => v
           <Card variant="muted">
             <CardHeader title="Penyaluran" />
             <CardContent>
-              <ul className="u-bsw-list">{r.salur.map((s) => <li key={s.id}>{s.tahun_id} {s.program} — {s.label}: {rp(s.nominal)} ({s.tujuan === 'tagihan' ? 'ke tagihan/deposit' : s.tujuan === 'mahasiswa' ? 'transfer' : 'dicatat'}, {s.status}){s.catatan ? ` · ${s.catatan}` : ''}</li>)}</ul>
+              <ul className="u-bsw-list">{r.salur.map((s) => <li key={s.id}>{s.tahun_id} {s.program} — {s.label}: {rp(s.nominal)} ({s.tujuan === 'tagihan' ? 'ke tagihan/deposit' : s.tujuan === 'mahasiswa' ? 'transfer' : s.tujuan === 'bebas' ? 'dibebaskan dari tagihan' : 'dicatat'}, {s.status}){s.catatan ? ` · ${s.catatan}` : ''}</li>)}</ul>
+            </CardContent>
+          </Card>
+          <Card variant="muted">
+            <CardHeader title="Keringanan beasiswa (tanpa dana)" description="Pembebasan biaya dan potongan UKT yang mengurangi tagihan" />
+            <CardContent>
+              {r.keringanan?.length ? (
+                <ul className="u-bsw-list">
+                  {r.keringanan.map((k) => (
+                    <li key={k.id}>
+                      {k.tahun_id} {k.jenis_biaya ?? k.kode_biaya}: {rp(k.nominal)} — {k.label} {k.status === 'dibatalkan' && <Badge variant="neutral">Dibatalkan</Badge>}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="u-bsw-ket">Belum ada.</p>
+              )}
             </CardContent>
           </Card>
           <Card variant="muted">
@@ -475,7 +654,10 @@ function TabPenyaluran({ program, onProgram }: { program: number | null; onProgr
   const [salur, setSalur] = React.useState(false);
   const [timpa, setTimpa] = React.useState<PenerimaLacak | null>(null);
   const [sisa, setSisa] = React.useState(false);
+  const [batal, setBatal] = React.useState<PenerimaLacak | 'semua' | null>(null);
+  const jenis = useJenisBiaya();
   const a = aturan.data;
+  const bebas = !!a && adaBebas(a);
   const p = lacak.data?.program.find((x) => x.id === program);
   const penerima = (lacak.data?.penerima ?? []).filter((x) => x.program_id === program);
   return (
@@ -502,8 +684,13 @@ function TabPenyaluran({ program, onProgram }: { program: number | null; onProgr
                   <Button variant="outline" size="sm" onClick={() => setUbah(true)}>
                     <Pencil /> Ubah aturan
                   </Button>
+                  {bebas && a.hak?.bebaskan !== false && (
+                    <Button variant="outline" size="sm" onClick={() => setBatal('semua')}>
+                      <Undo2 /> Batalkan pembebasan
+                    </Button>
+                  )}
                   <Button size="sm" onClick={() => setSalur(true)}>
-                    <Send /> Salurkan periode
+                    {a.mode === 'pembebasan' ? <HandCoins /> : <Send />} {a.mode === 'pembebasan' ? 'Bebaskan tagihan periode' : 'Salurkan periode'}
                   </Button>
                 </span>
               }
@@ -512,12 +699,16 @@ function TabPenyaluran({ program, onProgram }: { program: number | null; onProgr
               <DescriptionList
                 items={[
                   { label: 'Mode', value: MODE.find((m) => m.value === a.mode)?.label },
-                  { label: 'Komponen', value: a.komponen.map((k) => `${k.label} ${k.nominal == null ? '(nominal program)' : rp(k.nominal)} → ${String(TUJUAN.find((t) => t.value === k.tujuan)?.label ?? k.tujuan).toLowerCase()}`).join('; ') },
-                  { label: 'Urutan jenis biaya', value: a.prioritas.length ? a.prioritas.join(' → ') : 'Semua tagihan' },
-                  { label: 'Sisa dana', value: `${SISA.find((x) => x.value === a.aturan_sisa)?.label}${a.lintas_periode ? ', boleh lintas periode' : ''}` },
-                  { label: 'Saat lulus/keluar', value: LULUS.find((x) => x.value === a.aturan_lulus)?.label },
+                  { label: 'Komponen', value: a.komponen.map((k) => teksKomponen(k, a.mode, jenis)).join('; ') },
+                  { label: 'Urutan jenis biaya', value: a.prioritas.length ? namaBiaya(jenis, a.prioritas) : 'Semua tagihan' },
+                  ...(a.mode === 'pembebasan'
+                    ? [{ label: 'Keringanan lain', value: a.boleh_digabung ? 'Boleh digabung pada tagihan yang sama' : 'Tidak digabung: tagihan yang sudah mendapat keringanan lain dilewati' }]
+                    : [
+                        { label: 'Sisa dana', value: `${SISA.find((x) => x.value === a.aturan_sisa)?.label}${a.lintas_periode ? ', boleh lintas periode' : ''}` },
+                        { label: 'Saat lulus/keluar', value: LULUS.find((x) => x.value === a.aturan_lulus)?.label },
+                      ]),
                   { label: 'Pagu', value: a.pagu == null ? 'Tanpa batas' : `${rp(a.pagu)} · terpakai ${rp(a.terpakai ?? 0)} · sisa ${rp(a.pagu - (a.terpakai ?? 0))}` },
-                  { label: 'Persetujuan', value: a.persetujuan.map((t) => TAHAP.find((x) => x.kode === t)?.label ?? t).join(' → ') },
+                  ...(a.mode === 'pembebasan' ? [] : [{ label: 'Persetujuan', value: a.persetujuan.map((t) => TAHAP.find((x) => x.kode === t)?.label ?? t).join(' → ') }]),
                 ]}
               />
             </CardContent>
@@ -530,16 +721,21 @@ function TabPenyaluran({ program, onProgram }: { program: number | null; onProgr
               { key: 'transfer', header: 'Ditransfer', align: 'end', cell: (r) => rp(r.transfer), value: (r) => r.transfer },
               { key: 'rencana_transfer', header: 'Menunggu transfer', align: 'end', cell: (r) => rp(r.rencana_transfer), value: (r) => r.rencana_transfer },
               { key: 'deposit', header: 'Sisa deposit', align: 'end', cell: (r) => rp(r.deposit), value: (r) => r.deposit },
+              { key: 'dibebaskan', header: 'Dibebaskan', align: 'end', cell: (r) => rp(r.dibebaskan ?? 0), value: (r) => r.dibebaskan ?? 0 },
             ]}
             rows={penerima}
             rowKey={(r) => String(r.pendaftar_id)}
-            rowActions={(r) => [{ label: 'Timpa aturan penerima', icon: <Pencil />, onSelect: () => setTimpa(r) }]}
+            rowActions={(r) => [
+              { label: 'Timpa aturan penerima', icon: <Pencil />, onSelect: () => setTimpa(r) },
+              ...((r.dibebaskan ?? 0) - (r.potongan_lama ?? 0) > 0 && a.hak?.bebaskan !== false ? [{ label: 'Batalkan pembebasan', icon: <Undo2 />, onSelect: () => setBatal(r) }] : []),
+            ]}
             empty={{ title: 'Belum ada penerima' }}
           />
         </>
       )}
       {ubah && a && program !== null && <PanelAturan program={program} aturan={a} onClose={() => setUbah(false)} />}
-      {salur && program !== null && p && <PanelSalurkan program={p} onClose={() => setSalur(false)} />}
+      {salur && program !== null && p && a && <PanelSalurkan program={p} aturan={a} onClose={() => setSalur(false)} />}
+      {batal && program !== null && p && <PanelBatalBebas program={p} penerima={batal === 'semua' ? null : batal} onClose={() => setBatal(null)} />}
       {timpa && a && <PanelTimpa penerima={timpa} aturan={a} onClose={() => setTimpa(null)} />}
       {sisa && (
         <ConfirmDialog
@@ -583,36 +779,86 @@ function PanelAturan({ program, aturan, onClose }: { program: number; aturan: At
   );
 }
 
-function PanelSalurkan({ program: p, onClose }: { program: ProgramLacak; onClose: () => void }) {
+interface HasilSalur {
+  pratinjau?: boolean;
+  ke_deposit: number;
+  rencana_transfer: number;
+  dicatat: number;
+  dibebaskan: number;
+  nominal: number;
+  nominal_bebas: number;
+  alokasi: number;
+  dilewati: { nim: string; komponen: string; alasan: string }[];
+}
+interface Pratinjau {
+  nominal_dana: number;
+  nominal_bebas: number;
+  baris: { pendaftar_id: number; nim: string; nama: string | null; komponen: string; tujuan: string; nominal: number; rincian: { kode_biaya: string; jenis_biaya: string | null; tagihan: number; nominal: number; sesudah: number }[]; dilewati: { alasan: string }[] }[];
+}
+
+function PanelSalurkan({ program: p, aturan, onClose }: { program: ProgramLacak; aturan: AturanPencairan; onClose: () => void }) {
   const aksi = useAksi();
   const toast = useToast();
-  const masuk = useSiakadQuery<{ id: number; nomor: string; tahun_id: string; nominal: number; teralokasi: number }[]>(['beasiswa', 'bauk', 'penerimaan', p.id], q(`${B}/penerimaan?program_id=${p.id}`));
+  const s = useSiakad();
+  const bebas = adaBebas(aturan);
+  const hanyaBebas = aturan.mode === 'pembebasan';
+  const masuk = useSiakadQuery<{ id: number; nomor: string; tahun_id: string; nominal: number; teralokasi: number }[]>(['beasiswa', 'bauk', 'penerimaan', p.id], q(`${B}/penerimaan?program_id=${p.id}`), { enabled: !hanyaBebas });
   const [tahun, setTahun] = React.useState<string | null>(null);
   const [penerimaan, setPenerimaan] = React.useState<string | null>(null);
+  const [pra, setPra] = React.useState<Pratinjau | null>(null);
+  const [memuat, setMemuat] = React.useState(false);
+  React.useEffect(() => setPra(null), [tahun, penerimaan]);
+  const pratinjau = async () => {
+    setMemuat(true);
+    try {
+      const r = await s.request<Pratinjau>({ method: 'POST', path: `${B}/program/${p.id}/salurkan`, body: { tahun_id: tahun, penerimaan_id: penerimaan ? Number(penerimaan) : null, pratinjau: true } });
+      setPra(r.data);
+    } catch (e) {
+      toast.add({ title: 'Pratinjau gagal', description: galat(e), type: 'error' });
+    } finally {
+      setMemuat(false);
+    }
+  };
+  const barisBebas = (pra?.baris ?? []).filter((b) => b.tujuan === 'bebas');
   return (
     <Sheet
       open
       onOpenChange={(o) => !o && onClose()}
-      title={`Salurkan ${p.nama}`}
-      description="Komponen ke tagihan menjadi dana deposit bertujuan (periode yang tagihannya belum terbit = menunggu); komponen ke mahasiswa menjadi rencana transfer. Aman diulang per penerima, periode, komponen."
+      title={hanyaBebas ? `Bebaskan tagihan ${p.nama}` : `Salurkan ${p.nama}`}
+      size={bebas ? 'lg' : undefined}
+      description={
+        hanyaBebas
+          ? 'Tagihan penerima periode ini dikurangi sebagai keringanan beasiswa, tanpa dana masuk dan tanpa kwitansi. Lihat pratinjau dulu; aman diulang (yang sudah dibebaskan dilewati).'
+          : 'Komponen ke tagihan menjadi dana deposit bertujuan (periode yang tagihannya belum terbit = menunggu); komponen ke mahasiswa menjadi rencana transfer. Aman diulang per penerima, periode, komponen.'
+      }
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
             Batal
           </Button>
+          {bebas && (
+            <Button variant="outline" disabled={!tahun || memuat} onClick={() => void pratinjau()}>
+              <ListChecks /> {memuat ? 'Menghitung…' : 'Pratinjau'}
+            </Button>
+          )}
           <Button
-            disabled={!tahun}
+            disabled={!tahun || (bebas && !pra)}
             onClick={async () => {
               try {
-                const r = await aksi<{ ke_deposit: number; rencana_transfer: number; dicatat: number; nominal: number; alokasi: number; dilewati: { nim: string; komponen: string; alasan: string }[] }>(`${B}/program/${p.id}/salurkan`, { tahun_id: tahun, penerimaan_id: penerimaan ? Number(penerimaan) : null });
-                toast.add({ title: 'Dana disalurkan', description: `${r.ke_deposit} ke tagihan/deposit (${r.alokasi} alokasi berkwitansi), ${r.rencana_transfer} rencana transfer, ${r.dicatat} dicatat; ${rp(r.nominal)}${r.dilewati.length ? `; ${r.dilewati.length} dilewati (nominal kosong)` : ''}.`, type: 'success' });
+                const r = await aksi<HasilSalur>(`${B}/program/${p.id}/salurkan`, { tahun_id: tahun, penerimaan_id: penerimaan ? Number(penerimaan) : null });
+                const bagian = [
+                  ...(hanyaBebas ? [] : [`${r.ke_deposit} ke tagihan/deposit (${r.alokasi} alokasi berkwitansi), ${r.rencana_transfer} rencana transfer, ${r.dicatat} dicatat; ${rp(r.nominal)}`]),
+                  ...(r.dibebaskan ? [`${r.dibebaskan} komponen dibebaskan ${rp(r.nominal_bebas)}`] : hanyaBebas ? ['Tidak ada tagihan yang dibebaskan'] : []),
+                  ...(r.dilewati.length ? [`${r.dilewati.length} dilewati`] : []),
+                ];
+                toast.add({ title: hanyaBebas ? 'Pembebasan diterapkan' : 'Dana disalurkan', description: `${bagian.join('; ')}.`, type: r.dibebaskan || !hanyaBebas ? 'success' : 'warning' });
                 onClose();
               } catch {
                 /* toast sudah */
               }
             }}
           >
-            <Send /> Salurkan
+            {hanyaBebas ? <HandCoins /> : <Send />} {hanyaBebas ? 'Bebaskan tagihan' : 'Salurkan'}
           </Button>
         </>
       }
@@ -621,12 +867,91 @@ function PanelSalurkan({ program: p, onClose }: { program: ProgramLacak; onClose
         <Field label="Periode" required>
           <PilihTahunAkademik value={tahun} onValueChange={setTahun} />
         </Field>
-        <Field label="Dari dana masuk" optional description="Penyaluran dicatat terhadap dana masuk kolektif ini (sisa dicek).">
-          <Select
-            value={penerimaan}
-            onValueChange={setPenerimaan}
-            options={[{ value: '', label: 'Tanpa dana masuk tertentu' }, ...(masuk.data ?? []).map((m) => ({ value: String(m.id), label: `${m.nomor} · ${m.tahun_id}`, description: `${rp(m.nominal)} · teralokasi ${rp(m.teralokasi)}` }))]}
-          />
+        {!hanyaBebas && (
+          <Field label="Dari dana masuk" optional description="Penyaluran dicatat terhadap dana masuk kolektif ini (sisa dicek).">
+            <Select
+              value={penerimaan}
+              onValueChange={setPenerimaan}
+              options={[{ value: '', label: 'Tanpa dana masuk tertentu' }, ...(masuk.data ?? []).map((m) => ({ value: String(m.id), label: `${m.nomor} · ${m.tahun_id}`, description: `${rp(m.nominal)} · teralokasi ${rp(m.teralokasi)}` }))]}
+            />
+          </Field>
+        )}
+        {bebas && !pra && <p className="u-bsw-ket">Pilih periode lalu tekan Pratinjau untuk melihat tagihan yang akan dibebaskan per penerima.</p>}
+        {pra && (
+          <>
+            <StatGrid min={150}>
+              <StatCard label="Dibebaskan" value={rp(pra.nominal_bebas)} hint={`${barisBebas.filter((b) => b.nominal > 0).length} komponen`} />
+              {!hanyaBebas && <StatCard label="Dari dana" value={rp(pra.nominal_dana)} />}
+              <StatCard label="Dilewati" value={barisBebas.filter((b) => b.dilewati.length).length} hint="lihat alasan" />
+            </StatGrid>
+            <DataTable
+              columns={[
+                { key: 'nama', header: 'Penerima', cell: (r) => <span className="u-bsw-sel"><strong>{r.nama ?? r.nim}</strong><small>{r.nim} · {r.komponen}</small></span>, value: (r) => r.nama ?? r.nim },
+                {
+                  key: 'rincian',
+                  header: 'Tagihan dibebaskan',
+                  cell: (r) =>
+                    r.rincian.length ? (
+                      <ul className="u-bsw-list">
+                        {r.rincian.map((x) => (
+                          <li key={x.kode_biaya}>
+                            {x.jenis_biaya ?? x.kode_biaya}: {rp(x.tagihan)} → {rp(x.sesudah)}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      '-'
+                    ),
+                  value: (r) => r.nominal,
+                },
+                { key: 'nominal', header: 'Dibebaskan', align: 'end', cell: (r) => rp(r.nominal), value: (r) => r.nominal },
+                { key: 'dilewati', header: 'Catatan', cell: (r) => (r.dilewati.length ? <span className="u-bsw-ket">{r.dilewati.map((d) => d.alasan).join('; ')}</span> : <Badge variant="success">Siap</Badge>), value: (r) => r.dilewati.length },
+              ]}
+              rows={barisBebas}
+              rowKey={(r) => `${r.pendaftar_id}-${r.komponen}`}
+              empty={{ icon: <HandCoins />, title: 'Tidak ada yang perlu dibebaskan', description: 'Semua komponen periode ini sudah dibebaskan atau penerima belum ditetapkan.' }}
+            />
+          </>
+        )}
+      </div>
+    </Sheet>
+  );
+}
+
+/** Batalkan pembebasan biaya satu periode (semua penerima atau satu penerima): tagihan kembali, butuh alasan. */
+function PanelBatalBebas({ program: p, penerima, onClose }: { program: ProgramLacak; penerima: PenerimaLacak | null; onClose: () => void }) {
+  const aksi = useAksi();
+  const [tahun, setTahun] = React.useState<string | null>(null);
+  const [alasan, setAlasan] = React.useState('');
+  return (
+    <Sheet
+      open
+      onOpenChange={(o) => !o && onClose()}
+      title="Batalkan pembebasan biaya"
+      description={`${penerima ? `${penerima.nama ?? penerima.nim} · ` : 'Semua penerima · '}${p.nama}. Keringanan dicabut dan tagihan kembali seperti semula; mahasiswa mendapat kabar. Bisa diterapkan lagi lewat Bebaskan tagihan.`}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Kembali
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={!tahun || !alasan.trim()}
+            onClick={() =>
+              void aksi<{ dibatalkan: number; nominal: number }>(`${B}/program/${p.id}/pembebasan/batal`, { tahun_id: tahun, alasan, ...(penerima ? { pendaftar_id: [penerima.pendaftar_id] } : {}) }, 'Pembebasan dibatalkan; tagihan kembali.').then(onClose, () => undefined)
+            }
+          >
+            <Undo2 /> Batalkan pembebasan
+          </Button>
+        </>
+      }
+    >
+      <div className="u-bsw-form">
+        <Field label="Periode" required>
+          <PilihTahunAkademik value={tahun} onValueChange={setTahun} />
+        </Field>
+        <Field label="Alasan" required description="Tercatat di riwayat program dan dikirim ke mahasiswa.">
+          <Textarea rows={3} value={alasan} onChange={(e) => setAlasan(e.target.value)} />
         </Field>
       </div>
     </Sheet>
@@ -660,7 +985,7 @@ function PanelTimpa({ penerima: r, aturan, onClose }: { penerima: PenerimaLacak;
           <Select value={mode} onValueChange={setMode} options={[{ value: '', label: 'Ikut program' }, ...MODE]} />
         </Field>
         {aturan.komponen.map((k) => (
-          <Field key={k.kode} label={`Nominal ${k.label}`} optional description={`Program: ${k.nominal == null ? 'nominal program' : rp(k.nominal)}`}>
+          <Field key={k.kode} label={k.dasar === 'persen' && tujuanEfektif(aturan.mode, k) === 'bebas' ? `Persen ${k.label}` : `Nominal ${k.label}`} optional description={`Program: ${k.dasar === 'persen' && tujuanEfektif(aturan.mode, k) === 'bebas' ? `${k.persen ?? 0}%` : k.nominal == null ? 'nominal program' : rp(k.nominal)}`}>
             <Input inputMode="numeric" value={nominal[k.kode ?? ''] ?? ''} onChange={(e) => setNominal({ ...nominal, [k.kode ?? '']: e.target.value.replace(/[^\d]/g, '') })} />
           </Field>
         ))}
@@ -1090,7 +1415,7 @@ interface Rekon {
   program: { id: number; kode: string; nama: string; sumber_dana: string; nomor_sk: string | null };
   tahun_id: string | null;
   total: Record<string, number>;
-  baris: { nim: string; nama: string | null; kode_prodi: string; tahun_id: string; diterima: number; ke_tagihan: number; dialokasikan: number; ditransfer: number; sisa_deposit: number; menunggu: number; ditutup: number; dicatat: number; alokasi: { tahun_id: string; kode_biaya: string; jenis_biaya: string | null; jumlah: number; nomor_bukti: string }[]; keterangan: string[] }[];
+  baris: { nim: string; nama: string | null; kode_prodi: string; tahun_id: string; diterima: number; ke_tagihan: number; dialokasikan: number; ditransfer: number; sisa_deposit: number; menunggu: number; ditutup: number; dicatat: number; dibebaskan?: number; potongan_lama?: number; alokasi: { tahun_id: string; kode_biaya: string; jenis_biaya: string | null; jumlah: number; nomor_bukti: string }[]; keringanan?: { label: string; tahun_id: string; kode_biaya: string; jenis_biaya: string | null; jumlah: number }[]; keterangan: string[] }[];
   penerimaan: { nomor: string; tahun_id: string; tanggal: string; pemberi: string | null; nominal: number; teralokasi: number }[];
 }
 
@@ -1124,12 +1449,13 @@ function TabRekonsiliasi({ program, onProgram }: { program: number | null; onPro
       ) : (
         <>
           <StatGrid min={150}>
-            <StatCard label="Diterima" value={rp(r.total.diterima)} />
+            <StatCard label="Diterima (dana)" value={rp(r.total.diterima)} />
             <StatCard label="Dialokasikan ke tagihan" value={rp(r.total.dialokasikan)} />
             <StatCard label="Ditransfer" value={rp(r.total.ditransfer)} />
             <StatCard label="Sisa deposit" value={rp(r.total.sisa_deposit)} />
             <StatCard label="Menunggu periode" value={rp(r.total.menunggu)} />
             <StatCard label="Ditutup" value={rp(r.total.ditutup)} hint="kelebihan/kewajiban" />
+            <StatCard label="Dibebaskan tanpa dana" value={rp((r.total.dibebaskan ?? 0) + (r.total.potongan_lama ?? 0))} hint={r.total.potongan_lama ? `termasuk potongan UKT tahap 1 ${rp(r.total.potongan_lama)}` : 'pembebasan biaya'} />
           </StatGrid>
           <div ref={ref} className="u-bsw-cetak">
             <h1>
@@ -1137,20 +1463,21 @@ function TabRekonsiliasi({ program, onProgram }: { program: number | null; onPro
               {r.tahun_id ? ` periode ${r.tahun_id}` : ''}
             </h1>
             <p>
-              SK {r.program.nomor_sk ?? '-'} · sumber dana {r.program.sumber_dana}
+              SK {r.program.nomor_sk ?? '-'} · sumber dana {r.program.sumber_dana} · dibayar dari dana {rp(r.total.diterima)} · dibebaskan tanpa dana {rp((r.total.dibebaskan ?? 0) + (r.total.potongan_lama ?? 0))}
             </p>
             <table className="u-bsw-tabel">
               <thead>
                 <tr>
                   <th>NIM / Nama</th>
                   <th>Periode</th>
-                  <th>Diterima</th>
+                  <th>Diterima (dana)</th>
                   <th>Alokasi ke tagihan (bukti)</th>
                   <th>Ditransfer</th>
                   <th>Sisa deposit</th>
                   <th>Menunggu</th>
                   <th>Ditutup</th>
                   <th>Dicatat</th>
+                  <th>Dibebaskan tanpa dana</th>
                 </tr>
               </thead>
               <tbody>
@@ -1179,6 +1506,14 @@ function TabRekonsiliasi({ program, onProgram }: { program: number | null; onPro
                       {b.keterangan.length ? <small> {b.keterangan.join('; ')}</small> : null}
                     </td>
                     <td className="n">{rp(b.dicatat)}</td>
+                    <td>
+                      {(b.keringanan ?? []).map((k, j) => (
+                        <div key={j}>
+                          {k.label}: {k.jenis_biaya ?? k.kode_biaya} {k.tahun_id} {rp(k.jumlah)}
+                        </div>
+                      ))}
+                      {!(b.keringanan ?? []).length && '-'}
+                    </td>
                   </tr>
                 ))}
                 <tr>
@@ -1192,6 +1527,7 @@ function TabRekonsiliasi({ program, onProgram }: { program: number | null; onPro
                   <td className="n">{rp(r.total.menunggu)}</td>
                   <td className="n">{rp(r.total.ditutup)}</td>
                   <td className="n">{rp(r.total.dicatat)}</td>
+                  <td className="n">{rp((r.total.dibebaskan ?? 0) + (r.total.potongan_lama ?? 0))}</td>
                 </tr>
               </tbody>
             </table>

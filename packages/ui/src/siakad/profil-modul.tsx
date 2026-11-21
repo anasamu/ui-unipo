@@ -865,12 +865,14 @@ export interface KeuanganMahasiswaData {
   deposit?: number | { saldo?: number } | null;
   invoice_aktif?: Array<{ id: number; nomor: string; tahun_id: string; jumlah: number; berlaku_sampai?: string | null }>;
   dispensasi?: Array<{ id: number; tahun_id: string; untuk: string; janji_bayar?: string | null; status: string }>;
+  /** Keringanan yang mengurangi tagihan (pembebasan/potongan beasiswa, skema, kebijakan, voucher); tagihan di atas sudah setelah keringanan. */
+  keringanan?: Array<{ id: number; tahun_id: string; kode_biaya: string; jenis_biaya: string | null; sumber: string; label: string; nominal: number; status: string; tagihan_semula?: number | null }>;
 }
 
 /**
  * Riwayat keuangan mahasiswa (UKT dan biaya lain) dari GET /v1/keuangan/mahasiswa/{nim}: total tagihan, dibayar,
- * potongan, sisa; tagihan per periode beserta pembayarannya; invoice aktif dan dispensasi. Sama dengan menu
- * Riwayat Keuangan SIAKAD.
+ * potongan, sisa; tagihan per periode beserta pembayarannya; invoice aktif dan dispensasi; keringanan (mis. pembebasan
+ * biaya beasiswa) per periode sebagai keterangan pengurang tagihan, tanpa kwitansi. Sama dengan menu Riwayat Keuangan SIAKAD.
  */
 export function KeuanganMahasiswa({ nim: nimProp, className }: { nim?: string; className?: string }) {
   const akun = useAkunSaya({ foto: false });
@@ -947,7 +949,22 @@ export function KeuanganMahasiswa({ nim: nimProp, className }: { nim?: string; c
               </button>
               {terbuka && (() => {
                 const rb = rincianDariKeuanganMahasiswa({ periode: [p] });
+                const ker = (d.keringanan ?? []).filter((k) => k.tahun_id === p.tahun_id && k.status === 'diterapkan');
                 return (
+                  <>
+                  {ker.length > 0 && (
+                    <Alert variant="success" title="Keringanan yang mengurangi tagihan" className="u-modul-keringanan">
+                      <ul>
+                        {ker.map((k) => (
+                          <li key={k.id}>
+                            {k.label}: {k.jenis_biaya ?? 'tagihan'} dikurangi {formatRupiah(k.nominal)}
+                            {k.tagihan_semula != null ? ` (semula ${formatRupiah(k.tagihan_semula)})` : ''}
+                          </li>
+                        ))}
+                      </ul>
+                      <small>Keringanan bukan pembayaran, sehingga tidak ada kwitansi.</small>
+                    </Alert>
+                  )}
                   <RincianPembayaran
                     varian="lengkap"
                     judul={`Rincian pembayaran ${labelTahunAkademik(p.tahun_id)}`}
@@ -955,6 +972,7 @@ export function KeuanganMahasiswa({ nim: nimProp, className }: { nim?: string; c
                     riwayat={rb.riwayat}
                     ringkasan={{ biaya: p.ringkasan.tagihan, potongan: p.ringkasan.potongan, dibayar: p.ringkasan.dibayar, sisa: p.ringkasan.sisa }}
                   />
+                  </>
                 );
               })()}
             </li>
