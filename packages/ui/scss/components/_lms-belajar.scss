@@ -1829,3 +1829,14 @@ video.u-lmsb-video {
     font-size: var(--u-text-sm);
   }
 }
+// Ruang kelas: isi bagian (di samping daftar bagian vertikal) lebih sempit dari layar, jadi tata letak dua kolom di
+// dalamnya mengikuti lebar wadah, bukan lebar layar (presensi + rekap, nilai + ringkasan tidak tergencet di 1024 px).
+.u-lmsb-kelas .u-tabs-isi {
+  container-type: inline-size;
+}
+@container (max-width: 46rem) {
+  .u-lmsb-kelas .u-lmsb-dua-kolom,
+  .u-lmsb-kelas .u-lmsb-dua-kolom-kiri {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
