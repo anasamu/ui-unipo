@@ -54,7 +54,8 @@ export function PilihEntitasBanyak({ jenis, value, defaultValue, onValueChange, 
       if (load) return load(kata, signal);
       if (!siakad) throw new Error('SDK belum dipasang di <UnipoProvider>.');
       const r = await siakad.request<Baris[]>({ method: 'GET', path: src.path, query: { ...src.query, ...JSON.parse(q), q: kata || undefined, per_page: limit, ...ekstra } }, { signal });
-      return Array.isArray(r.data) ? r.data : [];
+      const rows = Array.isArray(r.data) ? r.data : [];
+      return src.saring && !Object.keys(ekstra).length ? rows.filter(src.saring) : rows;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [siakad, load, src.path, q, limit],
@@ -143,8 +144,8 @@ export function PilihPengguna(props: PilihPenggunaProps) {
 
 // ================================================================ PilihSurat
 export interface SuratRingkas {
-  id?: number | string;
-  nomor_surat: string;
+  id: number | string;
+  nomor_surat: string | null;
   perihal?: string | null;
   tanggal_surat?: string | null;
   arah?: string | null;
@@ -154,13 +155,17 @@ export interface SuratRingkas {
 }
 
 export interface PilihSuratProps {
-  /** Nomor surat terpilih. */
-  value?: string | null;
-  onValueChange?: (nomor: string | null, surat: SuratRingkas | null) => void;
+  /** ID surat terpilih (arsip_surat.id). */
+  value?: string | number | null;
+  defaultValue?: string | number | null;
+  onValueChange?: (id: string | null, surat: SuratRingkas | null) => void;
   /** Batasi arah: 'masuk' atau 'keluar'. Bawaan keduanya. */
   arah?: 'masuk' | 'keluar';
+  /** Ikutkan surat yang belum bernomor (konsep). Bawaan hanya surat bernomor. */
+  termasukKonsep?: boolean;
   /** Saringan tambahan ke /v1/arsip/surat (mis. `{ unit_id: 12, tahun: 2026 }`). */
   query?: Record<string, string | number | boolean | undefined>;
+  /** Ganti pemuat (data contoh/uji). Dipanggil juga dengan ID untuk menampilkan nilai awal. */
   load?: (q: string, signal: AbortSignal) => Promise<SuratRingkas[]>;
   placeholder?: string;
   name?: string;
@@ -178,33 +183,37 @@ const tgl = (s: unknown) => {
 };
 
 /**
- * Pilih surat dari registri arsip (GET /v1/arsip/surat) berdasarkan nomor atau perihal; hanya surat yang sudah bernomor
- * dan boleh dilihat pengguna. Nilainya nomor surat (tidak membuka detail, jadi surat tidak ikut tertandai dibaca).
- * Untuk SK yang disimpan sebagai rujukan berversi, pakai {@link PilihNomorSK}/PilihSK.
+ * Pilih surat dari registri arsip (GET /v1/arsip/surat) dengan mencari nomor atau perihal; hanya surat yang boleh
+ * dilihat pengguna. Nilainya ID surat; yang tampil nomor + perihal. Nilai awal dimuat lewat `?ids=` (SIAKAD dengan
+ * saringan ids) sehingga surat tidak ikut tertandai dibaca seperti saat membuka detail.
+ * Untuk SK yang menjadi dasar aturan, pakai {@link PilihNomorSK}/PilihSK.
  */
-export function PilihSurat({ value, onValueChange, arah, query, load, placeholder = 'Cari nomor atau perihal surat', ...rest }: PilihSuratProps) {
-  const siakad = useOptionalSiakad();
-  const q = JSON.stringify(query ?? {});
-  const muat = React.useCallback(
-    async (kata: string, signal: AbortSignal): Promise<Baris[]> => {
-      let rows: Baris[];
-      if (load) rows = (await load(kata, signal)) as unknown as Baris[];
-      else if (siakad) rows = (await siakad.request<Baris[]>({ method: 'GET', path: '/v1/arsip/surat', query: { ...JSON.parse(q), arah, q: kata || undefined, per_page: 20, urut: 'terbaru' } }, { signal })).data ?? [];
-      else throw new Error('SDK belum dipasang di <UnipoProvider>.');
-      return (Array.isArray(rows) ? rows : []).filter((r) => r.nomor_surat);
-    },
-    [siakad, load, arah, q],
-  );
+export function PilihSurat({ arah, termasukKonsep, query, load, placeholder = 'Cari nomor atau perihal surat', onValueChange, ...rest }: PilihSuratProps) {
   const sumber: SumberEntitas = React.useMemo(
     () => ({
       nama: 'surat',
       path: '/v1/arsip/surat',
-      kunci: 'nomor_surat',
-      judul: (r) => teks(r.perihal) || teks(r.nomor_surat),
-      meta: (r) => [r.nomor_surat, tgl(r.tanggal_surat), r.arah === 'masuk' ? [r.pengirim_nama, r.pengirim_instansi].filter(Boolean).join(', ') : r.unit_nama].filter(Boolean).join(' · '),
+      kunci: 'id',
+      saringKunci: 'ids',
+      query: { arah, urut: 'terbaru' },
+      saring: termasukKonsep ? undefined : (r) => Boolean(r.nomor_surat),
+      judul: (r) => teks(r.perihal) || teks(r.nomor_surat) || 'Surat tanpa perihal',
+      meta: (r) =>
+        [r.nomor_surat || 'Belum bernomor', tgl(r.tanggal_surat), r.arah === 'masuk' ? [r.pengirim_nama, r.pengirim_instansi].filter(Boolean).join(', ') : r.unit_nama]
+          .filter(Boolean)
+          .join(' · '),
       ikon: <Mail size={14} />,
     }),
-    [],
+    [arah, termasukKonsep],
   );
-  return <PilihEntitas jenis={sumber} value={value} onValueChange={(v, r) => onValueChange?.(v, (r as unknown as SuratRingkas) ?? null)} load={muat} placeholder={placeholder} {...rest} />;
+  return (
+    <PilihEntitas
+      jenis={sumber}
+      query={query}
+      load={load as ((q: string, signal: AbortSignal) => Promise<Baris[]>) | undefined}
+      placeholder={placeholder}
+      onValueChange={(v, r) => onValueChange?.(v, (r as unknown as SuratRingkas) ?? null)}
+      {...rest}
+    />
+  );
 }

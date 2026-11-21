@@ -65,10 +65,10 @@ const SURAT = [
 ];
 
 export function Surat() {
-  const [v, setV] = React.useState<string | null>(null);
+  const [v, setV] = React.useState<string | null>('1');
   return (
-    <Field label="Surat dasar" description="Rujukan surat dari arsip unit; nilainya nomor surat.">
-      <PilihSurat value={v} onValueChange={setV} load={async (q) => SURAT.filter((s) => `${s.nomor_surat} ${s.perihal}`.toLowerCase().includes(q.toLowerCase()))} />
+    <Field label="Surat dasar" description={`Rujukan surat dari arsip unit; yang tersimpan ID surat (${v ?? 'kosong'}), yang tampil nomor dan perihal.`}>
+      <PilihSurat value={v} onValueChange={setV} load={async (q) => SURAT.filter((s) => String(s.id) === q || `${s.nomor_surat} ${s.perihal}`.toLowerCase().includes(q.toLowerCase()))} />
     </Field>
   );
 }

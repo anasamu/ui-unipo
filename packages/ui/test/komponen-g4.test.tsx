@@ -71,3 +71,12 @@ describe('render komponen G4 (SSR, tanpa DOM)', () => {
     expect(html(<PilihIkon value="Wallet" readOnly aria-label="Ikon menu" />)).toContain('Ikon menu: Dompet');
   });
 });
+
+import { PilihSurat } from '../src/siakad/pilih-lain';
+describe('PilihSurat', () => {
+  it('nilai berupa ID: selama memuat tidak menampilkan ID mentah', () => {
+    const h = html(<PilihSurat value={57} load={async () => []} aria-label="Surat dasar" />);
+    expect(h).not.toContain('value="57"');
+    expect(h).toContain('placeholder="Cari nomor atau perihal surat"');
+  });
+});
