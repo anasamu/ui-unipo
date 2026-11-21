@@ -41,6 +41,7 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
 import type { KeuanganMahasiswaData } from './profil-modul';
 import { KwitansiResmi, type KwitansiResmiData } from './kwitansi';
 import { buktiPeramban, namaPerambanBawaan, useDaftarPerambanKasir, usePerambanKasir, type SesiPerambanKasir } from './kasir-peramban';
+import { IsianCari } from '../components/isian-cari';
 
 // Kasir modern (keuangan, fakultas, PMB), riwayat pembayaran mahasiswa, buku kas unit, dan jurnal umum.
 // Endpoint: /v1/keuangan (tagihan, transaksi, kasir, kwitansi), /v1/pmb/admin/tagihan, /v1/keu/kas, /v1/keu/jurnal.
@@ -1592,10 +1593,7 @@ export function JurnalUmum({ unitId, bolehPosting: boleh, judul = 'Jurnal umum',
           aria-label="Saring status jurnal"
         />
         <PilihPeriode value={rentang} onChange={setRentang} />
-        <label className="u-jurnal-cari">
-          <Search aria-hidden />
-          <input type="search" value={kata} onChange={(e) => setKata(e.target.value)} placeholder="Nomor, uraian, bukti" aria-label="Cari jurnal" />
-        </label>
+        <IsianCari className="u-jurnal-cari" value={kata} onValueChange={setKata} placeholder="Nomor, uraian, bukti" aria-label="Cari jurnal" />
       </div>
       {q.error && <GalatApi error={q.error} onRetry={q.refetch} />}
       <ul className="u-jurnal-daftar" data-mobile={p.mobile || undefined}>

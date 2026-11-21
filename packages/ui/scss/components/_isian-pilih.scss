@@ -455,3 +455,13 @@
   color: var(--u-muted-foreground);
   font-size: var(--u-text-sm);
 }
+
+// ---------------------------------------------------------------- IsianCari
+.u-isian-cari {
+  .u-input::-webkit-search-cancel-button {
+    display: none;
+  }
+  > .u-input-addon[data-align='start'] svg {
+    color: var(--u-muted-foreground);
+  }
+}

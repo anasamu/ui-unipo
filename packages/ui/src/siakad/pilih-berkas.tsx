@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { Check, FileText, FolderOpen, ImageIcon, Search, Upload, X } from 'lucide-react';
+import { Check, FileText, FolderOpen, ImageIcon, Upload, X } from 'lucide-react';
 import { Button } from '../components/actions';
 import { ProgressUnggah } from '../components/progres';
 import { Dialog } from '../components/overlays';
@@ -9,6 +9,7 @@ import { cn } from '../lib/cn';
 import { useInfoBerkas, useUnggahBerkas, type BerkasTerunggah, type OpsiUnggahBerkas } from './berkas';
 import { pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { usePilihBerkas } from '../components/pilih-berkas-lokal';
+import { IsianCari } from '../components/isian-cari';
 
 const ikonBerkas = (mime?: string | null) => (mime?.startsWith('image/') ? <ImageIcon aria-hidden /> : <FileText aria-hidden />);
 
@@ -86,10 +87,7 @@ function DialogBerkasSaya({ open, tutup, pilih, kategori, accept }: { open: bool
       }
     >
       <div className="u-pilih-berkas-dialog">
-        <div className="u-pilih-berkas-cari">
-          <Search aria-hidden />
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama atau keterangan berkas" aria-label="Cari berkas" autoFocus />
-        </div>
+        <IsianCari className="u-pilih-berkas-cari" value={q} onValueChange={setQ} placeholder="Cari nama atau keterangan berkas" aria-label="Cari berkas" autoFocus />
         {galat ? (
           <p className="u-field-error">{galat}</p>
         ) : !memuat && !isi.length ? (

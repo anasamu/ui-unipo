@@ -10,6 +10,7 @@ import { Sheet } from '../components/overlays';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakadQuery, type QueryState } from './provider';
 import { LabelProdi } from './prodi';
 import { KodeLaporan } from '../components/galat';
+import { IsianCari } from '../components/isian-cari';
 
 /*
  * Widget Kurikulum OBE (/v1/kurikulum-obe, Permendiktisaintek 39/2025): daftar kurikulum, ringkasan & alur status,
@@ -1283,7 +1284,7 @@ export function TabelStrukturKurikulum({ kurikulumId, detail = 'baris', onPilihM
   return (
     <div className={cn('u-tsk', className)}>
       <div className="u-tsk-toolbar">
-        {cari && <input className="u-input" data-size="sm" type="search" placeholder="Cari kode atau nama MK" value={kata} onChange={(e) => setKata(e.target.value)} aria-label="Cari mata kuliah" />}
+        {cari && <IsianCari className="u-tsk-cari" size="sm" placeholder="Cari kode atau nama MK" value={kata} onValueChange={setKata} aria-label="Cari mata kuliah" />}
         <span className="u-tsk-total">
           {mk.length} MK · <b>{formatNumber(totalWajib)}</b> SKS wajib{totalPilihan ? ` · ${formatNumber(totalPilihan)} SKS pilihan` : ''}
         </span>

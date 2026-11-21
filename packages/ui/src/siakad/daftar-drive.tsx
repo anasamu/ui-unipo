@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { Archive, Building2, ChevronRight, Clock, Eye, HardDrive, PencilLine, Pin, PinOff, Search, Trash2, Users, X } from 'lucide-react';
+import { Archive, Building2, ChevronRight, Clock, Eye, HardDrive, PencilLine, Pin, PinOff, Trash2, Users } from 'lucide-react';
 import { nadaKuota } from '../components/alokasi';
 import { cn } from '../lib/cn';
 import { formatBytes } from '../lib/format';
@@ -23,6 +23,7 @@ import {
   simpulTerbuka,
 } from './drive-pohon';
 import { useSiakadQuery } from './provider';
+import { IsianCari } from '../components/isian-cari';
 
 // ================================================================ Tipe (GET /v1/berkas/drive, KONTRAK-RUANG)
 
@@ -480,15 +481,7 @@ export function DaftarDrive({
                 )}
               </h4>
               {banyak && !ringkas && (
-                <div className="u-dd-cari">
-                  <Search aria-hidden />
-                  <input type="search" value={cari} onChange={(e) => setCari(e.target.value)} placeholder={`Cari di ${nBuka} unit`} aria-label="Cari unit" />
-                  {cari && (
-                    <button type="button" aria-label="Hapus pencarian unit" onClick={() => setCari('')}>
-                      <X aria-hidden />
-                    </button>
-                  )}
-                </div>
+                <IsianCari className="u-dd-cari" size="sm" value={cari} onValueChange={setCari} placeholder={`Cari di ${nBuka} unit`} aria-label="Cari unit" />
               )}
               <ul role="tree" aria-label="Drive unit">
                 {lain.map((d) => simpul(d, 0))}

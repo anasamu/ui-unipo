@@ -110,6 +110,7 @@ import {
   type UrutServer,
 } from './berkas-finder';
 import { usePilihBerkas } from '../components/pilih-berkas-lokal';
+import { IsianCari } from '../components/isian-cari';
 
 // ================================================================ Tipe dan aturan (sama dengan /v1/berkas)
 
@@ -2708,21 +2709,7 @@ export function ManajerBerkas({
               </span>
             )}
             <span className="u-mb-spasi" />
-            <div className="u-mb-cari">
-              <Search aria-hidden />
-              <input
-                type="search"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder={terbaru ? 'Cari di semua berkas' : folder ? `Cari di ${namaDari(folder)}` : 'Cari berkas dan folder'}
-                aria-label="Cari berkas dan folder"
-              />
-              {q && (
-                <button type="button" aria-label="Hapus pencarian" onClick={() => setQ('')}>
-                  <X aria-hidden />
-                </button>
-              )}
-            </div>
+            <IsianCari className="u-mb-cari" size="sm" value={q} onValueChange={setQ} placeholder={terbaru ? 'Cari di semua berkas' : folder ? `Cari di ${namaDari(folder)}` : 'Cari berkas dan folder'} aria-label="Cari berkas dan folder" />
             <Tooltip content={panelInfo ? 'Sembunyikan info' : 'Tampilkan info'} shortcut="⌘I">
               <Button variant="ghost" size="sm" iconOnly className="u-mb-tombol-info" aria-label="Panel info" aria-pressed={panelInfo} data-aktif={panelInfo ? '' : undefined} onClick={() => setPanelInfo((x) => !x)}>
                 <Info aria-hidden />

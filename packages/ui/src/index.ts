@@ -79,3 +79,4 @@ export * from './components/multi-pilih';
 export * from './components/aksi';
 export * from './components/pilih-tampilan';
 export * from './components/pilih-berkas-lokal';
+export * from './components/isian-cari';
