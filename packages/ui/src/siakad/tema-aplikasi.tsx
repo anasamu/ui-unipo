@@ -5,9 +5,12 @@ import { Badge, Button, Spinner } from '../components/actions';
 import { Alert, Card, Empty, Tabs } from '../components/display';
 import { Field, Input, SegmentedControl, Switch, Textarea } from '../components/forms';
 import { Select } from '../components/select';
-import { ConfirmDialog, useToast } from '../components/overlays';
+import { ConfirmDialog, Dialog, useToast } from '../components/overlays';
 import { GalatApi } from './galat';
 import { PengaturanHalamanMasuk } from './pengaturan-masuk';
+import { KartuHalamanDepan, PenyuntingLanding } from './penyunting-landing';
+import { LANDING_APLIKASI } from '../components/landing-kit';
+import type { AksiLanding, SlotLanding } from '../components/landing-blok';
 import type { TataMasuk } from './halaman-masuk';
 import { invalidateSiakad, useOptionalSiakad, useSiakad, useSiakadQuery } from './provider';
 import { KUNCI_TATA_KERANGKA, tataKerangka, type TataKerangka } from './kerangka-aplikasi';
@@ -112,8 +115,21 @@ export interface PengaturanTemaProps<T extends Tata = Tata> {
   denganMasuk?: boolean;
   /** Bawaan halaman masuk khusus aplikasi (sama dengan prop `bawaan` HalamanMasuk), untuk pratinjau. */
   bawaanMasuk?: Partial<TataMasuk>;
+  /**
+   * Bagian Halaman depan (pembangun landing page, /v1/tema/{aplikasi}/halaman/beranda). Bawaan aktif untuk aplikasi
+   * yang terdaftar di LANDING_APLIKASI (landing-nya memakai LandingAplikasi). Objek = isi bagian data (slot), aksi
+   * tombol, logo, dan templat bawaan dari aplikasi itu sendiri agar pratinjau memakai data nyata. false = sembunyikan.
+   */
+  landing?: boolean | PengaturanLandingTema;
   onTersimpan?: (data: DataTemaAplikasi<T>) => void;
   className?: string;
+}
+
+export interface PengaturanLandingTema {
+  bawaan?: string;
+  slot?: Record<string, SlotLanding>;
+  aksi?: Record<string, AksiLanding>;
+  merek?: React.ReactNode;
 }
 
 interface Draf<T extends Tata> {
@@ -129,7 +145,7 @@ interface Draf<T extends Tata> {
  *
  *   <PengaturanTema aplikasi="pmb" />
  */
-export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama, tataTambahan, pratinjau, kunciCache, denganMode = true, denganKerangka = true, denganMasuk = true, bawaanMasuk, onTersimpan, className }: PengaturanTemaProps<T>) {
+export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama, tataTambahan, pratinjau, kunciCache, denganMode = true, denganKerangka = true, denganMasuk = true, bawaanMasuk, landing, onTersimpan, className }: PengaturanTemaProps<T>) {
   const siakad = useSiakad();
   const toast = useToast();
   const q = useTemaAplikasi<T>(aplikasi, lingkup);
@@ -139,6 +155,19 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
   const [tab, setTab] = React.useState<'atur' | 'riwayat'>('atur');
   const [seluruh, setSeluruh] = React.useState(false);
   const [menyimpan, setMenyimpan] = React.useState(false);
+  const [sunting, setSunting] = React.useState(false);
+  const [suntingBerubah, setSuntingBerubah] = React.useState(false);
+  const [tanyaTutup, setTanyaTutup] = React.useState(false);
+  const terdaftar = LANDING_APLIKASI[aplikasi];
+  const opsiLanding: PengaturanLandingTema | null =
+    landing === false || (landing === undefined && !terdaftar)
+      ? null
+      : {
+          bawaan: (typeof landing === 'object' ? landing.bawaan : undefined) ?? terdaftar?.bawaan ?? aplikasi,
+          slot: { ...terdaftar?.slot, ...(typeof landing === 'object' ? landing.slot : undefined) },
+          aksi: { ...terdaftar?.aksi, ...(typeof landing === 'object' ? landing.aksi : undefined) },
+          merek: typeof landing === 'object' ? landing.merek : undefined,
+        };
   const idPratinjau = React.useId().replace(/[^a-zA-Z0-9_-]/g, '');
 
   const versi = q.data?.versi;
@@ -337,6 +366,11 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
                 }}
               />
             )}
+            {opsiLanding && (
+              <Card className="u-tema-kartu">
+                <KartuHalamanDepan aplikasi={aplikasi} lingkup={lingkup} nama={typeof nama === 'string' ? nama : undefined} boleh={boleh} buka={() => setSunting(true)} />
+              </Card>
+            )}
             {tataTambahan && <Card className="u-tema-kartu">{tataTambahan(tataBerlaku, ubahTata)}</Card>}
           </fieldset>
 
@@ -377,6 +411,46 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
           </div>
         </div>
       )}
+      {opsiLanding && (
+        <Dialog
+          open={sunting}
+          onOpenChange={(o) => {
+            if (o) return setSunting(true);
+            if (suntingBerubah) setTanyaTutup(true);
+            else setSunting(false);
+          }}
+          title={`Halaman depan ${typeof nama === 'string' ? nama : aplikasi}`}
+          size="full"
+          className="upl-dialog"
+        >
+          <PenyuntingLanding
+            aplikasi={aplikasi}
+            lingkup={lingkup}
+            nama={nama}
+            bawaan={opsiLanding.bawaan}
+            slot={opsiLanding.slot}
+            aksi={opsiLanding.aksi}
+            merek={opsiLanding.merek}
+            cssTema={sunting ? buatTema({ ...berlaku, muatFont: false }) : undefined}
+            boleh={boleh}
+            onBerubah={setSuntingBerubah}
+            onTutup={() => (suntingBerubah ? setTanyaTutup(true) : setSunting(false))}
+          />
+        </Dialog>
+      )}
+      <ConfirmDialog
+        open={tanyaTutup}
+        onOpenChange={setTanyaTutup}
+        title="Tutup tanpa menyimpan?"
+        description="Perubahan halaman depan yang belum disimpan sebagai draf akan hilang."
+        confirmLabel="Tutup tanpa menyimpan"
+        tone="warning"
+        onConfirm={() => {
+          setTanyaTutup(false);
+          setSuntingBerubah(false);
+          setSunting(false);
+        }}
+      />
     </div>
   );
 }
