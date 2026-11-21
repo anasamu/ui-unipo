@@ -50,6 +50,66 @@
     z-index: 2;
   }
 }
+// Header lengket: `th { position: sticky }` hanya bekerja terhadap kotak gulir terdekat, dan pembungkus sudah menjadi
+// kotak gulir karena `overflow-x: auto` (perlu untuk tabel lebar di ponsel). Karena itu tabel diberi tinggi maksimum
+// setinggi layar: baris panjang digulir di dalam tabel, header tetap terlihat, gulir horizontal tetap berjalan.
+// Atur `--u-dt-sticky-offset` (tinggi bilah atas + bilah alat + kaki halaman) per aplikasi bila perlu.
+.u-table-wrap[data-sticky] {
+  max-height: max(18rem, calc(100dvh - var(--u-dt-sticky-offset, 10rem)));
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+}
+// Status ekspor CSV (mengambil semua halaman dari server).
+.u-dt-export {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.625rem;
+  min-height: 2.5rem;
+  padding: 0.375rem 0.5rem 0.375rem 0.875rem;
+  border: 1px solid var(--u-border);
+  border-radius: calc(var(--u-radius) + 2px);
+  background: var(--u-surface);
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+  strong {
+    color: var(--u-foreground);
+    font-variant-numeric: tabular-nums;
+  }
+  > svg {
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+  }
+  > .u-button {
+    margin-inline-start: auto;
+  }
+  &[data-tone='danger'] {
+    border-color: color-mix(in oklab, var(--u-danger) 35%, var(--u-border));
+    color: var(--u-danger);
+  }
+}
+.u-dt-export-bar {
+  flex: 1 1 8rem;
+  max-width: 14rem;
+  height: 4px;
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--u-primary) 12%, transparent);
+  &::-webkit-progress-bar {
+    background: transparent;
+  }
+  &::-webkit-progress-value {
+    background: var(--u-primary);
+    border-radius: 999px;
+  }
+  &::-moz-progress-bar {
+    background: var(--u-primary);
+    border-radius: 999px;
+  }
+}
 .u-dt-check {
   width: 2.75rem;
   padding-inline-end: 0 !important;
