@@ -1070,10 +1070,11 @@ function DialogAksiPanitia({ panitia: p, aksi, onOpenChange, onPilih, onTertutup
   };
   return (
     <Dialog
+      side="right"
       open={Boolean(aksi)}
       onOpenChange={onOpenChange}
       title={aksi ? judul[aksi] : ''}
-      size="sm"
+      size="md"
       footer={
         <>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>

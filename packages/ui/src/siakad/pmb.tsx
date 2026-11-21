@@ -444,6 +444,7 @@ export function IsianPrestasiPmb({
         </Button>
       )}
       <Dialog
+        side="right"
         open={buka}
         onOpenChange={setBuka}
         title="Tambah prestasi"

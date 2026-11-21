@@ -32,6 +32,7 @@ import './mock/presensi-kerja';
 import './mock/jadwal-bentrok';
 import './mock/keuangan';
 import './mock/kasir';
+import './mock/sk';
 import { ssoDemo } from './mock/aplikasi';
 import { App } from './App';
 

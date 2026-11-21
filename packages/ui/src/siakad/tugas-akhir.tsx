@@ -1204,11 +1204,12 @@ function KirimBuktiSyarat({ nim, s, onTutup }: { nim: string; s: SyaratTambahan;
   };
   return (
     <Dialog
+      side="right"
       open
       onOpenChange={(o) => !o && onTutup()}
       title={s.nama}
       description={s.jenis === 'unggah' ? 'Unggah berkas bukti pemenuhan syarat ini.' : 'Tulis keterangan pemenuhan syarat; lampirkan bukti bila ada.'}
-      size="sm"
+      size="md"
       footer={
         <>
           <Button variant="ghost" onClick={onTutup}>

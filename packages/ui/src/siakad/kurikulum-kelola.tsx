@@ -342,6 +342,7 @@ export function FormKurikulumObe({ open, onOpenChange, kurikulum, kodeProdi, pil
   };
   return (
     <Dialog
+      side="right"
       open={open}
       onOpenChange={onOpenChange}
       size="lg"
@@ -582,6 +583,7 @@ function DialogSahkan({ open, onOpenChange, k }: { open: boolean; onOpenChange: 
   const galatValidasi = (galat as { status?: number; details?: { galat?: Array<{ pesan: string }> } } | null)?.details?.galat;
   return (
     <Dialog
+      side="right"
       open={open}
       onOpenChange={onOpenChange}
       title="Sahkan kurikulum"
@@ -685,6 +687,7 @@ function DialogRevisi({ open, onOpenChange, k, onSelesai }: { open: boolean; onO
   }, [open, k]);
   return (
     <Dialog
+      side="right"
       open={open}
       onOpenChange={onOpenChange}
       title="Buat revisi kurikulum"
@@ -750,6 +753,7 @@ function DialogAngkatan({ open, onOpenChange, k }: { open: boolean; onOpenChange
   const kini = new Date().getFullYear();
   return (
     <Dialog
+      side="right"
       open={open}
       onOpenChange={onOpenChange}
       title="Angkatan pengguna kurikulum"
@@ -956,6 +960,7 @@ function FormButir({ kurikulumId, jenis, awal, onTutup }: { kurikulumId: number 
   };
   return (
     <Dialog
+      side="right"
       open
       onOpenChange={(o) => !o && onTutup()}
       title={`${awal.id ? 'Ubah' : 'Tambah'} ${nm.satu}`}
@@ -1256,6 +1261,7 @@ function FormMk({ kurikulumId, awal, onTutup }: { kurikulumId: number | string; 
   };
   return (
     <Dialog
+      side="right"
       open
       size="lg"
       onOpenChange={(o) => !o && onTutup()}
@@ -1374,6 +1380,7 @@ function FormPrasyarat({ kurikulumId, mk, onTutup }: { kurikulumId: number | str
     .map((m) => ({ value: String(m.id), label: `${m.kode_mk} · ${m.nama}`, description: m.semester ? `Semester ${m.semester}` : 'Pilihan bebas', group: m.semester && mk.semester && m.semester >= mk.semester ? 'Semester sama/sesudahnya' : 'Semester sebelumnya' }));
   return (
     <Dialog
+      side="right"
       open
       size="lg"
       onOpenChange={(o) => !o && onTutup()}
@@ -1559,6 +1566,7 @@ function FormCpmk({ mkId, kurikulumId, awal, onTutup }: { mkId: number | string;
   const { kirim, sibuk, galat, kolom } = useKirim();
   return (
     <Dialog
+      side="right"
       open
       size="lg"
       onOpenChange={(o) => !o && onTutup()}
@@ -1637,6 +1645,7 @@ function FormSubCpmk({ cpmkId, awal, onTutup }: { cpmkId: number; awal: { id?: n
   const { kirim, sibuk, galat, kolom } = useKirim();
   return (
     <Dialog
+      side="right"
       open
       onOpenChange={(o) => !o && onTutup()}
       title={awal.id ? `Ubah ${awal.kode}` : 'Tambah sub-CPMK'}
@@ -2494,6 +2503,7 @@ function FormEkuivalensi({ kurikulumId, awal, onTutup }: { kurikulumId: number |
   const { kirim, sibuk, galat, kolom } = useKirim();
   return (
     <Dialog
+      side="right"
       open
       onOpenChange={(o) => !o && onTutup()}
       title={awal.id ? 'Ubah ekuivalensi' : 'Tambah ekuivalensi'}
@@ -2565,6 +2575,7 @@ function DialogEkuivalensiOtomatis({ kurikulumId, kodeProdi, onTutup }: { kuriku
   const { kirim, sibuk, galat } = useKirim();
   return (
     <Dialog
+      side="right"
       open
       onOpenChange={(o) => !o && onTutup()}
       title="Buat ekuivalensi otomatis"
@@ -2736,6 +2747,7 @@ function FormPeninjauan({ kurikulumId, awal, onTutup }: { kurikulumId: number | 
   const { kirim, sibuk, galat, kolom } = useKirim();
   return (
     <Dialog
+      side="right"
       open
       size="lg"
       onOpenChange={(o) => !o && onTutup()}
@@ -3426,6 +3438,7 @@ export function KelolaPerangkatMk({ mkId, bolehUbah, jenisAwal = 'rps', classNam
         </section>
       ))}
       <Dialog
+        side="right"
         open={form != null}
         onOpenChange={(o) => !o && setForm(null)}
         title={form?.id ? 'Ubah perangkat' : 'Unggah perangkat pembelajaran'}

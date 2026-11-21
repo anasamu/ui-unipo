@@ -341,6 +341,7 @@ export function KirimBuktiSyarat({ aturanId, open, onOpenChange }: { aturanId: s
   };
   return (
     <Dialog
+      side="right"
       open={open}
       onOpenChange={onOpenChange}
       title={m?.label ?? 'Kirim bukti syarat'}
@@ -711,7 +712,7 @@ function NilaiDialog({ u, open, onOpenChange }: { u: UjianTa; open: boolean; onO
     }
   };
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title={`Nilai ${u.jenis_label.toLowerCase()}`} description={`${u.nim} ${u.nama ?? ''}`} footer={<Button onClick={() => void simpan()}>Simpan nilai</Button>}>
+    <Dialog side="right" open={open} onOpenChange={onOpenChange} title={`Nilai ${u.jenis_label.toLowerCase()}`} description={`${u.nim} ${u.nama ?? ''}`} footer={<Button onClick={() => void simpan()}>Simpan nilai</Button>}>
       <div className="u-ujta-form">
         {rubrik.map((b) => (
           <Field key={b.kode} label={`${b.label} (${b.bobot}%)`} required>
@@ -746,7 +747,7 @@ function PutuskanDialog({ u, open, onOpenChange }: { u: UjianTa; open: boolean; 
     }
   };
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title="Keputusan sidang" footer={<Button onClick={() => void simpan()}>Simpan keputusan</Button>}>
+    <Dialog side="right" open={open} onOpenChange={onOpenChange} title="Keputusan sidang" footer={<Button onClick={() => void simpan()}>Simpan keputusan</Button>}>
       <div className="u-ujta-form">
         <SegmentedControl
           options={[
@@ -1401,6 +1402,7 @@ export function PenetapanUjianTa({ penerbitUnitId }: { penerbitUnitId?: number |
         empty={{ icon: <Gavel />, title: 'Tidak ada usulan yang menunggu penetapan' }}
       />
       <Dialog
+        side="right"
         open={pilih !== null}
         onOpenChange={(o) => !o && setPilih(null)}
         title={`Tetapkan ${pilih?.length ?? 0} ujian`}
@@ -1703,6 +1705,7 @@ export function AntreanPlagiasi() {
       />
       <DataTable columns={kolom} rows={q.data} rowKey={(r) => r.id} loading={q.loading} error={q.error} onRetry={q.refetch} empty={{ icon: <FileSearch />, title: 'Antrean kosong' }} />
       <Dialog
+        side="right"
         open={hasil !== null}
         onOpenChange={(o) => !o && setHasil(null)}
         title="Hasil cek plagiasi"

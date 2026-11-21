@@ -1,12 +1,14 @@
 'use client';
 import * as React from 'react';
-import { FilePlus2, FileText, ScrollText, ShieldCheck } from 'lucide-react';
+import { Archive, Building2, CircleCheck, ClipboardCheck, FilePlus2, FileText, Hash, Loader2, ScrollText, ShieldCheck, Upload } from 'lucide-react';
 import { Combobox, OptionContent, Select } from '../components/select';
 import { DatePicker } from '../components/calendar';
-import { Field, Input, SegmentedControl, type ControlSize } from '../components/forms';
+import { Field, Input, SegmentedControl, Textarea, type ControlSize } from '../components/forms';
 import { Alert } from '../components/display';
 import { Badge, Button } from '../components/actions';
-import { Dialog, useToast } from '../components/overlays';
+import { useToast } from '../components/overlays';
+import { PanelLangkah, type PanelLangkahStep } from '../components/panel-langkah';
+import { WizardReview } from '../components/wizard';
 import { cn } from '../lib/cn';
 import { formatDate } from '../lib/format';
 import { CariAtauUnggahDokumen } from './cari-dokumen';
@@ -194,12 +196,12 @@ export function useBukaBerkasSK() {
 }
 
 /** Kartu ringkas SK registri: nomor, perihal, penerbit, penandatangan, status, tombol lihat berkas. */
-export function KartuSK({ sk, aksi, className }: { sk: SKRegistri; aksi?: React.ReactNode; className?: string }) {
+export function KartuSK({ sk, aksi, className, pratinjau }: { sk: SKRegistri; aksi?: React.ReactNode; className?: string; /** Pratinjau sebelum disimpan (mis. langkah Tinjau): tanpa tombol berkas dan catatan status. */ pratinjau?: boolean }) {
   const buka = useBukaBerkasSK();
   const st = STATUS_SK[sk.status] ?? STATUS_SK.terbit;
   const arsip = sk.id.startsWith('surat:');
   return (
-    <div className={cn('u-kartu-sk', className)} data-status={sk.status}>
+    <div className={cn('u-kartu-sk', className)} data-status={sk.status} data-pratinjau={pratinjau ? '' : undefined}>
       <span className="u-kartu-sk-ikon" aria-hidden>
         <ScrollText />
       </span>
@@ -242,11 +244,11 @@ export function KartuSK({ sk, aksi, className }: { sk: SKRegistri; aksi?: React.
             </div>
           )}
         </dl>
-        {sk.status === 'draf' && <span className="u-kartu-sk-catatan">Dicatat sebagai ajuan; unit penerbit memverifikasi nomor, penandatangan, dan berkasnya.</span>}
+        {sk.status === 'draf' && !pratinjau && <span className="u-kartu-sk-catatan">Dicatat sebagai ajuan; unit penerbit memverifikasi nomor, penandatangan, dan berkasnya.</span>}
         {sk.status === 'terbit' && !sk.diverifikasi_at && sk.sumber?.startsWith('impor') && <span className="u-kartu-sk-catatan">Dicatat dari data lama; belum diverifikasi penerbit.</span>}
       </div>
       <div className="u-kartu-sk-aksi">
-        {sk.berkas?.ada ? (
+        {pratinjau ? null : sk.berkas?.ada ? (
           <Button variant="outline" size="sm" onClick={() => buka(sk)}>
             <FileText /> Lihat berkas
           </Button>
@@ -333,18 +335,24 @@ export function IsianPenandatangan({ value, onValueChange, unitId, label = 'Pena
         {tautan === 'pejabat' ? (
           <Select<number>
             value={value?.pejabat_id ?? null}
-            onValueChange={(v) => set({ pejabat_id: v })}
+            onValueChange={(v) => {
+              const p = pejabat.find((x) => x.pejabat_id === v);
+              set({ pejabat_id: v, nama: p?.nama ?? null, jabatan: p?.jabatan ?? null });
+            }}
             options={pejabat.map((p) => ({ value: p.pejabat_id, label: p.nama, description: p.jabatan }))}
-            placeholder={pejabat.length ? 'Pilih pejabat' : 'Belum ada pejabat aktif; pilih "Jabatan saja" atau "Ketik"'}
+            placeholder={pejabat.length ? 'Pilih pejabat…' : 'Belum ada pejabat aktif; pilih "Jabatan saja" atau "Ketik"'}
             aria-label="Pejabat penandatangan"
           />
         ) : tautan === 'jabatan' ? (
           <div className="u-ajukan-sk-dua">
             <Select<number>
               value={value?.jabatan_id ?? null}
-              onValueChange={(v) => set({ jabatan_id: v, unit_id: jabatan.find((j) => j.jabatan_id === v)?.unit_id ?? unitId ?? null })}
+              onValueChange={(v) => {
+                const j = jabatan.find((x) => x.jabatan_id === v);
+                set({ jabatan_id: v, unit_id: j?.unit_id ?? unitId ?? null, jabatan: j?.jabatan_lengkap ?? null });
+              }}
               options={jabatan.map((j) => ({ value: j.jabatan_id, label: j.jabatan_lengkap }))}
-              placeholder="Pilih jabatan"
+              placeholder="Pilih jabatan…"
               aria-label="Jabatan penandatangan"
             />
             <Input value={value?.nama ?? ''} onChange={(e) => set({ nama: e.target.value })} placeholder="Nama (opsional)" aria-label="Nama penandatangan" />
@@ -369,6 +377,8 @@ export interface IsianAwalSK {
   penerbitUnitId?: number | null;
   penerbitLuar?: string | null;
   penandatangan?: NilaiPenandatangan | null;
+  /** Berkas SK (UUID /v1/berkas) yang sudah dipilih/diunggah di form pemanggil. */
+  berkasId?: string | null;
   /** Ambil bawaan dari server (/v1/sk/bawaan): penerbit, perihal, penandatangan menurut jabatan yang diangkat. */
   untukJabatanId?: number | null;
   untukUnitId?: number | null;
@@ -389,7 +399,7 @@ export interface PilihSKProps {
   /** Tampilkan tombol "Ajukan pencatatan SK baru" bila SK belum ada di registri. Bawaan true. */
   bolehAjukan?: boolean;
   /**
-   * Tombol "Catat SK ... sekarang" di bawah isian (bila belum ada SK terpilih): membuka dialog pencatatan dengan isian
+   * Tombol "Catat SK ... sekarang" di bawah isian (bila belum ada SK terpilih): membuka panel samping pencatatan dengan isian
    * terisi; setelah tersimpan SK langsung terpilih.
    */
   catatSekarang?: { label?: string; isian?: IsianAwalSK };
@@ -572,14 +582,73 @@ export interface AjukanPencatatanSKProps {
 
 const LUAR = -1;
 
+/** Ruang arsip tujuan berkas SK menurut penerbit (docs/SK.md "Arsip institusi"): fakultas (dan prodi di bawahnya) → arsip fakultas, lainnya → arsip universitas. */
+function arsipTujuan(penerbit: number | null, daftar: PenerbitSK[], namaLuar: string, tahun: string | null) {
+  const unit = penerbit !== null && penerbit !== LUAR ? daftar.find((u) => u.unit_id === penerbit) : undefined;
+  let fak: PenerbitSK | undefined;
+  for (let u = unit, i = 0; u && i < 8; u = daftar.find((x) => x.unit_id === u!.induk_id), i++) {
+    if (u.jenis === 'fakultas') {
+      fak = u;
+      break;
+    }
+  }
+  const ruang = fak ? `Arsip ${fak.nama}` : 'Arsip Universitas';
+  const nama = penerbit === LUAR ? namaLuar.trim() || 'instansi luar' : (unit?.nama ?? 'unit penerbit');
+  return { ruang, jalur: [ruang, 'Arsip SK', nama, tahun ?? 'tahun SK'].join(' › ') };
+}
+
+/** Status nomor yang sedang diketik: memeriksa, aman, sudah tercatat (sama), atau nomor sama di penerbit lain (mirip). */
+function StatusNomorSK({ nomor, memeriksa, cek, onPakai }: { nomor: string; memeriksa: boolean; cek: PeriksaSK | null; onPakai: (sk: SKRegistri) => void }) {
+  if (!nomor.trim()) return null;
+  const sama = cek?.sama?.[0];
+  if (sama)
+    return (
+      <Alert
+        variant="warning"
+        title="Nomor ini sudah tercatat di registri"
+        actions={
+          <Button size="sm" onClick={() => onPakai(sama)}>
+            Pakai SK ini
+          </Button>
+        }
+      >
+        {sama.nomor}
+        {sama.perihal ? ` (${sama.perihal})` : ''}
+        {sama.penerbit?.nama ? `, penerbit ${sama.penerbit.nama}` : ''}. Satu SK cukup dicatat sekali; pakai SK itu.
+      </Alert>
+    );
+  if (memeriksa)
+    return (
+      <p className="u-ajukan-sk-status" data-status="periksa" aria-live="polite">
+        <Loader2 aria-hidden /> Memeriksa registri…
+      </p>
+    );
+  if (cek?.mirip?.length)
+    return (
+      <Alert variant="info" title="Nomor sama dipakai penerbit lain">
+        {cek.mirip.map((m) => `${m.nomor} (${m.penerbit?.nama ?? 'penerbit belum diketahui'})`).join(', ')}. Boleh lanjut bila penerbitnya memang berbeda; periksa lagi di langkah Penerbit.
+      </Alert>
+    );
+  if (cek)
+    return (
+      <p className="u-ajukan-sk-status" data-status="aman" aria-live="polite">
+        <CircleCheck aria-hidden /> Belum ada di registri. Nomor ini bisa dicatat.
+      </p>
+    );
+  return null;
+}
+
 /**
- * Dialog mencatat SK ke registri. Pemegang sk.catat di unit penerbit: SK langsung terbit. Unit lain: ajuan pencatatan
- * (draf) yang diverifikasi penerbit. Penandatangan opsional: pejabat, jabatan saja, atau teks (Ketua Yayasan, dsb.).
+ * Catat SK ke registri lewat panel samping bertahap (PanelLangkah): (1) berkas SK, (2) identitas dengan cek nomor
+ * duplikat langsung, (3) penerbit & penandatangan, (4) tinjau kartu SK + tempat arsip + siapa yang memverifikasi.
+ * Pemegang sk.catat di unit penerbit: SK langsung terbit. Unit lain: ajuan pencatatan (draf) yang diverifikasi
+ * penerbit. Di ponsel panel menjadi lembar bawah.
  */
 export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor: nomorLama, jenis: jenisLama, penerbitUnitId: penerbitLama, perihal: perihalLama, onTercatat }: AjukanPencatatanSKProps) {
   const isian: IsianAwalSK = { nomor: nomorLama, jenis: jenisLama, penerbitUnitId: penerbitLama, perihal: perihalLama, ...(isianProp ?? {}) };
   const siakad = useOptionalSiakad();
   const periksa = usePeriksaSK();
+  const [langkah, setLangkah] = React.useState(0);
   const [nomor, setNomor] = React.useState(isian.nomor ?? '');
   const [tanggal, setTanggal] = React.useState<string | null>(isian.tanggal ?? null);
   const [perihal, setPerihal] = React.useState(isian.perihal ?? '');
@@ -592,12 +661,14 @@ export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor
   const [luar, setLuar] = React.useState(isian.penerbitLuar ?? '');
   const [ttd, setTtd] = React.useState<NilaiPenandatangan | null>(isian.penandatangan ?? null);
   const [tempat, setTempat] = React.useState('');
-  const [berkas, setBerkas] = React.useState<string | null>(null);
+  const tempatDiketik = React.useRef(false);
+  const [tempatBawaan, setTempatBawaan] = React.useState<string | null>(null);
+  const [berkas, setBerkas] = React.useState<string | null>(isian.berkasId ?? null);
+  const [namaBerkas, setNamaBerkas] = React.useState<string | null>(null);
   const [daftarPenerbit, setDaftarPenerbit] = React.useState<PenerbitSK[]>([]);
   const [cek, setCek] = React.useState<PeriksaSK | null>(null);
+  const [memeriksa, setMemeriksa] = React.useState(false);
   const [mirip, setMirip] = React.useState(false);
-  const [kirim, setKirim] = React.useState(false);
-  const [galat, setGalat] = React.useState<string | null>(null);
   const jenis = isian.jenis;
   React.useEffect(() => {
     if (!siakad || !open) return;
@@ -636,26 +707,57 @@ export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siakad, open]);
   const unitPenerbit = penerbit === LUAR ? null : penerbit;
+  // "Ditetapkan di" bawaan = tempat SK terakhir unit penerbit (aturan server); ditampilkan terisi agar terlihat dan bisa diubah.
+  React.useEffect(() => {
+    if (!siakad || !open || !unitPenerbit) return setTempatBawaan(null);
+    const ac = new AbortController();
+    siakad
+      .request<SKRegistri[]>({ method: 'GET', path: '/v1/sk', query: { penerbit: unitPenerbit, per_page: 10, arsip: 0 } }, { signal: ac.signal })
+      .then((r) => {
+        const t = (Array.isArray(r.data) ? r.data : []).find((s) => s.tempat)?.tempat ?? null;
+        setTempatBawaan(t);
+        if (t && !tempatDiketik.current) setTempat(t);
+      })
+      .catch(() => undefined);
+    return () => ac.abort();
+  }, [siakad, open, unitPenerbit]);
   const bolehCatat = (penerbit === LUAR ? daftarPenerbit.some((u) => u.boleh_catat) : daftarPenerbit.find((u) => u.unit_id === penerbit)?.boleh_catat) ?? false;
   React.useEffect(() => {
+    setMirip(false);
     if (!nomor.trim()) {
       setCek(null);
+      setMemeriksa(false);
       return;
     }
-    const t = setTimeout(() => void periksa(nomor, unitPenerbit).then(setCek), 350);
-    return () => clearTimeout(t);
+    setMemeriksa(true);
+    let batal = false;
+    const t = setTimeout(
+      () =>
+        void periksa(nomor, unitPenerbit).then((h) => {
+          if (batal) return;
+          setCek(h);
+          setMemeriksa(false);
+        }),
+      350,
+    );
+    return () => {
+      batal = true;
+      clearTimeout(t);
+    };
   }, [nomor, unitPenerbit, periksa]);
-  const simpan = async () => {
-    if (!siakad) return;
-    setKirim(true);
-    setGalat(null);
+  const pakai = (s: SKRegistri) => {
+    onTercatat(s, `SK ini sudah tercatat sebagai ${s.nomor}. SK itu yang dipilih.`);
+    onOpenChange(false);
+  };
+  const simpan = async (): Promise<string | void> => {
+    if (!siakad) return 'Belum tersambung ke SIAKAD.';
     try {
       const r = await siakad.request<SKRegistri>({
         method: 'POST',
         path: '/v1/sk',
         body: {
-          nomor, tanggal, perihal: perihal || null, jenis, ...(penerbit === LUAR ? { penerbit_luar: luar || null } : { penerbit_unit_id: penerbit }),
-          ...bodyPenandatangan(ttd), tempat: tempat || null, berkas_id: berkas, abaikan_mirip: mirip || undefined,
+          nomor: nomor.trim(), tanggal, perihal: perihal.trim() || null, jenis, ...(penerbit === LUAR ? { penerbit_luar: luar.trim() || null } : { penerbit_unit_id: penerbit }),
+          ...bodyPenandatangan(ttd), tempat: tempat.trim() || null, berkas_id: berkas, abaikan_mirip: mirip || undefined,
         },
       });
       onTercatat(r.data, r.data.status === 'draf' ? 'Ajuan pencatatan SK terkirim ke unit penerbit untuk diverifikasi. SK ini sudah bisa dirujuk.' : undefined);
@@ -665,10 +767,11 @@ export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor
         onTercatat(d.sk as SKRegistri, `SK ini sudah tercatat sebagai ${(d.sk as SKRegistri).nomor}. SK itu yang dipilih.`);
         return;
       }
-      if (d.kode === 'sk_mirip') setMirip(true);
-      setGalat(pesanGalat(e));
-    } finally {
-      setKirim(false);
+      if (d.kode === 'sk_mirip') {
+        setMirip(true);
+        return `${pesanGalat(e)} Periksa penerbit, lalu tekan "Tetap catat" bila sudah benar.`;
+      }
+      return pesanGalat(e);
     }
   };
   const sama = cek?.sama?.[0];
@@ -676,96 +779,191 @@ export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor
   const pencatat = React.useMemo(() => new Set(daftarPenerbit.filter((u) => u.boleh_catat).map((u) => u.unit_id)), [daftarPenerbit]);
   // Lencana "Anda pencatat" hanya bila membedakan (bukan di semua unit, mis. admin).
   const semuaPencatat = daftarPenerbit.length > 0 && pencatat.size === daftarPenerbit.length;
+  const namaPenerbit = penerbit === LUAR ? luar.trim() : (daftarPenerbit.find((u) => u.unit_id === penerbit)?.nama ?? '');
+  const arsip = arsipTujuan(penerbit, daftarPenerbit, luar, tanggal ? tanggal.slice(0, 4) : null);
+  const teksTtd = ttd ? [ttd.jabatan, ttd.nama].filter(Boolean).join(', ') : '';
+  const pratinjau: SKRegistri = {
+    id: 'pratinjau',
+    nomor: nomor.trim() || 'Nomor SK',
+    tanggal,
+    perihal: perihal.trim() || null,
+    penerbit: namaPenerbit ? { unit_id: unitPenerbit, nama: namaPenerbit, luar: penerbit === LUAR } : null,
+    penandatangan: teksTtd ? { pejabat_id: ttd?.pejabat_id ?? null, jabatan: ttd?.jabatan ?? null, nama: ttd?.nama ?? null, tautan: ttd?.tautan } : null,
+    tempat: tempat.trim() || tempatBawaan,
+    status: bolehCatat ? 'terbit' : 'draf',
+    diverifikasi_at: bolehCatat ? 'sekarang' : null,
+  };
+  const blokirIdentitas = !nomor.trim() ? 'Isi nomor SK untuk lanjut.' : sama ? 'Nomor ini sudah tercatat. Tekan "Pakai SK ini" di atas.' : memeriksa ? 'Memeriksa nomor di registri…' : null;
+  const blokirPenerbit = penerbit === null ? 'Pilih unit penerbit SK.' : penerbit === LUAR && !luar.trim() ? 'Tulis nama instansi penerbit.' : null;
+  const steps: PanelLangkahStep[] = [
+    {
+      id: 'berkas',
+      title: 'Berkas SK',
+      icon: <Upload />,
+      optional: true,
+      description: 'Unggah atau seret PDF/foto SK yang sudah ditandatangani, atau pilih dari berkas yang sudah ada. Boleh dilewati dan diunggah penerbit kemudian.',
+      content: (
+        <div className="u-ajukan-sk">
+          <Field label="Berkas SK" optional description="PDF, JPG, atau PNG. Cukup satu kali: unit lain membacanya dari registri, tidak mengunggah ulang.">
+            <CariAtauUnggahDokumen
+              value={berkas}
+              onValueChange={(id, d) => {
+                setBerkas(id);
+                setNamaBerkas(d?.nama ?? null);
+              }}
+              accept=".pdf,.jpg,.jpeg,.png"
+              kategori="sk"
+              placeholder="Cari berkas SK atau unggah yang baru…"
+            />
+          </Field>
+          <p className="u-ajukan-sk-bantuan">
+            <Archive aria-hidden />
+            <span>Berkas disimpan di arsip institusi (Arsip universitas atau fakultas, sesuai penerbit), bukan di ruang pribadi Anda. Hanya pengelola arsip yang bisa menghapusnya.</span>
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: 'identitas',
+      title: 'Identitas',
+      icon: <Hash />,
+      description: 'Salin nomor persis seperti tertulis di SK. Registri langsung memeriksa apakah SK ini sudah pernah dicatat.',
+      blocked: blokirIdentitas,
+      validate: () => (!nomor.trim() ? 'Nomor SK wajib diisi.' : sama ? 'Nomor ini sudah tercatat di registri. Pakai SK yang sudah ada.' : undefined),
+      content: (
+        <div className="u-ajukan-sk">
+          <Field label="Nomor SK" required description="Contoh: 91.01/UNIPO-SK/VII/2026. Beda spasi, huruf besar/kecil, tanda baca, atau nol di depan tetap dianggap nomor yang sama.">
+            <Input value={nomor} onChange={(e) => setNomor(e.target.value)} placeholder="mis. 91.01/UNIPO-SK/VII/2026" autoComplete="off" />
+          </Field>
+          <StatusNomorSK nomor={nomor} memeriksa={memeriksa} cek={cek} onPakai={pakai} />
+          <Field label="Tanggal SK" optional description="Tanggal penetapan yang tertulis di SK.">
+            <DatePicker value={isoKeTanggal(tanggal)} onValueChange={(d) => setTanggal(tanggalKeIso(d))} placeholder="Pilih tanggal…" />
+          </Field>
+          <Field label="Perihal" optional description="Judul atau isi singkat SK, agar mudah dicari.">
+            <Textarea rows={2} value={perihal} onChange={(e) => setPerihal(e.target.value)} placeholder="mis. Pengangkatan Dekan Fakultas Ilmu Komputer" />
+          </Field>
+        </div>
+      ),
+    },
+    {
+      id: 'penerbit',
+      title: 'Penerbit & penandatangan',
+      icon: <Building2 />,
+      description: 'Siapa yang menerbitkan dan menandatangani SK ini. Universitas untuk SK Rektor, fakultas untuk SK Dekan; SK pengangkatan Rektor diterbitkan Yayasan (instansi luar).',
+      blocked: blokirPenerbit,
+      validate: () => blokirPenerbit ?? undefined,
+      content: (
+        <div className="u-ajukan-sk">
+          <Field label="Penerbit" required>
+            <div className="u-ajukan-sk-penerbit">
+              <SegmentedControl<'unit' | 'luar'>
+                aria-label="Jenis penerbit"
+                value={penerbit === LUAR ? 'luar' : 'unit'}
+                onValueChange={(v) => setPenerbit(v === 'luar' ? LUAR : unitTerakhir.current)}
+                options={[
+                  { value: 'unit', label: 'Unit UNIPO' },
+                  { value: 'luar', label: 'Instansi luar' },
+                ]}
+              />
+              {penerbit === LUAR ? (
+                <Input value={luar} onChange={(e) => setLuar(e.target.value)} placeholder="Nama instansi, mis. Yayasan, LLDIKTI, BAN-PT" aria-label="Nama instansi penerbit" />
+              ) : (
+                <PilihUnit
+                  dataCadangan={unitPilihan}
+                  value={penerbit}
+                  onValueChange={(v) => {
+                    unitTerakhir.current = v;
+                    setPenerbit(v);
+                  }}
+                  keterangan={semuaPencatat ? undefined : (u) => (pencatat.has(Number(u.id)) ? 'Anda pencatat' : null)}
+                  placeholder="Pilih unit penerbit…"
+                  aria-label="Unit penerbit"
+                />
+              )}
+            </div>
+          </Field>
+          {sama && <StatusNomorSK nomor={nomor} memeriksa={false} cek={cek} onPakai={pakai} />}
+          {!sama && cek?.mirip?.length && unitPenerbit ? <StatusNomorSK nomor={nomor} memeriksa={false} cek={{ ...cek, sama: [] }} onPakai={pakai} /> : null}
+          <IsianPenandatangan value={ttd} onValueChange={setTtd} unitId={unitPenerbit} />
+          <Field label="Ditetapkan di" optional description={tempatBawaan ? `Bawaan dari SK terakhir penerbit ini: ${tempatBawaan}. Ubah bila berbeda.` : 'Kota tempat SK ditetapkan, seperti tertulis di SK.'}>
+            <Input
+              value={tempat}
+              onChange={(e) => {
+                tempatDiketik.current = true;
+                setTempat(e.target.value);
+              }}
+              placeholder={tempatBawaan ?? 'mis. Marisa'}
+            />
+          </Field>
+        </div>
+      ),
+    },
+    {
+      id: 'tinjau',
+      title: 'Tinjau',
+      icon: <ClipboardCheck />,
+      description: 'Periksa sekali lagi. Begini SK ini akan tampil di registri dan di form yang merujuknya.',
+      content: (
+        <div className="u-ajukan-sk">
+          <KartuSK sk={pratinjau} pratinjau />
+          <WizardReview
+            sections={[
+              {
+                title: 'Berkas SK',
+                onEdit: () => setLangkah(0),
+                missing: berkas ? undefined : 'Belum ada berkas. SK tetap bisa dicatat; penerbit dapat mengunggahnya kemudian.',
+                items: [
+                  { label: 'Berkas', value: berkas ? (namaBerkas ?? 'Berkas terpilih') : null },
+                  { label: 'Diarsipkan di', value: arsip.jalur },
+                ],
+              },
+              {
+                title: 'Identitas',
+                onEdit: () => setLangkah(1),
+                items: [
+                  { label: 'Nomor', value: nomor.trim() },
+                  { label: 'Tanggal', value: tanggal ? formatDate(tanggal) : null },
+                  { label: 'Perihal', value: perihal.trim() },
+                ],
+              },
+              {
+                title: 'Penerbit & penandatangan',
+                onEdit: () => setLangkah(2),
+                items: [
+                  { label: 'Penerbit', value: namaPenerbit },
+                  { label: 'Penandatangan', value: teksTtd || null },
+                  { label: 'Ditetapkan di', value: tempat.trim() || tempatBawaan },
+                ],
+              },
+            ]}
+          />
+          <Alert variant={bolehCatat ? 'success' : 'info'} title={bolehCatat ? 'Langsung terbit' : `Diverifikasi ${namaPenerbit || 'unit penerbit'}`}>
+            {bolehCatat
+              ? 'Anda pencatat SK unit ini. Setelah disimpan, SK langsung terbit dan bisa dirujuk semua unit.'
+              : `Ajuan dikirim ke pencatat SK ${namaPenerbit || 'unit penerbit'}, yang memeriksa nomor, penandatangan, dan berkasnya. Sementara menunggu, SK ini sudah bisa dirujuk.`}
+          </Alert>
+        </div>
+      ),
+    },
+  ];
   return (
-    <Dialog
+    <PanelLangkah
       open={open}
       onOpenChange={onOpenChange}
-      size="lg"
+      step={langkah}
+      onStepChange={setLangkah}
       title={bolehCatat ? 'Catat SK di registri' : 'Ajukan pencatatan SK'}
-      description={
-        bolehCatat
-          ? 'Anda pencatat SK unit ini: SK langsung terbit dan bisa dirujuk semua unit.'
-          : 'SK belum ada di registri. Ajuan dikirim ke unit penerbit untuk diverifikasi; sementara itu SK sudah bisa dirujuk.'
-      }
-      footer={
+      description={bolehCatat ? 'Anda pencatat SK unit ini: SK langsung terbit.' : 'Ajuan diverifikasi unit penerbit; sementara itu SK sudah bisa dirujuk.'}
+      steps={steps}
+      onFinish={simpan}
+      finishLabel={
         <>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Batal
-          </Button>
-          <Button onClick={simpan} loading={kirim} disabled={!nomor.trim() || penerbit === null || (penerbit === LUAR && !luar.trim()) || !!sama}>
-            {bolehCatat ? <ShieldCheck /> : <FilePlus2 />} {mirip ? 'Tetap catat' : bolehCatat ? 'Catat SK' : 'Ajukan pencatatan'}
-          </Button>
+          {bolehCatat ? <ShieldCheck /> : <FilePlus2 />} {mirip ? 'Tetap catat' : bolehCatat ? 'Catat SK' : 'Ajukan pencatatan'}
         </>
       }
-    >
-      <div className="u-ajukan-sk">
-        <Field label="Nomor SK" required>
-          <Input value={nomor} onChange={(e) => setNomor(e.target.value)} placeholder="mis. 91.01/UNIPO-SK/VII/2026" />
-        </Field>
-        {sama && (
-          <Alert
-            variant="info"
-            title="SK ini sudah tercatat"
-            actions={
-              <Button size="sm" onClick={() => onTercatat(sama, `SK ini sudah tercatat sebagai ${sama.nomor}. SK itu yang dipilih.`)}>
-                Pakai SK ini
-              </Button>
-            }
-          >
-            {sama.nomor}
-            {sama.perihal ? ` (${sama.perihal})` : ''}
-            {sama.penerbit?.nama ? `, penerbit ${sama.penerbit.nama}` : ''}. Pilih SK itu, jangan catat ulang.
-          </Alert>
-        )}
-        {!sama && cek?.mirip?.length ? (
-          <Alert variant="warning" title="Nomor sama dengan penerbit lain">
-            {cek.mirip.map((m) => `${m.nomor} (${m.penerbit?.nama ?? 'penerbit belum diketahui'})`).join(', ')}. Pastikan penerbitnya benar.
-          </Alert>
-        ) : null}
-        <Field label="Penerbit" required description="Universitas untuk SK Rektor, fakultas untuk SK Dekan; SK pengangkatan Rektor diterbitkan Yayasan (instansi luar).">
-          <div className="u-ajukan-sk-penerbit">
-            <SegmentedControl<'unit' | 'luar'>
-              aria-label="Jenis penerbit"
-              value={penerbit === LUAR ? 'luar' : 'unit'}
-              onValueChange={(v) => setPenerbit(v === 'luar' ? LUAR : unitTerakhir.current)}
-              options={[
-                { value: 'unit', label: 'Unit UNIPO' },
-                { value: 'luar', label: 'Instansi luar' },
-              ]}
-            />
-            {penerbit === LUAR ? (
-              <Input value={luar} onChange={(e) => setLuar(e.target.value)} placeholder="Nama instansi, mis. Yayasan (Badan Penyelenggara), LLDIKTI, BAN-PT" aria-label="Nama instansi penerbit" />
-            ) : (
-              <PilihUnit
-                dataCadangan={unitPilihan}
-                value={penerbit}
-                onValueChange={(v) => {
-                  unitTerakhir.current = v;
-                  setPenerbit(v);
-                }}
-                keterangan={semuaPencatat ? undefined : (u) => (pencatat.has(Number(u.id)) ? 'Anda pencatat' : null)}
-                placeholder="Pilih unit penerbit"
-                aria-label="Unit penerbit"
-              />
-            )}
-          </div>
-        </Field>
-        <Field label="Tanggal SK" optional>
-          <DatePicker value={isoKeTanggal(tanggal)} onValueChange={(d) => setTanggal(tanggalKeIso(d))} placeholder="Tanggal SK" />
-        </Field>
-        <Field label="Perihal" optional>
-          <Input value={perihal} onChange={(e) => setPerihal(e.target.value)} placeholder="mis. Pengangkatan Dekan Fakultas Ilmu Komputer" />
-        </Field>
-        <IsianPenandatangan value={ttd} onValueChange={setTtd} unitId={unitPenerbit} />
-        <Field label="Ditetapkan di" optional>
-          <Input value={tempat} onChange={(e) => setTempat(e.target.value)} placeholder="Kosong = sama dengan SK terakhir unit penerbit" />
-        </Field>
-        <Field label="Berkas SK" optional description="Satu berkas, disimpan di Berkas unit penerbit. Unit lain membacanya dari registri, tidak mengunggah ulang.">
-          <CariAtauUnggahDokumen value={berkas} onValueChange={setBerkas} accept=".pdf,.jpg,.jpeg,.png" kategori="sk" placeholder="Cari atau unggah berkas SK" />
-        </Field>
-        {galat && <Alert variant="danger">{galat}</Alert>}
-      </div>
-    </Dialog>
+      footerNote="Kolom bertanda * wajib diisi."
+      className="u-ajukan-sk-panel"
+    />
   );
 }
 
@@ -878,6 +1076,12 @@ export interface IsianSKProps extends Omit<PilihNomorSKProps, 'value' | 'onValue
   error?: string;
   /** Ekstensi berkas SK. Bawaan PDF dan gambar. */
   accept?: string;
+  /**
+   * Tombol "Catat lengkap di registri" untuk nomor baru: membuka panel samping pencatatan SK (berkas, identitas,
+   * penerbit & penandatangan, tinjau) dengan isian terbawa; setelah tersimpan SK langsung terpilih (nilai membawa
+   * sk_id). Bawaan true bila nomor baru diperbolehkan.
+   */
+  catatLengkap?: boolean;
 }
 
 /**
@@ -885,7 +1089,9 @@ export interface IsianSKProps extends Omit<PilihNomorSKProps, 'value' | 'onValue
  * registri (tidak diunggah ulang), nilai membawa `sk_id`. Nomor baru (belum tercatat): tanggal + berkas diisi, lalu
  * server mengajukan pencatatannya ke unit penerbit. Kirim `sk_id` bila ada, selain itu nomor/tanggal/berkas_id.
  */
-export function IsianSK({ value, onValueChange, tanggal = true, berkas = true, label = 'Nomor SK', required, error, accept = '.pdf,.jpg,.jpeg,.png', className, ...pilih }: IsianSKProps) {
+export function IsianSK({ value, onValueChange, tanggal = true, berkas = true, label = 'Nomor SK', required, error, accept = '.pdf,.jpg,.jpeg,.png', catatLengkap = true, className, ...pilih }: IsianSKProps) {
+  const siakad = useOptionalSiakad();
+  const [catat, setCatat] = React.useState(false);
   const v = value ?? null;
   const set = (patch: Partial<NilaiSK>) => {
     const n = { nomor: v?.nomor ?? '', ...v, ...patch };
@@ -930,6 +1136,25 @@ export function IsianSK({ value, onValueChange, tanggal = true, berkas = true, l
             )}
           </div>
         )
+      )}
+      {!dariRegistri && v?.nomor && catatLengkap && pilih.bolehBaru !== false && siakad && !pilih.disabled && (
+        <div className="u-isian-sk-catat">
+          <Button variant="outline" size="sm" onClick={() => setCatat(true)}>
+            <FilePlus2 /> Catat lengkap di registri SK
+          </Button>
+          <small>Penerbit, penandatangan, dan berkas dicatat sekali; form lain cukup merujuknya.</small>
+        </div>
+      )}
+      {catat && v && (
+        <AjukanPencatatanSK
+          open
+          onOpenChange={(o) => !o && setCatat(false)}
+          isian={{ nomor: v.nomor, tanggal: v.tanggal ?? null, perihal: v.perihal ?? undefined, berkasId: v.berkas_id ?? null }}
+          onTercatat={(s) => {
+            setCatat(false);
+            onValueChange?.({ nomor: s.nomor, tanggal: s.tanggal ?? null, perihal: s.perihal ?? null, berkas_id: null, sk_id: s.id, sk: s });
+          }}
+        />
       )}
     </div>
   );

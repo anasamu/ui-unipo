@@ -1196,6 +1196,7 @@ function UnggahBukti({ open, onOpenChange, pendaftaranId, tagihan, onSelesai }: 
   };
   return (
     <Dialog
+      side="right"
       open={open}
       onOpenChange={onOpenChange}
       title="Unggah bukti transfer"

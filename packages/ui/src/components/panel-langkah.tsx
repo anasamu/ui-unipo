@@ -22,6 +22,11 @@ export interface PanelLangkahStep {
   /** Tandai bermasalah dari luar (mis. galat server 422 pada kolom langkah ini). */
   error?: boolean;
   optional?: boolean;
+  /**
+   * Alasan tombol utama (Lanjut/Simpan) belum bisa ditekan di langkah ini, mis. "Isi nomor SK dulu". Tombol nonaktif dan
+   * alasannya tampil di kaki panel, agar pengguna tahu apa yang kurang tanpa menebak.
+   */
+  blocked?: React.ReactNode;
 }
 
 export interface PanelLangkahProps {
@@ -170,6 +175,10 @@ export function PanelLangkah({
             <p className="u-pl-galat" role="alert">
               <CircleAlert aria-hidden /> {error}
             </p>
+          ) : cur.blocked ? (
+            <p className="u-pl-catatan" data-blokir="" aria-live="polite">
+              {cur.blocked}
+            </p>
           ) : footerNote ? (
             <p className="u-pl-catatan">{footerNote}</p>
           ) : null}
@@ -190,11 +199,11 @@ export function PanelLangkah({
               </Button>
             ) : null}
             {last ? (
-              <Button onClick={() => void simpan()} loading={busy}>
+              <Button onClick={() => void simpan()} loading={busy} disabled={!busy && !!cur.blocked}>
                 {finishLabel}
               </Button>
             ) : (
-              <Button onClick={() => void lanjut()} loading={busy}>
+              <Button onClick={() => void lanjut()} loading={busy} disabled={!busy && !!cur.blocked}>
                 {nextLabel}
                 {!busy && <ArrowRight />}
               </Button>

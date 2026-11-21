@@ -933,6 +933,7 @@ export function TinjauKejadianPresensi({ kejadian: k, onOpenChange }: { kejadian
   const penanda: PenandaPeta[] = k && k.lat != null && k.lng != null ? [{ id: k.id, lat: k.lat, lng: k.lng, warna: WARNA_STATUS_KEJADIAN[k.status], label: k.pegawai_nama ?? 'Titik presensi' }] : [];
   return (
     <Dialog
+      side="right"
       open={!!k}
       onOpenChange={onOpenChange}
       size="lg"
