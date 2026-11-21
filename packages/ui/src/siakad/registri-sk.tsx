@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { ArrowRightLeft, Ban, Check, Link2, Pencil, Plus, Search, X } from 'lucide-react';
+import { Archive, ArrowRightLeft, Ban, Check, Link2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { Field, Input, SegmentedControl, Textarea } from '../components/forms';
 import { Alert, Empty } from '../components/display';
 import { Badge, Button, Spinner } from '../components/actions';
@@ -27,7 +27,9 @@ export interface DetailSK extends SKRegistri {
   mengubah: Array<{ id: string; nomor: string; perihal: string | null; jenis: 'mengubah' | 'mencabut'; status: SKRegistri['status'] }>;
   diubah_oleh_sk: Array<{ id: string; nomor: string; perihal: string | null; jenis: 'mengubah' | 'mencabut'; status: SKRegistri['status'] }>;
   ganda: SKRegistri[];
-  boleh: { catat: boolean };
+  /** hapus = boleh menghapus entri dicabut (izin sk.registri.hapus); hapus_tolak = alasan entri ini belum bisa dihapus. */
+  boleh: { catat: boolean; hapus?: boolean };
+  hapus_tolak?: string[];
 }
 
 export interface SaringanSK {
@@ -170,6 +172,7 @@ export function RincianSK({ id, open, onOpenChange, onBuka }: { id: string | nul
   const { data: sk, loading, error, refetch } = useSK(open ? id : null);
   const [catatan, setCatatan] = React.useState('');
   const [ubah, setUbah] = React.useState(false);
+  const [hapus, setHapus] = React.useState(false);
   const aksi = async (judul: string, path: string, body: Record<string, unknown>) => {
     try {
       await siakad.request({ method: 'POST', path, body });
@@ -200,6 +203,15 @@ export function RincianSK({ id, open, onOpenChange, onBuka }: { id: string | nul
             }
           />
           {ubah && <UbahSK sk={sk} open onOpenChange={setUbah} onTersimpan={refetch} />}
+          {sk.berkas?.arsip && (
+            <p className="u-sk-arsip">
+              <Archive aria-hidden />
+              <span>
+                Berkas tersimpan di <strong>{sk.berkas.arsip.path}</strong>
+                {sk.berkas.diunggah_oleh ? `, diunggah oleh ${sk.berkas.diunggah_oleh}` : ''}. Arsip institusi dikelola pengelola arsip, bukan ruang pribadi pengunggah.
+              </span>
+            </p>
+          )}
           {sk.boleh.catat && sk.status === 'terbit' && !sk.diverifikasi_at && (
             <Alert
               variant="warning"
@@ -305,8 +317,95 @@ export function RincianSK({ id, open, onOpenChange, onBuka }: { id: string | nul
               onConfirm={() => aksi('SK dicabut', `/v1/sk/${sk.id}/cabut`, { catatan: catatan || undefined })}
             />
           )}
+          {sk.status === 'dicabut' && sk.boleh.hapus && (
+            <div>
+              <Button variant="outline" size="sm" onClick={() => setHapus(true)}>
+                <Trash2 /> Hapus dari registri
+              </Button>
+            </div>
+          )}
+          {hapus && (
+            <HapusSK
+              sk={sk}
+              onOpenChange={setHapus}
+              onTerhapus={() => {
+                setHapus(false);
+                onOpenChange(false);
+              }}
+            />
+          )}
         </div>
       ) : null}
+    </Sheet>
+  );
+}
+
+/**
+ * Panel samping hapus entri registri berstatus dicabut (izin sk.registri.hapus, administrator Pustikom). Alasan wajib;
+ * ditolak server bila masih dirujuk modul atau terhubung SK lain (alasannya ditampilkan). Berkas masuk sampah arsip.
+ */
+function HapusSK({ sk, onOpenChange, onTerhapus }: { sk: DetailSK; onOpenChange: (o: boolean) => void; onTerhapus: () => void }) {
+  const siakad = useSiakad();
+  const toast = useToast();
+  const [alasan, setAlasan] = React.useState('');
+  const [galat, setGalat] = React.useState<string | null>(null);
+  const [tolak, setTolak] = React.useState<string[]>(sk.hapus_tolak ?? []);
+  const [sibuk, setSibuk] = React.useState(false);
+  const kirim = async () => {
+    if (alasan.trim().length < 5) {
+      setGalat('Tulis alasan penghapusan (minimal 5 karakter).');
+      return;
+    }
+    setSibuk(true);
+    try {
+      await siakad.request({ method: 'POST', path: `/v1/sk/${sk.id}/hapus`, body: { alasan: alasan.trim() } });
+      invalidateSiakad('sk');
+      toast.add({ title: `SK ${sk.nomor} dihapus dari registri`, description: 'Berkasnya dipindah ke sampah arsip dan masih bisa dipulihkan selama masa sampah.', type: 'success' });
+      onTerhapus();
+    } catch (e) {
+      const d = (e as { details?: { alasan?: unknown } }).details;
+      if (d && Array.isArray(d.alasan)) setTolak(d.alasan.map(String));
+      else setGalat(pesanGalat(e));
+    } finally {
+      setSibuk(false);
+    }
+  };
+  return (
+    <Sheet
+      open
+      onOpenChange={onOpenChange}
+      title={`Hapus SK ${sk.nomor}?`}
+      description="Hanya untuk SK dicabut yang salah input atau tidak dipakai lagi. Tercatat di log beserta alasannya."
+      footer={
+        <>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Batal
+          </Button>
+          <Button variant="destructive" loading={sibuk} disabled={tolak.length > 0} onClick={() => void kirim()}>
+            <Trash2 /> Hapus dari registri
+          </Button>
+        </>
+      }
+    >
+      <div className="u-rincian-sk">
+        <KartuSK sk={sk} />
+        {tolak.length > 0 ? (
+          <Alert variant="danger" title="SK ini belum bisa dihapus">
+            <ul className="u-sk-hapus-alasan">
+              {tolak.map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
+          </Alert>
+        ) : (
+          <Alert variant="warning" title="Yang terjadi">
+            Catatan SK dihapus dari registri (tidak tampil lagi dan tidak bisa dirujuk). Berkas SK dipindah ke sampah arsip dan bisa dipulihkan Pustikom selama masa sampah.
+          </Alert>
+        )}
+        <Field label="Alasan penghapusan" required error={galat ?? undefined}>
+          <Textarea value={alasan} onChange={(e) => (setAlasan(e.target.value), setGalat(null))} rows={3} placeholder="Mis. catatan ganda hasil impor data lama" disabled={tolak.length > 0} />
+        </Field>
+      </div>
     </Sheet>
   );
 }

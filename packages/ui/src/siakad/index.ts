@@ -119,6 +119,7 @@ export * from './pedoman-ruang';
 export * from './pedoman-kelola';
 export * from './syarat-keuangan';
 export * from './akreditasi-kelengkapan';
+export * from './akreditasi-rinci';
 export * from './beasiswa';
 export * from './wisuda';
 export * from './identitas-prodi';

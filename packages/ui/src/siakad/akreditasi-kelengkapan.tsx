@@ -13,6 +13,7 @@ import { FormGrid } from '../components/wizard';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { PilihBerkas } from './pilih-berkas';
 import { AlurPemeriksa, LabelPemeriksa, type TahapPemeriksa } from './pemeriksa';
+import { GarisWaktuAkreditasi, KartuAkreditasi, type IntegrasiAkreditasiData, type RiwayatAkreditasi } from './akreditasi-rinci';
 
 /*
  * Kelengkapan akreditasi prodi terintegrasi SPMI (SIAKAD /v1/spmi/akreditasi-kelengkapan, docs/AKREDITASI.md
@@ -103,6 +104,8 @@ interface RuangKelengkapan {
   pengingat: string;
   instrumen: { id: number; kode: string; nama: string; lembaga: string; jumlah_dokumen: number }[];
   kriteria: { id: number | null; kode: string; nama: string; jumlah: number; lengkap: number; persen: number; item: ButirKelengkapan[] }[];
+  /** Rincian akreditasi dari SPMI (kartu yang sama dengan SPMI » Akreditasi, hanya baca). */
+  akreditasi_rinci?: { riwayat: RiwayatAkreditasi[]; integrasi: IntegrasiAkreditasiData } | null;
 }
 interface DetailButir extends ButirKelengkapan {
   kode_prodi: string;
@@ -144,9 +147,31 @@ function useKirim() {
 }
 
 // ================================================================== status akreditasi
-/** Kartu akreditasi terkini prodi (dari SPMI, hanya baca). */
-export function StatusAkreditasiProdi({ akreditasi, pengingat, className }: { akreditasi: InfoAkreditasiProdi | null | undefined; pengingat?: string; className?: string }) {
+/**
+ * Kartu akreditasi terkini prodi (dari SPMI, hanya baca). Dengan `rinci` (riwayat dari SPMI) tampil kartu lengkap yang
+ * sama dengan SPMI: peringkat besar, keadaan & sisa masa, tanda data impor, SK di Registri SK, sertifikat di arsip,
+ * dan garis waktu riwayat.
+ */
+export function StatusAkreditasiProdi({ akreditasi, pengingat, rinci, className }: { akreditasi: InfoAkreditasiProdi | null | undefined; pengingat?: string; rinci?: RiwayatAkreditasi[] | null; className?: string }) {
   const a = akreditasi;
+  const terkini = rinci?.find((r) => r.terkini);
+  if (terkini)
+    return (
+      <Card className={className}>
+        <CardHeader title="Status akreditasi" description="Dari SPMI (hanya baca). Perubahan dicatat petugas SPMI di SPMI » Akreditasi; usulan status baru lewat tab Usulan status akreditasi." />
+        <CardContent>
+          <div className="u-bkd-form">
+            <KartuAkreditasi a={terkini} />
+            {rinci && rinci.length > 1 ? <GarisWaktuAkreditasi riwayat={rinci} /> : null}
+            {pengingat ? (
+              <p className="u-bkd-keterangan u-ak-pengingat">
+                <CalendarClock aria-hidden /> {pengingat}
+              </p>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
+    );
   return (
     <Card className={className}>
       <CardHeader title="Status akreditasi" description="Dari SPMI (hanya baca). Perubahan dicatat petugas SPMI di SPMI » Akreditasi." />
@@ -389,8 +414,9 @@ export function RuangKelengkapanAkreditasi({ kodeProdi, className }: { kodeProdi
   const tampil = (item: ButirKelengkapan[]) => item.filter((i) => !saring || (saring === 'terlambat' ? i.terlambat : i.status === saring));
   return (
     <div className={cn('u-bkd-form', className)}>
+      {x.akreditasi_rinci?.riwayat.some((r) => r.terkini) ? <StatusAkreditasiProdi akreditasi={x.akreditasi} pengingat={x.pengingat} rinci={x.akreditasi_rinci.riwayat} /> : null}
       <div className="u-ak-atas">
-        <StatusAkreditasiProdi akreditasi={x.akreditasi} pengingat={x.pengingat} />
+        {x.akreditasi_rinci?.riwayat.some((r) => r.terkini) ? null : <StatusAkreditasiProdi akreditasi={x.akreditasi} pengingat={x.pengingat} />}
         {x.persiapan && h ? (
           <Card>
             <CardHeader title="Kelengkapan dokumen" description={`${x.persiapan.nama_instrumen ?? x.persiapan.kode_instrumen ?? 'Instrumen'} · ${x.persiapan.jenis}${x.persiapan.target_pengajuan ? ` · target pengajuan ${tgl(x.persiapan.target_pengajuan)}` : ''}`} />
