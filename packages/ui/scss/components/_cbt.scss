@@ -484,6 +484,18 @@
   .u-cbt-ragu {
     margin-inline: auto;
   }
+  // Ponsel: tiga tombol tidak muat satu baris (luapan 424 px pada 390 px); Ragu-ragu pindah ke baris sendiri.
+  @media (max-width: 30rem) {
+    flex-wrap: wrap;
+    .u-cbt-ragu {
+      order: 3;
+      flex-basis: 100%;
+    }
+    > :first-child,
+    > :last-child {
+      flex: 1 1 0;
+    }
+  }
 }
 .u-cbt-lembar-side {
   display: flex;
