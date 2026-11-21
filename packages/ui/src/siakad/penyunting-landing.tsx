@@ -922,12 +922,12 @@ export function PenyuntingLanding({ aplikasi, lingkup, halaman = 'beranda', nama
               </Button>
             </>
           )}
-          {onTutup && (
-            <Button size="sm" variant="ghost" aria-label="Tutup penyunting" title="Tutup" onClick={onTutup}>
-              <X />
-            </Button>
-          )}
         </div>
+        {onTutup && (
+          <Button size="sm" variant="ghost" className="upl-tutup" aria-label="Tutup penyunting" title="Tutup" onClick={onTutup}>
+            <X />
+          </Button>
+        )}
       </header>
 
       {konflik && (

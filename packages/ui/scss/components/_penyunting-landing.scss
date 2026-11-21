@@ -672,12 +672,28 @@
     display: none;
   }
   .upl-bilah {
+    position: relative;
     padding: 0.5rem 0.625rem;
+  }
+  .upl-bilah-judul {
+    width: 100%;
+    padding-right: 2.5rem;
+  }
+  .upl-bilah-aksi {
+    flex: 1;
+  }
+  .upl-tutup {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
   }
   .upl-bilah-tengah {
     order: 3;
     width: 100%;
     justify-content: space-between;
+  }
+  .u-dialog-viewport:has(> .upl-dialog) {
+    padding: 0;
   }
   .upl-dialog.u-dialog[data-size='full'] {
     --u-dialog-w: 100vw;

@@ -98,6 +98,10 @@ describe('HalamanLanding', () => {
     const d = normalisasiDokumen({ blok: [{ tipe: 'slot', isi: { kunci: 'kelas-terbuka', judul: 'Kelas terbuka' } }] });
     expect(html(<HalamanLanding dokumen={d} slot={{ 'kelas-terbuka': { label: 'Kelas', render: <p>KATALOG</p> } }} />)).toContain('<p>KATALOG</p>');
     expect(html(<HalamanLanding dokumen={d} />)).not.toContain('KATALOG');
+    // Slot kosong / tidak disediakan: seluruh blok (termasuk judul) tidak tampil ke pengunjung, tetap tampil di penyunting.
+    expect(html(<HalamanLanding dokumen={d} />)).not.toContain('Kelas terbuka');
+    expect(html(<HalamanLanding dokumen={d} slot={{ 'kelas-terbuka': { label: 'Kelas', kosong: true, render: <p>KATALOG</p> } }} />)).not.toContain('ul-blok');
+    expect(html(<HalamanLanding dokumen={d} pratinjau slot={{ 'kelas-terbuka': { label: 'Kelas', kosong: true, render: <p>KATALOG</p> } }} />)).toContain('KATALOG');
   });
 
   it('menu atas dari blok berlabel menu dan berjangkar', () => {

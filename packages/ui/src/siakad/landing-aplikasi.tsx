@@ -156,7 +156,13 @@ export interface LandingAplikasiProps extends Omit<HalamanLandingProps, 'dokumen
  *   <LandingAplikasi aplikasi="lms" slot={{ 'kelas-terbuka': { label: 'Kelas terbuka', render: <KatalogKelasTerbuka /> } }}
  *     aksi={{ masuk: { label: 'Masuk', href: masukUrl('/') } }} merek={<Logo />} />
  */
-export function LandingAplikasi({ aplikasi, lingkup, halaman, bawaan, aturJudul = true, memuat, ...rest }: LandingAplikasiProps) {
+/**
+ * Dokumen landing yang tampil untuk aplikasi: isi terbit, salinan terakhir di peramban selama memuat, atau templat
+ * bawaan bila belum pernah terbit / SIAKAD tidak terjangkau. `dok` null = kunjungan pertama masih memuat.
+ * Dipakai LandingAplikasi, dan oleh aplikasi untuk menyusun menu atas (`menuLanding(dok)`).
+ */
+export function useDokumenLanding(aplikasi: string, opts: { lingkup?: string; halaman?: string; bawaan?: string } = {}) {
+  const { lingkup, halaman, bawaan } = opts;
   const siakad = useOptionalSiakad();
   const q = useHalamanLanding(aplikasi, { lingkup, halaman, enabled: !!siakad });
   const kunci = `unipo.landing.${aplikasi}.${lingkup ?? ''}.${halaman ?? 'beranda'}`;
@@ -181,6 +187,11 @@ export function LandingAplikasi({ aplikasi, lingkup, halaman, bawaan, aturJudul 
     }
   }, [q.data, terbit, kunci]);
   const dok = React.useMemo(() => (terbit ? normalisasiDokumen(terbit) : q.data || q.error || !siakad ? cadangan : cache), [terbit, q.data, q.error, siakad, cadangan, cache]);
+  return { dok, berkas: q.data?.berkas, versi: q.data?.versi ?? 0, memuat: q.loading };
+}
+
+export function LandingAplikasi({ aplikasi, lingkup, halaman, bawaan, aturJudul = true, memuat, ...rest }: LandingAplikasiProps) {
+  const { dok, berkas } = useDokumenLanding(aplikasi, { lingkup, halaman, bawaan });
   React.useEffect(() => {
     if (!aturJudul || !dok || typeof document === 'undefined') return;
     const j = dok.halaman?.judul;
@@ -197,5 +208,5 @@ export function LandingAplikasi({ aplikasi, lingkup, halaman, bawaan, aturJudul 
     }
   }, [aturJudul, dok]);
   if (!dok) return <>{memuat ?? <div className="ul-halaman-muat" aria-busy="true" aria-label="Memuat halaman" />}</>;
-  return <HalamanLanding dokumen={dok} berkas={q.data?.berkas} penyedia={PENYEDIA_SIAKAD} {...rest} />;
+  return <HalamanLanding dokumen={dok} berkas={berkas} penyedia={PENYEDIA_SIAKAD} {...rest} />;
 }

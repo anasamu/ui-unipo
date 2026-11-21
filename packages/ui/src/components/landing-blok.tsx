@@ -112,6 +112,8 @@ export interface SlotLanding {
   keterangan?: string;
   /** Isi bagian. Bila kosong, penyunting menampilkan penanda. */
   render?: React.ReactNode | ((isi: IsiBlok) => React.ReactNode);
+  /** Data bagian ini sedang kosong: seluruh blok (termasuk judulnya) tidak tampil ke pengunjung. */
+  kosong?: boolean;
 }
 
 /** Aksi milik aplikasi yang bisa dipasang ke tombol lewat alamat `aksi:<kunci>` (mis. aksi:masuk). */
@@ -672,6 +674,11 @@ class BatasGalatBlok extends React.Component<{ label: string; pratinjau?: boolea
 export function BlokLandingView({ blok, terpilih, onPilih }: { blok: BlokLanding; terpilih?: boolean; onPilih?: (id: string) => void }) {
   const k = React.useContext(KonteksLanding);
   const R = RENDER[blok.tipe];
+  // Bagian data aplikasi yang tidak disediakan aplikasi ini atau datanya kosong tidak tampil ke pengunjung.
+  if (blok.tipe === 'slot' && !k.pratinjau) {
+    const def = k.slot?.[String(blok.isi?.kunci ?? '')];
+    if (!def || def.kosong) return null;
+  }
   const g = blok.gaya ?? {};
   const latarGambar = g.latar === 'gambar' ? gambarAman(g.latar_gambar, k.berkas) : undefined;
   const lebar = g.lebar ?? (blok.tipe === 'kaki' ? 'penuh' : 'normal');
