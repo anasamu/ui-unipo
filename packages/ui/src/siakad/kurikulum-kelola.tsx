@@ -1476,72 +1476,72 @@ export function KelolaMkKurikulum({ kurikulumId, bolehUbah, onBukaMk, className 
                   </span>
                   {!!maks && <Progress value={Math.min(100, (wajib / maks) * 100)} size="sm" tone={wajib > maks ? 'danger' : 'primary'} />}
                 </header>
-                <TableContainer>
-                  <Table density="compact">
-                    <thead>
-                      <tr>
-                        <th style={{ width: 110 }}>Kode</th>
-                        <th>Mata kuliah</th>
-                        <th style={{ width: 70, textAlign: 'right' }}>SKS</th>
-                        <th style={{ width: 130 }}>Sifat</th>
-                        <th style={{ width: 110 }}>Prasyarat</th>
-                        <th style={{ width: 90 }}>CPL</th>
-                        <th style={{ width: 70 }}>CPMK</th>
-                        <th style={{ width: 100 }}>RPS</th>
-                        <th style={{ width: 44 }} aria-label="Aksi" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {isi.map((m) => {
-                        const cpl = Array.isArray(m.cpl) ? m.cpl : m.cpl ? String(m.cpl).split(',') : [];
-                        const pras = Array.isArray(m.prasyarat) ? (m.prasyarat as Array<{ kode_mk?: string } | string>).map((p) => (typeof p === 'string' ? p : (p.kode_mk ?? ''))) : [];
-                        const aksi: MenuEntry[] = [
-                          { label: 'Buka CPMK & RPS', icon: <ListChecks />, onSelect: () => onBukaMk?.(m) },
-                          ...(bolehUbah
-                            ? ([
-                                { label: 'Ubah mata kuliah', icon: <PenLine />, onSelect: () => setForm(m as MkDetail) },
-                                { label: 'Atur prasyarat', icon: <Network />, onSelect: () => setSyarat(m) },
-                                { type: 'separator' },
-                                { label: 'Hapus', icon: <Trash2 />, destructive: true, onSelect: () => setHapus(m) },
-                              ] as MenuEntry[])
-                            : []),
-                        ];
-                        return (
-                          <tr key={m.id} className="u-kk-baris" data-jenis={m.jenis} onClick={() => onBukaMk?.(m)}>
-                            <td>
-                              <span className="u-kur-code">{m.kode_mk}</span>
-                            </td>
-                            <td>
-                              <span className="u-kk-nama-mk">{m.nama}</span>
-                            </td>
-                            <td style={{ textAlign: 'right' }} className="u-kk-angka">
-                              {formatNumber(n(m.sks))}
-                            </td>
-                            <td>
-                              <span className="u-mk-jenis" data-jenis={m.jenis}>
-                                {JENIS_MK[m.jenis] ?? m.jenis}
-                              </span>
-                            </td>
-                            <td>{pras.length ? <span title={pras.join(', ')}>{pras.join(', ')}</span> : <span className="u-kk-muted">–</span>}</td>
-                            <td>{cpl.length ? <span title={cpl.join(', ')}>{cpl.length} CPL</span> : <span className="u-kk-warn">belum</span>}</td>
-                            <td className="u-kk-angka">{n(m.jumlah_cpmk) || <span className="u-kk-warn">0</span>}</td>
-                            <td>{m.status_rps === 'disahkan' ? <Badge variant="success">Disahkan</Badge> : <Badge variant="warning">{m.status_rps ? label(m.status_rps) : 'Belum'}</Badge>}</td>
-                            <td onClick={(e) => e.stopPropagation()}>
-                              <Menu
-                                trigger={
-                                  <Button size="sm" variant="ghost" iconOnly aria-label={`Aksi ${m.nama}`}>
-                                    ⋯
-                                  </Button>
-                                }
-                                items={aksi}
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </Table>
-                </TableContainer>
+                <DataTable<(typeof isi)[number]>
+                  columns={[
+                    { key: 'kode_mk', header: 'Kode', width: 110, sortable: true, mobile: 'subtitle', cell: (m) => <span className="u-kur-code">{m.kode_mk}</span> },
+                    { key: 'nama', header: 'Mata kuliah', sortable: true, mobile: 'title', cell: (m) => <span className="u-kk-nama-mk">{m.nama}</span> },
+                    { key: 'sks', header: 'SKS', width: 70, align: 'end', sortable: true, value: (m) => n(m.sks), cell: (m) => <span className="u-kk-angka">{formatNumber(n(m.sks))}</span> },
+                    {
+                      key: 'jenis',
+                      header: 'Sifat',
+                      width: 130,
+                      sortable: true,
+                      value: (m) => JENIS_MK[m.jenis] ?? m.jenis,
+                      cell: (m) => (
+                        <span className="u-mk-jenis" data-jenis={m.jenis}>
+                          {JENIS_MK[m.jenis] ?? m.jenis}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: 'prasyarat',
+                      header: 'Prasyarat',
+                      width: 110,
+                      value: (m) => prasyaratMk(m).join(', '),
+                      cell: (m) => {
+                        const pras = prasyaratMk(m);
+                        return pras.length ? <span title={pras.join(', ')}>{pras.join(', ')}</span> : <span className="u-kk-muted">–</span>;
+                      },
+                    },
+                    {
+                      key: 'cpl',
+                      header: 'CPL',
+                      width: 90,
+                      value: (m) => cplMk(m).length,
+                      cell: (m) => {
+                        const cpl = cplMk(m);
+                        return cpl.length ? <span title={cpl.join(', ')}>{cpl.length} CPL</span> : <span className="u-kk-warn">belum</span>;
+                      },
+                    },
+                    { key: 'jumlah_cpmk', header: 'CPMK', width: 70, align: 'end', value: (m) => n(m.jumlah_cpmk), cell: (m) => <span className="u-kk-angka">{n(m.jumlah_cpmk) || <span className="u-kk-warn">0</span>}</span> },
+                    {
+                      key: 'status_rps',
+                      header: 'RPS',
+                      width: 100,
+                      mobile: 'badge',
+                      value: (m) => (m.status_rps ? label(m.status_rps) : 'Belum'),
+                      cell: (m) => (m.status_rps === 'disahkan' ? <Badge variant="success">Disahkan</Badge> : <Badge variant="warning">{m.status_rps ? label(m.status_rps) : 'Belum'}</Badge>),
+                    },
+                  ]}
+                  rows={isi}
+                  rowKey={(m) => String(m.id)}
+                  onRowClick={onBukaMk ? (m) => onBukaMk(m) : undefined}
+                  rowActions={(m) => [
+                    { label: 'Buka CPMK & RPS', icon: <ListChecks />, onSelect: () => onBukaMk?.(m) },
+                    ...(bolehUbah
+                      ? ([
+                          { label: 'Ubah mata kuliah', icon: <PenLine />, onSelect: () => setForm(m as MkDetail) },
+                          { label: 'Atur prasyarat', icon: <Network />, onSelect: () => setSyarat(m) },
+                          { type: 'separator' },
+                          { label: 'Hapus', icon: <Trash2 />, destructive: true, onSelect: () => setHapus(m) },
+                        ] as MenuEntry[])
+                      : []),
+                  ]}
+                  pagination={false}
+                  columnToggle={false}
+                  densityToggle={false}
+                  defaultDensity="compact"
+                />
               </section>
             );
           })}
@@ -1563,6 +1563,9 @@ export function KelolaMkKurikulum({ kurikulumId, bolehUbah, onBukaMk, className 
   );
 }
 
+const cplMk = (m: { cpl?: unknown }): string[] => (Array.isArray(m.cpl) ? (m.cpl as string[]) : m.cpl ? String(m.cpl).split(',') : []);
+const prasyaratMk = (m: { prasyarat?: unknown }): string[] =>
+  Array.isArray(m.prasyarat) ? (m.prasyarat as Array<{ kode_mk?: string } | string>).map((p) => (typeof p === 'string' ? p : (p.kode_mk ?? ''))) : [];
 /** Kategori MK untuk perangkat wajib aturan (AturanKurikulum::JENIS_MK): teori, praktikum, lapangan, mbkm, ta. */
 const kategoriMk = (f: { jenis: string; sks_praktikum: string; sks_praktik_lapangan: string; luar_prodi: boolean }) =>
   f.jenis === 'S' ? 'ta' : f.luar_prodi ? 'mbkm' : n(f.sks_praktik_lapangan) > 0 ? 'lapangan' : n(f.sks_praktikum) > 0 ? 'praktikum' : 'teori';
@@ -2720,6 +2723,7 @@ function EditorPertemuan({ r }: { r: Rps }) {
       </div>
       {baris.length > 0 && (
         <TableContainer>
+          {/* unipo-ui-izinkan tabel-primitif: kisi isian (sel = isian angka/teks), bukan tabel data */}
           <Table density="compact" className="u-kk-tabel-isi">
             <thead>
               <tr>
@@ -2876,6 +2880,7 @@ function EditorEvaluasi({ r }: { r: Rps }) {
       <Progress value={Math.min(100, total)} size="sm" tone={Math.abs(total - 100) < 0.01 ? 'success' : total > 100 ? 'danger' : 'warning'} />
       {baris.length > 0 && (
         <TableContainer>
+          {/* unipo-ui-izinkan tabel-primitif: kisi isian (sel = isian angka/teks), bukan tabel data */}
           <Table density="compact" className="u-kk-tabel-isi">
             <thead>
               <tr>
@@ -3746,30 +3751,22 @@ export function KelolaCapaianCpl({ kurikulumId, bolehRekam, className }: { kurik
       <CapaianCplKurikulum kurikulumId={kurikulumId} angkatan={angkatan ? Number(angkatan) : undefined} />
       {per.size > 0 && (
         <Panel title="Riwayat capaian terekam" description="Rekaman tetap walau nilai berubah; dipakai untuk evaluasi kurikulum dan akreditasi.">
-          <TableContainer>
-            <Table density="compact">
-              <thead>
-                <tr>
-                  <th>Semester</th>
-                  <th>Angkatan</th>
-                  <th>Mahasiswa</th>
-                  <th>CPL tercapai (rata-rata ≥ target)</th>
-                  <th>Direkam</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...per.entries()].map(([kunci, rows]) => (
-                  <tr key={kunci}>
-                    <td>{tahunLabel(rows[0]!.tahun_id)}</td>
-                    <td>{rows[0]!.angkatan ?? 'Semua'}</td>
-                    <td>{formatNumber(rows[0]!.jumlah_mahasiswa)}</td>
-                    <td>{rows.map((r) => `${r.kode} ${r.rata_rata == null ? '–' : formatNumber(r.rata_rata, { maximumFractionDigits: 1 })}`).join(' · ')}</td>
-                    <td>{formatDate(rows[0]!.dihitung_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </TableContainer>
+          <DataTable<{ kunci: string; rows: (typeof per extends Map<string, infer R> ? R : never) }>
+            columns={[
+              { key: 'tahun', header: 'Semester', mobile: 'title', value: (x) => x.rows[0]!.tahun_id, cell: (x) => tahunLabel(x.rows[0]!.tahun_id) },
+              { key: 'angkatan', header: 'Angkatan', value: (x) => x.rows[0]!.angkatan ?? '', cell: (x) => x.rows[0]!.angkatan ?? 'Semua' },
+              { key: 'mahasiswa', header: 'Mahasiswa', align: 'end', value: (x) => x.rows[0]!.jumlah_mahasiswa, cell: (x) => formatNumber(x.rows[0]!.jumlah_mahasiswa) },
+              { key: 'cpl', header: 'CPL tercapai (rata-rata ≥ target)', value: (x) => x.rows.map((r) => `${r.kode} ${r.rata_rata ?? '–'}`).join(' · '), cell: (x) => x.rows.map((r) => `${r.kode} ${r.rata_rata == null ? '–' : formatNumber(r.rata_rata, { maximumFractionDigits: 1 })}`).join(' · ') },
+              { key: 'dihitung_at', header: 'Direkam', value: (x) => x.rows[0]!.dihitung_at, cell: (x) => formatDate(x.rows[0]!.dihitung_at) },
+            ]}
+            rows={[...per.entries()].map(([kunci, rows]) => ({ kunci, rows }))}
+            rowKey={(x) => x.kunci}
+            pagination={false}
+            columnToggle={false}
+            densityToggle={false}
+            defaultDensity="compact"
+            exportCsv={`riwayat-capaian-cpl-${kurikulumId}`}
+          />
         </Panel>
       )}
       <Dialog

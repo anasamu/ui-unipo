@@ -1618,6 +1618,7 @@ export function KartuPesertaPmb({ pendaftaranId }: { pendaftaranId: string }) {
             </Text>
           ) : (
             <TableContainer>
+              {/* unipo-ui-izinkan tabel-primitif: jadwal di kartu tes yang dicetak/diunduh peserta, tata letak kartu */}
               <Table density="compact">
                 <thead>
                   <tr>
