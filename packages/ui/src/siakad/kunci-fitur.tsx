@@ -128,16 +128,21 @@ const tumpuk: React.CSSProperties = { display: 'grid', gap: '1rem' };
 export interface KunciFiturPeriodeProps {
   /** Periode awal (bawaan: periode aktif). */
   tahunId?: string | null;
+  /**
+   * Hanya lihat walau server mengizinkan mengatur (`boleh_atur`): untuk aplikasi yang bukan pemilik fitur ini
+   * (pemilik tunggal: BAAK; Pustikom hanya memantau).
+   */
+  hanyaLihat?: boolean;
 }
 
 /** Halaman Kunci fitur per periode: katalog fitur × status, aturan, simulasi, riwayat. */
-export function KunciFiturPeriode({ tahunId }: KunciFiturPeriodeProps) {
+export function KunciFiturPeriode({ tahunId, hanyaLihat }: KunciFiturPeriodeProps) {
   const kunci = useKunciPeriode();
   const [tahun, setTahun] = React.useState<string | null>(tahunId ?? null);
   const t = tahun ?? kunci.aktif;
   const q = useSiakadQuery<Katalog>(['kalender/kunci-fitur', t], (s, signal) => s.request<Katalog>({ method: 'GET', path: '/v1/kalender/kunci-fitur', query: { tahun_id: t ?? undefined } }, { signal }), { enabled: Boolean(t) });
   const k = q.data;
-  const boleh = Boolean((q.meta as { boleh_atur?: boolean } | undefined)?.boleh_atur);
+  const boleh = !hanyaLihat && Boolean((q.meta as { boleh_atur?: boolean } | undefined)?.boleh_atur);
   const [modul, setModul] = React.useState<string | null>(null);
   const [status, setStatus] = React.useState<string | null>(null);
   const [cari, setCari] = React.useState('');
@@ -243,7 +248,7 @@ export function KunciFiturPeriode({ tahunId }: KunciFiturPeriodeProps) {
           {k.periode.ditutup
             ? `Ditutup${k.periode.sejak ? ` sejak ${tanggalKunci(k.periode.sejak)}` : ''}: fitur yang ikut kunci menolak perubahan data periode ini (423). Pengecualian dan buka sementara diatur di sini tanpa mengubah kode.`
             : 'Periode masih dibuka: semua fitur boleh mengubah data periode ini (batas waktu tiap fitur diatur di Batas waktu). Aturan di sini berlaku saat periode ditutup.'}
-          {!boleh ? ' Anda hanya bisa melihat (mengatur butuh izin kalender.kunci.atur).' : ''}
+          {hanyaLihat ? ' Hanya lihat di aplikasi ini: kunci fitur diatur di aplikasi BAAK.' : !boleh ? ' Anda hanya bisa melihat (mengatur butuh izin kalender.kunci.atur).' : ''}
         </Alert>
       ) : null}
       <Tabs

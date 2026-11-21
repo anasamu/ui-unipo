@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { ExternalLink, Monitor, Moon, Search, Star, Sun } from 'lucide-react';
+import { ExternalLink, LayoutGrid, Monitor, Moon, Search, Star, Sun } from 'lucide-react';
 import { Button } from '../components/actions';
 import type { AkunPengguna, MenuAkunProps, TemaAkun } from '../components/akun';
 import { LogoAplikasi } from '../components/identity';
@@ -8,6 +8,7 @@ import { animasikanMasuk, BilahProgres, MuatHalaman, useMuatTertunda, usePantauM
 import { AppShell, SearchTrigger, Sidebar, type NavGroup, type NavItem, type SidebarProps, type SidebarUser } from '../components/layout';
 import { Tooltip } from '../components/overlays';
 import { fiturDariMenu, labelPintasanCari, PencarianFitur, usePintasanCari, type ItemFitur } from '../components/pencarian-fitur';
+import type { HasilMenu } from '../components/menu-aplikasi';
 import { NavigasiBawah, type ItemNavigasiBawah } from '../components/platform';
 import { cn } from '../lib/cn';
 import { MenuAkunSiakad, useAkunSaya } from './akun';
@@ -32,9 +33,16 @@ export interface KerangkaAplikasiProps {
   logo?: React.ReactNode;
   /** Alamat beranda; logo dan nama aplikasi menuju ke sini. Bawaan "/". */
   beranda?: string;
-  /** Kelompok menu yang sudah disaring sesuai izin pengguna. */
-  groups: NavGroup[];
+  /**
+   * Menu dari definisi data (`useMenuAplikasi(MENU, { konteks, path })`): mengisi `groups`, `activeKey`, dan judul
+   * halaman sekaligus. Cara baru; `groups` tetap didukung untuk aplikasi yang belum pindah.
+   */
+  menu?: HasilMenu;
+  /** Kelompok menu yang sudah disaring sesuai izin pengguna (cara lama; abaikan bila memakai `menu`). */
+  groups?: NavGroup[];
   activeKey?: string;
+  /** Judul kategori sidebar bisa dilipat dan diingat per aplikasi; `'terlipat'` = terlipat bawaan (lihat Sidebar). */
+  lipatKategori?: boolean | 'terlipat';
   /** Tautan menu, mis. `(item, p) => <Link to={item.href!} {...p} />`. Juga dipakai logo. */
   renderLink?: SidebarProps['renderLink'];
   /** Navigasi dari kode (pencarian, notifikasi), mis. `useNavigate()`. Bawaan `location.assign`. */
@@ -83,8 +91,10 @@ export interface KerangkaAplikasiProps {
   /** Tombol tambahan di kanan bilah atas, sebelum notifikasi. */
   aksi?: React.ReactNode;
   /**
-   * Navigasi bawah untuk layar sempit. Bawaan: Beranda + menu yang disematkan pengguna (maks. 5 item); bila belum ada
-   * sematan, Beranda + menu teratas sidebar. Isi untuk menimpa; [] = tanpa navigasi bawah.
+   * Navigasi bawah untuk layar sempit: maks. 4 item + tombol "Menu" (membuka laci sidebar). Bawaan: item ber-`bawah`
+   * dari definisi `menu`; bila tidak ada, Beranda + menu yang disematkan pengguna, atau Beranda + menu teratas
+   * sidebar. Label = label singkat menu (`pendek`), tidak pernah rute. Isi untuk menimpa (tanpa tombol Menu);
+   * [] = tanpa navigasi bawah.
    */
   navBawah?: ItemNavigasiBawah[];
   /** Kunci aktif navigasi bawah. Bawaan bagian pertama activeKey. */
@@ -162,8 +172,10 @@ export function KerangkaAplikasi({
   tagline,
   logo,
   beranda = '/',
-  groups,
-  activeKey,
+  menu,
+  groups: groupsProp,
+  activeKey: activeKeyProp,
+  lipatKategori,
   renderLink,
   onNavigasi,
   judul,
@@ -199,6 +211,8 @@ export function KerangkaAplikasi({
   className,
 }: KerangkaAplikasiProps) {
   const siakad = useOptionalSiakad();
+  const groups = groupsProp ?? menu?.groups ?? [];
+  const activeKey = activeKeyProp ?? menu?.activeKey;
   const temaQ = useTemaAplikasi(temaAplikasi ?? (kode === 'api' ? 'api-portal' : kode), temaLingkup, { enabled: Boolean(siakad) });
   const t = tataKerangka(temaQ.data?.tata);
   const kunciCiut = `unipo.sidebar.ciut.${kode}`;
@@ -236,8 +250,8 @@ export function KerangkaAplikasi({
   const brandProps = { className: 'u-kerangka-brand', 'aria-label': `${nama ?? kode}: beranda`, children: brandIsi };
   const brand = renderLink ? renderLink({ key: '__beranda', label: nama ?? kode, href: beranda }, { ...brandProps, href: beranda }) : <a {...brandProps} href={beranda} />;
 
-  const judulTampil = judul ?? cariLabel(groups, activeKey) ?? nama ?? kode;
-  const kelompokAktif = t.headerJudul === 'breadcrumb' && !subjudul ? cariKelompok(groups, activeKey) : undefined;
+  const judulTampil = judul ?? (activeKeyProp === undefined ? menu?.judul : undefined) ?? cariLabel(groups, activeKey) ?? nama ?? kode;
+  const kelompokAktif = t.headerJudul === 'breadcrumb' && !subjudul ? (menu?.kelompok ?? cariKelompok(groups, activeKey)) : undefined;
   const sidebarKelas = cn(
     t.sidebarGaya === 'gelap' && 'dark u-sb-gelap',
     t.sidebarGaya === 'utama' && 'u-sb-utama',
@@ -266,7 +280,15 @@ export function KerangkaAplikasi({
         ];
       }
     : undefined;
-  const navBawahTampil: ItemNavigasiBawah[] = navBawah ?? navBawahOtomatis(berandaItem, pin.disematkan, groupsTanpaBeranda);
+  const [laci, setLaci] = React.useState(false);
+  // Laci menu ponsel tertutup sendiri setelah pindah halaman.
+  React.useEffect(() => setLaci(false), [activeKey]);
+  const navBawahTampil: ItemNavigasiBawah[] =
+    navBawah ??
+    [
+      ...(menu?.navBawah.length ? menu.navBawah : navBawahOtomatis(berandaItem, pin.disematkan, groupsTanpaBeranda)),
+      { key: '__menu', label: 'Menu', icon: <LayoutGrid />, onClick: () => setLaci(true) },
+    ];
   const cariIkonSaja = t.headerCari === 'ikon';
   const cariEl =
     cari !== false ? (
@@ -338,6 +360,8 @@ export function KerangkaAplikasi({
     {kodePengumuman && siakad && <PengumumanTampil aplikasi={kodePengumuman} bagian={['atas']} />}
     <AppShell
       className={cn('u-kerangka-aplikasi', className)}
+      menuTerbuka={laci}
+      onMenuTerbuka={setLaci}
       atribut={{ 'data-header-gaya': t.headerGaya, 'data-header-tinggi': t.headerTinggi, 'data-header-lengket': t.headerLengket ? undefined : 'tidak', 'data-cari': t.headerCari }}
       sidebar={
         <Sidebar
@@ -353,6 +377,8 @@ export function KerangkaAplikasi({
           onCollapsedChange={setCollapsed}
           renderLink={renderLink}
           ingat={`unipo.sidebar.buka.${kode}`}
+          lipatKategori={lipatKategori}
+          ingatKategori={`unipo.sidebar.kategori.${kode}`}
           footerTetap={
             statusSidebar === false ? undefined : React.isValidElement(statusSidebar) ? (
               statusSidebar
@@ -555,20 +581,29 @@ function simpan(kunci: string, nilai: string) {
   }
 }
 
-/** Label pendek untuk navigasi bawah, mis. "Kasir & pembayaran" menjadi "Kasir". */
+/**
+ * Label pendek untuk navigasi bawah, mis. "Kasir & pembayaran" menjadi "Kasir". Tidak pernah memakai rute/kunci: label
+ * berupa elemen tanpa `labelTeks` memakai teks elemen itu.
+ */
 function labelPendek(it: NavItem): string {
-  const t = (it.labelTeks ?? (typeof it.label === 'string' ? it.label : it.key)).trim();
-  return t.length <= 12 ? t : (t.split(/[\s&,/]+/)[0] ?? t);
+  const t = (it.labelTeks ?? teksNode(it.label)).trim() || 'Menu';
+  return t.length <= 12 ? t : (t.split(/[\s&,/]+/).filter(Boolean)[0] ?? t);
+}
+function teksNode(n: React.ReactNode): string {
+  if (typeof n === 'string' || typeof n === 'number') return String(n);
+  if (Array.isArray(n)) return n.map(teksNode).join('');
+  if (React.isValidElement<{ children?: React.ReactNode }>(n)) return teksNode(n.props.children);
+  return '';
 }
 
 /**
- * Navigasi bawah otomatis, maksimal 5: Beranda + menu yang disematkan (stabil, tidak ikut hitungan kunjungan). Bila
+ * Navigasi bawah otomatis, maksimal 4 (+ tombol Menu): Beranda + menu yang disematkan (stabil, tidak ikut hitungan kunjungan). Bila
  * belum ada sematan: Beranda + menu teratas sidebar.
  */
 function navBawahOtomatis(beranda: NavItem | undefined, pin: NavItem[], groups: NavGroup[]): ItemNavigasiBawah[] {
   const out: NavItem[] = [];
   const tambah = (it?: NavItem) => {
-    if (it && it.href && !it.disabled && out.length < 5 && !out.some((x) => x.key === it.key)) out.push(it);
+    if (it && it.href && !it.disabled && !it.luar && out.length < 4 && !out.some((x) => x.key === it.key)) out.push(it);
   };
   tambah(beranda);
   pin.forEach(tambah);

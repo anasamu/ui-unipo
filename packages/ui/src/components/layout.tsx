@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { Collapsible as BaseCollapsible } from '@base-ui/react/collapsible';
 import { ContextMenu as BaseContextMenu } from '@base-ui/react/context-menu';
-import { ChevronDown, ChevronsUpDown, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
+import { ChevronDown, ChevronsUpDown, ExternalLink, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
 import { cn, dataFlag } from '../lib/cn';
 import { Button, Kbd } from './actions';
 import { Avatar } from './display';
@@ -23,10 +23,24 @@ export interface NavItem {
   /** Sub-menu (satu tingkat). */
   children?: NavItem[];
   disabled?: boolean;
+  /** Keterangan satu baris: tooltip item (juga di mode ikon) dan baris kecil di Cari fitur. */
+  keterangan?: string;
+  /** Sinonim untuk Cari fitur. */
+  kataKunci?: string[];
+  /** Tautan ke aplikasi lain: dibuka di tab baru, diberi ikon tautan keluar. */
+  luar?: boolean;
+  /** Lencana "Baru" di kanan label. */
+  baru?: boolean;
 }
 export interface NavGroup {
   label?: React.ReactNode;
   items: NavItem[];
+  /** Kunci stabil kategori untuk mengingat lipatan (bawaan label teks). */
+  kunci?: string;
+  /** Judul kategori bisa dilipat (menimpa `lipatKategori` Sidebar untuk grup ini). */
+  lipat?: boolean;
+  /** Terlipat saat pertama dibuka (bila bisa dilipat). */
+  terlipat?: boolean;
 }
 
 export interface SidebarUser {
@@ -70,6 +84,13 @@ export interface SidebarProps {
   aksiItem?: (item: NavItem) => React.ReactNode;
   /** Isi menu konteks item (klik kanan, Shift+F10, tekan lama). Kosong = menu bawaan peramban. Tidak saat mode ikon. */
   menuItem?: (item: NavItem) => MenuEntry[] | undefined;
+  /**
+   * Judul kategori bisa dilipat. `true` = terbuka bawaan, `'terlipat'` = terlipat bawaan. Kategori yang memuat halaman
+   * aktif selalu dibuka saat halaman itu dibuka. Lencana kategori terlipat = jumlah lencana angka di dalamnya.
+   */
+  lipatKategori?: boolean | 'terlipat';
+  /** Kunci localStorage untuk mengingat kategori yang dilipat/dibuka (mis. "unipo.sidebar.kategori.bauk"). */
+  ingatKategori?: string;
   className?: string;
 }
 
@@ -149,11 +170,45 @@ function containsActive(item: NavItem, key?: string): boolean {
   return item.key === key || Boolean(item.children?.some((c) => containsActive(c, key)));
 }
 
+/** Jumlah lencana angka di item dan sub-menunya (lencana bukan angka diabaikan). */
+function jumlahLencana(items: NavItem[]): number {
+  let n = 0;
+  for (const it of items) {
+    const b = typeof it.badge === 'number' ? it.badge : typeof it.badge === 'string' && /^\d+$/.test(it.badge) ? Number(it.badge) : 0;
+    n += b + (it.children ? jumlahLencana(it.children) : 0);
+  }
+  return n;
+}
+
+function bacaLipatan(kunci?: string): Record<string, boolean> {
+  const v = bacaIngat(kunci);
+  if (!v) return {};
+  try {
+    const o = JSON.parse(v) as unknown;
+    return o && typeof o === 'object' ? (o as Record<string, boolean>) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Isi tooltip item: label tebal + keterangan. */
+function isiTip(item: NavItem, denganLabel: boolean): React.ReactNode {
+  if (!item.keterangan) return item.label;
+  return (
+    <span className="u-nav-tip">
+      {denganLabel && <strong>{item.label}</strong>}
+      <span>{item.keterangan}</span>
+    </span>
+  );
+}
+
 function NavLink({ item, active, collapsed, renderLink, depth, aksiItem, menuItem }: AksiNav & { item: NavItem; active: boolean; collapsed?: boolean; renderLink?: SidebarProps['renderLink']; depth: number }) {
   const content = (
     <>
       {depth === 0 && <span className="u-nav-icon">{item.icon}</span>}
       <span className="u-nav-label">{item.label}</span>
+      {item.luar && <ExternalLink className="u-nav-luar" aria-label="(tab baru)" />}
+      {item.baru && <span className="u-nav-baru">Baru</span>}
       {item.badge != null && <span className="u-nav-badge">{item.badge}</span>}
     </>
   );
@@ -166,15 +221,27 @@ function NavLink({ item, active, collapsed, renderLink, depth, aksiItem, menuIte
     onClick: item.onClick,
   };
   let el: React.ReactElement;
-  if (item.href) el = renderLink ? renderLink(item, { ...props, href: item.href, children: content }) : <a {...props} href={item.href}>{content}</a>;
+  if (item.href && item.luar)
+    el = (
+      <a {...props} href={item.href} target="_blank" rel="noopener noreferrer">
+        {content}
+      </a>
+    );
+  else if (item.href) el = renderLink ? renderLink(item, { ...props, href: item.href, children: content }) : <a {...props} href={item.href}>{content}</a>;
   else el = <button type="button" {...props}>{content}</button>;
-  return collapsed && depth === 0 ? (
-    <Tooltip content={item.label} side="right">
-      {el}
-    </Tooltip>
-  ) : (
-    <BarisNav item={item} el={el} aksiItem={aksiItem} menuItem={menuItem} />
-  );
+  if (collapsed && depth === 0)
+    return (
+      <Tooltip content={isiTip(item, true)} side="right">
+        {el}
+      </Tooltip>
+    );
+  if (item.keterangan)
+    el = (
+      <Tooltip content={isiTip(item, false)} side="right" delay={700}>
+        {el}
+      </Tooltip>
+    );
+  return <BarisNav item={item} el={el} aksiItem={aksiItem} menuItem={menuItem} />;
 }
 
 function NavTree({
@@ -200,6 +267,8 @@ function NavTree({
   const setOpen = (o: boolean) => (onOpenChange ? onOpenChange(o) : setOpenInner(o));
   if (!item.children?.length) return <NavLink item={item} active={item.key === activeKey} collapsed={collapsed} renderLink={renderLink} depth={0} aksiItem={aksiItem} menuItem={menuItem} />;
   const childActive = containsActive(item, activeKey);
+  // Lencana induk = jumlah lencana anak, tampil saat sub-menu tertutup (dan di mode ikon).
+  const lencanaAnak = item.badge ?? (jumlahLencana(item.children) || undefined);
   if (collapsed) {
     // Saat rail, sub-menu dibuka sebagai menu melayang.
     return (
@@ -210,9 +279,25 @@ function NavTree({
         trigger={
           <button type="button" className="u-nav-item" data-active={dataFlag(childActive)} aria-label={typeof item.label === 'string' ? item.label : undefined}>
             <span className="u-nav-icon">{item.icon}</span>
+            {lencanaAnak != null && <span className="u-nav-badge">{lencanaAnak}</span>}
           </button>
         }
-        items={[{ type: 'label', label: item.label }, ...item.children.map((c) => ({ label: c.label, href: c.href, onSelect: c.onClick, icon: c.key === activeKey ? <span className="u-nav-flyout-aktif" aria-hidden /> : undefined }))]}
+        items={[
+          { type: 'label', label: item.label },
+          ...item.children.map((c) => ({
+            label: c.badge != null ? (
+              <>
+                {c.label} <span className="u-nav-badge">{c.badge}</span>
+              </>
+            ) : (
+              c.label
+            ),
+            // Tautan keluar dibuka di tab baru.
+            href: c.luar ? undefined : c.href,
+            onSelect: c.luar && c.href ? () => window.open(c.href, '_blank', 'noopener') : c.onClick,
+            icon: c.key === activeKey ? <span className="u-nav-flyout-aktif" aria-hidden /> : undefined,
+          })),
+        ]}
       />
     );
   }
@@ -221,6 +306,7 @@ function NavTree({
       <BaseCollapsible.Trigger className="u-nav-item" data-parent-active={dataFlag(childActive)}>
         <span className="u-nav-icon">{item.icon}</span>
         <span className="u-nav-label">{item.label}</span>
+        {!open && lencanaAnak != null && <span className="u-nav-badge">{lencanaAnak}</span>}
         <ChevronDown className="u-nav-chevron" />
       </BaseCollapsible.Trigger>
       <BaseCollapsible.Panel className="u-collapsible-panel">
@@ -235,7 +321,7 @@ function NavTree({
 }
 
 /** Sidebar aplikasi dasbor (SIAKAD, Pustikom, LMS, fakultas): grup menu, sub-menu, lencana, profil, mode rail. */
-export function Sidebar({ brand, groups, activeKey, header, footer, user, collapsed, onCollapsedChange, renderLink, accordion = true, ingat, footerTetap, aksiItem, menuItem, className }: SidebarProps) {
+export function Sidebar({ brand, groups, activeKey, header, footer, user, collapsed, onCollapsedChange, renderLink, accordion = true, ingat, footerTetap, aksiItem, menuItem, lipatKategori, ingatKategori, className }: SidebarProps) {
   // Mode accordion: simpan satu kunci sub-menu yang terbuka. Awalnya sub-menu yang memuat halaman aktif,
   // dan ikut berpindah saat halaman aktif pindah ke sub-menu lain.
   const induk = (key?: string) => groups.flatMap((g) => g.items).find((it) => it.children?.length && containsActive(it, key))?.key ?? null;
@@ -250,6 +336,42 @@ export function Sidebar({ brand, groups, activeKey, header, footer, user, collap
   React.useEffect(() => {
     if (indukAktif) setOpenKeyDalam(indukAktif);
   }, [activeKey, indukAktif]);
+
+  // Kategori yang bisa dilipat: peta kunci → terlipat (diingat). Kategori yang memuat halaman aktif dibuka.
+  const kunciGrup = (g: NavGroup, gi: number) => g.kunci ?? (typeof g.label === 'string' ? g.label : `grup-${gi}`);
+  const bisaLipat = (g: NavGroup) => Boolean(g.label) && (g.lipat ?? Boolean(lipatKategori));
+  const [lipatan, setLipatan] = React.useState<Record<string, boolean>>(() => bacaLipatan(ingatKategori));
+  const giAktif = groups.findIndex((g) => g.items.some((it) => containsActive(it, activeKey)));
+  const kunciAktif = giAktif >= 0 ? kunciGrup(groups[giAktif]!, giAktif) : null;
+  const ubahLipatan = (k: string, terlipat: boolean) =>
+    setLipatan((l) => {
+      const baru = { ...l, [k]: terlipat };
+      simpanIngat(ingatKategori, JSON.stringify(baru));
+      return baru;
+    });
+  React.useEffect(() => {
+    if (kunciAktif && lipatan[kunciAktif]) ubahLipatan(kunciAktif, false);
+  }, [activeKey, kunciAktif]); // eslint-disable-line react-hooks/exhaustive-deps
+  const terlipat = (g: NavGroup, gi: number) => {
+    if (!bisaLipat(g)) return false;
+    const k = kunciGrup(g, gi);
+    if (lipatan[k] !== undefined) return lipatan[k]!;
+    if (k === kunciAktif) return false;
+    return lipatKategori === 'terlipat' || Boolean(g.terlipat);
+  };
+  const isiGrup = (g: NavGroup) =>
+    g.items.map((it) => (
+      <NavTree
+        key={it.key}
+        item={it}
+        activeKey={activeKey}
+        collapsed={collapsed}
+        renderLink={renderLink}
+        aksiItem={collapsed ? undefined : aksiItem}
+        menuItem={collapsed ? undefined : menuItem}
+        {...(accordion && it.children?.length ? { open: openKey === it.key, onOpenChange: (o: boolean) => setOpenKey(o ? it.key : openKey === it.key ? null : openKey) } : {})}
+      />
+    ));
   return (
     <aside className={cn('u-sidebar', className)} data-collapsed={dataFlag(collapsed)}>
       <div className="u-sidebar-brand">
@@ -264,23 +386,29 @@ export function Sidebar({ brand, groups, activeKey, header, footer, user, collap
       </div>
       {header && !collapsed && <div className="u-sidebar-header">{header}</div>}
       <nav className="u-sidebar-nav" aria-label="Menu utama">
-        {groups.map((g, gi) => (
-          <div key={gi} className="u-nav-group">
-            {g.label && !collapsed && <div className="u-nav-group-label">{g.label}</div>}
-            {g.items.map((it) => (
-              <NavTree
-                key={it.key}
-                item={it}
-                activeKey={activeKey}
-                collapsed={collapsed}
-                renderLink={renderLink}
-                aksiItem={collapsed ? undefined : aksiItem}
-                menuItem={collapsed ? undefined : menuItem}
-                {...(accordion && it.children?.length ? { open: openKey === it.key, onOpenChange: (o: boolean) => setOpenKey(o ? it.key : openKey === it.key ? null : openKey) } : {})}
-              />
-            ))}
-          </div>
-        ))}
+        {groups.map((g, gi) => {
+          // Mode ikon: semua item tampil, kategori dipisah garis tipis (lihat _layout.scss).
+          if (collapsed || !bisaLipat(g))
+            return (
+              <div key={gi} className="u-nav-group">
+                {g.label && !collapsed && <div className="u-nav-group-label">{g.label}</div>}
+                {isiGrup(g)}
+              </div>
+            );
+          const k = kunciGrup(g, gi);
+          const lipat = terlipat(g, gi);
+          const jumlah = lipat ? jumlahLencana(g.items) : 0;
+          return (
+            <BaseCollapsible.Root key={gi} className="u-nav-group" data-lipat="" open={!lipat} onOpenChange={(o) => ubahLipatan(k, !o)}>
+              <BaseCollapsible.Trigger className="u-nav-group-label" data-lipat="">
+                <span>{g.label}</span>
+                {jumlah > 0 && <span className="u-nav-badge">{jumlah}</span>}
+                <ChevronDown className="u-nav-chevron" />
+              </BaseCollapsible.Trigger>
+              <BaseCollapsible.Panel className="u-collapsible-panel">{isiGrup(g)}</BaseCollapsible.Panel>
+            </BaseCollapsible.Root>
+          );
+        })}
       </nav>
       {footer && !collapsed && <div className="u-sidebar-footer">{footer}</div>}
       {footerTetap && <div className="u-sidebar-tetap">{footerTetap}</div>}
@@ -320,10 +448,15 @@ export interface AppShellProps {
   className?: string;
   /** Atribut data tambahan di elemen akar (mis. gaya bilah atas dari tema). */
   atribut?: Record<`data-${string}`, string | undefined>;
+  /** Laci menu ponsel dikendalikan dari luar (mis. tombol "Menu" di navigasi bawah). */
+  menuTerbuka?: boolean;
+  onMenuTerbuka?: (terbuka: boolean) => void;
 }
 /** Kerangka halaman dasbor: sidebar tetap di desktop, laci (sheet) di ponsel. */
-export function AppShell({ sidebar, topbar, children, className, atribut }: AppShellProps) {
-  const [mobileOpen, setMobileOpen] = React.useState(false);
+export function AppShell({ sidebar, topbar, children, className, atribut, menuTerbuka, onMenuTerbuka }: AppShellProps) {
+  const [mobileOpenDalam, setMobileOpenDalam] = React.useState(false);
+  const mobileOpen = menuTerbuka ?? mobileOpenDalam;
+  const setMobileOpen = (o: boolean) => (onMenuTerbuka ? onMenuTerbuka(o) : setMobileOpenDalam(o));
   return (
     <div className={cn('u-app-shell', className)} data-collapsed={dataFlag(sidebar.props.collapsed)} {...atribut}>
       <div className="u-app-shell-sidebar">{sidebar}</div>

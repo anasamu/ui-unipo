@@ -10,7 +10,8 @@
     "build": "node build-css.mjs && tsup && node add-use-client.mjs && node scripts/katalog/rapikan-dist.mjs && node gen-registry.mjs",
     "build:css": "node build-css.mjs",
     "katalog": "node scripts/katalog/buat.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run test"
   },
   "peerDependencies": {
     "react": ">=18",
@@ -52,7 +53,8 @@
     "sass": "1.108.2",
     "tsup": "8.5.1",
     "typescript": "5.9.3",
-    "unipo-siakad-sdk": "1.0.0"
+    "unipo-siakad-sdk": "1.0.0",
+    "vitest": "3.2.7"
   },
   "description": "Komponen UI UNIPO: CSS kelas u-* (framework-agnostic) dan komponen React di atas Base UI, terhubung ke SDK SIAKAD.",
   "license": "MIT",

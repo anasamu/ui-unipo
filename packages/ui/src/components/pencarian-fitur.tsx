@@ -34,10 +34,13 @@ export function fiturDariMenu(groups: NavGroup[]): ItemFitur[] {
     out.push({
       key: it.key,
       label: it.labelTeks || teks(it.label) || it.key,
-      href: it.href,
-      onSelect: it.onClick,
+      // Tautan keluar (aplikasi lain) dibuka di tab baru, bukan lewat navigasi aplikasi.
+      href: it.luar ? undefined : it.href,
+      onSelect: it.luar && it.href ? () => window.open(it.href, '_blank', 'noopener') : it.onClick,
       icon: it.icon ?? induk?.icon,
       kelompok: [kelompok, induk ? induk.labelTeks || teks(induk.label) : ''].filter(Boolean).join(' › ') || undefined,
+      keterangan: it.keterangan,
+      kataKunci: it.kataKunci,
     });
   };
   groups.forEach((g) => g.items.forEach((it) => masuk(it, teks(g.label))));
