@@ -2,6 +2,12 @@
 
 ## 1.51.0 (belum dirilis)
 
+- **CBT satu mesin & e-learning** (butuh SIAKAD dengan `perlu_token` di `/v1/cbt/saya` dan `aturan` di `/v1/lms/kelas/{id}`; docs/CBT.md di siakad_unipo):
+  - `LembarUjian`: antrean jawaban yang belum terkirim kini benar-benar disimpan di perangkat (localStorage per lembar), dipulihkan dan dikirim saat lembar dibuka lagi, dihapus setelah terkirim/dikumpulkan (CBT-09); teks luring disesuaikan.
+  - `DaftarUjianSaya`: kuis e-learning tanpa token pengawas (`perlu_token: false`) langsung **Mulai** tanpa isian token.
+  - `PantauSesiCbt` (`cbt-pantau.tsx`, baru): layar pengawas sesi (token besar, buka/ganti token/tutup dengan berita acara, ringkasan status, kartu peserta berprogres, saring & cari, reset perangkat, tambah waktu, diskualifikasi; pembaruan tiap 5 detik) untuk Fakultas, PMB, dan aplikasi lain (CBT-03).
+  - E-learning: syarat hadir UAS (`PresensiKelasLms`, rekap kelas) dan nada nilai (`nadaNilaiLms`) dari aturan kelas ber-SK, bukan 75/70 tetap; sumber aturan ditampilkan (LMS-18/19). Tab Kurikulum juga untuk peran `admin` (LMS-07).
+
 - **Persetujuan perangkat kasir** (`unipo-ui/siakad` `perangkat-kasir.tsx`, baru; butuh SIAKAD dengan `/v1/kasir/kelola/perangkat-persetujuan`, docs/KASIR.md "Perangkat kasir" di siakad_unipo): `PerangkatKasir` (saring status Menunggu/Disetujui/Ditolak/Dicabut dengan hitungan, cari, rincian di panel samping: kode verifikasi kunci perangkat, sidik komputer, sesi aktif, riwayat `Linimasa`; Setujui di panel samping dengan pilih unit loket "Pilih…", nama, dan centang kecocokan kode verifikasi; Tolak/Cabut beralasan (cabut menutup sesi aktif); Ganti nama; aksi hanya bagi pemegang `kasir.perangkat.setujui` dalam lingkupnya), `LencanaPerangkatKasir`, `STATUS_PERANGKAT_KASIR`. Dipakai Pustikom » Aplikasi & integrasi » Perangkat kasir.
 - `PengaturanKasirUnit`: tab **Loket** menjadi **Perangkat & loket** (komponen `PerangkatKasir` terlingkup unit; ubah unit/blokir loket kini lewat persetujuan); `?tab=loket` di alamat membuka tab itu (tautan notifikasi perangkat menunggu persetujuan).
 

@@ -29,6 +29,7 @@ export * from './kurikulum-pengajuan';
 export * from './kurikulum-wizard';
 export * from './lms';
 export * from './cbt';
+export * from './cbt-pantau';
 export * from './akademik';
 export * from './navigasi';
 export * from './kerangka-portal';

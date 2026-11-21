@@ -57,7 +57,7 @@ import { StatCard, StatGrid } from '../components/charts';
 import { KodeLaporan } from '../components/galat';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakadQuery, type QueryState } from './provider';
 import { NavigasiSoal, SoalCbt, TimerUjian, type JawabanCbt, type SoalCbtData } from './cbt';
-import { SampulKelas, sisaTenggat, type KelasLms } from './lms';
+import { HADIR_MIN_BAWAAN, SampulKelas, nadaNilaiLms, sisaTenggat, type KelasLms } from './lms';
 import { KalenderAkademik } from './kalender';
 import type { CalendarEvent } from '../components/schedule';
 import { PenandaKurikulum, SiapkanKelasDariRps } from './kurikulum-aturan';
@@ -2139,6 +2139,7 @@ export function HasilKuisLms({ percobaanId, kuisId, className }: { percobaanId: 
   const p = q.data;
   const kid = p?.kuis_id ?? kuisId;
   const kq = useKuisLms(kid);
+  const kelasQ = useKelasLmsDetail(kq.data?.kelas_id);
   const rute = useRuteLms();
   if (q.error) return <Galat q={q} judul="Hasil tidak tersedia" />;
   if (!p) return <Skeleton className={className} style={{ height: 380 }} />;
@@ -2170,7 +2171,7 @@ export function HasilKuisLms({ percobaanId, kuisId, className }: { percobaanId: 
             value={persen ?? 0}
             size={132}
             thickness={10}
-            tone={persen == null ? undefined : persen >= 70 ? 'success' : persen >= 50 ? 'warning' : 'danger'}
+            tone={nadaNilaiLms(persen, kelasQ.data?.aturan?.skala)}
             label={
               <span className="u-lmsb-hasil-angka">
                 <b>{p.nilai != null ? formatNumber(p.nilai, { maximumFractionDigits: 1 }) : '–'}</b>
@@ -2538,8 +2539,11 @@ export function IsiPresensiLms({ sesi, onTutup }: { sesi: Pick<SesiPresensiLms, 
 }
 
 /** Presensi satu kelas: sesi yang dibuka, daftar pertemuan dengan status saya, dan rekap kehadiran. */
-export function PresensiKelasLms({ kelasId, minimal = 75, className }: { kelasId: number; /** Batas minimal kehadiran (%) untuk ikut UAS. */ minimal?: number; className?: string }) {
+export function PresensiKelasLms({ kelasId, minimal: minimalProp, className }: { kelasId: number; /** Batas minimal kehadiran (%) untuk ikut UAS; bawaan dari aturan kelas (ber-SK). */ minimal?: number; className?: string }) {
   const q = usePresensiKelas(kelasId);
+  const kd = useKelasLmsDetail(kelasId);
+  const hadirMin = kd.data?.aturan?.hadir_min;
+  const minimal = minimalProp ?? hadirMin?.nilai ?? HADIR_MIN_BAWAAN;
   const [isi, setIsi] = React.useState<SesiPresensiLms | null>(null);
   if (q.error) return <Galat q={q} />;
   if (muatDari(q)) return <Skeleton className={className} style={{ height: 240 }} />;
@@ -2611,7 +2615,8 @@ export function PresensiKelasLms({ kelasId, minimal = 75, className }: { kelasId
           ))}
         </ul>
         <p className="u-lmsb-redup">
-          {persen >= minimal ? `Kehadiran memenuhi syarat ${minimal}% untuk ikut UAS.` : `Kehadiran di bawah ${minimal}%. Syarat ikut UAS mengikuti aturan prodi.`}
+          {persen >= minimal ? `Kehadiran memenuhi syarat ${formatNumber(minimal)}% untuk ikut UAS.` : `Kehadiran di bawah ${formatNumber(minimal)}%, syarat ikut UAS.`}
+          {hadirMin && <small className="u-lmsb-redup"> {hadirMin.sumber === 'bawaan' ? 'Batas bawaan sistem; BAAK belum menetapkan aturannya.' : `Dasar: ${hadirMin.keterangan}.`}</small>}
           {r?.belum ? ` ${r.belum} sesi belum diisi.` : ''}
         </p>
       </aside>
@@ -2624,6 +2629,7 @@ export function PresensiKelasLms({ kelasId, minimal = 75, className }: { kelasId
 /** Buku nilai mahasiswa di satu kelas + perkiraan nilai akhir dengan bobot komponen SIAKAD. */
 export function NilaiKelasSayaLms({ kelasId, className }: { kelasId: number; className?: string }) {
   const q = useNilaiKelas(kelasId);
+  const kd = useKelasLmsDetail(kelasId);
   const rute = useRuteLms();
   if (q.error) return <Galat q={q} />;
   if (muatDari(q) || !q.data) return <Skeleton className={className} style={{ height: 240 }} />;
@@ -2687,7 +2693,7 @@ export function NilaiKelasSayaLms({ kelasId, className }: { kelasId: number; cla
                   {KOMPONEN_NILAI[k] ?? k} <small>({persen}%)</small>
                 </span>
                 <b>{v != null ? formatNumber(v, { maximumFractionDigits: 1 }) : <small>dari SIAKAD</small>}</b>
-                <Progress value={v ?? 0} size="sm" tone={v == null ? undefined : v >= 70 ? 'success' : v >= 55 ? 'warning' : 'danger'} />
+                <Progress value={v ?? 0} size="sm" tone={nadaNilaiLms(v, kd.data?.aturan?.skala)} />
               </li>
             );
           })}
@@ -2726,7 +2732,7 @@ export function RekapNilaiKelasLms({ kelas, className }: { kelas: KelasLms[] | u
                 </small>
               </span>
               <span className="u-lmsb-rekap-hadir">
-                <Progress value={h ?? 0} size="sm" tone={h == null ? undefined : h >= 75 ? 'success' : 'danger'} />
+                <Progress value={h ?? 0} size="sm" tone={h == null ? undefined : h >= (k.aturan?.hadir_min.nilai ?? HADIR_MIN_BAWAAN) ? 'success' : 'danger'} />
                 <small>{h != null ? `${Math.round(h)}% hadir` : 'Kehadiran –'}</small>
               </span>
               <b className="u-lmsb-nilai">{n?.mahasiswa?.nilai_akhir_perkiraan != null ? formatNumber(n.mahasiswa.nilai_akhir_perkiraan, { maximumFractionDigits: 1 }) : '–'}</b>
@@ -2846,7 +2852,7 @@ export function HalamanKelasLms({ kelasId, tab = 'materi', onTabChange, classNam
     { value: 'peserta', label: 'Peserta', icon: <Users />, content: <PesertaKelasLms kelasId={kelasId} /> },
     { value: 'info', label: 'Info', icon: <Info />, content: <InfoKelasLms kelasId={kelasId} /> },
     // Kurikulum (pengajar/pengelola): siapkan kelas dari RPS, penanda CPMK/tingkat kognitif tugas & kuis (aturan kurikulum).
-    ...(k.data && ['pengajar', 'asisten', 'pengelola'].includes(String(k.data.peran ?? '')) && k.data.kode_prodi && k.data.kode_mk
+    ...(k.data && ['pengajar', 'asisten', 'admin', 'pengelola'].includes(String(k.data.peran ?? '')) && k.data.kode_prodi && k.data.kode_mk
       ? [{ value: 'kurikulum' as const, label: 'Kurikulum', icon: <GraduationCap />, content: <KurikulumKelasLms kelasId={kelasId} prodi={String(k.data.kode_prodi)} kodeMk={String(k.data.kode_mk)} /> }]
       : []),
   ];
