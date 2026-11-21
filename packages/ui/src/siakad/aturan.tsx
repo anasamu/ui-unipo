@@ -1,6 +1,7 @@
 'use client';
 import * as React from 'react';
 import {
+  Calculator,
   AlarmClock,
   BookOpen,
   Briefcase,
@@ -87,6 +88,7 @@ import {
 import { DasarPedoman } from './pedoman';
 import { useFakultasReferensi } from './prodi';
 import { DasarSkAturanDaftar, LencanaDasarSk, PenjelasanPengaturValidator, PanelAjukanAturan, PanelLampirSkDasar, ValidatorAturan, WizardTemplatAturan, type DasarSkAturan, type UnitRingkas } from './aturan-sk';
+import { KetentuanAkibat, PanelAkibatAturan, kalimatAkibat } from './aturan-akibat';
 
 /*
  * Aturan akademik, kelulusan, dan keuangan dinamis (/v1/aturan): aturan disusun di satu titik penerapan (langkah
@@ -97,7 +99,7 @@ import { DasarSkAturanDaftar, LencanaDasarSk, PenjelasanPengaturValidator, Panel
 
 // ================================================================ Tipe
 export type KategoriAturan = 'akademik' | 'kelulusan' | 'keuangan' | 'kemahasiswaan' | 'kepegawaian' | 'penelitian' | 'mutu' | 'akun' | 'umum';
-export type JenisAturan = 'syarat' | 'batas_waktu' | 'batas_nilai';
+export type JenisAturan = 'syarat' | 'batas_waktu' | 'batas_nilai' | 'akibat';
 export type ModeAturan = 'blokir' | 'peringatan';
 export type SifatAturan = 'ketat' | 'boleh_pengecualian';
 /** Status aturan. `diajukan`/`disetujui`/`dikembalikan` dari alur persetujuan (SIAKAD terbaru). */
@@ -649,6 +651,7 @@ export const LABEL_JENIS_ATURAN: Record<JenisAturan, { label: string; keterangan
   syarat: { label: 'Syarat', keterangan: 'Semua kondisi harus terpenuhi sebelum langkah dijalankan.' },
   batas_waktu: { label: 'Batas waktu', keterangan: 'Langkah hanya bisa dijalankan di antara tanggal mulai dan selesai.' },
   batas_nilai: { label: 'Batas nilai', keterangan: 'Nilai (mis. SKS yang diambil) tidak boleh melewati batas, bisa bertingkat.' },
+  akibat: { label: 'Kebijakan berakibat', keterangan: 'Isi kebijakan dipakai SIAKAD (tarif, konversi nilai, predikat) atau menyesuaikan tagihan dengan jejak yang bisa dibatalkan.' },
 };
 export const LABEL_STATUS_ATURAN: Record<StatusAturan, string> = {
   draf: 'Draf',
@@ -1003,7 +1006,7 @@ export function ModeAturanBadge({ mode }: { mode: ModeAturan }) {
     </Badge>
   );
 }
-const IKON_JENIS: Record<string, React.ReactNode> = { syarat: <ListChecks />, batas_waktu: <CalendarRange />, batas_nilai: <Gauge /> };
+const IKON_JENIS: Record<string, React.ReactNode> = { syarat: <ListChecks />, batas_waktu: <CalendarRange />, batas_nilai: <Gauge />, akibat: <Calculator /> };
 /** Ikon bawaan per kategori untuk jenis aturan yang tidak dikenal pustaka (mis. jenis akibat baru). */
 const IKON_KATEGORI: Record<string, React.ReactNode> = {
   akademik: <BookOpen />, kelulusan: <GraduationCap />, keuangan: <Wallet />, kemahasiswaan: <Users />, kepegawaian: <Briefcase />,
@@ -1126,8 +1129,8 @@ export function KartuAturan({ aturan: a, katalog, onBuka, onLampirkan, className
       </div>
       <p className="u-aturan-kartu-isi">{ketentuan || '—'}</p>
       <div className="u-aturan-kartu-meta">
-        <ModeAturanBadge mode={a.mode} />
-        <SifatAturanBadge sifat={a.sifat} />
+        {a.jenis !== 'akibat' && <ModeAturanBadge mode={a.mode} />}
+        {a.jenis !== 'akibat' && <SifatAturanBadge sifat={a.sifat} />}
         <span>
           <Users aria-hidden /> {rapikanNamaUnit(ringkasCakupan(a.cakupan, nama))}
         </span>
@@ -1221,8 +1224,8 @@ export function KartuAturanKelompok({
       </div>
       <p className="u-aturan-kartu-isi">{ringkasKetentuan(a, katalog) || '—'}</p>
       <div className="u-aturan-kartu-meta">
-        <ModeAturanBadge mode={a.mode} />
-        <SifatAturanBadge sifat={a.sifat} />
+        {a.jenis !== 'akibat' && <ModeAturanBadge mode={a.mode} />}
+        {a.jenis !== 'akibat' && <SifatAturanBadge sifat={a.sifat} />}
       </div>
       <div className="u-aturan-kartu-kaki">
         {kurang.length ? (
@@ -1267,6 +1270,7 @@ export function KartuAturanKelompok({
 export function ringkasKetentuan(a: Pick<Aturan, 'jenis' | 'kondisi' | 'parameter'>, katalog?: KatalogAturan): string {
   const bila = a.kondisi ? ringkasKondisi(a.kondisi, katalog, { kecil: a.jenis !== 'syarat' }) : '';
   if (a.jenis === 'syarat') return bila;
+  if (a.jenis === 'akibat' && kalimatAkibat(a.parameter)) return bila ? `${kalimatAkibat(a.parameter)} Berlaku bila ${bila}.` : kalimatAkibat(a.parameter);
   if (a.jenis !== 'batas_waktu' && a.jenis !== 'batas_nilai') {
     // Jenis/akibat baru (mis. `akibat` dari Kebijakan): label tipe akibat, tanpa nilai mentah.
     const p = (a.parameter ?? {}) as { akibat?: string; bentuk?: string };
@@ -1291,7 +1295,7 @@ export function ringkasKetentuan(a: Pick<Aturan, 'jenis' | 'kondisi' | 'paramete
 
 /** Label ringkas tipe akibat (registri SIAKAD Data/akibat.php) untuk kalimat kartu. */
 const LABEL_AKIBAT_RINGKAS: Record<string, string> = {
-  hitung: 'Menghitung nilai', konversi_huruf: 'Mengonversi nilai ke huruf', predikat: 'Menetapkan predikat', ubah_tagihan: 'Mengubah tagihan', tarif: 'Menetapkan tarif',
+  hitung: 'Menghitung nilai', konversi_huruf: 'Mengonversi nilai ke huruf', predikat: 'Menetapkan predikat', predikat_lulus: 'Menetapkan predikat kelulusan', bobot_nilai: 'Menetapkan bobot nilai', ubah_tagihan: 'Mengubah tagihan', tarif: 'Menetapkan tarif',
   keringanan: 'Memberi keringanan', denda: 'Mengenakan denda', ubah_status: 'Mengubah status', tugaskan: 'Menugaskan', minta_persetujuan: 'Meminta persetujuan',
   ingatkan: 'Mengirim pengingat', beri_akses: 'Mengatur akses',
 };
@@ -2166,6 +2170,7 @@ export function kalimatAturan(a: Pick<Aturan, 'jenis' | 'kondisi' | 'parameter'>
   const langkah = judulTitik ? `“${judulTitik}”` : 'ini';
   const siapa = a.kondisi ? ringkasKondisi(a.kondisi, katalog, { kecil: true }) : '';
   if (a.jenis === 'syarat') return siapa ? `Langkah ${langkah} hanya boleh dijalankan jika ${siapa}.` : '';
+  if (a.jenis === 'akibat') return `${kalimatAkibat(a.parameter)}${siapa ? ` Berlaku untuk yang ${siapa}.` : ''}`;
   if (a.jenis === 'batas_waktu') {
     const p = a.parameter as ParameterBatasWaktu | null;
     if (!p?.mulai || !p.selesai) return '';
@@ -2273,7 +2278,7 @@ function ringkasKeterangan(s: string) {
     .trim();
 }
 
-const JUDUL_JENIS_PANEL: Record<JenisAturan, string> = { syarat: 'Syarat', batas_waktu: 'Batas waktu', batas_nilai: 'Batas nilai' };
+const JUDUL_JENIS_PANEL: Record<JenisAturan, string> = { syarat: 'Syarat', batas_waktu: 'Batas waktu', batas_nilai: 'Batas nilai', akibat: 'Kebijakan berakibat' };
 
 /** Aturan aktif dan draf di satu titik, dikelompokkan per jenis, supaya pengatur melihat gabungannya sebelum menambah. */
 export function AturanDiTitik({ titik, kecuali, className }: { titik: string; kecuali?: string | null; className?: string }) {
@@ -2318,8 +2323,8 @@ export function AturanDiTitik({ titik, kecuali, className }: { titik: string; ke
                         {a.bawaan && <Badge variant="info">Bawaan</Badge>}
                         <StatusAturanBadge status={statusTampil(a)} />
                         <DaruratAturanBadge aturan={a} />
-                        <ModeAturanBadge mode={a.mode} />
-                        <SifatAturanBadge sifat={a.sifat} />
+                        {a.jenis !== 'akibat' && <ModeAturanBadge mode={a.mode} />}
+                        {a.jenis !== 'akibat' && <SifatAturanBadge sifat={a.sifat} />}
                         <span title="Prioritas: angka lebih besar diperiksa lebih dulu">Prioritas {a.prioritas}</span>
                       </div>
                     </li>
@@ -2349,6 +2354,11 @@ const PENJELASAN_JENIS: Record<JenisAturan, { judul: string; kalimat: string; co
     judul: 'Batas nilai',
     kalimat: 'Paling banyak atau paling sedikit …',
     contoh: 'Paling banyak 24 SKS bila IPS ≥ 3,00; 21 SKS bila IPS ≥ 2,50; selain itu 18 SKS.',
+  },
+  akibat: {
+    judul: 'Kebijakan berakibat',
+    kalimat: 'Mulai periode …, berlaku …',
+    contoh: 'Tunggakan BPP diputihkan bagi mahasiswa yang aktif kembali setelah cuti 3 semester; cukup bayar 1 semester dengan tarif periode baru.',
   },
 };
 
@@ -3461,6 +3471,14 @@ function UjiDiWizard({
 export function KetentuanAturan({ aturan: a }: { aturan: Pick<Aturan, 'jenis' | 'kondisi' | 'parameter'> }) {
   const katalog = useKatalogAturan();
   const peta = petaIndikator(katalog.data);
+  if (a.jenis === 'akibat') {
+    return (
+      <div className="u-aturan-ketentuan">
+        <KetentuanAkibat parameter={a.parameter} />
+        {a.kondisi && <p className="u-aturan-sub">Berlaku bila {ringkasKondisi(a.kondisi, katalog.data, { kecil: true })}.</p>}
+      </div>
+    );
+  }
   if (a.jenis === 'batas_waktu') {
     const p = a.parameter as ParameterBatasWaktu | null;
     const pos = posisiBatasWaktu(p);
@@ -4709,8 +4727,8 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
             {a.status === 'aktif' && usulan?.status === 'diajukan' && <Badge variant="info">Versi baru diajukan</Badge>}
             {usulan?.status === 'dikembalikan' && <Badge variant="danger">Dikembalikan</Badge>}
             <DaruratAturanBadge aturan={a} />
-            <ModeAturanBadge mode={a.mode} />
-            <SifatAturanBadge sifat={a.sifat} />
+            {a.jenis !== 'akibat' && <ModeAturanBadge mode={a.mode} />}
+            {a.jenis !== 'akibat' && <SifatAturanBadge sifat={a.sifat} />}
             <Badge variant="outline">{LABEL_JENIS_ATURAN[a.jenis].label}</Badge>
             <Badge variant="outline">v{a.versi}</Badge>
           </div>
@@ -4962,6 +4980,7 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
               </div>
             ),
           },
+          ...(a.jenis === 'akibat' ? [{ value: 'akibat', label: 'Simulasi & penerapan', icon: <Calculator />, content: <PanelAkibatAturan aturan={a} /> }] : []),
           { value: 'sk', label: 'SK', icon: <FileBadge />, count: a.lampiran.length, content: <LampiranSkAturan aturan={a} onBerubah={q.refetch} /> },
           ...(a.boleh_atur
             ? [
@@ -5174,8 +5193,8 @@ function AntreanAlurAturan({ antrean, kategori, onBuka, className }: { antrean: 
               {a.bawaan && <Badge variant="info">Bawaan</Badge>}
               <StatusAturanBadge status={statusTampil(a)} />
               {a.status === 'aktif' && <Badge variant="info">Versi baru</Badge>}
-              <ModeAturanBadge mode={a.mode} />
-              <SifatAturanBadge sifat={a.sifat} />
+              {a.jenis !== 'akibat' && <ModeAturanBadge mode={a.mode} />}
+              {a.jenis !== 'akibat' && <SifatAturanBadge sifat={a.sifat} />}
             </div>
             <strong>{a.nama}</strong>
             <span>{labelTitik(a.titik, a.titik_judul)}</span>
