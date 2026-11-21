@@ -17,6 +17,7 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
 import { IsianAngka } from '../components/isian-angka';
 import { IsianTanggal } from '../components/formulir';
 import { keAngka } from '../lib/angka';
+import { DataTable } from '../components/data-table';
 
 // ================================================================ Kontrak API (/v1/integrasi/ai)
 
@@ -377,6 +378,7 @@ export function TeksAi({ teks, className }: { teks: string; className?: string }
         const k = kunci();
         out.push(
           <div key={k} className="u-ai-tabel-bungkus">
+            {/* unipo-ui-izinkan tabel-bawaan: tabel di dalam jawaban AI (markdown yang dirender), bukan tabel data */}
             <table>
               <thead>
                 <tr>
@@ -2052,41 +2054,33 @@ export function PemakaianAi({ klienId, className }: { klienId?: string; classNam
           {q.data && q.data.rincian.length === 0 ? (
             <Empty icon={<Bot />} title="Belum ada pemakaian" description="Belum ada permintaan AI pada rentang tanggal ini." bordered />
           ) : (
-            <div className="u-ai-tabel-bungkus">
-              <table className="u-ai-tabel">
-                <thead>
-                  <tr>
-                    <th>Tanggal</th>
-                    <th>Aplikasi</th>
-                    <th>Model</th>
-                    <th data-angka>Permintaan</th>
-                    <th data-angka>Token</th>
-                    <th data-angka>Ditolak/gagal</th>
-                    <th data-angka>Rata-rata</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(q.data?.rincian ?? []).map((x, i) => (
-                    <tr key={i}>
-                      <td>{x.tanggal}</td>
-                      <td>{x.klien_id}</td>
-                      <td>
-                        <span className="u-ai-model">
-                          <IkonDriverAi driver={x.driver} />
-                          {x.model}
-                        </span>
-                      </td>
-                      <td data-angka>{formatNumber(x.permintaan)}</td>
-                      <td data-angka>{formatNumber(x.token_masuk + x.token_keluar)}</td>
-                      <td data-angka>
-                        {x.ditolak} / {x.gagal}
-                      </td>
-                      <td data-angka>{(x.rata_ms / 1000).toLocaleString('id-ID', { maximumFractionDigits: 1 })} dtk</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable<PemakaianAiData['rincian'][number] & { __i: number }>
+              className="u-ai-tabel"
+              columns={[
+                { key: 'tanggal', header: 'Tanggal', format: 'tanggal', sortable: true },
+                { key: 'klien_id', header: 'Aplikasi', sortable: true, mobile: 'title' },
+                {
+                  key: 'model',
+                  header: 'Model',
+                  sortable: true,
+                  cell: (x) => (
+                    <span className="u-ai-model">
+                      <IkonDriverAi driver={x.driver} />
+                      {x.model}
+                    </span>
+                  ),
+                },
+                { key: 'permintaan', header: 'Permintaan', format: 'angka', sortable: true },
+                { key: 'token', header: 'Token', align: 'end', sortable: true, value: (x) => x.token_masuk + x.token_keluar, cell: (x) => formatNumber(x.token_masuk + x.token_keluar) },
+                { key: 'ditolak', header: 'Ditolak/gagal', align: 'end', value: (x) => x.ditolak + x.gagal, cell: (x) => `${x.ditolak} / ${x.gagal}` },
+                { key: 'rata_ms', header: 'Rata-rata', align: 'end', sortable: true, value: (x) => x.rata_ms, cell: (x) => `${(x.rata_ms / 1000).toLocaleString('id-ID', { maximumFractionDigits: 1 })} dtk` },
+              ]}
+              rows={(q.data?.rincian ?? []).map((x, i) => ({ ...x, __i: i }))}
+              rowKey={(x) => String(x.__i)}
+              loading={q.loading}
+              exportCsv={`pemakaian-ai-${dari}-${sampai}`}
+              defaultDensity="compact"
+            />
           )}
         </>
       )}

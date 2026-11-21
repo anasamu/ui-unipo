@@ -1753,23 +1753,6 @@
     }
   }
 }
-.u-mb-kebijakan-tabel {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--u-text-sm);
-  th,
-  td {
-    padding: 0.4rem 0.5rem;
-    text-align: start;
-    border-bottom: 1px solid var(--u-border);
-  }
-  th {
-    font-size: var(--u-text-xs);
-    color: var(--u-muted-foreground);
-    font-weight: var(--u-weight-medium, 500);
-  }
-}
-
 // ---------------------------------------------------------------- DriveBerkas
 .u-db {
   display: flex;

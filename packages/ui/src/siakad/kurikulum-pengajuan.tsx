@@ -640,26 +640,20 @@ export function BandingKurikulumAktif({ kurikulumId, className }: { kurikulumId:
   const x = d.data;
   if (!x.aktif) return <Alert variant="info">Prodi belum punya kurikulum aktif; semua {x.kurikulum.jumlah_mk} MK adalah MK baru.</Alert>;
   const tabelMk = (rows: MkBanding[]) => (
-    <table className="u-kur-tabel">
-      <thead>
-        <tr>
-          <th>Kode</th>
-          <th>Nama</th>
-          <th>SKS</th>
-          <th>Smt</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((m) => (
-          <tr key={m.kode_mk}>
-            <td>{m.kode_mk}</td>
-            <td>{m.nama}</td>
-            <td>{angka(m.sks)}</td>
-            <td>{m.semester}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <DataTable
+      columns={[
+        { key: 'kode_mk', header: 'Kode', sortable: true, mobile: 'subtitle', cell: (m) => <span className="u-mono">{m.kode_mk}</span> },
+        { key: 'nama', header: 'Nama', sortable: true, mobile: 'title' },
+        { key: 'sks', header: 'SKS', align: 'end', sortable: true, value: (m) => Number(m.sks) || 0, cell: (m) => angka(m.sks) },
+        { key: 'semester', header: 'Smt', align: 'end', sortable: true, value: (m) => Number(m.semester) || 0 },
+      ]}
+      rows={rows}
+      rowKey={(m) => m.kode_mk}
+      pagination={rows.length > 20}
+      columnToggle={false}
+      densityToggle={false}
+      defaultDensity="compact"
+    />
   );
   return (
     <div className={cn('u-bkd-form', className)}>

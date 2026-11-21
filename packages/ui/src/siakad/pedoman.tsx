@@ -4,6 +4,7 @@ import { BookOpenText, Check, CircleAlert, FileDown, Info, Scale, Search, X } fr
 import { cn } from '../lib/cn';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Empty } from '../components/display';
+import { DataTable } from '../components/data-table';
 import { Checkbox, Field, Input, Textarea } from '../components/forms';
 import { Sheet, useToast } from '../components/overlays';
 import { blokKeHtml } from '../editor/render';
@@ -770,24 +771,13 @@ export function BlokParameter({ p, aksi }: { p: ParameterPedoman; aksi?: React.R
         </span>
       </div>
       {p.tipe === 'tabel' && Array.isArray(p.nilai) && kolom.length > 0 ? (
-        <table className="u-pdm-param-tabel">
-          <thead>
-            <tr>
-              {kolom.map((k) => (
-                <th key={k.kode}>{k.label}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {(p.nilai as Array<Record<string, unknown>>).map((r, i) => (
-              <tr key={i}>
-                {kolom.map((k) => (
-                  <td key={k.kode}>{String(r[k.kode] ?? '')}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          className="u-pdm-param-tabel"
+          columns={kolom.map((k) => ({ key: k.kode, header: k.label, value: (r: Record<string, unknown>) => String(r[k.kode] ?? ''), cell: (r: Record<string, unknown>) => String(r[k.kode] ?? '') }))}
+          rows={(p.nilai as Array<Record<string, unknown>>).map((r, i) => ({ ...r, __i: i }))}
+          rowKey={(r) => String(r.__i)}
+          pagination={false} columnToggle={false} densityToggle={false} defaultDensity="compact"
+        />
       ) : (
         <div className="u-pdm-param-nilai">{p.teks}</div>
       )}

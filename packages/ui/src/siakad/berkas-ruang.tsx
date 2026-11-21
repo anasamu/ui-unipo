@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { Building2, Check, Copy, Globe, Link2, Lock, LockOpen, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { Badge, Button } from '../components/actions';
+import { DataTable } from '../components/data-table';
 import { Input, SegmentedControl, Textarea } from '../components/forms';
 import { Select } from '../components/select';
 import { Dialog } from '../components/overlays';
@@ -10,6 +11,8 @@ import type { BerkasManajer, FolderBerkas } from './manajer-berkas';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { PilihUnit, useUnitArsip } from './pilih-unit';
 import { IsianTanggal } from '../components/formulir';
+
+const LABEL_LINGKUP_KEBIJAKAN: Record<'global' | 'unit' | 'pengguna', string> = { global: 'Seluruh kampus', unit: 'Unit', pengguna: 'Pengguna' };
 
 // ================================================================ Tipe (sama dengan /v1/berkas)
 
@@ -246,26 +249,22 @@ export function KebijakanEnkripsiBerkas({ unit, tampilkanSemua, className }: Keb
       {galat && <p className="u-field-error">{galat}</p>}
       <p className="u-field-description">Perubahan berlaku untuk berkas baru. Berkas lama bisa dienkripsi satu per satu dari menu berkas.</p>
       {tampilkanSemua && data.semua && data.semua.length > 0 && (
-        <table className="u-mb-kebijakan-tabel">
-          <thead>
-            <tr>
-              <th>Lingkup</th>
-              <th>Unit/pengguna</th>
-              <th>Mode</th>
-              <th>Diubah</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.semua.map((k) => (
-              <tr key={`${k.lingkup}:${k.kunci}`}>
-                <td>{k.lingkup}</td>
-                <td>{k.kunci || 'Seluruh kampus'}</td>
-                <td>{LABEL_MODE[k.enkripsi]}</td>
-                <td>{[k.diubah_oleh, k.updated_at ? formatDate(k.updated_at, 'short') : null].filter(Boolean).join(' · ')}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          className="u-mb-kebijakan-tabel"
+          columns={[
+            { key: 'lingkup', header: 'Lingkup', value: (k) => LABEL_LINGKUP_KEBIJAKAN[k.lingkup], cell: (k) => LABEL_LINGKUP_KEBIJAKAN[k.lingkup] },
+            { key: 'kunci', header: 'Unit/pengguna', mobile: 'title', value: (k) => k.kunci || 'Seluruh kampus', cell: (k) => k.kunci || 'Seluruh kampus' },
+            { key: 'enkripsi', header: 'Mode', mobile: 'badge', value: (k) => LABEL_MODE[k.enkripsi], cell: (k) => <Badge variant={k.enkripsi === 'wajib' ? 'success' : 'neutral'}>{LABEL_MODE[k.enkripsi]}</Badge> },
+            { key: 'updated_at', header: 'Diubah', value: (k) => k.updated_at ?? '', cell: (k) => [k.diubah_oleh, k.updated_at ? formatDate(k.updated_at, 'short') : null].filter(Boolean).join(' · ') || '—' },
+          ]}
+          rows={data.semua}
+          rowKey={(k) => `${k.lingkup}:${k.kunci}`}
+          exportCsv="kebijakan-enkripsi-berkas"
+          pagination={data.semua.length > 15}
+          columnToggle={false}
+          densityToggle={false}
+          defaultDensity="compact"
+        />
       )}
     </div>
   );

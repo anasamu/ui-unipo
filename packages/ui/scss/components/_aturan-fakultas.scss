@@ -200,39 +200,6 @@
   display: grid;
   gap: 0.75rem;
 }
-.u-aturan-fak-tabel-gulir {
-  overflow-x: auto;
-}
-.u-aturan-fak-tabel {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--u-text-sm);
-  th,
-  td {
-    padding: 0.5rem 0.625rem;
-    border-bottom: 1px solid var(--u-border);
-    text-align: left;
-    white-space: nowrap;
-  }
-  th {
-    color: var(--u-muted-foreground);
-    font-size: var(--u-text-xs);
-    font-weight: var(--u-weight-medium);
-  }
-  td:not(:first-child),
-  th:not(:first-child) {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-  }
-  td[data-nada='tolak'] {
-    color: var(--u-danger-text);
-    font-weight: var(--u-weight-semibold);
-  }
-  td[data-nada='peringatan'] {
-    color: var(--u-warning-text);
-    font-weight: var(--u-weight-semibold);
-  }
-}
 .u-aturan-fak-kurang {
   display: grid;
   margin: 0;

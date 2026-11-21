@@ -592,6 +592,7 @@ export function IsianNilaiParameter({ kat, value, onChange }: { kat: Pick<Katalo
       const ubah = (i: number, k: string, x: string) => onChange(rows.map((r, n) => (n === i ? { ...r, [k]: angka(x) } : r)));
       return (
         <div className="u-pdm-isian-tabel">
+          {/* unipo-ui-izinkan tabel-bawaan: kisi isian parameter berbentuk tabel (sel = Input), bukan tabel data */}
           <table>
             <thead>
               <tr>
