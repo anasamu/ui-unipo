@@ -33,7 +33,17 @@ export interface SKRegistri {
   /** tautan: pejabat = data pejabat; jabatan = jabatan di unit tanpa orang; teks = diketik, belum tertaut. */
   penandatangan?: { pejabat_id: number | null; jabatan_id?: number | null; unit_id?: number | null; jabatan: string | null; nama: string | null; tautan?: 'pejabat' | 'jabatan' | 'teks'; ttd?: string | null } | null;
   tempat?: string | null;
-  berkas?: { ada: boolean; nama?: string | null; mime?: string | null; ukuran?: number | null; url: string } | null;
+  berkas?: {
+    ada: boolean;
+    nama?: string | null;
+    mime?: string | null;
+    ukuran?: number | null;
+    url: string;
+    /** Tempat berkas di arsip institusi (Arsip universitas/fakultas), bukan ruang pribadi pengunggah. */
+    arsip?: { ruang: string; nama: string; folder: string | null; berkas: string; path: string } | null;
+    diunggah_oleh?: string | null;
+    diunggah_at?: string | null;
+  } | null;
   status: 'draf' | 'terbit' | 'ditolak' | 'dicabut' | 'diubah';
   keamanan?: 'biasa' | 'terbatas';
   sumber?: string | null;
