@@ -48,6 +48,14 @@ function readJson(p) {
   }
 }
 const project = readJson(join(cwd, 'package.json'));
+
+// periksa-elemen: tolak elemen bawaan di halaman aplikasi (lihat cli/periksa-elemen.mjs).
+if (cmd === 'periksa-elemen') {
+  const kode = await (await import('./periksa-elemen.mjs')).utama({ cwd, flags, c, ok, warn });
+  // Tunggu stdout tersalurkan (pipa bersifat asinkron) sebelum keluar, agar keluaran panjang/--json tidak terpotong.
+  await new Promise((r) => process.stdout.write('', r));
+  process.exit(kode);
+}
 const deps = { ...(project?.dependencies ?? {}), ...(project?.devDependencies ?? {}) };
 
 function packageManager() {
@@ -426,6 +434,8 @@ ${c.b('Perintah')}
                        --tulis bff/lib/izin-komponen.json | --cek bff/lib/izin-komponen.json --src src --rinci
   tema                 Tulis ulang berkas tema   --primary --secondary --radius --netral --font --teks
                        --bayangan --gerak --dari "<tautan tema.css dari api.unipo.ac.id/docs/tema>" --out --stdout
+  periksa-elemen       Tolak <input>/<select>/<table>/<button> polos & window.confirm di halaman (pages/, halaman/)
+                       --semua --src <folder> --json --tulis-dasar <berkas> --dasar <berkas>
 
 ${c.b('Opsi umum')}
   --pm npm|pnpm|yarn|bun   paksa pengelola paket   --no-install   --no-edit   --no-font

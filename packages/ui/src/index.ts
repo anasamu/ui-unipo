@@ -69,3 +69,8 @@ export * from './components/pencarian-fitur';
 export * from './components/menu-aplikasi';
 export * from './components/tab-halaman';
 export * from './components/alokasi';
+export * from './lib/angka';
+export * from './components/isian-angka';
+export * from './components/multi-pilih';
+export * from './components/aksi';
+export * from './components/pilih-tampilan';

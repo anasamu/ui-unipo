@@ -41,6 +41,8 @@ export interface SumberEntitas {
   placeholder?: string;
   /** Tampilan baris sendiri di daftar pilihan (menggantikan avatar/ikon + judul + meta). */
   tampil?: (r: Baris) => React.ReactNode;
+  /** Saring baris hasil server sebelum ditampilkan (mis. hanya surat yang sudah bernomor). */
+  saring?: (r: Baris) => boolean;
 }
 
 /** Sumber bawaan. Kunci objek ini dipakai sebagai `jenis` di <PilihEntitas jenis="mahasiswa" />. */
@@ -306,10 +308,13 @@ function PilihEntitasDasar({ jenis, value, defaultValue, onValueChange, query, l
         semua.current ??= siakad.request<Baris[]>({ method: 'GET', path: src.path, query: { ...src.query, ...JSON.parse(q) } }).then((r) => (Array.isArray(r.data) ? r.data : []));
         const rows = await semua.current;
         const t = kata.trim().toLowerCase();
-        return t ? rows.filter((r) => `${src.judul(r)} ${src.meta?.(r) ?? ''} ${kunciDari(r)}`.toLowerCase().includes(t)) : rows;
+        const cocok = t ? rows.filter((r) => `${src.judul(r)} ${src.meta?.(r) ?? ''} ${kunciDari(r)}`.toLowerCase().includes(t)) : rows;
+        return src.saring ? cocok.filter(src.saring) : cocok;
       }
       const r = await siakad.request<Baris[]>({ method: 'GET', path: src.path, query: { ...src.query, ...JSON.parse(q), q: kata || undefined, per_page: limit, ...ekstra } }, { signal });
-      return Array.isArray(r.data) ? r.data : [];
+      const rows = Array.isArray(r.data) ? r.data : [];
+      // Saringan tampilan hanya untuk hasil pencarian; nilai awal (lewat saringKunci) tetap ditampilkan.
+      return src.saring && !Object.keys(ekstra).length ? rows.filter(src.saring) : rows;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [siakad, load, src.path, src.klien, q, limit],
@@ -336,7 +341,8 @@ function PilihEntitasDasar({ jenis, value, defaultValue, onValueChange, query, l
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nilai, src.path, src.kunci]);
 
-  const label = (r: Baris) => (r.__stub ? teks(r[src.kunci]) : src.judul(r) || kunciDari(r));
+  // Selama baris nilai awal dimuat: kunci yang bermakna (NIM, username) boleh tampil, ID angka/UUID tidak.
+  const label = (r: Baris) => (r.__stub ? (src.kunci === 'id' ? 'Memuat…' : teks(r[src.kunci])) : src.judul(r) || kunciDari(r));
   const opsiTambah = tambah
     ? {
         label: tambah.label ?? ((k: string) => (k ? `Tambah ${src.nama} “${k}”` : `Tambah ${src.nama} baru`)),
