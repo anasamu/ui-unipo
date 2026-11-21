@@ -349,3 +349,36 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+
+// ---------------------------------------------------------------- Baris ringkasan (total)
+.u-dt-ringkasan td {
+  border-top: 2px solid var(--u-border);
+  background: var(--u-surface);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.u-dt-ringkasan-kartu {
+  display: grid;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+  background: var(--u-surface);
+  dl {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0;
+  }
+}
+.u-dt-ringkasan-baris {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: var(--u-text-sm);
+  dt {
+    color: var(--u-muted-foreground);
+  }
+  dd {
+    margin: 0;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+}

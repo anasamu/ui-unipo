@@ -18,6 +18,7 @@ import { AlurPemeriksa, LabelPemeriksa, PratinjauPemeriksa, type TahapPemeriksa 
 import { invalidateSiakad, pesanGalat, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
 import { IsianTanggal } from '../components/formulir';
 import { IsianBerkas } from '../components/pilih-berkas-lokal';
+import { labelTahunAkademik } from './akademik';
 
 /*
  * Validasi syarat keuangan (SIAKAD /v1/syarat-keuangan, docs/VALIDASI_SYARAT_KEUANGAN.md di siakad_unipo).
@@ -384,7 +385,7 @@ function AntreanSyarat({ katalog, fiturAwal, hanyaSyarat }: { katalog: KatalogSy
                   {b.butir.map((x) => (
                     <li key={`${x.kode_biaya}-${x.tahun_id}`}>
                       {x.nama}
-                      {x.tahun_id && x.tahun_id !== tahun ? ` ${x.tahun_id}` : ''} <span className="u-syk-redup">{x.persen}%/{x.minimal}% · {x.unit_kode}</span>
+                      {x.tahun_id && x.tahun_id !== tahun ? ` ${labelTahunAkademik(x.tahun_id)}` : ''} <span className="u-syk-redup">{x.persen}%/{x.minimal}% · {x.unit_kode}</span>
                     </li>
                   ))}
                 </ul>
@@ -465,7 +466,7 @@ export function RincianSyaratKeuangan({ jenis, subjek, tahunId, onAksi }: Rincia
           { label: jenis === 'mahasiswa' ? 'NIM' : 'No. pendaftar', value: d.identitas.nim },
           ...(d.identitas.nama_prodi ? [{ label: 'Program studi', value: d.identitas.nama_prodi }] : []),
           ...(d.identitas.angkatan ? [{ label: 'Angkatan', value: d.identitas.angkatan }] : []),
-          { label: 'Periode', value: d.tahun_id },
+          { label: 'Periode', value: labelTahunAkademik(d.tahun_id) },
           ...(d.tagihan ? [{ label: 'Tunggakan semua periode', value: rp(d.tagihan.tunggakan) }] : []),
         ]}
       />
@@ -474,26 +475,31 @@ export function RincianSyaratKeuangan({ jenis, subjek, tahunId, onAksi }: Rincia
       {d.tagihan && d.tagihan.periode.length ? (
         <>
           <h4 className="u-syk-sub">Tagihan per periode</h4>
-          <table className="u-syk-tabel">
-            <thead>
-              <tr>
-                <th>Periode</th>
-                <th>Tagihan</th>
-                <th>Dibayar</th>
-                <th>Sisa</th>
-              </tr>
-            </thead>
-            <tbody>
-              {d.tagihan.periode.map((p) => (
-                <tr key={p.tahun_id}>
-                  <td>{p.tahun_id}</td>
-                  <td>{rp(p.tagihan)}</td>
-                  <td>{rp(p.bayar)}</td>
-                  <td data-kurang={p.sisa > 0 ? '' : undefined}>{rp(p.sisa)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable<{ tahun_id: string; tagihan: number; bayar: number; sisa: number }>
+            columns={[
+              { key: 'tahun_id', header: 'Periode', mobile: 'title', sortable: true, cell: (p) => labelTahunAkademik(p.tahun_id) },
+              { key: 'tagihan', header: 'Tagihan', format: 'rupiah', sortable: true },
+              { key: 'bayar', header: 'Dibayar', format: 'rupiah', sortable: true },
+              {
+                key: 'sisa',
+                header: 'Sisa',
+                align: 'end',
+                sortable: true,
+                mobile: 'badge',
+                value: (p) => p.sisa,
+                cell: (p) => (p.sisa > 0 ? <Badge variant="danger">{rp(p.sisa)}</Badge> : <span className="u-syk-redup">{rp(p.sisa)}</span>),
+              },
+            ]}
+            rows={d.tagihan.periode}
+            rowKey={(p) => p.tahun_id}
+            defaultSort={{ key: 'tahun_id', dir: 'desc' }}
+            pagination={d.tagihan.periode.length > 10}
+            columnToggle={false}
+            densityToggle={false}
+            defaultDensity="compact"
+            exportCsv={`tagihan-${d.identitas.nim}`}
+            ringkasan={{ tagihan: rp(d.tagihan.periode.reduce((t, p) => t + p.tagihan, 0)), bayar: rp(d.tagihan.periode.reduce((t, p) => t + p.bayar, 0)), sisa: rp(d.tagihan.tunggakan) }}
+          />
         </>
       ) : null}
       <h4 className="u-syk-sub">Riwayat validasi</h4>
@@ -533,7 +539,7 @@ function KartuSyarat({ syarat, onAksi, saya }: { syarat: SyaratSubjek[]; onAksi?
                 {kurang.map((b) => (
                   <li key={`${b.kode_biaya}-${b.tahun_id}`}>
                     {b.nama}
-                    {b.tahun_id ? ` (${b.tahun_id})` : ''}: dibayar {b.persen}% dari minimal {b.minimal}%{b.sisa ? `, sisa ${rp(b.sisa)}` : ''} <span className="u-syk-redup">· diperiksa {b.unit}</span>
+                    {b.tahun_id ? ` (${labelTahunAkademik(b.tahun_id)})` : ''}: dibayar {b.persen}% dari minimal {b.minimal}%{b.sisa ? `, sisa ${rp(b.sisa)}` : ''} <span className="u-syk-redup">· diperiksa {b.unit}</span>
                   </li>
                 ))}
               </ul>
@@ -584,7 +590,7 @@ function KartuValidasi({ r, saya }: { r: ValidasiSyaratKeuanganRow; saya?: boole
         items={[
           ...(!saya && r.nama ? [{ label: 'Mahasiswa', value: `${r.nama} (${r.subjek})` }] : []),
           { label: 'Unit pemilik biaya', value: r.unit },
-          ...(r.tahun_id ? [{ label: 'Periode', value: r.tahun_id }] : []),
+          ...(r.tahun_id ? [{ label: 'Periode', value: labelTahunAkademik(r.tahun_id) }] : []),
           ...(r.berlaku_sampai ? [{ label: 'Berlaku sampai', value: tgl(r.berlaku_sampai) }] : []),
           ...(r.janji_bayar?.length ? [{ label: 'Janji bayar', value: r.janji_bayar.map((j) => `${tgl(j.tanggal)}: ${rp(j.jumlah)}`).join('; ') }] : []),
           ...(saya ? [] : [{ label: 'Alasan', value: r.alasan }]),
