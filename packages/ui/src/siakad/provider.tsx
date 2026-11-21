@@ -6,6 +6,7 @@ import { requestIdDari } from '../components/galat';
 import { laporPemeliharaan } from './pemeliharaan';
 import { LaporGalat } from './lapor-galat';
 import { PemberitahuanPeriodeDitutup } from './kunci-periode';
+import { KalenderAkademikProvider } from './kalender-tanggal';
 
 const SiakadContext = React.createContext<Siakad | null>(null);
 
@@ -23,13 +24,18 @@ export interface UnipoProviderProps {
    * Matikan untuk SDK tanpa sesi pengguna yang tidak bersarang di provider lain.
    */
   laporGalat?: boolean;
+  /**
+   * Komponen tanggal (Calendar, DatePicker, DateRangePicker) memakai kalender akademik SIAKAD: libur, agenda, tahapan,
+   * preset, peringatan periode ditutup (bawaan true bila `siakad` ada; data dimuat saat kalender pertama tampil).
+   */
+  kalenderAkademik?: boolean;
 }
 
 /** Penyedia konteks UNIPO: instans SDK untuk komponen terhubung, toast, dan tooltip. */
-export function UnipoProvider({ siakad = null, children, withProviders = true, laporGalat = true }: UnipoProviderProps) {
+export function UnipoProvider({ siakad = null, children, withProviders = true, laporGalat = true, kalenderAkademik = true }: UnipoProviderProps) {
   const inner = (
     <SiakadContext.Provider value={siakad}>
-      {children}
+      <KalenderAkademikProvider aktif={kalenderAkademik}>{children}</KalenderAkademikProvider>
       {siakad && laporGalat && <LaporGalat siakad={siakad} />}
     </SiakadContext.Provider>
   );
