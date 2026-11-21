@@ -4508,6 +4508,7 @@ export function BukuKurikulum({ kurikulumId, institusi = 'Universitas Pohuwato',
 
         <section>
           <h2>{++bab}. Identitas dan beban belajar</h2>
+          {/* unipo-ui-izinkan tabel-bawaan: tata letak dokumen buku kurikulum (cetak/PDF), bukan tabel data */}
           <table className="u-kk-buku-tabel u-kk-buku-kv">
             <tbody>
               <tr>
@@ -4540,7 +4541,7 @@ export function BukuKurikulum({ kurikulumId, institusi = 'Universitas Pohuwato',
 
         <section>
           <h2>{++bab}. Profil lulusan</h2>
-          {b.profil_lulusan.length ? (
+          {b.profil_lulusan.length ? ( // unipo-ui-izinkan tabel-bawaan: tata letak dokumen buku kurikulum (cetak/PDF), bukan tabel data
             <table className="u-kk-buku-tabel">
               <thead>
                 <tr>
@@ -4570,6 +4571,7 @@ export function BukuKurikulum({ kurikulumId, institusi = 'Universitas Pohuwato',
             ranah.map((r) => (
               <div key={r}>
                 <h3>{r}</h3>
+                {/* unipo-ui-izinkan tabel-bawaan: tata letak dokumen buku kurikulum (cetak/PDF), bukan tabel data */}
                 <table className="u-kk-buku-tabel">
                   <tbody>
                     {b.cpl
@@ -4592,6 +4594,7 @@ export function BukuKurikulum({ kurikulumId, institusi = 'Universitas Pohuwato',
         {b.bahan_kajian.length > 0 && (
           <section>
             <h2>{++bab}. Bahan kajian</h2>
+            {/* unipo-ui-izinkan tabel-bawaan: tata letak dokumen buku kurikulum (cetak/PDF), bukan tabel data */}
             <table className="u-kk-buku-tabel">
               <tbody>
                 {b.bahan_kajian.map((x) => (
@@ -4615,6 +4618,7 @@ export function BukuKurikulum({ kurikulumId, institusi = 'Universitas Pohuwato',
               <h3>
                 {s.semester ? `Semester ${s.semester}` : 'Pilihan bebas'} <small>({formatNumber(s.sks_wajib + s.sks_pilihan)} SKS)</small>
               </h3>
+              {/* unipo-ui-izinkan tabel-bawaan: tata letak dokumen buku kurikulum (cetak/PDF), bukan tabel data */}
               <table className="u-kk-buku-tabel">
                 <thead>
                   <tr>
@@ -4683,6 +4687,7 @@ export function BukuKurikulum({ kurikulumId, institusi = 'Universitas Pohuwato',
         {b.ekuivalensi.length > 0 && (
           <section>
             <h2>{++bab}. Ekuivalensi mata kuliah</h2>
+            {/* unipo-ui-izinkan tabel-bawaan: tata letak dokumen buku kurikulum (cetak/PDF), bukan tabel data */}
             <table className="u-kk-buku-tabel">
               <thead>
                 <tr>
@@ -4713,6 +4718,7 @@ export function BukuKurikulum({ kurikulumId, institusi = 'Universitas Pohuwato',
         {b.peninjauan.length > 0 && (
           <section>
             <h2>{++bab}. Riwayat evaluasi dan peninjauan</h2>
+            {/* unipo-ui-izinkan tabel-bawaan: tata letak dokumen buku kurikulum (cetak/PDF), bukan tabel data */}
             <table className="u-kk-buku-tabel">
               <tbody>
                 {b.peninjauan.map((p, i) => (

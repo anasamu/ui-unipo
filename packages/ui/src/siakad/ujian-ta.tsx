@@ -26,7 +26,7 @@ import {
 import { Badge, Button } from '../components/actions';
 import { Alert, Card, DescriptionList, Empty, Tabs } from '../components/display';
 import { DataTable, type DataColumn } from '../components/data-table';
-import { Field, Input, SegmentedControl, Switch, Textarea } from '../components/forms';
+import { Checkbox, Field, Input, SegmentedControl, Switch, Textarea } from '../components/forms';
 import { Select } from '../components/select';
 import { AgendaList, type CalendarEvent } from '../components/schedule';
 import { ConfirmDialog, Dialog, Sheet, useToast } from '../components/overlays';
@@ -384,7 +384,7 @@ export function KirimBuktiSyarat({ aturanId, open, onOpenChange }: { aturanId: s
           ))}
           {(m?.ceklis ?? []).map((c, i) => (
             <label key={i} className="u-ujta-centang">
-              <input type="checkbox" checked={Boolean(centang[i])} onChange={(e) => setCentang((o) => Object.assign([...o], { [i]: e.target.checked }))} /> {c}
+              <Checkbox checked={Boolean(centang[i])} onCheckedChange={(c) => setCentang((o) => Object.assign([...o], { [i]: c }))} /> {c}
             </label>
           ))}
         </div>
@@ -1095,7 +1095,7 @@ export function FormJadwalUjianTa({ u, open, onOpenChange }: { u: UjianTa | null
                   </ul>
                   {lunak.length > 0 && !cek.bentrok.some((b) => b.keras) && (
                     <label className="u-ujta-centang">
-                      <input type="checkbox" checked={f.abaikan_kuliah} onChange={(e) => set('abaikan_kuliah', e.target.checked)} /> Sudah dikoordinasikan (kuliah diganti/ruang dilepas)
+                      <Checkbox checked={f.abaikan_kuliah} onCheckedChange={(c) => set('abaikan_kuliah', c)} /> Sudah dikoordinasikan (kuliah diganti/ruang dilepas)
                     </label>
                   )}
                 </Alert>

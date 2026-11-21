@@ -25,7 +25,7 @@ import {
 import { cn } from '../lib/cn';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Card, Empty, Tabs } from '../components/display';
-import { Field, Input, SegmentedControl, Textarea } from '../components/forms';
+import { Checkbox, Field, Input, SegmentedControl, Textarea } from '../components/forms';
 import { Pilihan, PilihanBanyak } from '../components/formulir';
 import { Dialog, useToast } from '../components/overlays';
 import { PanelLangkah } from '../components/panel-langkah';
@@ -841,7 +841,7 @@ function FormValidator({ open, onOpenChange, awal, katalog, templat }: { open: b
                       <Pilihan tampilan="daftar" options={[{ value: '', label: 'Semua jenis aturan' }, ...katalog.kategori.map((k) => ({ value: k.kode, label: k.label }))]} value={v.kategori ?? ''} onValueChange={(x) => set({ kategori: x || null })} />
                     </Field>
                     <label className="u-ask-centang">
-                      <input type="checkbox" checked={v.warisi} onChange={(e) => set({ warisi: e.target.checked })} /> Berlaku juga untuk sub-unit (mis. prodi di bawah fakultas). Sub-unit bisa diberi rantai sendiri untuk menimpa.
+                      <Checkbox checked={v.warisi} onCheckedChange={(c) => set({ warisi: c })} /> Berlaku juga untuk sub-unit (mis. prodi di bawah fakultas). Sub-unit bisa diberi rantai sendiri untuk menimpa.
                     </label>
                   </div>
                 ),
@@ -1599,7 +1599,7 @@ export function WizardTemplatAturan({
                 required={!simpanSaja}
               />
               <label className="u-ask-centang">
-                <input type="checkbox" checked={simpanSaja} onChange={(e) => setSimpanSaja(e.target.checked)} /> Simpan sebagai draf dulu (ajukan nanti)
+                <Checkbox checked={simpanSaja} onCheckedChange={(c) => setSimpanSaja(c)} /> Simpan sebagai draf dulu (ajukan nanti)
               </label>
               <section>
                 <h4 className="u-ask-judul">

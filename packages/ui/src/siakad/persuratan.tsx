@@ -653,6 +653,7 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, gal
 
   const sebelumIsi = (
     <div className="u-psr-kepala">
+      {/* unipo-ui-izinkan tabel-bawaan: kepala surat resmi (tata letak naskah dinas) */}
       <table className="ub-tabel-polos">
         <tbody>
           <tr>

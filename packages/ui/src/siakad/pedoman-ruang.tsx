@@ -4,7 +4,7 @@ import { ArrowLeft, BookOpenText, Check, CircleAlert, Copy, GitCompare, GripVert
 import { cn } from '../lib/cn';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Empty, Tabs } from '../components/display';
-import { Field, Input, Textarea } from '../components/forms';
+import { Checkbox, Field, Input, Textarea } from '../components/forms';
 import { Combobox, Select } from '../components/select';
 import { ConfirmDialog, Sheet } from '../components/overlays';
 import { IsianTanggal } from '../components/formulir';
@@ -498,7 +498,7 @@ function PanelKomentar({ versi: v, butir }: { versi: VersiPedoman; butir: ButirP
   return (
     <div className="u-pdm-kanan-isi">
       <label className="u-pdm-centang">
-        <input type="checkbox" checked={semua} onChange={(e) => setSemua(e.target.checked)} /> Semua pasal
+        <Checkbox checked={semua} onCheckedChange={(c) => setSemua(c)} /> Semua pasal
       </label>
       {daftar.length === 0 ? <p className="u-pdm-redup">Belum ada komentar {butir && !semua ? `untuk ${butir.label}` : ''}.</p> : null}
       {daftar.map((k) => (
@@ -573,7 +573,7 @@ export function IsianNilaiParameter({ kat, value, onChange }: { kat: Pick<Katalo
             <div className="u-pdm-pilihan">
               {opsi.map((o) => (
                 <label key={o.value} className="u-pdm-centang">
-                  <input type="checkbox" checked={v.includes(o.value)} onChange={(e) => onChange(e.target.checked ? [...v, o.value] : v.filter((x) => x !== o.value))} /> {o.label}
+                  <Checkbox checked={v.includes(o.value)} onCheckedChange={(c) => onChange(c ? [...v, o.value] : v.filter((x) => x !== o.value))} /> {o.label}
                 </label>
               ))}
             </div>

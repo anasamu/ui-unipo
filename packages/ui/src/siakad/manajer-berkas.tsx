@@ -60,7 +60,7 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '../components/actions';
-import { Input } from '../components/forms';
+import { Checkbox, Input } from '../components/forms';
 import { ConfirmDialog, Dialog, Menu, Tooltip, type MenuEntry } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { formatBytes, formatDate } from '../lib/format';
@@ -3298,7 +3298,7 @@ function DialogLihat({ unit, b, f, pengelola, tutup, selesai }: { unit: string; 
           <div className="u-mb-lihat-peran">
             {(['semua', 'mahasiswa', 'dosen', 'tendik'] as const).map((k) => (
               <label key={k}>
-                <input type="checkbox" checked={peran.includes(k)} onChange={(e) => ubahPeran(k, e.target.checked)} />
+                <Checkbox checked={peran.includes(k)} onCheckedChange={(c) => ubahPeran(k, c)} />
                 {LABEL_LIHAT[k]}
               </label>
             ))}

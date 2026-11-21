@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { Badge, Button, Spinner } from '../components/actions';
 import { Alert, Empty } from '../components/display';
-import { Field, Input, SegmentedControl, Textarea } from '../components/forms';
+import { Checkbox, Field, Input, SegmentedControl, Textarea } from '../components/forms';
 import { IsianTanggal } from '../components/formulir';
 import { Dialog, useToast } from '../components/overlays';
 import { Combobox, OptionContent, Select } from '../components/select';
@@ -928,11 +928,10 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
                 return (
                   <li key={k} data-pilih={dipilih ? '' : undefined} data-nonaktif={it.boleh === false || undefined}>
                     <label className="u-kasir-tagihan-baris">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={Boolean(dipilih)}
                         disabled={it.boleh === false && !dipilih}
-                        onChange={() =>
+                        onCheckedChange={() =>
                           alih({ kunci: k, label: it.jenis_biaya, sub: `Periode ${per}`, jumlah: it.sisa, max: it.sisa, sumber: { jenis: 'mhs', nim, tahun_id: per, kode_biaya: it.kode_biaya } })
                         }
                       />

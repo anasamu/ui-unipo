@@ -5,6 +5,7 @@ import { cn } from '../lib/cn';
 import { matriksQr } from '../lib/qr';
 import { Button } from '../components/actions';
 import { UnipoMark } from '../components/identity';
+import { Checkbox } from '../components/forms';
 
 // ================================================================ Tipe
 
@@ -910,10 +911,10 @@ export function UnduhKalender({ tahapan, info, namaBerkas = 'kalender-akademik',
           ])}
           {daftarSasaran.length ? pilih('Sasaran', sasaran, setSasaran, [{ value: '', label: 'Semua sasaran' }, ...daftarSasaran.map((s) => ({ value: s, label: s }))]) : null}
           <label className="u-unduh-kal-cek">
-            <input type="checkbox" checked={libur} onChange={(e) => setLibur(e.target.checked)} /> Libur
+            <Checkbox checked={libur} onCheckedChange={(c) => setLibur(c)} /> Libur
           </label>
           <label className="u-unduh-kal-cek">
-            <input type="checkbox" checked={kegiatan} onChange={(e) => setKegiatan(e.target.checked)} /> Kegiatan
+            <Checkbox checked={kegiatan} onCheckedChange={(c) => setKegiatan(c)} /> Kegiatan
           </label>
           {saringan}
         </div>

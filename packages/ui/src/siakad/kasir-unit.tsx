@@ -31,7 +31,7 @@ import {
 import { Badge, Button, Spinner, type BadgeVariant } from '../components/actions';
 import { Alert, Card, Empty, Tabs } from '../components/display';
 import { DataTable, type DataColumn } from '../components/data-table';
-import { CheckboxGroup, Field, Input, RadioGroup, Switch, Textarea } from '../components/forms';
+import { Checkbox, CheckboxGroup, Field, Input, RadioGroup, Switch, Textarea } from '../components/forms';
 import { IsianTanggal } from '../components/formulir';
 import { ConfirmDialog, Sheet, useToast } from '../components/overlays';
 import { PanelLangkah } from '../components/panel-langkah';
@@ -1300,7 +1300,7 @@ export function PratinjauTemplatLaporanKasir({ isi, kolom, unit, baris, periode,
           {isi.subjudul ? <small>{isi.subjudul}</small> : null}
           <small>{periode ?? 'Periode 17–19 November 2026'}</small>
         </div>
-        {kol.length ? (
+        {kol.length ? ( // unipo-ui-izinkan tabel-bawaan: pratinjau kertas laporan kasir sesuai cetakan
           <table className="u-ksu-kertas-tabel">
             <thead>
               <tr>
@@ -1487,7 +1487,7 @@ function FormTemplat({ awal, onOpenChange, saya, unitId }: { awal: IsianTemplat 
                 {dipilih.map((k, i) => (
                   <li key={k} data-pilih>
                     <label>
-                      <input type="checkbox" checked onChange={() => setIsi({ kolom: dipilih.filter((x) => x !== k), kelompok: v.isi.kelompok === k ? null : v.isi.kelompok })} />
+                      <Checkbox checked onCheckedChange={() => setIsi({ kolom: dipilih.filter((x) => x !== k), kelompok: v.isi.kelompok === k ? null : v.isi.kelompok })} />
                       <span>
                         {peta.get(k)?.label ?? k}
                         {peta.get(k)?.angka ? <small> · angka</small> : null}
@@ -1506,7 +1506,7 @@ function FormTemplat({ awal, onOpenChange, saya, unitId }: { awal: IsianTemplat 
                 {lain.map((k) => (
                   <li key={k.kunci}>
                     <label>
-                      <input type="checkbox" checked={false} onChange={() => setIsi({ kolom: [...dipilih, k.kunci] })} />
+                      <Checkbox checked={false} onCheckedChange={() => setIsi({ kolom: [...dipilih, k.kunci] })} />
                       <span>
                         {k.label}
                         {k.angka ? <small> · angka</small> : null}
