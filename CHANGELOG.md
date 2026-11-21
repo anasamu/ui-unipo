@@ -2,6 +2,7 @@
 
 ## 1.51.0 (belum dirilis)
 
+- **Kebijakan berakibat "Bobot nilai skripsi"** (`aturan-akibat.tsx`; butuh SIAKAD dengan titik `ta.nilai_skripsi`, bentuk `bobot_skripsi`, docs/UJIAN-TA.md di siakad_unipo): `BentukAkibat` menerima `bobot_skripsi`, `ParameterAkibat.bimbingan`/`sidang`, `kalimatAkibat` menulis kalimat awam ("nilai skripsi = 40% nilai pembimbing + 60% nilai penguji sidang …") untuk daftar aturan dan `KetentuanAkibat`.
 - **Persetujuan perangkat kasir** (`unipo-ui/siakad` `perangkat-kasir.tsx`, baru; butuh SIAKAD dengan `/v1/kasir/kelola/perangkat-persetujuan`, docs/KASIR.md "Perangkat kasir" di siakad_unipo): `PerangkatKasir` (saring status Menunggu/Disetujui/Ditolak/Dicabut dengan hitungan, cari, rincian di panel samping: kode verifikasi kunci perangkat, sidik komputer, sesi aktif, riwayat `Linimasa`; Setujui di panel samping dengan pilih unit loket "Pilih…", nama, dan centang kecocokan kode verifikasi; Tolak/Cabut beralasan (cabut menutup sesi aktif); Ganti nama; aksi hanya bagi pemegang `kasir.perangkat.setujui` dalam lingkupnya), `LencanaPerangkatKasir`, `STATUS_PERANGKAT_KASIR`. Dipakai Pustikom » Aplikasi & integrasi » Perangkat kasir.
 - `PengaturanKasirUnit`: tab **Loket** menjadi **Perangkat & loket** (komponen `PerangkatKasir` terlingkup unit; ubah unit/blokir loket kini lewat persetujuan); `?tab=loket` di alamat membuka tab itu (tautan notifikasi perangkat menunggu persetujuan).
 
