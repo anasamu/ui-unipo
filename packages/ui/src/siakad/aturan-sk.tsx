@@ -232,6 +232,30 @@ export interface DaftarDasarSk {
   jumlah: { belum: number; tinjau: number; berlaku: number };
 }
 
+// ================================================================ Galat
+
+/**
+ * Galat endpoint aturan berbasis SK (/v1/aturan/validator, /dasar-sk, /templat) bila API SIAKAD di server belum memuat
+ * endpoint itu: server lama mencocokkan /v1/aturan/validator ke /v1/aturan/{id} lalu menjawab 422 `details.id`
+ * ("Data yang dikirim tidak valid."), server baru menjawab 404 `route_not_found`. Keduanya dijelaskan dengan bahasa awam.
+ * Mengembalikan null bila galat bukan kasus itu (pakai pesan bawaan).
+ */
+export function pesanGalatAturanBaru(e: unknown): string | null {
+  const err = e as { status?: number; code?: string; details?: Record<string, unknown> } | null;
+  if (!err) return null;
+  const lama = err.status === 422 && err.details?.id === 'uuid aturan';
+  const belumAda = err.status === 404 && err.code === 'route_not_found';
+  return lama || belumAda
+    ? 'Fitur ini belum tersedia di server SIAKAD: API SIAKAD di server masih versi lama. Minta Pustikom menjalankan pembaruan SIAKAD (update dan migrasi), lalu muat ulang halaman.'
+    : null;
+}
+
+/** GalatApi untuk halaman aturan berbasis SK (menjelaskan API SIAKAD yang belum diperbarui). */
+function GalatAturan({ error, onRetry, className }: { error: unknown; onRetry?: () => void; className?: string }) {
+  const lama = pesanGalatAturanBaru(error);
+  return <GalatApi error={error} onRetry={onRetry} className={className} title={lama ? 'Fitur belum tersedia di server' : undefined} message={lama ?? undefined} variant={lama ? 'warning' : undefined} />;
+}
+
 // ================================================================ Hook
 
 export function useDasarSkAturan(f: { status?: 'belum' | 'tinjau' | 'berlaku'; kategori?: string; q?: string } = {}) {
@@ -530,7 +554,7 @@ export function PanelAjukanAturan({
           <h4 className="u-ask-judul">
             <GitBranch aria-hidden /> Yang akan memvalidasi
           </h4>
-          {sim.loading ? <Skeleton height={96} /> : sim.data ? <PratinjauRantai rantai={sim.data} /> : sim.error ? <GalatApi error={sim.error} onRetry={sim.refetch} /> : null}
+          {sim.loading ? <Skeleton height={96} /> : sim.data ? <PratinjauRantai rantai={sim.data} /> : sim.error ? <GalatAturan error={sim.error} onRetry={sim.refetch} /> : null}
         </section>
         <Field label="Catatan untuk validator" optional>
           <Textarea value={catatan} onChange={(e) => setCatatan(e.target.value)} maxLength={1000} placeholder="mis. Menindaklanjuti SK Rektor tentang pedoman akademik pasal 12" />
@@ -893,6 +917,29 @@ function FormValidator({ open, onOpenChange, awal, katalog, templat }: { open: b
   );
 }
 
+/**
+ * Penjelasan singkat beda Pengatur dan Validator aturan (dipasang di atas tab Pengatur dan halaman Validator aturan).
+ * `tautan` = tautan ke halaman satunya (mis. <Link to="/aturan/validator">Validator aturan</Link>).
+ */
+export function PenjelasanPengaturValidator({ halaman, tautan, className }: { halaman: 'pengatur' | 'validator'; tautan?: React.ReactNode; className?: string }) {
+  return (
+    <Alert variant="info" icon={halaman === 'pengatur' ? <Users /> : <GitBranch />} title={halaman === 'pengatur' ? 'Pengatur: siapa yang boleh menyusun aturan' : 'Validator: siapa yang menyetujui pengajuan aturan'} className={cn('u-aturan-penjelasan-peran', className)}>
+      <ul>
+        <li>
+          <strong>Pengatur</strong> = siapa yang boleh <em>menyusun dan mengubah</em> aturan untuk tiap kategori (dan langkah tertentu), mis. staf BAAK untuk aturan akademik.
+        </li>
+        <li>
+          <strong>Validator</strong> = siapa yang <em>menyetujui</em> aturan yang diajukan sebuah unit, berurutan (mis. usulan prodi → Dekan → Wakil Rektor). Aturan baru berlaku setelah semua tahap menyetujui.
+        </li>
+        <li>
+          Keduanya bisa orang yang berbeda. Bila sebuah unit belum punya rantai validator, aturan disetujui <em>pejabat penyetuju kategori</em> (Wakil Rektor bidangnya), bukan oleh pengatur.
+        </li>
+      </ul>
+      {tautan && <p className="u-aturan-penjelasan-tautan">Lihat juga: {tautan}</p>}
+    </Alert>
+  );
+}
+
 /** Simulasi: pengajuan aturan dari unit X jenis Y akan divalidasi siapa. */
 export function SimulasiValidator({ unitAwal, kategoriAwal = 'akademik', ringkas }: { unitAwal?: string | null; kategoriAwal?: string; ringkas?: boolean }) {
   const katalog = useKatalogValidator();
@@ -916,7 +963,7 @@ export function SimulasiValidator({ unitAwal, kategoriAwal = 'akademik', ringkas
           </Field>
         </div>
       )}
-      {!unit ? <Empty icon={<Route />} title="Pilih unit pengaju" description="Hasil simulasi menampilkan rantai lengkap dengan nama orang saat ini." /> : sim.loading ? <Skeleton height={120} /> : sim.error ? <GalatApi error={sim.error} onRetry={sim.refetch} /> : sim.data ? <PratinjauRantai rantai={sim.data} /> : null}
+      {!unit ? <Empty icon={<Route />} title="Pilih unit pengaju" description="Hasil simulasi menampilkan rantai lengkap dengan nama orang saat ini." /> : sim.loading ? <Skeleton height={120} /> : sim.error ? <GalatAturan error={sim.error} onRetry={sim.refetch} /> : sim.data ? <PratinjauRantai rantai={sim.data} /> : null}
     </div>
   );
 }
@@ -928,14 +975,14 @@ const LABEL_JENIS_UNIT_BARIS = (p: PengaturanValidator, katalog?: KatalogValidat
  * Pustikom » Aturan » Validator aturan: rantai validator per unit pengaju (dan per jenis aturan), templat rantai,
  * simulasi, riwayat. Tulis butuh izin aturan.validator.atur; lihat butuh aturan.validator.lihat.
  */
-export function ValidatorAturan({ className }: { className?: string }) {
+export function ValidatorAturan({ className, tautanPengatur }: { className?: string; /** Tautan ke tab Pengatur (Aturan & pengatur). */ tautanPengatur?: React.ReactNode }) {
   const q = useValidatorAturan();
   const katalog = useKatalogValidator();
   const riwayat = useRiwayatValidator();
   const siakad = useSiakad();
   const toast = useToast();
   const [form, setForm] = React.useState<IsianValidator | null>(null);
-  if (q.error) return <GalatApi error={q.error} onRetry={q.refetch} className={className} />;
+  if (q.error) return <GalatAturan error={q.error} onRetry={q.refetch} className={className} />;
   if (!q.data || !katalog.data) return <Skeleton height={240} className={className} />;
   const boleh = q.data.boleh_atur;
   const rantai = q.data.data.filter((p) => p.jenis_baris === 'aturan');
@@ -998,7 +1045,8 @@ export function ValidatorAturan({ className }: { className?: string }) {
   );
   return (
     <div className={cn('u-ask', className)}>
-      <Alert variant="info" icon={<ShieldCheck />} title="Cara kerja">
+      <PenjelasanPengaturValidator halaman="validator" tautan={tautanPengatur} />
+      <Alert icon={<ShieldCheck />} title="Cara kerja rantai validator">
         Aturan yang diajukan sebuah unit diperiksa berurutan, mis. usulan prodi → Dekan → LP2M → Rektor. Unit yang punya rantai sendiri memakai rantainya; bila tidak, ikut rantai unit induk atau rantai untuk unit sejenis; bila tidak ada sama sekali, disetujui Wakil Rektor bidangnya. Pengaju tidak pernah memeriksa usulannya sendiri.
       </Alert>
       <Tabs
@@ -1192,7 +1240,7 @@ export function DasarSkAturanDaftar({ kategori, awal = 'belum', className }: { k
         onValueChange={setStatus}
       />
       {q.error ? (
-        <GalatApi error={q.error} onRetry={q.refetch} />
+        <GalatAturan error={q.error} onRetry={q.refetch} />
       ) : !q.data ? (
         <Skeleton height={200} />
       ) : status === 'belum' ? (

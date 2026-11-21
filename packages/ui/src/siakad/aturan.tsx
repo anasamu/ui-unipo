@@ -69,6 +69,7 @@ import { IsianSK, PilihSK, type NilaiSK } from './isian-sk';
 import { LinimasaPengajuan } from './pengajuan';
 import { KelolaTitikAturan } from './aturan-titik';
 import { DaftarAturanKelompok, rapikanNamaUnit } from './aturan-kelompok';
+import { kalimatIzinPengatur, labelIzinPengatur, ringkasPengatur, type TitikRingkas } from './aturan-pengatur';
 import {
   AjukanPengecualianAturan,
   AktifkanDaruratAturan,
@@ -85,7 +86,7 @@ import {
 } from './aturan-keputusan';
 import { DasarPedoman } from './pedoman';
 import { useFakultasReferensi } from './prodi';
-import { DasarSkAturanDaftar, LencanaDasarSk, PanelAjukanAturan, PanelLampirSkDasar, ValidatorAturan, WizardTemplatAturan, type DasarSkAturan, type UnitRingkas } from './aturan-sk';
+import { DasarSkAturanDaftar, LencanaDasarSk, PenjelasanPengaturValidator, PanelAjukanAturan, PanelLampirSkDasar, ValidatorAturan, WizardTemplatAturan, type DasarSkAturan, type UnitRingkas } from './aturan-sk';
 
 /*
  * Aturan akademik, kelulusan, dan keuangan dinamis (/v1/aturan): aturan disusun di satu titik penerapan (langkah
@@ -4325,12 +4326,21 @@ interface PengaturKategori {
   boleh_saya?: boolean;
 }
 
-/** Siapa yang berhak mengatur aturan per kategori (GET /v1/aturan/pengatur); admin bisa mengubahnya. */
-export function PengaturAturan({ className }: { className?: string }) {
+/**
+ * Siapa yang berhak mengatur aturan per kategori (GET /v1/aturan/pengatur); admin bisa mengubahnya. Titik (langkah)
+ * yang pengaturnya sama dengan kategori tidak diulang; titik dengan pengatur sama dikelompokkan ("Berlaku untuk 4 langkah").
+ * Izin tampil dengan nama awam; kode teknis hanya di "Detail teknis". `tautanValidator` = tautan ke halaman Validator aturan.
+ */
+export function PengaturAturan({ className, tautanValidator }: { className?: string; tautanValidator?: React.ReactNode }) {
   const q = useSiakadQuery<PengaturKategori[]>(['aturan', 'pengatur'], (s, signal) => s.request<PengaturKategori[]>({ method: 'GET', path: '/v1/aturan/pengatur' }, { signal }));
   const peran = useSiakadQuery<Array<{ kode: string; nama: string }>>(
     ['rbac', 'peran'],
     (s, signal) => s.request<Array<{ kode: string; nama: string }>>({ method: 'GET', path: '/v1/rbac/peran', query: { per_page: 100 } }, { signal }),
+    { staleTime: 5 * 60_000 },
+  );
+  const izinRbac = useSiakadQuery<Array<{ kode: string; nama: string }>>(
+    ['rbac', 'izin', 'aturan'],
+    (s, signal) => s.request<Array<{ kode: string; nama: string }>>({ method: 'GET', path: '/v1/rbac/izin', query: { q: 'aturan', per_page: 100 } }, { signal }),
     { staleTime: 5 * 60_000 },
   );
   const saya = useAturanSaya();
@@ -4338,42 +4348,40 @@ export function PengaturAturan({ className }: { className?: string }) {
   const [ubah, setUbah] = React.useState<PengaturKategori | null>(null);
   if (q.error) return <GalatApi error={q.error} onRetry={q.refetch} className={className} />;
   if (!q.data) return <Skeleton height={200} className={className} />;
-  const judulTitik = (k: string | null) => (k ? (katalog.data?.titik.find((t) => t.kode === k)?.judul ?? k) : null);
+  const titikKatalog = (k: string): TitikRingkas | undefined => {
+    const t = katalog.data?.titik.find((x) => x.kode === k);
+    return t ? { kode: t.kode, judul: t.judul, kelompok: t.kelompok } : { kode: k, judul: labelTitik(k) };
+  };
   const namaPeran = new Map((peran.data ?? []).map((p) => [p.kode, p.nama]));
-  const daftarPengatur = (rows: PengaturBaris[]) => {
-    const pr = rows.filter((p) => p.jenis === 'peran');
-    const iz = rows.filter((p) => p.jenis === 'izin');
-    return (
-      <div className="u-aturan-pengatur-daftar">
-        {pr.length > 0 && (
-          <div className="u-aturan-pengatur-tag">
-            {pr.map((p) => (
-              <Tag key={p.kode} size="sm" icon={<Users />} title={p.keterangan ?? undefined}>
-                {namaPeran.get(p.kode) ?? labelKodePeran(p.kode)}
-              </Tag>
-            ))}
-          </div>
-        )}
-        {iz.length > 0 && (
-          <span className="u-aturan-sub">
-            {pr.length ? 'Juga pemegang izin' : 'Pemegang izin'} {iz.map((p) => p.kode).join(', ')}
-          </span>
-        )}
+  const namaIzin = new Map((izinRbac.data ?? []).map((p) => [p.kode, p.nama]));
+  const chipPeran = (kode: string[]) =>
+    kode.length > 0 && (
+      <div className="u-aturan-pengatur-tag">
+        {kode.map((k) => (
+          <Tag key={k} size="sm" icon={<Users />}>
+            {namaPeran.get(k) ?? labelKodePeran(k)}
+          </Tag>
+        ))}
       </div>
     );
+  const kalimatIzin = (izin: string[], juga: boolean) => {
+    if (!izin.length) return null;
+    const t = kalimatIzinPengatur(izin, (k) => namaIzin.get(k));
+    return <span className="u-aturan-sub">{juga ? `Juga ${t}.` : `${t.charAt(0).toUpperCase()}${t.slice(1)}.`}</span>;
   };
   return (
     <div className={cn('u-aturan-pengatur', className)}>
+      <PenjelasanPengaturValidator halaman="pengatur" tautan={tautanValidator} />
       {q.data.map((k) => {
-        const perTitik = new Map<string, PengaturBaris[]>();
-        for (const p of k.pengatur) perTitik.set(p.titik ?? '', [...(perTitik.get(p.titik ?? '') ?? []), p]);
-        const umum = perTitik.get('') ?? [];
-        perTitik.delete('');
+        const labelKat = LABEL_KATEGORI_ATURAN[k.kategori] ?? k.judul;
+        const r = ringkasPengatur(k.pengatur, titikKatalog, labelKat);
+        const umumAda = r.umum.peran.length + r.umum.izin.length > 0;
+        const teknis = [...new Set(k.pengatur.map((p) => `${p.titik ? `${p.titik}: ` : ''}${p.jenis} ${p.kode}`))];
         return (
           <Card key={k.kategori} className="u-aturan-pengatur-kartu">
             <div className="u-aturan-pengatur-kepala">
               <div>
-                <strong>{LABEL_KATEGORI_ATURAN[k.kategori] ?? k.judul}</strong>
+                <strong>{labelKat}</strong>
                 <span>{k.judul}</span>
               </div>
               {k.boleh_saya || saya.data?.kategori.find((s) => s.kategori === k.kategori)?.boleh_atur ? <Badge variant="success">Anda boleh mengatur</Badge> : null}
@@ -4384,19 +4392,78 @@ export function PengaturAturan({ className }: { className?: string }) {
               )}
             </div>
             <div className="u-aturan-pengatur-isi">
-              {umum.length ? (
-                daftarPengatur(umum)
-              ) : (
-                <p className="u-aturan-sub">
-                  Bawaan: pemegang izin <code>{k.bawaan.kode}</code>
-                </p>
-              )}
-              {[...perTitik].map(([titik, rows]) => (
-                <div key={titik} className="u-aturan-pengatur-titik">
-                  <span>Khusus {judulTitik(titik)}</span>
-                  {daftarPengatur(rows)}
+              {umumAda ? (
+                <div className="u-aturan-pengatur-daftar">
+                  {chipPeran(r.umum.peran)}
+                  {kalimatIzin(r.umum.izin, r.umum.peran.length > 0)}
                 </div>
-              ))}
+              ) : (
+                <p className="u-aturan-sub">Bawaan: {kalimatIzinPengatur([k.bawaan.kode], (x) => namaIzin.get(x))}.</p>
+              )}
+              {r.khusus.map((g) => {
+                const pmb = g.titik.every((t) => t.kelompok && t.kelompok !== labelKat) ? g.titik[0].kelompok : null;
+                return (
+                  <div key={g.titik.map((t) => t.kode).join(',')} className="u-aturan-pengatur-titik">
+                    <details className="u-aturan-pengatur-langkah">
+                      <summary>
+                        {g.titik.length === 1 ? `Khusus langkah ${g.titik[0].judul}` : `Berlaku khusus untuk ${g.titik.length} langkah`}
+                        {pmb && (
+                          <Badge variant="outline">
+                            {pmb}
+                          </Badge>
+                        )}
+                      </summary>
+                      {g.titik.length > 1 && (
+                        <ul>
+                          {g.titik.map((t) => (
+                            <li key={t.kode}>
+                              {t.judul}
+                              {t.kelompok && t.kelompok !== labelKat && !pmb ? ` (${t.kelompok})` : ''}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </details>
+                    {g.mewarisi ? (
+                      <>
+                        <span className="u-aturan-sub">
+                          Pengatur {labelKat.toLowerCase()} di atas
+                          {g.tambahPeran.length ? ', ditambah:' : g.tambahIzin.length ? `, ditambah ${kalimatIzinPengatur(g.tambahIzin, (x) => namaIzin.get(x))}.` : '.'}
+                        </span>
+                        {chipPeran(g.tambahPeran)}
+                        {g.tambahPeran.length > 0 && kalimatIzin(g.tambahIzin, true)}
+                        {g.kurangIzin.length > 0 && (
+                          <span className="u-aturan-sub">Pemegang izin {g.kurangIzin.map((x) => labelIzinPengatur(x, namaIzin.get(x))).join(' / ')} saja tidak cukup untuk langkah ini.</span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <span className="u-aturan-sub">Hanya:</span>
+                        {chipPeran(g.peran)}
+                        {kalimatIzin(g.izin, g.peran.length > 0)}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+              {r.samaDenganKategori.length > 0 && r.khusus.length > 0 && (
+                <p className="u-aturan-sub">Langkah lain di kategori ini memakai pengatur kategori.</p>
+              )}
+              <details className="u-aturan-pengatur-teknis">
+                <summary>Detail teknis</summary>
+                <ul>
+                  {teknis.map((t) => (
+                    <li key={t}>
+                      <code>{t}</code>
+                    </li>
+                  ))}
+                  {!teknis.length && (
+                    <li>
+                      <code>izin {k.bawaan.kode}</code>
+                    </li>
+                  )}
+                </ul>
+              </details>
             </div>
           </Card>
         );
