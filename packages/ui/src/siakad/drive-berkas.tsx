@@ -7,6 +7,7 @@ import { cn } from '../lib/cn';
 import { formatBytes, formatDate } from '../lib/format';
 import { useDibagikanBerkas, type BagiBerkas } from './berkas-ruang';
 import { DaftarDrive, useDriveBerkas, type DriveBerkasData } from './daftar-drive';
+import { rapikanNamaUnit } from './drive-pohon';
 import { Dialog } from '../components/overlays';
 import { ManajerBerkas, useAksiBerkas, type ManajerBerkasProps, type OpsiSampingBerkas } from './manajer-berkas';
 import { DaftarSampah } from './sampah-berkas';
@@ -85,8 +86,15 @@ export function DriveBerkas({ ruangAwal, unitTampil, tampilPribadi = true, tampi
       drive={drive}
       aktif={pilih.jenis === 'drive' && !opsi?.terbaru.aktif ? pilih.id : null}
       memuat={dq.loading}
-      onPilih={(d) => (pilih.jenis === 'drive' && pilih.id === d.id && opsi?.terbaru.aktif ? setKunci((k) => k + 1) : setPilih({ jenis: 'drive', id: d.id }))}
+      onPilih={(d) => {
+        // Klik ulang drive aktif: kembali ke folder utamanya (juga dari Terbaru).
+        if (pilih.jenis === 'drive' && pilih.id === d.id) return opsi ? opsi.bukaAkar() : setKunci((k) => k + 1);
+        setPilih({ jenis: 'drive', id: d.id });
+      }}
       folder={folder}
+      diAkar={opsi ? opsi.diAkar : true}
+      jumlahAktif={opsi?.jumlah}
+      onLebarkan={opsi?.lebarkan}
       ringkas={opsi?.ringkas}
       terbaru={opsi?.terbaru}
       onLepas={opsi ? (d, e) => opsi.lepasKeRuang({ unit: d.ruang.unit ?? null, modul: d.ruang.modul ?? undefined, label: d.singkatan || d.nama }, e) : undefined}
@@ -129,7 +137,7 @@ export function DriveBerkas({ ruangAwal, unitTampil, tampilPribadi = true, tampi
             tinggi={tinggi}
             unit={pilih.jenis === 'drive' ? (unitAktif ?? undefined) : undefined}
             bagi={pilih.jenis === 'bagi' ? pilih.id : undefined}
-            judul={pilih.jenis === 'bagi' ? pilih.nama : aktif && aktif.jenis !== 'pribadi' ? aktif.nama : undefined}
+            judul={pilih.jenis === 'bagi' ? pilih.nama : aktif && aktif.jenis !== 'pribadi' ? rapikanNamaUnit(aktif.nama, aktif.unit_jenis, { pendek: false }) : undefined}
             samping={daftar}
           />
         </>
