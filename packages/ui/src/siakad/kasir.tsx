@@ -251,6 +251,7 @@ export function SesiKasir({ className }: { className?: string }) {
         </Button>
       )}
       <Dialog
+        side="right"
         open={buka}
         onOpenChange={setBuka}
         title="Buka sesi kasir"
@@ -281,6 +282,7 @@ export function SesiKasir({ className }: { className?: string }) {
         </div>
       </Dialog>
       <Dialog
+        side="right"
         open={tutup}
         onOpenChange={(o) => {
           setTutup(o);
@@ -1059,6 +1061,7 @@ export function FormJurnal({ open, onOpenChange, unitId, jurnal, bolehPosting, o
   };
   return (
     <Dialog
+      side="right"
       open={open}
       onOpenChange={onOpenChange}
       size="xl"

@@ -346,6 +346,7 @@ function FormPenomoran({ unitId, awal, jenis, tutup, simpan }: { unitId: number;
   };
   return (
     <Dialog
+      side="right"
       open
       onOpenChange={(o) => !o && tutup()}
       size="lg"

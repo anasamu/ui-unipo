@@ -2355,6 +2355,7 @@ export function UtasBaruLms({ forumId, open, onOpenChange, onDibuat }: { forumId
       .catch(() => undefined);
   return (
     <Dialog
+      side="right"
       open={open}
       onOpenChange={onOpenChange}
       size="lg"

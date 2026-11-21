@@ -1862,7 +1862,7 @@ export function PengaturanObrolan({ open, onOpenChange, tab: tabAwal = 'privasi'
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title="Pengaturan obrolan" size="md">
+    <Dialog side="right" open={open} onOpenChange={onOpenChange} title="Pengaturan obrolan" size="md">
       {galat && <Alert variant="danger">{galat}</Alert>}
       {berhasil && <Alert variant="success">{berhasil}</Alert>}
       <Tabs

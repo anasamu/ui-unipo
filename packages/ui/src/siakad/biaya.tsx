@@ -1042,7 +1042,6 @@ export function FormLampiranBiaya({ aturanId, trigger, open, onOpenChange }: { a
         onOpenChange?.(o);
       }}
       trigger={trigger}
-      tampilan="dialog"
       title="Lampirkan dokumen"
       description="Berkas disimpan di storage kampus. SK menjadi dasar aturan dan bisa dibuka semua unit terkait setelah aturan berlaku."
       berubah={JSON.stringify(isi) !== JSON.stringify(kosong)}
@@ -1224,6 +1223,7 @@ function DialogAlurBiaya({
   };
   return (
     <Dialog
+      side="right"
       open
       onOpenChange={onOpenChange}
       title={t.judul}
@@ -1865,7 +1865,6 @@ export function FormPencairanBiaya({
         onOpenChange?.(o);
       }}
       trigger={trigger}
-      tampilan="dialog"
       title="Catat pencairan"
       description="Unit: transfer dari rekening universitas ke rekening unit. Yayasan: setoran bagian yayasan. Jurnal dibuat otomatis."
       berubah={JSON.stringify(isi) !== JSON.stringify(kosong)}

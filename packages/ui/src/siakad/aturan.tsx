@@ -3405,7 +3405,6 @@ export function FormLampiranAturan({
         onOpenChange?.(o);
       }}
       trigger={trigger}
-      tampilan="dialog"
       title="Lampirkan dokumen"
       description="SK menjadi dasar hukum aturan dan terbuka untuk semua pengguna saat aturan aktif."
       berubah={JSON.stringify(isi) !== JSON.stringify(kosong)}
@@ -3604,7 +3603,6 @@ export function FormPengecualianAturan({
         onOpenChange?.(o);
       }}
       trigger={trigger}
-      tampilan="dialog"
       title="Beri dispensasi"
       description="Orang atau prodi ini tidak diperiksa aturan ini sampai batas waktunya. Tercatat di riwayat."
       berubah={JSON.stringify(isi) !== JSON.stringify(kosong)}

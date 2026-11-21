@@ -1811,7 +1811,6 @@ export function PengajuanIzinPresensi({ open, onOpenChange, trigger, sesi, idj, 
       open={open}
       onOpenChange={onOpenChange}
       trigger={trigger}
-      tampilan="dialog"
       size="md"
       title={jenis === 'sakit' ? 'Ajukan keterangan sakit' : 'Ajukan izin'}
       description={sesi ? judulSesiPresensi(sesi) : 'Untuk pertemuan kuliah pada tanggal tertentu.'}

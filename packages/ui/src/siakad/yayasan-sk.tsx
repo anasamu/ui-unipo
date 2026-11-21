@@ -315,6 +315,7 @@ export function KewenanganSK({ className }: { className?: string }) {
       )}
       {edit && (
         <Dialog
+          side="right"
           open
           onOpenChange={(o) => !o && setEdit(null)}
           title={edit.id ? 'Ubah kewenangan SK' : 'Tambah kewenangan SK'}

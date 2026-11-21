@@ -1,10 +1,11 @@
 'use client';
 import * as React from 'react';
-import { Archive, ArrowRightLeft, Ban, Check, Link2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { Archive, ArrowRightLeft, Ban, Check, Hash, Link2, Pencil, Plus, Search, Trash2, Upload, UserPen, X } from 'lucide-react';
+import { PanelLangkah } from '../components/panel-langkah';
 import { Field, Input, SegmentedControl, Textarea } from '../components/forms';
 import { Alert, Empty } from '../components/display';
 import { Badge, Button, Spinner } from '../components/actions';
-import { ConfirmDialog, Dialog, Sheet, useToast } from '../components/overlays';
+import { ConfirmDialog, Sheet, useToast } from '../components/overlays';
 import { DatePicker } from '../components/calendar';
 import { CariAtauUnggahDokumen } from './cari-dokumen';
 import { KewenanganSK, ProfilYayasan } from './yayasan-sk';
@@ -98,70 +99,88 @@ export function UbahSK({ sk, open, onOpenChange, onTersimpan }: { sk: DetailSK; 
     ? { tautan: sk.penandatangan.tautan ?? (sk.penandatangan.pejabat_id ? 'pejabat' : 'teks'), pejabat_id: sk.penandatangan.pejabat_id, jabatan_id: sk.penandatangan.jabatan_id ?? null, unit_id: sk.penandatangan.unit_id ?? null, jabatan: sk.penandatangan.jabatan, nama: sk.penandatangan.nama }
     : null;
   const [penandatangan, setPenandatangan] = React.useState<NilaiPenandatangan | null>(awalTtd);
-  const [kirim, setKirim] = React.useState(false);
-  const simpan = async () => {
-    setKirim(true);
+  const simpan = async (): Promise<string | void> => {
     try {
       await siakad.request({
         method: 'POST',
         path: `/v1/sk/${sk.id}`,
         body: {
-          nomor: isi.nomor, tanggal: isi.tanggal, perihal: isi.perihal || null, tempat: isi.tempat || null,
+          nomor: isi.nomor.trim(), tanggal: isi.tanggal, perihal: isi.perihal.trim() || null, tempat: isi.tempat.trim() || null,
           ...(JSON.stringify(penandatangan) !== JSON.stringify(awalTtd) ? bodyPenandatangan(penandatangan) : {}), ...(isi.berkas ? { berkas_id: isi.berkas } : {}), ...(isi.ttd ? { ttd_berkas_id: isi.ttd } : {}),
         },
       });
       invalidateSiakad('sk');
       toast.add({ title: 'SK diperbarui', description: 'Modul yang merujuk SK ini ikut menampilkan data terbaru.', type: 'success' });
       onTersimpan?.();
-      onOpenChange(false);
     } catch (e) {
-      toast.add({ title: 'SK belum tersimpan', description: pesanGalat(e), type: 'error' });
-    } finally {
-      setKirim(false);
+      return pesanGalat(e);
     }
   };
+  const blokir = !isi.nomor.trim() ? 'Nomor SK wajib diisi.' : null;
   return (
-    <Dialog
+    <PanelLangkah
       open={open}
       onOpenChange={onOpenChange}
-      size="lg"
+      mode="ubah"
       title={`Ubah SK ${sk.nomor}`}
-      description="Hanya unit penerbit. Penandatangan bisa pejabat, jabatan saja, atau teks yang belum tertaut (tautkan ke pejabat di sini kemudian); berkas cukup diunggah sekali."
-      footer={
-        <>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Batal
-          </Button>
-          <Button onClick={simpan} loading={kirim} disabled={!isi.nomor.trim()}>
-            Simpan
-          </Button>
-        </>
-      }
-    >
-      <div className="u-ajukan-sk">
-        <Field label="Nomor SK" required description="Tulisan resmi penerbit. Nomor yang sama di penerbit sama ditolak.">
-          <Input value={isi.nomor} onChange={(e) => setIsi((x) => ({ ...x, nomor: e.target.value }))} />
-        </Field>
-        <div className="u-ajukan-sk-dua">
-          <Field label="Tanggal SK" optional>
-            <DatePicker value={isoKeTanggal(isi.tanggal)} onValueChange={(d) => setIsi((x) => ({ ...x, tanggal: tanggalKeIso(d) }))} />
-          </Field>
-          <Field label="Ditetapkan di" optional>
-            <Input value={isi.tempat} onChange={(e) => setIsi((x) => ({ ...x, tempat: e.target.value }))} />
-          </Field>
-        </div>
-        <Field label="Perihal" optional>
-          <Input value={isi.perihal} onChange={(e) => setIsi((x) => ({ ...x, perihal: e.target.value }))} />
-        </Field>
-        <IsianPenandatangan value={penandatangan} onValueChange={setPenandatangan} unitId={sk.penerbit?.unit_id ?? null} />
-        <Field label={sk.berkas?.ada ? 'Ganti berkas SK' : 'Berkas SK'} optional description="Satu berkas, disimpan di Berkas unit penerbit; unit lain membacanya dari registri.">
-          <CariAtauUnggahDokumen value={isi.berkas} onValueChange={(id) => setIsi((x) => ({ ...x, berkas: id }))} accept=".pdf,.jpg,.jpeg,.png" kategori="sk" placeholder="Cari atau unggah berkas SK" />
-        </Field>
-        <Field label="Gambar tanda tangan" optional description="Hanya tanda tangan resmi penandatangan (PNG transparan); dipakai dokumen turunan seperti kalender unduhan.">
-          <CariAtauUnggahDokumen value={isi.ttd} onValueChange={(id) => setIsi((x) => ({ ...x, ttd: id }))} accept=".png,.jpg,.jpeg" kategori="sk" placeholder="Cari atau unggah gambar tanda tangan" />
-        </Field>
-      </div>
-    </Dialog>
+      description="Hanya unit penerbit. Pilih bagian yang ingin diubah; simpan dari langkah mana pun."
+      finishLabel="Simpan perubahan"
+      steps={[
+        {
+          id: 'identitas',
+          title: 'Identitas',
+          icon: <Hash />,
+          description: 'Tulisan resmi penerbit. Nomor yang sama di penerbit yang sama ditolak.',
+          blocked: blokir,
+          validate: () => blokir ?? undefined,
+          content: (
+            <div className="u-ajukan-sk">
+              <Field label="Nomor SK" required>
+                <Input value={isi.nomor} onChange={(e) => setIsi((x) => ({ ...x, nomor: e.target.value }))} placeholder="mis. 91.01/UNIPO-SK/VII/2026" />
+              </Field>
+              <Field label="Tanggal SK" optional>
+                <DatePicker value={isoKeTanggal(isi.tanggal)} onValueChange={(d) => setIsi((x) => ({ ...x, tanggal: tanggalKeIso(d) }))} placeholder="Pilih tanggal…" />
+              </Field>
+              <Field label="Perihal" optional>
+                <Textarea rows={2} value={isi.perihal} onChange={(e) => setIsi((x) => ({ ...x, perihal: e.target.value }))} />
+              </Field>
+            </div>
+          ),
+        },
+        {
+          id: 'penandatangan',
+          title: 'Penandatangan',
+          icon: <UserPen />,
+          description: 'Pejabat, jabatan saja, atau teks yang belum tertaut (tautkan ke pejabat di sini kemudian).',
+          content: (
+            <div className="u-ajukan-sk">
+              <IsianPenandatangan value={penandatangan} onValueChange={setPenandatangan} unitId={sk.penerbit?.unit_id ?? null} />
+              <Field label="Ditetapkan di" optional>
+                <Input value={isi.tempat} onChange={(e) => setIsi((x) => ({ ...x, tempat: e.target.value }))} placeholder="mis. Marisa" />
+              </Field>
+            </div>
+          ),
+        },
+        {
+          id: 'berkas',
+          title: 'Berkas',
+          icon: <Upload />,
+          optional: true,
+          description: 'Satu berkas, disimpan di arsip institusi; unit lain membacanya dari registri.',
+          content: (
+            <div className="u-ajukan-sk">
+              <Field label={sk.berkas?.ada ? 'Ganti berkas SK' : 'Berkas SK'} optional description={sk.berkas?.ada ? `Sekarang: ${sk.berkas.nama ?? 'berkas SK'}. Kosongkan bila tidak diganti.` : undefined}>
+                <CariAtauUnggahDokumen value={isi.berkas} onValueChange={(id) => setIsi((x) => ({ ...x, berkas: id }))} accept=".pdf,.jpg,.jpeg,.png" kategori="sk" placeholder="Cari berkas SK atau unggah yang baru…" />
+              </Field>
+              <Field label="Gambar tanda tangan" optional description="Hanya tanda tangan resmi penandatangan (PNG transparan); dipakai dokumen turunan seperti kalender unduhan.">
+                <CariAtauUnggahDokumen value={isi.ttd} onValueChange={(id) => setIsi((x) => ({ ...x, ttd: id }))} accept=".png,.jpg,.jpeg" kategori="sk" placeholder="Cari atau unggah gambar tanda tangan…" />
+              </Field>
+            </div>
+          ),
+        },
+      ]}
+      onFinish={simpan}
+    />
   );
 }
 

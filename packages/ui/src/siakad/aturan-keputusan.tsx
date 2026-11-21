@@ -396,7 +396,6 @@ export function AktifkanDaruratAturan({
         onOpenChange?.(o);
       }}
       trigger={trigger}
-      tampilan="dialog"
       size="lg"
       title="Aktifkan lewat jalur darurat"
       description={`“${a.nama}” langsung diperiksa di ${a.titik_judul ?? a.titik} tanpa menunggu persetujuan, lalu masuk antrean pengesahan susulan. Penyetuju bisa mengesahkan atau mencabutnya.`}
@@ -532,7 +531,6 @@ export function AjukanPengecualianAturan({ aturan: a, subjek: subjekTetap, pesan
         onOpenChange?.(o);
       }}
       trigger={trigger}
-      tampilan="dialog"
       size="lg"
       title="Ajukan pengecualian"
       description={`Dari aturan “${a.nama}”${a.titik_judul || t?.judul ? ` di ${a.titik_judul ?? t?.judul}` : ''}. Pengecualian berlaku setelah disetujui dan hanya selama masa berlakunya.`}

@@ -390,6 +390,7 @@ export function DialogBagikanBerkas({ sasaran, tutup }: { sasaran: SasaranBagi |
 
   return (
     <Dialog
+      side="right"
       open={Boolean(sasaran)}
       onOpenChange={(o) => !o && tutup()}
       title={`Bagikan ${nama}`}

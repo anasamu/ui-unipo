@@ -255,7 +255,6 @@ export function DataPribadiSaya({ className }: { className?: string }) {
       <PanelForm
         open={ubah != null}
         onOpenChange={(o) => !o && setUbah(null)}
-        tampilan="dialog"
         size="lg"
         title={`Ubah ${(label[ubah ?? ''] ?? '').toLowerCase()}`}
         description="Data ini dikirim ke PDDikti. Pastikan sesuai KTP/KK."
@@ -610,7 +609,6 @@ export function RiwayatProfilSaya({ jenis, judul, lampiran, className }: Riwayat
       <PanelForm
         open={form != null}
         onOpenChange={(o) => !o && setForm(null)}
-        tampilan="dialog"
         size="lg"
         title={form?.id ? `Ubah ${def.judul.toLowerCase()}` : `Tambah ${def.judul.toLowerCase()}`}
         berubah={form != null && JSON.stringify(form) !== JSON.stringify(formAwal)}

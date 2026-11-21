@@ -1058,6 +1058,7 @@ export function KelolaPetugasSurat({ unitId, bolehUbah = false }: KelolaPetugasS
       />
       {form && (
         <Dialog
+          side="right"
           open
           onOpenChange={(o) => !o && setForm(null)}
           title={form.id ? 'Ubah petugas surat' : 'Tambah petugas surat'}

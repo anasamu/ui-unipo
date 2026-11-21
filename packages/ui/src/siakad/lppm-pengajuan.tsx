@@ -923,6 +923,7 @@ function DetailVerifikasi({ id, tutup }: { id: number; tutup: () => void }) {
   };
   return (
     <Dialog
+      side="right"
       open
       onOpenChange={(o) => !o && tutup()}
       size="lg"
