@@ -44,6 +44,7 @@ import { formatDate, formatNumber, formatRupiah } from '../lib/format';
 import { PilihTahunAkademik } from './cari';
 import { GalatApi } from './galat';
 import { namaRapi } from './prodi';
+import { PerangkatKasir } from './perangkat-kasir';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 
 // Pengaturan kasir per unit penerbit (SIAKAD /v1/kasir/kelola, docs/KASIR.md "Pengaturan di aplikasi unit"): jenis
@@ -652,117 +653,9 @@ function TabJenis({ saya, unitId }: { saya: KasirKelolaSaya; unitId?: number }) 
   );
 }
 
-// ================================================================ Tab Loket
-function FormLoket({ loket, onOpenChange, saya, unitId }: { loket: LoketKasir | null; onOpenChange: (o: boolean) => void; saya: KasirKelolaSaya; unitId?: number }) {
-  const siakad = useSiakad();
-  const toast = useToast();
-  const [nama, setNama] = React.useState('');
-  const [unit, setUnit] = React.useState<string | null>(null);
-  const [aktif, setAktif] = React.useState(true);
-  const [galat, setGalat] = React.useState<string | null>(null);
-  const [sibuk, setSibuk] = React.useState(false);
-  React.useEffect(() => {
-    if (!loket) return;
-    setNama(loket.nama ?? '');
-    setUnit(kunciUnit(loket.unit_id, saya));
-    setAktif(benar(loket.aktif));
-    setGalat(null);
-  }, [loket, saya]);
-  const simpan = async () => {
-    if (!nama.trim()) return setGalat('Nama loket wajib diisi.');
-    if (!unit) return setGalat('Pilih unit loket.');
-    setSibuk(true);
-    setGalat(null);
-    try {
-      await siakad.request({ method: 'POST', path: `${API}/perangkat/${loket!.id}`, body: { nama: nama.trim(), unit_id: unitDariKunci(unit), aktif } });
-      toast.add({ title: aktif ? 'Loket disimpan' : 'Loket diblokir', type: 'success' });
-      invalidateSiakad(`${API}/perangkat`);
-      onOpenChange(false);
-    } catch (e) {
-      setGalat(pesanGalat(e));
-    } finally {
-      setSibuk(false);
-    }
-  };
-  return (
-    <Sheet
-      open={Boolean(loket)}
-      onOpenChange={(o) => !sibuk && onOpenChange(o)}
-      size="md"
-      title={`Loket ${loket?.kode ?? ''}`}
-      description="Loket terdaftar otomatis saat aplikasi desktop Kasir dipakai pertama kali di sebuah komputer."
-      footer={
-        <div className="u-ksu-kaki">
-          {galat ? (
-            <p className="u-ksu-galat" role="alert">
-              {galat}
-            </p>
-          ) : null}
-          <span className="u-ksu-spasi" />
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={sibuk}>
-            Batal
-          </Button>
-          <Button onClick={() => void simpan()} loading={sibuk}>
-            Simpan
-          </Button>
-        </div>
-      }
-    >
-      {loket && (
-        <div className="u-ksu-isian">
-          <Field label="Nama loket" required description="Mis. Loket 1 Gedung Rektorat, Loket FISIP.">
-            <Input value={nama} maxLength={100} onChange={(e) => setNama(e.target.value)} />
-          </Field>
-          <Field label="Unit" required description="Unit pemilik loket; transaksi loket ini masuk laporan unit tersebut.">
-            <Select<string> value={unit} onValueChange={setUnit} options={opsiUnit(saya, unitId)} placeholder="Pilih…" />
-          </Field>
-          <Sakelar nilai={!aktif} ubah={(c) => setAktif(!c)} label="Blokir loket" ket="Aplikasi Kasir di komputer ini tidak bisa menerima pembayaran sampai blokir dibuka." />
-          <dl className="u-ksu-dl">
-            <dt>Pengguna terakhir</dt>
-            <dd>{loket.pengguna ?? '–'}</dd>
-            <dt>Aktif terakhir</dt>
-            <dd>{loket.terakhir_aktif_at ? formatDate(loket.terakhir_aktif_at.replace(' ', 'T'), 'medium') : '–'}</dd>
-            <dt>Aplikasi</dt>
-            <dd>{[loket.versi && `v${loket.versi}`, loket.os].filter(Boolean).join(' · ') || '–'}</dd>
-            <dt>Transaksi</dt>
-            <dd>{formatNumber(loket.jumlah_transaksi ?? 0)}</dd>
-          </dl>
-        </div>
-      )}
-    </Sheet>
-  );
-}
-
-function TabLoket({ saya, unitId }: { saya: KasirKelolaSaya; unitId?: number }) {
-  const q = useSiakadQuery<LoketKasir[]>([`${API}/perangkat`], (s, signal) => s.request({ method: 'GET', path: `${API}/perangkat` }, { signal }));
-  const [ubah, setUbah] = React.useState<LoketKasir | null>(null);
-  const kolom: DataColumn<LoketKasir>[] = [
-    { key: 'kode', header: 'Kode', value: (l) => l.kode, cell: (l) => <span className="u-ksu-mono">{l.kode}</span>, mobile: 'subtitle', shrink: true },
-    { key: 'nama', header: 'Nama', value: (l) => l.nama ?? '', cell: (l) => l.nama || <span className="u-ksu-redup">Tanpa nama</span>, mobile: 'title' },
-    { key: 'unit', header: 'Unit', value: (l) => namaUnit(saya, l.unit_id, l.unit) },
-    { key: 'pengguna', header: 'Pengguna terakhir', value: (l) => l.pengguna ?? '' },
-    { key: 'terakhir', header: 'Aktif terakhir', value: (l) => l.terakhir_aktif_at ?? '', cell: (l) => (l.terakhir_aktif_at ? formatDate(l.terakhir_aktif_at.replace(' ', 'T'), 'medium') : '–') },
-    { key: 'transaksi', header: 'Transaksi', align: 'end', value: (l) => l.jumlah_transaksi ?? 0, cell: (l) => formatNumber(l.jumlah_transaksi ?? 0) },
-    { key: 'aktif', header: 'Status', value: (l) => (benar(l.aktif) ? 'Aktif' : 'Diblokir'), cell: (l) => (benar(l.aktif) ? <Badge variant="success">Aktif</Badge> : <Badge variant="danger">Diblokir</Badge>), mobile: 'badge', shrink: true },
-  ];
-  return (
-    <div className="u-ksu-tumpuk">
-      <DataTable<LoketKasir>
-        columns={kolom}
-        rows={dalamUnit(q.data, saya, unitId, false)}
-        rowKey={(l) => String(l.id)}
-        loading={q.loading}
-        error={q.error}
-        onRetry={q.refetch}
-        onRowClick={setUbah}
-        rowActions={(l) => [{ label: 'Ubah', icon: <Pencil />, onSelect: () => setUbah(l) }]}
-        empty={{ title: 'Belum ada loket', description: 'Loket terdaftar otomatis saat aplikasi desktop Kasir dipakai pertama kali oleh petugas unit Anda.', icon: <MonitorSmartphone /> }}
-        mobile="cards"
-      />
-      <FormLoket loket={ubah} onOpenChange={(o) => !o && setUbah(null)} saya={saya} unitId={unitId} />
-    </div>
-  );
-}
+// ================================================================ Tab Perangkat & loket
+// Loket = perangkat UNIPO Kasir yang disetujui (siakad/perangkat-kasir.tsx): status persetujuan, kode verifikasi,
+// setujui/tolak/cabut (izin kasir.perangkat.setujui), ganti nama, riwayat.
 
 // ================================================================ Tab Aturan penerimaan
 interface IsianAturan extends IsianSasaran {
@@ -2193,11 +2086,14 @@ export interface PengaturanKasirUnitProps {
 }
 
 /**
- * Pengaturan kasir unit: jenis biaya, loket, aturan penerimaan per status akademik (dengan cek satu mahasiswa), jadwal
+ * Pengaturan kasir unit: jenis biaya, perangkat & loket (persetujuan perangkat Kasir), aturan penerimaan per status akademik (dengan cek satu mahasiswa), jadwal
  * aktif pembayaran (garis waktu), dan templat laporan kasir. Semua formulir di panel samping bertahap. Izin
  * kasir.pengaturan berlingkup unit (SIAKAD /v1/kasir/kelola); scope token kasir:read / kasir:write.
  */
-export function PengaturanKasirUnit({ unitId, judul, tabAwal = 'jenis', className }: PengaturanKasirUnitProps) {
+export function PengaturanKasirUnit({ unitId, judul, tabAwal, className }: PengaturanKasirUnitProps) {
+  // ?tab=loket dari tautan notifikasi "Perangkat kasir menunggu persetujuan".
+  const tabUrl = typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('tab') as TabKasirUnit | null) : null;
+  const tabMula: TabKasirUnit = tabAwal ?? (tabUrl && ['jenis', 'loket', 'aturan', 'jadwal', 'templat'].includes(tabUrl) ? tabUrl : 'jenis');
   const q = useSiakadQuery<KasirKelolaSaya>([`${API}/saya`], (s, signal) => s.request({ method: 'GET', path: `${API}/saya` }, { signal }), { staleTime: 5 * 60_000 });
   const kepala = judul ? <h2 className="u-ksu-judul">{judul}</h2> : null;
   if (q.error) {
@@ -2243,10 +2139,10 @@ export function PengaturanKasirUnit({ unitId, judul, tabAwal = 'jenis', classNam
         <span>Lingkup: {saya.lintas && unitId == null ? 'semua unit' : lingkup.slice(0, 6).join(' · ') + (lingkup.length > 6 ? ` · +${lingkup.length - 6} unit` : '')}</span>
       </p>
       <Tabs<TabKasirUnit>
-        defaultValue={tabAwal}
+        defaultValue={tabMula}
         items={[
           { value: 'jenis', label: 'Jenis biaya', icon: <Receipt />, content: <TabJenis saya={saya} unitId={unitId} /> },
-          { value: 'loket', label: 'Loket', icon: <MonitorSmartphone />, content: <TabLoket saya={saya} unitId={unitId} /> },
+          { value: 'loket', label: 'Perangkat & loket', icon: <MonitorSmartphone />, content: <PerangkatKasir unitId={unitId} /> },
           { value: 'aturan', label: 'Aturan penerimaan', icon: <Gavel />, content: <TabAturan saya={saya} unitId={unitId} /> },
           { value: 'jadwal', label: 'Jadwal aktif', icon: <CalendarClock />, content: <TabJadwal saya={saya} unitId={unitId} /> },
           { value: 'templat', label: 'Templat laporan', icon: <FileClock />, content: <TabTemplat saya={saya} unitId={unitId} /> },
