@@ -36,6 +36,7 @@ import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakadQuery, type Q
 import { KodeLaporan } from '../components/galat';
 import { LogoAplikasi } from '../components/identity';
 import { LogAktivitas, LogApi, RingkasanLogApi } from './log';
+import { TombolPilihBerkas } from '../components/pilih-berkas-lokal';
 
 /*
  * Komponen pengelolaan aplikasi integrasi (Pustikom): satu aplikasi = entri katalog hak akses SIAKAD (/v1/rbac/aplikasi)
@@ -1339,18 +1340,9 @@ function PilihLogo({ value, onChange, nama }: { value: string | null; onChange: 
   return (
     <div className="u-app-logo-pick">
       <IkonAplikasi nama={nama || '?'} src={value} size="xl" />
-      <label className="u-button" data-variant="outline" data-size="sm">
+      <TombolPilihBerkas accept="image/png,image/jpeg,image/webp" onFiles={async (f) => onChange(await bacaDataUri(f[0]!))}>
         <ImagePlus /> {value ? 'Ganti logo' : 'Pilih logo'}
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          className="u-sr-only"
-          onChange={async (e) => {
-            const f = e.target.files?.[0];
-            if (f) onChange(await bacaDataUri(f));
-          }}
-        />
-      </label>
+      </TombolPilihBerkas>
       {value && (
         <Button variant="ghost" size="sm" onClick={() => onChange(null)}>
           Hapus

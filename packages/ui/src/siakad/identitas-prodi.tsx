@@ -14,6 +14,7 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
 import { useUnggahBerkas } from './berkas';
 import { PilihBerkas } from './pilih-berkas';
 import { AlurPemeriksa, LabelPemeriksa, type TahapPemeriksa } from './pemeriksa';
+import { TombolPilihBerkas } from '../components/pilih-berkas-lokal';
 
 /*
  * Identitas fakultas & prodi (SIAKAD docs/IDENTITAS-PRODI.md):
@@ -358,7 +359,6 @@ function PanelGantiLogo({ data, path, onTutup }: { data: DataIdentitasFakultas; 
   const [warna, setWarna] = React.useState(s.warna_utama ?? '');
   const [catatan, setCatatan] = React.useState('');
   const [galat, setGalat] = React.useState<Record<string, string>>({});
-  const masukan = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     let batal = false;
@@ -438,10 +438,9 @@ function PanelGantiLogo({ data, path, onTutup }: { data: DataIdentitasFakultas; 
             <div className="u-idp-tumpuk">
               <Field label="Berkas logo" description="Kosongkan bila hanya mengubah nama singkat atau warna." error={galatBerkas ?? galat.berkas_id}>
                 <div className="u-idp-aksi">
-                  <input ref={masukan} type="file" accept={b.mime.join(',')} hidden onChange={(e) => void pilihBerkas(e.target.files?.[0])} />
-                  <Button variant="outline" onClick={() => masukan.current?.click()}>
+                  <TombolPilihBerkas size="md" accept={b.mime.join(',')} onFiles={(f) => void pilihBerkas(f[0])}>
                     <ImageUp /> {asli ? 'Ganti berkas' : 'Pilih berkas logo'}
-                  </Button>
+                  </TombolPilihBerkas>
                   {asli ? (
                     <Button variant="ghost" onClick={() => (setAsli(null), setGalatBerkas(null))}>
                       Batalkan berkas

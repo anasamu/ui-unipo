@@ -35,6 +35,7 @@ import {
   type TemplatTerpilih,
 } from './surat-galeri';
 import { IsianTanggal } from '../components/formulir';
+import { usePilihBerkas } from '../components/pilih-berkas-lokal';
 
 // ---------------------------------------------------------------- data master arsip
 
@@ -934,7 +935,7 @@ export function CatatArsipSurat({ unitId, arahAwal = 'masuk', onSelesai, onBatal
   const [proses, setProses] = React.useState<string | null>(null);
   const [galat, setGalat] = React.useState<string | null>(null);
   const [sentuh, setSentuh] = React.useState(false);
-  const input = React.useRef<HTMLInputElement>(null);
+  const input = usePilihBerkas({ accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx', multiple: true, onFiles: (files) => setFile((x) => [...x, ...files]) });
   const ubah = (x: Partial<typeof f>) => setF((v) => ({ ...v, ...x }));
 
   const wajib: Record<string, string | null> = {
@@ -1032,13 +1033,13 @@ export function CatatArsipSurat({ unitId, arahAwal = 'masuk', onSelesai, onBatal
           setFile((x) => [...x, ...Array.from(e.dataTransfer.files)]);
         }}
       >
-        <input ref={input} type="file" multiple hidden accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" onChange={(e) => setFile((x) => [...x, ...Array.from(e.target.files ?? [])])} />
+        {input.elemen}
         <FileUp aria-hidden />
         <div>
           <b>Unggah file surat</b>
           <p>PDF atau hasil pindai. File pertama menjadi file utama, sisanya lampiran.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => input.current?.click()}>
+        <Button variant="outline" size="sm" onClick={() => input.buka()}>
           <Upload />
           Pilih file
         </Button>

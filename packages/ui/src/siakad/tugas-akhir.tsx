@@ -34,6 +34,7 @@ import { PilihEntitas, type SumberEntitas } from './pilih';
 import { PilihDosenBersyarat } from './aturan-fakultas';
 import { invalidateSiakad, pesanGalat, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
 import { LabelProdi, namaRapi } from './prodi';
+import { IsianBerkas, TombolPilihBerkas } from '../components/pilih-berkas-lokal';
 
 /*
  * Tugas akhir/skripsi (/v1/ta) dan syarat kelulusan mahasiswa (/v1/kelulusan): mahasiswa mengajukan judul dengan
@@ -487,20 +488,9 @@ function BerkasPengajuan({ pengajuan, daftar, bolehUbah }: { pengajuan: Pengajua
                 {d.keterangan && <span>{d.keterangan}</span>}
               </div>
               {bolehUbah && (
-                <label className="u-ta-unggah">
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.odt,.jpg,.jpeg,.png"
-                    disabled={p !== undefined}
-                    onChange={(e) => {
-                      void pilih(d.kode, e.target.files?.[0]);
-                      e.target.value = '';
-                    }}
-                  />
-                  <span className="u-button" data-variant="outline" data-size="sm">
-                    <Upload aria-hidden /> {p !== undefined ? `Mengunggah ${p}%` : ada.length ? 'Tambah' : 'Unggah'}
-                  </span>
-                </label>
+                <TombolPilihBerkas className="u-ta-unggah" accept=".pdf,.doc,.docx,.odt,.jpg,.jpeg,.png" loading={p !== undefined} onFiles={(f) => void pilih(d.kode, f[0])}>
+                  <Upload aria-hidden /> {p !== undefined ? `Mengunggah ${p}%` : ada.length ? 'Tambah' : 'Unggah'}
+                </TombolPilihBerkas>
               )}
             </div>
             {ada.length > 0 && (
@@ -1231,12 +1221,12 @@ function KirimBuktiSyarat({ nim, s, onTutup }: { nim: string; s: SyaratTambahan;
           <Textarea rows={3} value={ket} onChange={(e) => setKet(e.target.value)} placeholder="Mis. nomor sertifikat, tanggal kegiatan" />
         </Field>
         <Field label="Berkas bukti" required={s.jenis === 'unggah' && !s.pengajuan} optional={s.jenis !== 'unggah'} error={galat ?? undefined} description="PDF atau gambar, paling besar sesuai batas server.">
-          <input
-            type="file"
-            className="u-ta-file"
+          <IsianBerkas
+            value={file}
             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-            onChange={(e) => {
-              setFile(e.target.files?.[0] ?? null);
+            info={false}
+            onValueChange={(f) => {
+              setFile(f);
               setGalat(null);
             }}
           />

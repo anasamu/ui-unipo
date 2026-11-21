@@ -17,6 +17,7 @@ import { useProdiOptions, useTahunOptions } from './filter-presets';
 import { AlurPemeriksa, LabelPemeriksa, PratinjauPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import { invalidateSiakad, pesanGalat, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
 import { IsianTanggal } from '../components/formulir';
+import { IsianBerkas } from '../components/pilih-berkas-lokal';
 
 /*
  * Validasi syarat keuangan (SIAKAD /v1/syarat-keuangan, docs/VALIDASI_SYARAT_KEUANGAN.md di siakad_unipo).
@@ -782,7 +783,7 @@ export function PanelValidasiSyarat({ baris, jenisAwal = 'validasi', pengaturan,
                     <Textarea rows={3} value={alasan} onChange={(e) => setAlasan(e.target.value)} placeholder="Mis. transfer BNI 18-11 sudah masuk rekening, belum tercatat di sistem" />
                   </Field>
                   <Field label="Berkas bukti" description="PDF/JPG/PNG, disimpan privat di berkas SIAKAD." optional={!wajibBukti}>
-                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setBerkas(e.target.files?.[0] ?? null)} aria-label="Berkas bukti" />
+                    <IsianBerkas value={berkas} onValueChange={setBerkas} accept=".pdf,.jpg,.jpeg,.png" aria-label="Berkas bukti" info={false} />
                   </Field>
                   <Field label="Keterangan bukti" description="No. referensi transfer, bank, tanggal bayar." optional>
                     <Input value={buktiKet} onChange={(e) => setBuktiKet(e.target.value)} placeholder="Mis. Ref BNI 20261118-0042" />

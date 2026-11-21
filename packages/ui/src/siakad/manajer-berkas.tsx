@@ -109,6 +109,7 @@ import {
   type UrutKolom,
   type UrutServer,
 } from './berkas-finder';
+import { usePilihBerkas } from '../components/pilih-berkas-lokal';
 
 // ================================================================ Tipe dan aturan (sama dengan /v1/berkas)
 
@@ -1263,8 +1264,6 @@ export function ManajerBerkas({
   const [pesan, setPesan] = React.useState<{ nada: 'sukses' | 'galat'; teks: string; aksi?: { label: string; jalan: () => void } } | null>(null);
   const sasaranMenu = React.useRef<Sasaran>({ jenis: 'kosong' });
   const [menuSasaran, setMenuSasaran] = React.useState<Sasaran>({ jenis: 'kosong' });
-  const inputFile = React.useRef<HTMLInputElement>(null);
-  const inputFolder = React.useRef<HTMLInputElement>(null);
   const hitungSeret = React.useRef(0);
 
   const daftarFolder = pohonQ.data?.folder ?? [];
@@ -1718,7 +1717,7 @@ export function ManajerBerkas({
     return [
       ...(bisaTempel ? ([{ label: `Tempel ${papan?.folder ? `folder ${papan.folder.nama}` : `${papan?.berkas.length} berkas`}`, icon: <ClipboardPaste aria-hidden />, shortcut: 'Ctrl+V', onSelect: () => void tempel(folder) }, sep] as MenuEntry[]) : []),
       ...entriBaru,
-      ...(bolehUnggah ? ([{ label: 'Unggah folder', icon: <FolderUp aria-hidden />, onSelect: () => inputFolder.current?.click() }] as MenuEntry[]) : []),
+      ...(bolehUnggah ? ([{ label: 'Unggah folder', icon: <FolderUp aria-hidden />, onSelect: () => pemilihFolder.buka() }] as MenuEntry[]) : []),
       sep,
       ...(!bagi ? ([{ label: 'Keamanan berkas…', icon: <ShieldCheck aria-hidden />, onSelect: () => setDialog({ jenis: 'kebijakan' }) }] as MenuEntry[]) : []),
       { label: 'Segarkan', icon: <RotateCw aria-hidden />, onSelect: () => aksi.segarkan() },
@@ -1729,7 +1728,7 @@ export function ManajerBerkas({
   const entriBaru: MenuEntry[] = [
     ...(bolehKelola ? ([{ label: 'Folder baru', icon: <FolderPlus aria-hidden />, onSelect: () => setDialog({ jenis: 'folder-baru' }) }] as MenuEntry[]) : []),
     ...(bolehUnggah ? opsiBaru.map((t) => ({ label: BERKAS_BARU[t].label, icon: <FilePlus aria-hidden />, onSelect: () => setDialog({ jenis: 'baru', tipe: t }) })) : []),
-    ...(bolehUnggah ? ([{ label: 'Unggah berkas', icon: <Upload aria-hidden />, onSelect: () => inputFile.current?.click() }] as MenuEntry[]) : []),
+    ...(bolehUnggah ? ([{ label: 'Unggah berkas', icon: <Upload aria-hidden />, onSelect: () => pemilihBerkas.buka() }] as MenuEntry[]) : []),
   ];
 
   const setelSasaran = (s: Sasaran) => (e: React.MouseEvent) => {
@@ -2352,7 +2351,7 @@ export function ManajerBerkas({
   const jumlahSaring = (jenis !== 'semua' ? 1 : 0) + (periode ? 1 : 0);
   const entriLain: MenuEntry[] = [
     ...entriBaru,
-    ...(bolehUnggah ? ([{ label: 'Unggah folder', icon: <FolderUp aria-hidden />, onSelect: () => inputFolder.current?.click() }] as MenuEntry[]) : []),
+    ...(bolehUnggah ? ([{ label: 'Unggah folder', icon: <FolderUp aria-hidden />, onSelect: () => pemilihFolder.buka() }] as MenuEntry[]) : []),
     ...(entriBaru.length || bolehUnggah ? ([{ type: 'separator' }] as MenuEntry[]) : []),
     ...(!bagi ? ([{ label: enkripsiEfektif === 'wajib' ? 'Keamanan berkas (terenkripsi)…' : 'Keamanan berkas…', icon: <ShieldCheck aria-hidden />, onSelect: () => setDialog({ jenis: 'kebijakan' }) }] as MenuEntry[]) : []),
     { label: panelInfo ? 'Sembunyikan panel info' : 'Tampilkan panel info', icon: <Info aria-hidden />, shortcut: '⌘I', onSelect: () => setPanelInfo((x) => !x) },
@@ -2376,6 +2375,23 @@ export function ManajerBerkas({
     window.addEventListener('pointermove', gerak);
     window.addEventListener('pointerup', lepas);
   };
+  const pemilihBerkas = usePilihBerkas({
+    multiple: pilih !== 'satu',
+    accept: accept ?? (info?.ekstensi.length ? info.ekstensi.map((x) => `.${x}`).join(',') : undefined),
+    onFiles: (files) => void tambahUnggah(files.map((file) => ({ file, sub: null })), folder),
+  });
+  const pemilihFolder = usePilihBerkas({
+    folder: true,
+    onFiles: (files) =>
+      void tambahUnggah(
+        files.map((file) => {
+          const rel = (file as File & { webkitRelativePath?: string }).webkitRelativePath ?? '';
+          const dir = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : '';
+          return { file, sub: dir ? dir.split('/').map(rapikanSegmen).join('/') : null };
+        }),
+        folder,
+      ),
+  });
 
   return (
     <div
@@ -2580,11 +2596,11 @@ export function ManajerBerkas({
                     <span className="u-mb-sembunyi-sedang">Baru</span>
                   </Button>
                 }
-                items={[...entriBaru, ...(bolehUnggah ? ([{ label: 'Unggah folder', icon: <FolderUp aria-hidden />, onSelect: () => inputFolder.current?.click() }] as MenuEntry[]) : [])]}
+                items={[...entriBaru, ...(bolehUnggah ? ([{ label: 'Unggah folder', icon: <FolderUp aria-hidden />, onSelect: () => pemilihFolder.buka() }] as MenuEntry[]) : [])]}
               />
             )}
             {bolehUnggah && (
-              <Button size="sm" aria-label="Unggah berkas" onClick={() => inputFile.current?.click()}>
+              <Button size="sm" aria-label="Unggah berkas" onClick={() => pemilihBerkas.buka()}>
                 <Upload aria-hidden />
                 <span className="u-mb-sembunyi-kecil">Unggah</span>
               </Button>
@@ -2712,38 +2728,8 @@ export function ManajerBerkas({
                 <Info aria-hidden />
               </Button>
             </Tooltip>
-            <input
-              ref={inputFile}
-              type="file"
-              multiple={pilih !== 'satu'}
-              accept={accept ?? (info?.ekstensi.length ? info.ekstensi.map((x) => `.${x}`).join(',') : undefined)}
-              hidden
-              onChange={(e) => {
-                void tambahUnggah(
-                  Array.from(e.target.files ?? []).map((file) => ({ file, sub: null })),
-                  folder,
-                );
-                e.target.value = '';
-              }}
-            />
-            <input
-              ref={inputFolder}
-              type="file"
-              multiple
-              hidden
-              {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
-              onChange={(e) => {
-                void tambahUnggah(
-                  Array.from(e.target.files ?? []).map((file) => {
-                    const rel = (file as File & { webkitRelativePath?: string }).webkitRelativePath ?? '';
-                    const dir = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : '';
-                    return { file, sub: dir ? dir.split('/').map(rapikanSegmen).join('/') : null };
-                  }),
-                  folder,
-                );
-                e.target.value = '';
-              }}
-            />
+            {pemilihBerkas.elemen}
+            {pemilihFolder.elemen}
           </div>
         </div>
 
@@ -2864,7 +2850,7 @@ export function ManajerBerkas({
                     </Button>
                   ) : (
                     bolehUnggah && (
-                      <Button size="sm" onClick={() => inputFile.current?.click()}>
+                      <Button size="sm" onClick={() => pemilihBerkas.buka()}>
                         <Upload aria-hidden />
                         Pilih file
                       </Button>

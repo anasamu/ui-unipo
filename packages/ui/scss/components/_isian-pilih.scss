@@ -406,3 +406,52 @@
     cursor: not-allowed;
   }
 }
+
+// ---------------------------------------------------------------- IsianBerkas (pemilih berkas perangkat)
+.u-berkas-lokal {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+.u-berkas-lokal-baris {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--u-space-2, 0.5rem);
+  min-height: 2.25rem;
+  > .u-button {
+    flex-shrink: 0;
+  }
+}
+.u-berkas-lokal-nama {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.125rem 0.25rem 0.125rem 0.5rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius);
+  background: var(--u-surface);
+  font-size: var(--u-text-sm);
+  > svg {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    color: var(--u-muted-foreground);
+  }
+  > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  > small {
+    flex-shrink: 0;
+    color: var(--u-muted-foreground);
+    font-variant-numeric: tabular-nums;
+  }
+}
+.u-berkas-lokal-kosong {
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-sm);
+}

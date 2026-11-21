@@ -9,6 +9,7 @@ import { formatBytes, formatDate } from '../lib/format';
 import { usePlatform } from '../lib/platform';
 import { useUnggahBerkas, type BerkasTerunggah, type OpsiUnggahBerkas } from './berkas';
 import { pesanGalat, useOptionalSiakad } from './provider';
+import { usePilihBerkas } from '../components/pilih-berkas-lokal';
 
 /** Satu dokumen hasil pencarian (berkas, dokumen arsip, atau sumber sendiri). */
 export interface DokumenDitemukan {
@@ -94,7 +95,18 @@ export function CariAtauUnggahDokumen({
   const siakad = useOptionalSiakad();
   const p = usePlatform();
   const unggah = useUnggahBerkas(opsi);
-  const inputBerkas = React.useRef<HTMLInputElement>(null);
+  const inputBerkas = usePilihBerkas({
+    accept: accept,
+    onFiles: async (files) => {
+      const f = files[0];
+      const resolve = tunggu.current;
+      tunggu.current = null;
+      if (!f) return resolve?.(null);
+      const d = await jalankanUnggah(f);
+      resolve?.(d);
+      if (d && !resolve) pilih(d);
+    },
+  });
   const kataRef = React.useRef('');
   const tunggu = React.useRef<((d: DokumenDitemukan | null) => void) | null>(null);
   const [terpilih, setTerpilih] = React.useState<DokumenDitemukan | null>(null);
@@ -159,7 +171,7 @@ export function CariAtauUnggahDokumen({
   const mintaBerkas = () =>
     new Promise<DokumenDitemukan | null>((resolve) => {
       tunggu.current = resolve;
-      inputBerkas.current?.click();
+      inputBerkas.buka();
     });
 
   return (
@@ -209,22 +221,7 @@ export function CariAtauUnggahDokumen({
           onTambah: () => mintaBerkas(),
         }}
       />
-      <input
-        ref={inputBerkas}
-        type="file"
-        hidden
-        accept={accept}
-        onChange={async (e) => {
-          const f = e.target.files?.[0];
-          e.target.value = '';
-          const resolve = tunggu.current;
-          tunggu.current = null;
-          if (!f) return resolve?.(null);
-          const d = await jalankanUnggah(f);
-          resolve?.(d);
-          if (d && !resolve) pilih(d);
-        }}
-      />
+      {inputBerkas.elemen}
       {seret && <div className="u-cud-seret">Lepaskan untuk mengunggah</div>}
       {proses && (
         <ProgressUnggah

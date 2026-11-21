@@ -179,22 +179,6 @@
 }
 .u-lppm-unggah {
   flex: none;
-  position: relative;
-  cursor: pointer;
-  input {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: pointer;
-    width: 100%;
-  }
-  input:disabled {
-    cursor: progress;
-  }
-  input:focus-visible + .u-button {
-    outline: 2px solid var(--u-ring, var(--u-primary));
-    outline-offset: 2px;
-  }
 }
 .u-lppm-berkas-file {
   list-style: none;

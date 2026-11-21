@@ -39,6 +39,7 @@ import { SUMBER_DOSEN_TA } from './tugas-akhir';
 import { IsianAngka, IsianJam } from '../components/isian-angka';
 import { IsianTanggal } from '../components/formulir';
 import { keAngka, teksAngka } from '../lib/angka';
+import { IsianBerkas } from '../components/pilih-berkas-lokal';
 
 /*
  * Ujian tugas akhir (/v1/ta/ujian, SIAKAD docs/UJIAN-TA.md): ujian proposal, seminar hasil, sidang skripsi dalam satu
@@ -373,7 +374,7 @@ export function KirimBuktiSyarat({ aturanId, open, onOpenChange }: { aturanId: s
           {m?.petunjuk && <p className="u-ta-redup">{m.petunjuk}</p>}
           {perluBerkas && (
             <Field label="Berkas" required description={`Format ${(m?.format ?? ['pdf']).join(', ')}, paling besar ${m?.maks_mb ?? 5} MB.`}>
-              <input type="file" accept={(m?.format ?? ['pdf']).map((f) => `.${f}`).join(',')} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              <IsianBerkas value={file} onValueChange={setFile} accept={(m?.format ?? ['pdf']).map((f) => `.${f}`).join(',')} maxSize={(m?.maks_mb ?? 5) * 1024 * 1024} info={false} />
             </Field>
           )}
           {(m?.isian ?? []).map((f) => (
@@ -514,7 +515,7 @@ export function CekPlagiasiSaya({ jenisAwal }: { jenisAwal?: string }) {
       )}
       {k?.pengecualian && <p className="u-ta-redup">{k.pengecualian}</p>}
       <div className="u-ujta-unggah">
-        <input type="file" accept={(k?.format ?? ['pdf']).map((f) => `.${f}`).join(',')} onChange={(e) => setFile(e.target.files?.[0] ?? null)} aria-label="Naskah" />
+        <IsianBerkas value={file} onValueChange={setFile} accept={(k?.format ?? ['pdf']).map((f) => `.${f}`).join(',')} label="Pilih naskah" aria-label="Naskah" />
         <Button onClick={() => void ajukan()} loading={kirim} disabled={!file || (k ? k.sisa < 1 : false)}>
           <Upload /> Ajukan cek {k?.jenis_label.toLowerCase() ?? ''}
         </Button>
@@ -1731,7 +1732,7 @@ export function AntreanPlagiasi() {
                 </Field>
               </div>
               <Field label="Laporan hasil (PDF)" required>
-                <input type="file" accept=".pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                <IsianBerkas value={file} onValueChange={setFile} accept=".pdf" info={false} />
               </Field>
             </>
           )}

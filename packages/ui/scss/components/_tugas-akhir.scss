@@ -250,23 +250,7 @@
   font-size: 0.75rem !important;
 }
 .u-ta-unggah {
-  position: relative;
   flex: none;
-  cursor: pointer;
-  input {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: pointer;
-    width: 100%;
-  }
-  input:focus-visible + .u-button {
-    outline: 2px solid var(--u-ring, var(--u-primary));
-    outline-offset: 2px;
-  }
-  input:disabled + .u-button {
-    opacity: 0.6;
-  }
 }
 .u-ta-berkas-file {
   list-style: none;
@@ -478,8 +462,4 @@
 .u-ta-tolak {
   color: var(--u-danger, #dc2626);
   font-size: 0.8125rem;
-}
-.u-ta-file {
-  font-size: 0.875rem;
-  max-width: 100%;
 }

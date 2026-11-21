@@ -24,6 +24,7 @@ import {
   type VarianKwitansi,
 } from './kwitansi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { usePilihBerkas } from '../components/pilih-berkas-lokal';
 
 // Pengaturan kwitansi resmi per unit penerbit (GET/POST /v1/kwitansi/penerbit), aturan catatan pembayaran
 // (/v1/kwitansi/catatan), daftar kwitansi terbit (/v1/kwitansi/terbit), dan log (/v1/kwitansi/log).
@@ -156,7 +157,20 @@ async function gambarKeDataUri(f: File, maks = 640): Promise<string> {
 
 function UnggahGambar({ label, nilai, onChange, keterangan }: { label: string; nilai: string | null | undefined; onChange: (v: string | null) => void; keterangan: string }) {
   const toast = useToast();
-  const ref = React.useRef<HTMLInputElement>(null);
+  const pemilih = usePilihBerkas({
+    accept: 'image/png,image/jpeg,image/webp',
+    onFiles: async (files) => {
+      const f = files[0];
+      if (!f) return;
+      try {
+        const uri = await gambarKeDataUri(f);
+        if (uri.length > 520_000) throw new Error('Gambar terlalu besar setelah diperkecil (maks. 400 KB). Pakai PNG berlatar transparan yang lebih sederhana.');
+        onChange(uri);
+      } catch (er) {
+        toast.add({ title: `${label} tidak dapat dipakai`, description: (er as Error).message, type: 'error' });
+      }
+    },
+  });
   return (
     <Field label={label} description={keterangan} optional>
       <div className="u-kwp-gambar">
@@ -164,25 +178,8 @@ function UnggahGambar({ label, nilai, onChange, keterangan }: { label: string; n
           {nilai ? <img src={nilai} alt={label} /> : <ImageUp aria-hidden />}
         </span>
         <span className="u-kwp-gambar-aksi">
-          <input
-            ref={ref}
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            hidden
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              e.target.value = '';
-              if (!f) return;
-              try {
-                const uri = await gambarKeDataUri(f);
-                if (uri.length > 520_000) throw new Error('Gambar terlalu besar setelah diperkecil (maks. 400 KB). Pakai PNG berlatar transparan yang lebih sederhana.');
-                onChange(uri);
-              } catch (er) {
-                toast.add({ title: `${label} tidak dapat dipakai`, description: (er as Error).message, type: 'error' });
-              }
-            }}
-          />
-          <Button size="sm" variant="outline" onClick={() => ref.current?.click()}>
+          {pemilih.elemen}
+          <Button size="sm" variant="outline" onClick={pemilih.buka}>
             <ImageUp /> {nilai ? 'Ganti' : 'Unggah'}
           </Button>
           {nilai && (

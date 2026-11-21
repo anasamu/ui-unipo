@@ -54,6 +54,7 @@ import { judulRuang, lawanDari, mesinObrolan, namaDepan, type KeadaanObrolan, ty
 import type { IsiPesan } from './obrolan-kripto';
 import { pesanGalat, useSiakad } from './provider';
 import { TabKabar } from './notifikasi';
+import { usePilihBerkas } from '../components/pilih-berkas-lokal';
 
 export type { KeadaanObrolan, MesinObrolan, OrangObrolan, PesanObrolan, RuangObrolanData } from './obrolan-mesin';
 export { mesinObrolan } from './obrolan-mesin';
@@ -963,7 +964,7 @@ function InfoRuang({ r, open, onOpenChange, onKeluar }: { r: RuangObrolanData; o
   React.useEffect(() => setJudul(r.judul ?? ''), [r.judul]);
   const jalan = (f: Promise<unknown>) => void f.then(() => setGalat(null)).catch((e) => setGalat(pesanGalat(e)));
   const [fotoProses, setFotoProses] = React.useState(false);
-  const fotoRef = React.useRef<HTMLInputElement>(null);
+  const pilihFoto = usePilihBerkas({ accept: 'image/jpeg,image/png,image/webp', onFiles: (f) => void gantiFoto(f[0]) });
   const kembaliRef = React.useRef<HTMLButtonElement>(null);
   const bolehFoto = r.jenis === 'grup' && admin;
   const gantiFoto = async (f: File | undefined) => {
@@ -976,7 +977,6 @@ function InfoRuang({ r, open, onOpenChange, onKeluar }: { r: RuangObrolanData; o
       setGalat(pesanGalat(e));
     } finally {
       setFotoProses(false);
-      if (fotoRef.current) fotoRef.current.value = '';
     }
   };
   React.useEffect(() => {
@@ -1004,13 +1004,13 @@ function InfoRuang({ r, open, onOpenChange, onKeluar }: { r: RuangObrolanData; o
             <div className="u-ob-info-kepala">
               {bolehFoto ? (
                 <div className="u-ob-info-foto">
-                  <button type="button" className="u-ob-info-foto-tombol" onClick={() => fotoRef.current?.click()} disabled={fotoProses} aria-label={r.foto ? 'Ganti foto grup' : 'Pasang foto grup'}>
+                  <button type="button" className="u-ob-info-foto-tombol" onClick={() => pilihFoto.buka()} disabled={fotoProses} aria-label={r.foto ? 'Ganti foto grup' : 'Pasang foto grup'}>
                     <AvatarRuang r={r} saya={saya} size="xl" />
                     <span className="u-ob-info-foto-ikon" aria-hidden>
                       {fotoProses ? <Spinner size="sm" /> : <Camera />}
                     </span>
                   </button>
-                  <input ref={fotoRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => void gantiFoto(e.target.files?.[0])} />
+                  {pilihFoto.elemen}
                   {r.foto && (
                     <Button size="sm" variant="ghost" disabled={fotoProses} onClick={() => jalan(mesin.hapusFoto(r.id))}>
                       Hapus foto
@@ -1305,7 +1305,7 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
   const [dipilih, setDipilih] = React.useState<string | null>(null);
   const [seret, setSeret] = React.useState(false);
   const areaRef = React.useRef<HTMLTextAreaElement>(null);
-  const fileRef = React.useRef<HTMLInputElement>(null);
+  const pilihLampiran = usePilihBerkas({ multiple: true, onFiles: (f) => tambahBerkas(f) });
 
   React.useEffect(() => {
     setTeksMentah(draf.get(id) ?? '');
@@ -1618,9 +1618,9 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
             void kirim();
           }}
         >
-          <input ref={fileRef} type="file" multiple hidden onChange={(e) => (tambahBerkas(e.target.files), (e.target.value = ''))} />
+          {pilihLampiran.elemen}
           <Tooltip content={`Lampirkan berkas (maks. ${k.lampiranMb} MB)`}>
-            <Button type="button" variant="ghost" size="sm" iconOnly aria-label="Lampirkan berkas" onClick={() => fileRef.current?.click()} disabled={Boolean(ubah) || unggah || !siap}>
+            <Button type="button" variant="ghost" size="sm" iconOnly aria-label="Lampirkan berkas" onClick={() => pilihLampiran.buka()} disabled={Boolean(ubah) || unggah || !siap}>
               <Paperclip />
             </Button>
           </Tooltip>

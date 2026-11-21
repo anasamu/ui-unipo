@@ -13,6 +13,7 @@ import { useDibagikanBerkas, type BagiBerkas } from './berkas-ruang';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad } from './provider';
 import { waktuRelatif } from './notifikasi';
 import { useAkunSaya } from './akun';
+import { usePilihBerkas } from '../components/pilih-berkas-lokal';
 
 /**
  * Kelola berkas cepat dari bilah atas: unggah (tombol atau tarik-lepas), berkas terbaru dengan tombol unduh, dan
@@ -50,6 +51,7 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
   const siakad = useOptionalSiakad();
   const [tersedia, setTersedia] = React.useState(true);
   const [info, setInfo] = React.useState<InfoBerkas | null>(null);
+  const pemilih = usePilihBerkas({ multiple: true, accept: info?.ekstensi?.length ? info.ekstensi.map((e) => `.${e}`).join(',') : undefined, onFiles: (f) => void unggah(f) });
   const [buka, setBuka] = React.useState(false);
   const [drive, setDrive] = React.useState<false | 'saya' | 'dibagikan' | 'sampah'>(false);
   const [konfirmasi, setKonfirmasi] = React.useState<string | null>(null);
@@ -58,7 +60,6 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
   const [daftar, setDaftar] = React.useState<Berkas[] | null>(null);
   const [unggahan, setUnggahan] = React.useState<Unggahan[]>([]);
   const [seret, setSeret] = React.useState(false);
-  const inputRef = React.useRef<HTMLInputElement>(null);
   const saya = useAkunSaya({ foto: false }).data?.akun?.username ?? null;
   const bagi = useDibagikanBerkas('masuk', buka && tab === 'dibagikan' && tersedia);
 
@@ -194,20 +195,10 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
       >
         <div className="u-kabar-kepala">
           <span className="u-kabar-judul">Berkas</span>
-          <Button variant="soft" size="xs" onClick={() => inputRef.current?.click()}>
+          <Button variant="soft" size="xs" onClick={() => pemilih.buka()}>
             <Upload /> Unggah
           </Button>
-          <input
-            ref={inputRef}
-            type="file"
-            multiple
-            hidden
-            accept={info?.ekstensi?.length ? info.ekstensi.map((e) => `.${e}`).join(',') : undefined}
-            onChange={(e) => {
-              if (e.target.files) void unggah(e.target.files);
-              e.target.value = '';
-            }}
-          />
+          {pemilih.elemen}
         </div>
         <div
           className="u-berkas-cepat-jatuh"
@@ -222,10 +213,10 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
             setSeret(false);
             void unggah(e.dataTransfer.files);
           }}
-          onClick={() => inputRef.current?.click()}
+          onClick={() => pemilih.buka()}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), inputRef.current?.click())}
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), pemilih.buka())}
         >
           <Upload aria-hidden />
           <span>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatRibuan, keAngka, teksAngka, gabungTanggalWaktu, geserJam, periksaBatasAngka, pisahTanggalWaktu, rapikanKetikan, uraiAngka, uraiJam } from '../src/lib/angka';
 import { periksaIsianTanya } from '../src/components/aksi';
+import { saringBerkasLokal } from '../src/components/pilih-berkas-lokal';
 import { saringIkon, IKON_PILIHAN, warnaToken } from '../src/components/pilih-tampilan';
 import { urutkanAksi } from '../src/components/aksi';
 
@@ -117,5 +118,18 @@ describe('isian tanpa titik ribuan & keAngka', () => {
     expect(keAngka('abc')).toBeNull();
     expect(teksAngka(null)).toBe('');
     expect(teksAngka(2.5)).toBe('2.5');
+  });
+});
+
+describe('saringBerkasLokal', () => {
+  const berkas = (nama: string, ukuran: number, tipe = '') => new File([new Uint8Array(ukuran)], nama, { type: tipe });
+  it('menyaring jenis dan ukuran dengan pesan awam', () => {
+    const r = saringBerkasLokal([berkas('a.pdf', 10, 'application/pdf'), berkas('b.exe', 10), berkas('c.PDF', 5000)], { accept: '.pdf', maxSize: 1000 });
+    expect(r.lolos.map((f) => f.name)).toEqual(['a.pdf']);
+    expect(r.pesan).toContain('b.exe: jenis berkas tidak diterima');
+    expect(r.pesan).toContain('c.PDF: melebihi batas');
+  });
+  it('menerima pola mime image/*', () => {
+    expect(saringBerkasLokal([berkas('x.png', 1, 'image/png')], { accept: 'image/*' }).lolos).toHaveLength(1);
   });
 });
