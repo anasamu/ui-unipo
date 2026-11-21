@@ -15,6 +15,7 @@ import { useFakultasReferensi } from './prodi';
 import { invalidateSiakad, pesanGalat, useSiakad } from './provider';
 import {
   FormLampiranAturan,
+  labelTitik,
   ringkasKetentuan,
   statusTampil,
   useDaftarAturan,
@@ -195,7 +196,7 @@ export function DaftarAturanKelompok({
       if (lingkup === 'fakultas' && l.tingkat === 'universitas') return false;
       if (lingkup.startsWith('fak:') && l.fakultas !== lingkup.slice(4)) return false;
       if (!cocokStatus(a, status)) return false;
-      if (kata && ![a.nama, a.kode ?? '', a.titik_judul ?? a.titik, a.keterangan ?? ''].some((s) => s.toLowerCase().includes(kata))) return false;
+      if (kata && ![a.nama, a.kode ?? '', labelTitik(a.titik, a.titik_judul), a.keterangan ?? ''].some((s) => s.toLowerCase().includes(kata))) return false;
       return true;
     });
   }, [semua, q, lingkup, status]);
@@ -204,7 +205,7 @@ export function DaftarAturanKelompok({
     const baris = new Map<string, BarisKelompok>();
     for (const a of tersaring) {
       const kunci = `${a.titik}|${a.nama.trim().toLowerCase()}`;
-      const b = baris.get(kunci) ?? { kunci, nama: a.nama, titik: a.titik, titikJudul: a.titik_judul ?? a.titik, anggota: [] };
+      const b = baris.get(kunci) ?? { kunci, nama: a.nama, titik: a.titik, titikJudul: labelTitik(a.titik, a.titik_judul), anggota: [] };
       b.anggota.push(a);
       baris.set(kunci, b);
     }
@@ -528,7 +529,7 @@ export function LampirSkMassal({ aturan, namaLingkup, onTutup, onSelesai }: Lamp
                       <span>
                         <strong>{a.nama}</strong>
                         <small>
-                          {a.titik_judul ?? a.titik}
+                          {labelTitik(a.titik, a.titik_judul)}
                           {namaLingkup ? ` · ${namaLingkup(a)}` : ''}
                         </small>
                       </span>

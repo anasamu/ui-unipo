@@ -1059,7 +1059,7 @@ export function ValidatorAturan({ className }: { className?: string }) {
 
 // ================================================================ Dasar SK: belum berdasar SK & tinjau ulang
 
-function PanelLampirSkDasar({ aturan, judul, open, onOpenChange }: { aturan: string[]; judul: string; open: boolean; onOpenChange: (o: boolean) => void }) {
+export function PanelLampirSkDasar({ aturan, judul, open, onOpenChange }: { aturan: string[]; judul: string; open: boolean; onOpenChange: (o: boolean) => void }) {
   const siakad = useSiakad();
   const toast = useToast();
   const [sk, setSk] = React.useState<string | null>(null);

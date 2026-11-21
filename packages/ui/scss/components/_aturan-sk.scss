@@ -424,3 +424,132 @@
     -webkit-line-clamp: 1;
   }
 }
+
+// Kartu aturan (KartuAturan, KartuAturanKelompok): judul utuh di baris sendiri, lencana di bawahnya, satu penanda SK.
+@container (min-width: 40rem) {
+  .u-aturan-kisi {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  }
+}
+.u-aturan-kartu {
+  position: relative;
+  grid-template-rows: auto auto 1fr auto auto;
+  min-width: 0;
+  cursor: default;
+  &[data-interactive] {
+    cursor: pointer;
+  }
+  .u-aturan-kartu-kepala {
+    min-width: 0;
+  }
+  .u-aturan-kartu-judul {
+    min-width: 0;
+    strong,
+    .u-aturan-kartu-buka {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+      word-break: normal;
+    }
+  }
+  .u-aturan-kartu-lencana {
+    flex: initial;
+    justify-content: flex-start;
+  }
+}
+.u-aturan-kartu-buka {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--u-weight-semibold);
+  line-height: var(--u-leading-snug);
+  text-align: left;
+  cursor: pointer;
+  &:focus-visible {
+    outline: 2px solid var(--u-primary);
+    outline-offset: 2px;
+    border-radius: var(--u-radius-sm);
+  }
+}
+.u-aturan-kartu-kaki {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--u-border);
+}
+.u-aturan-penanda-sk {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  color: var(--u-muted-foreground);
+  font-size: var(--u-text-xs);
+  svg {
+    flex: none;
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  &[data-kurang] {
+    color: var(--u-warning-text);
+    font-weight: var(--u-weight-semibold);
+  }
+}
+.u-aturan-mode {
+  &[data-mode='blokir'] svg {
+    color: var(--u-danger);
+  }
+  &[data-mode='peringatan'] svg {
+    color: var(--u-warning);
+  }
+}
+.u-aturan-kelompok-panah {
+  transition: transform 0.15s;
+  &[data-buka] {
+    transform: rotate(90deg);
+  }
+}
+.u-aturan-kelompok-daftar {
+  display: grid;
+  container-type: inline-size;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--u-text-sm);
+  li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0;
+    border-top: 1px dashed var(--u-border);
+  }
+}
+.u-aturan-kelompok-unit {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  font-weight: var(--u-weight-semibold);
+}
+.u-aturan-saring-titik {
+  min-width: min(100%, 14rem);
+  .u-input,
+  input {
+    text-overflow: ellipsis;
+  }
+}
+.u-aturan-saring-centang {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: var(--u-text-sm);
+  white-space: nowrap;
+}
