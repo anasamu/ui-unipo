@@ -33,6 +33,8 @@ import './mock/jadwal-bentrok';
 import './mock/keuangan';
 import './mock/kasir';
 import './mock/sk';
+// Terakhir: rute tulis wizard kurikulum mendahului rute tulis umum (formulir/katalog).
+import './mock/kurikulum-aturan';
 import { ssoDemo } from './mock/aplikasi';
 import { App } from './App';
 
