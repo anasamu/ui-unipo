@@ -15,6 +15,7 @@ import { useUnggahBerkas } from './berkas';
 import { PilihBerkas } from './pilih-berkas';
 import { AlurPemeriksa, LabelPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import { TombolPilihBerkas } from '../components/pilih-berkas-lokal';
+import { IsianWarnaHex } from '../components/isian-warna';
 
 /*
  * Identitas fakultas & prodi (SIAKAD docs/IDENTITAS-PRODI.md):
@@ -513,15 +514,17 @@ function PanelGantiLogo({ data, path, onTutup }: { data: DataIdentitasFakultas; 
                 <Input value={singkatan} onChange={(e) => setSingkatan(e.target.value)} maxLength={30} placeholder="mis. FKIP" />
               </Field>
               <Field label="Warna aksen" optional description="Dipakai portal bila Tema portal & dasbor belum diatur. Kosong = mengikuti tema." error={galat.warna_utama}>
-                <div className="u-idp-aksi">
-                  <input type="color" aria-label="Pilih warna aksen" value={/^#[0-9a-f]{6}$/i.test(warna) ? warna : '#1e5aa0'} onChange={(e) => setWarna(e.target.value)} style={{ width: '2.5rem', height: '2.25rem', padding: 0, border: 'none', background: 'none' }} />
-                  <Input value={warna} onChange={(e) => setWarna(e.target.value)} maxLength={7} placeholder="#1E5AA0" style={{ maxWidth: '9rem' }} />
-                  {warna ? (
-                    <Button variant="ghost" size="sm" onClick={() => setWarna('')}>
+                <IsianWarnaHex
+                  value={warna}
+                  onValueChange={setWarna}
+                  bawaan="#1e5aa0"
+                  aria-label="Warna aksen"
+                  otomatis={
+                    <>
                       <Palette /> Ikuti tema
-                    </Button>
-                  ) : null}
-                </div>
+                    </>
+                  }
+                />
               </Field>
             </div>
           ),

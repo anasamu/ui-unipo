@@ -25,6 +25,7 @@ import {
 } from './kwitansi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { usePilihBerkas } from '../components/pilih-berkas-lokal';
+import { IsianWarnaHex } from '../components/isian-warna';
 
 // Pengaturan kwitansi resmi per unit penerbit (GET/POST /v1/kwitansi/penerbit), aturan catatan pembayaran
 // (/v1/kwitansi/catatan), daftar kwitansi terbit (/v1/kwitansi/terbit), dan log (/v1/kwitansi/log).
@@ -284,15 +285,7 @@ function FormPenerbit({ p, open, onOpenChange }: { p: PengaturanPenerbitKwitansi
                 <RadioGroup<VarianKwitansi> variant="card" columns={2} value={v.varian} onValueChange={(x) => set('varian', x)} options={VARIAN_KWITANSI.map((x) => ({ value: x.value, label: x.label, description: `${x.keterangan} (${x.kertas})` }))} />
               </Field>
               <Field label="Warna aksen" error={warnaSalah}>
-                <div className="u-kwp-warna">
-                  <input type="color" aria-label="Pilih warna" value={/^#[0-9a-fA-F]{6}$/.test(v.warna) ? v.warna : '#0b6b3a'} onChange={(e) => set('warna', e.target.value)} />
-                  <Input value={v.warna} maxLength={7} onChange={(e) => set('warna', e.target.value)} className="u-kwp-kode" aria-label="Kode warna" />
-                  <span className="u-kwp-swatch" role="group" aria-label="Warna cepat">
-                    {WARNA_CEPAT.map((w) => (
-                      <button key={w} type="button" style={{ background: w }} aria-label={w} aria-pressed={v.warna === w} onClick={() => set('warna', w)} />
-                    ))}
-                  </span>
-                </div>
+                <IsianWarnaHex value={v.warna} onValueChange={(w) => set('warna', w)} bawaan="#0b6b3a" cepat={WARNA_CEPAT} aria-label="Warna aksen kwitansi" />
               </Field>
               <Field label="Judul kwitansi" description="Bawaan BUKTI KAS MASUK.">
                 <Input value={v.judul} maxLength={60} placeholder="BUKTI KAS MASUK" onChange={(e) => set('judul', e.target.value)} />

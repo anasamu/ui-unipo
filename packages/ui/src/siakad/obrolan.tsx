@@ -46,7 +46,7 @@ import {
 } from 'lucide-react';
 import { Badge, Button, Skeleton, Spinner } from '../components/actions';
 import { Alert, Avatar, Empty, Tabs } from '../components/display';
-import { Checkbox, Field, Input, InputGroup, SegmentedControl, Switch } from '../components/forms';
+import { Checkbox, Field, Input, InputGroup, RadioGroup, SegmentedControl, Switch } from '../components/forms';
 import { ConfirmDialog, Dialog, Menu, Popover, Tooltip, useToast, type MenuEntry } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { formatBytes } from '../lib/format';
@@ -1795,23 +1795,21 @@ function DialogBersihkan({
             <legend>
               {info.lampiran} lampiran di obrolan ini{info.sudah_disimpan ? ` (${info.sudah_disimpan} sudah ada di Berkas saya)` : ''}
             </legend>
-            <label data-aktif={lampiran === 'simpan' ? '' : undefined}>
-              <input type="radio" name="lampiran" checked={lampiran === 'simpan'} onChange={() => setLampiran('simpan')} />
-              <span>
-                <strong>{hapus ? 'Simpan ke Berkas saya' : 'Simpan lampiran ke Berkas saya'}</strong>
-                <small>
-                  {belum ? `${belum} lampiran disalin ke Berkas saya › Obrolan/${nama}.` : 'Semua lampiran yang bisa disalin sudah ada di Berkas saya.'}
-                  {info.tidak_bisa_disimpan ? ` ${info.tidak_bisa_disimpan} lampiran lama tidak bisa disalin.` : ''}
-                </small>
-              </span>
-            </label>
-            <label data-aktif={lampiran === 'hapus' ? '' : undefined}>
-              <input type="radio" name="lampiran" checked={lampiran === 'hapus'} onChange={() => setLampiran('hapus')} />
-              <span>
-                <strong>{hapus ? 'Hapus lampiran juga (hanya dari tampilan Anda)' : 'Hapus lampiran juga'}</strong>
-                <small>Lampiran ikut hilang dari tampilan Anda (tidak disalin).</small>
-              </span>
-            </label>
+            <RadioGroup<'simpan' | 'hapus'>
+              variant="card"
+              columns={1}
+              value={lampiran}
+              onValueChange={setLampiran}
+              aria-label="Lampiran"
+              options={[
+                {
+                  value: 'simpan',
+                  label: hapus ? 'Simpan ke Berkas saya' : 'Simpan lampiran ke Berkas saya',
+                  description: `${belum ? `${belum} lampiran disalin ke Berkas saya › Obrolan/${nama}.` : 'Semua lampiran yang bisa disalin sudah ada di Berkas saya.'}${info.tidak_bisa_disimpan ? ` ${info.tidak_bisa_disimpan} lampiran lama tidak bisa disalin.` : ''}`,
+                },
+                { value: 'hapus', label: hapus ? 'Hapus lampiran juga (hanya dari tampilan Anda)' : 'Hapus lampiran juga', description: 'Lampiran ikut hilang dari tampilan Anda (tidak disalin).' },
+              ]}
+            />
           </fieldset>
         ) : null}
       </div>

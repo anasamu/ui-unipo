@@ -6,6 +6,7 @@ import { matriksQr } from '../lib/qr';
 import { Button } from '../components/actions';
 import { UnipoMark } from '../components/identity';
 import { Checkbox } from '../components/forms';
+import { Select } from '../components/select';
 
 // ================================================================ Tipe
 
@@ -880,16 +881,10 @@ export function UnduhKalender({ tahapan, info, namaBerkas = 'kalender-akademik',
   }
 
   const pilih = <T extends string>(label: string, nilai: T, set: (v: T) => void, opsi: { value: T; label: string; disabled?: boolean }[]) => (
-    <label className="u-unduh-kal-pilih">
+    <div className="u-unduh-kal-pilih">
       <span>{label}</span>
-      <select value={nilai} onChange={(e) => set(e.target.value as T)}>
-        {opsi.map((o) => (
-          <option key={o.value} value={o.value} disabled={o.disabled}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
+      <Select<T> value={nilai} onValueChange={(v) => v && set(v)} options={opsi} aria-label={label} />
+    </div>
   );
 
   return (

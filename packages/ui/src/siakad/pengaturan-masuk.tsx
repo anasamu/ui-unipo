@@ -30,6 +30,7 @@ import {
   type TataMasuk,
 } from './halaman-masuk';
 import { TombolPilihBerkas } from '../components/pilih-berkas-lokal';
+import { IsianWarnaHex } from '../components/isian-warna';
 
 type TataTema = Record<string, unknown>;
 type PerubahanTata = ReturnType<typeof tulisTataMasuk>;
@@ -149,17 +150,7 @@ function IsianGambar({
 function PilihWarnaMasuk({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <Field label="Warna latar" description="Otomatis = warna utama tema.">
-      <div className="u-tema-warna">
-        <button type="button" className="u-tema-warna-otomatis" aria-pressed={!value} onClick={() => onChange('')}>
-          Otomatis
-        </button>
-        {WARNA.map((c) => (
-          <button key={c} type="button" title={c} aria-label={`Warna ${c}`} aria-pressed={value === c} style={{ background: c }} onClick={() => onChange(c)} />
-        ))}
-        <label className="u-tema-warna-bebas" title="Pilih warna bebas">
-          <input type="color" value={value || '#244ce6'} onChange={(e) => onChange(e.target.value)} aria-label="Warna bebas" />
-        </label>
-      </div>
+      <IsianWarnaHex value={value} onValueChange={onChange} cepat={WARNA} otomatis="Otomatis" tanpaKode aria-label="Warna latar" />
     </Field>
   );
 }

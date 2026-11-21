@@ -60,7 +60,7 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '../components/actions';
-import { Checkbox, Input } from '../components/forms';
+import { Checkbox, Input, RadioGroup } from '../components/forms';
 import { ConfirmDialog, Dialog, Menu, Tooltip, type MenuEntry } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { formatBytes, formatDate } from '../lib/format';
@@ -3271,16 +3271,15 @@ function DialogLihat({ unit, b, f, pengelola, tutup, selesai }: { unit: string; 
         </>
       }
     >
-      <div className="u-mb-lihat-opsi" role="radiogroup" aria-label="Siapa yang bisa melihat">
-        {opsi.map((o) => (
-          <label key={o.v} data-kunci={o.kunci ? '' : undefined}>
-            <input type="radio" name="lihat" checked={mode === o.v} disabled={o.kunci} onChange={() => setMode(o.v)} />
-            <span>
-              <b>{o.label}</b>
-              <small>{o.kunci ? 'Hanya pengelola unit yang bisa membuka berkas untuk mahasiswa, dosen, atau tendik.' : o.ket}</small>
-            </span>
-          </label>
-        ))}
+      <div className="u-mb-lihat-opsi">
+        <RadioGroup<typeof mode>
+          variant="card"
+          columns={1}
+          aria-label="Siapa yang bisa melihat"
+          value={mode}
+          onValueChange={setMode}
+          options={opsi.map((o) => ({ value: o.v, label: o.label, description: o.kunci ? 'Hanya pengelola unit yang bisa membuka berkas untuk mahasiswa, dosen, atau tendik.' : o.ket, disabled: o.kunci }))}
+        />
         {mode === 'pilih' && (
           <div className="u-mb-lihat-peran">
             {(['semua', 'mahasiswa', 'dosen', 'tendik'] as const).map((k) => (

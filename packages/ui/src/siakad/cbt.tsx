@@ -8,6 +8,7 @@ import { Alert, Empty, ProgressRing } from '../components/display';
 import { Input, Textarea } from '../components/forms';
 import { ConfirmDialog } from '../components/overlays';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakadQuery, type QueryState } from './provider';
+import { Select } from '../components/select';
 
 /*
  * Widget CBT (/v1/cbt) untuk peserta ujian: daftar ujian saya dengan masuk token, lembar ujian lengkap
@@ -439,24 +440,19 @@ function Menjodohkan({ opsi, nilai, onJawab, disabled }: { opsi: { kiri: OpsiSoa
       {opsi.kiri.map((k) => (
         <li key={k.id}>
           <span dangerouslySetInnerHTML={{ __html: k.teks }} />
-          <select
+          <Select<string>
             value={nilai[k.id] ?? ''}
             disabled={disabled}
             aria-label={`Pasangan untuk ${k.teks.replace(/<[^>]+>/g, '')}`}
-            onChange={(e) => {
+            placeholder="Pilih pasangan…"
+            options={[{ value: '', label: 'Belum dipasangkan' }, ...opsi.kanan.map((r) => ({ value: r.id, label: r.teks.replace(/<[^>]+>/g, '') }))]}
+            onValueChange={(v) => {
               const baru = { ...nilai };
-              if (e.target.value) baru[k.id] = e.target.value;
+              if (v) baru[k.id] = v;
               else delete baru[k.id];
               onJawab(Object.keys(baru).length ? baru : null);
             }}
-          >
-            <option value="">Pilih pasangan…</option>
-            {opsi.kanan.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.teks.replace(/<[^>]+>/g, '')}
-              </option>
-            ))}
-          </select>
+          />
         </li>
       ))}
     </ol>

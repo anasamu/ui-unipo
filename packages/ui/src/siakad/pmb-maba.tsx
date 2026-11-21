@@ -72,6 +72,7 @@ import {
   type SyaratBerkasPmb,
 } from './pmb-publik';
 import { IsianBerkas, TombolPilihBerkas } from '../components/pilih-berkas-lokal';
+import { Select } from '../components/select';
 
 /**
  * Area pendaftar PMB (`/v1/pmb/saya/*`): dasbor tahapan, pilih gelombang, formulir, berkas, tagihan dan pembayaran
@@ -406,17 +407,16 @@ export function PemilihPendaftaranPmb() {
   const { daftar, aktif, pilih } = usePendaftaranAktifPmb();
   if (daftar.length < 2) return null;
   return (
-    <label className="u-pmb-pemilih">
+    <div className="u-pmb-pemilih">
       <span>Pendaftaran</span>
-      <select value={aktif?.id ?? ''} onChange={(e) => pilih(e.target.value)}>
-        {daftar.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.gelombang.nama}
-            {p.no_pmb ? ` · ${p.no_pmb}` : ''}
-          </option>
-        ))}
-      </select>
-    </label>
+      <Select<string>
+        size="sm"
+        aria-label="Pilih pendaftaran"
+        value={aktif?.id != null ? String(aktif.id) : null}
+        onValueChange={(v) => v && pilih(v)}
+        options={daftar.map((p) => ({ value: String(p.id), label: `${p.gelombang.nama}${p.no_pmb ? ` · ${p.no_pmb}` : ''}` }))}
+      />
+    </div>
   );
 }
 
