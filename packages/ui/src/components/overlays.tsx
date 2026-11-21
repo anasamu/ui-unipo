@@ -300,6 +300,8 @@ function ToastList() {
         <BaseToast.Description className="u-toast-description" />
         {galat && <TombolLaporGalat info={galat} className="u-toast-lapor" />}
       </BaseToast.Content>
+      {/* toast.add({ ..., actionProps: { children: 'Urungkan', onClick } }) */}
+      {t.actionProps && <BaseToast.Action className="u-toast-aksi" />}
       <BaseToast.Close className="u-toast-close" aria-label="Tutup">
         <X />
       </BaseToast.Close>
@@ -327,5 +329,6 @@ export function Toaster({ children, limit = 3, timeout = 5000 }: { children?: Re
  * toast.add({ title: 'Data tersimpan', type: 'success' });
  * toast.add({ title: 'Gagal menyimpan', description: pesanGalat(e), type: 'error', data: { galat: e } }); // + tombol Buat tiket
  * toast.promise(simpan(), { loading: 'Menyimpan…', success: 'Tersimpan', error: 'Gagal menyimpan' });
+ * toast.add({ title: 'Dipindahkan ke Sampah', actionProps: { children: 'Urungkan', onClick: urungkan } }); // tombol aksi
  */
 export const useToast = BaseToast.useToastManager;

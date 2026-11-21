@@ -1110,6 +1110,26 @@
 .u-berkas-cepat-item {
   align-items: center;
   cursor: default;
+  // Tombol hapus muncul saat baris disorot/difokus (selalu tampil di layar sentuh).
+  > .u-button[aria-label^='Pindahkan'] {
+    opacity: 0;
+    transition: opacity var(--u-duration-fast);
+  }
+  &:hover > .u-button[aria-label^='Pindahkan'],
+  &:focus-within > .u-button[aria-label^='Pindahkan'] {
+    opacity: 1;
+  }
+  @media (hover: none) {
+    > .u-button[aria-label^='Pindahkan'] {
+      opacity: 1;
+    }
+  }
+  &[data-konfirmasi] {
+    background: color-mix(in oklab, var(--u-danger) 7%, transparent);
+    .u-berkas-cepat-ikon {
+      color: var(--u-danger-text, var(--u-danger));
+    }
+  }
 }
 .u-berkas-cepat-ikon {
   display: inline-flex;

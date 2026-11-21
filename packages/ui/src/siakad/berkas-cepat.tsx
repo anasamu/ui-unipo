@@ -1,16 +1,16 @@
 'use client';
 import * as React from 'react';
-import { Download, File, FileArchive, FileImage, FileSpreadsheet, FileText, Folder, FolderOpen, Upload } from 'lucide-react';
+import { Download, File, FileArchive, FileImage, FileSpreadsheet, FileText, Folder, FolderOpen, Trash2, Upload } from 'lucide-react';
 import { Button, Skeleton } from '../components/actions';
 import { Empty } from '../components/display';
-import { Dialog, Popover } from '../components/overlays';
+import { Dialog, Popover, useToast } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { formatBytes } from '../lib/format';
-import { periksaUnggahan, unggahKeBerkas, type BerkasTerunggah, type InfoBerkas, type OpsiUnggahBerkas } from './berkas';
+import { periksaUnggahan, teksBatasUnggah, unggahKeBerkas, type BerkasTerunggah, type InfoBerkas, type OpsiUnggahBerkas } from './berkas';
 import { MeterKuota } from '../components/alokasi';
 import { DriveBerkas } from './drive-berkas';
 import { useDibagikanBerkas, type BagiBerkas } from './berkas-ruang';
-import { invalidateSiakad, useOptionalSiakad } from './provider';
+import { invalidateSiakad, pesanGalat, useOptionalSiakad } from './provider';
 import { waktuRelatif } from './notifikasi';
 import { useAkunSaya } from './akun';
 
@@ -51,7 +51,9 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
   const [tersedia, setTersedia] = React.useState(true);
   const [info, setInfo] = React.useState<InfoBerkas | null>(null);
   const [buka, setBuka] = React.useState(false);
-  const [drive, setDrive] = React.useState<false | 'saya' | 'dibagikan'>(false);
+  const [drive, setDrive] = React.useState<false | 'saya' | 'dibagikan' | 'sampah'>(false);
+  const [konfirmasi, setKonfirmasi] = React.useState<string | null>(null);
+  const toast = useToast();
   const [tab, setTab] = React.useState<'terbaru' | 'dibagikan'>('terbaru');
   const [daftar, setDaftar] = React.useState<Berkas[] | null>(null);
   const [unggahan, setUnggahan] = React.useState<Unggahan[]>([]);
@@ -124,7 +126,49 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
     }
   };
 
-  const kelola = (ruang: 'saya' | 'dibagikan' = 'saya') => {
+  const segarkanBerkas = () => {
+    invalidateSiakad('berkas-isi');
+    invalidateSiakad('berkas-folder');
+    invalidateSiakad('berkas-info');
+    invalidateSiakad('berkas-sampah');
+    void muat();
+  };
+
+  /** Pindahkan berkas ke Sampah (setelah konfirmasi ringan di barisnya), dengan toast "Urungkan". */
+  const keSampah = async (b: Berkas) => {
+    setKonfirmasi(null);
+    try {
+      const r = await siakad.request<{ dihapus: string[]; gagal: Array<{ id: string; pesan: string }> }>({ method: 'POST', path: '/v1/berkas/hapus-banyak', body: { id: [b.id] } });
+      if (r.data.gagal.length) {
+        toast.add({ title: 'Tidak bisa dihapus', description: r.data.gagal[0].pesan, type: 'error' });
+        return;
+      }
+      setDaftar((d) => d?.filter((x) => x.id !== b.id) ?? d);
+      segarkanBerkas();
+      toast.add({
+        title: 'Dipindahkan ke Sampah',
+        description: b.nama,
+        type: 'success',
+        timeout: 8000,
+        actionProps: {
+          children: 'Urungkan',
+          onClick: () => {
+            siakad
+              .request({ method: 'POST', path: '/v1/berkas/sampah/pulihkan', body: { id: [b.id] } })
+              .then(() => {
+                segarkanBerkas();
+                toast.add({ title: 'Berkas dikembalikan', description: b.nama, type: 'success' });
+              })
+              .catch((e) => toast.add({ title: 'Gagal mengembalikan', description: pesanGalat(e), type: 'error', data: { galat: e } }));
+          },
+        },
+      });
+    } catch (e) {
+      toast.add({ title: 'Gagal menghapus', description: pesanGalat(e), type: 'error', data: { galat: e } });
+    }
+  };
+
+  const kelola = (ruang: 'saya' | 'dibagikan' | 'sampah' = 'saya') => {
     setBuka(false);
     // Selalu membuka file manager dalam modal di semua aplikasi.
     setDrive(ruang);
@@ -186,16 +230,18 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
           <Upload aria-hidden />
           <span>
             Tarik berkas ke sini atau <b>pilih berkas</b>
-            {info && <small>Maks. {formatBytes(info.maks_byte)} per berkas</small>}
+            {info && <small title={info.batas_unggah?.maks_sumber ? `Batas dari ${info.batas_unggah.maks_sumber.label}` : undefined}>{teksBatasUnggah(info)}</small>}
           </span>
         </div>
         {info?.kuota && (
+          // Batas yang mengikat (kuota pribadi atau kolam unit), sama dengan yang ditegakkan saat unggah.
           <MeterKuota
             className="u-berkas-cepat-kuota"
             size="sm"
             label={info.kuota.ruang === 'unit' ? 'Ruang bersama unit' : 'Penyimpanan saya'}
-            terpakai={info.kuota.terpakai_byte}
-            kuota={info.kuota.kuota_byte}
+            terpakai={info.kuota.batas?.sumber === 'kolam' ? info.kuota.batas.terpakai_byte : info.kuota.terpakai_byte}
+            kuota={info.kuota.batas ? info.kuota.batas.byte : info.kuota.kuota_byte}
+            keterangan={info.kuota.batas?.sumber === 'kolam' ? `Mengikuti ${info.kuota.batas.label}` : !info.kuota.batas && info.kuota.kuota_byte === null ? 'Kuota belum diatur Pustikom' : undefined}
           />
         )}
         {unggahan.length > 0 && (
@@ -227,7 +273,14 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
           ) : daftar.length ? (
             <div className="u-kabar-daftar" role="list">
               {daftar.map((b) => (
-                <BarisBerkas key={b.id} b={b} keterangan={`${formatBytes(b.ukuran)}${b.dibuat_at ? ` · ${waktuRelatif(b.dibuat_at)}` : ''}`} onUnduh={() => void unduh(b)} />
+                <BarisBerkas
+                  key={b.id}
+                  b={b}
+                  keterangan={`${formatBytes(b.ukuran)}${b.dibuat_at ? ` · ${waktuRelatif(b.dibuat_at)}` : ''}`}
+                  onUnduh={() => void unduh(b)}
+                  onHapus={() => setKonfirmasi(b.id)}
+                  konfirmasi={konfirmasi === b.id ? { ya: () => void keSampah(b), batal: () => setKonfirmasi(null) } : undefined}
+                />
               ))}
             </div>
           ) : (
@@ -268,6 +321,10 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
           <Empty icon={<FolderOpen />} title="Belum ada yang dibagikan" description="Berkas dan folder yang dibagikan orang lain kepada Anda tampil di sini." />
         )}
         <div className="u-kabar-kaki">
+          <Button variant="ghost" size="sm" onClick={() => kelola('sampah')}>
+            <Trash2 aria-hidden />
+            Sampah
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => kelola(tab === 'dibagikan' ? 'dibagikan' : 'saya')}>
             Kelola berkas
           </Button>
@@ -280,9 +337,43 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
   );
 }
 
-function BarisBerkas({ b, keterangan, onUnduh }: { b: Berkas; keterangan: string; onUnduh: () => void }) {
+function BarisBerkas({
+  b,
+  keterangan,
+  onUnduh,
+  onHapus,
+  konfirmasi,
+}: {
+  b: Berkas;
+  keterangan: string;
+  onUnduh: () => void;
+  onHapus?: () => void;
+  /** Konfirmasi ringan di baris: "Pindahkan ke Sampah?" */
+  konfirmasi?: { ya: () => void; batal: () => void };
+}) {
+  if (konfirmasi) {
+    return (
+      <div role="listitem" className="u-kabar-item u-berkas-cepat-item" data-konfirmasi="">
+        <span className="u-berkas-cepat-ikon" aria-hidden>
+          <Trash2 />
+        </span>
+        <span className="u-kabar-item-teks">
+          <span className="u-kabar-item-atas">
+            <b title={b.nama}>Ke Sampah?</b>
+          </span>
+          <span className="u-kabar-item-isi">{b.nama}</span>
+        </span>
+        <Button variant="ghost" size="xs" onClick={konfirmasi.batal}>
+          Batal
+        </Button>
+        <Button variant="soft" size="xs" autoFocus onClick={konfirmasi.ya}>
+          Pindahkan
+        </Button>
+      </div>
+    );
+  }
   return (
-    <div role="listitem" className="u-kabar-item u-berkas-cepat-item">
+    <div role="listitem" className="u-kabar-item u-berkas-cepat-item" tabIndex={onHapus ? 0 : undefined} onKeyDown={onHapus ? (e) => e.key === 'Delete' && (e.preventDefault(), onHapus()) : undefined}>
       <span className="u-berkas-cepat-ikon" aria-hidden>
         <IkonBerkas b={b} />
       </span>
@@ -295,6 +386,11 @@ function BarisBerkas({ b, keterangan, onUnduh }: { b: Berkas; keterangan: string
       <Button variant="ghost" size="xs" iconOnly aria-label={`Unduh ${b.nama}`} onClick={onUnduh}>
         <Download />
       </Button>
+      {onHapus && (
+        <Button variant="ghost" size="xs" iconOnly aria-label={`Pindahkan ${b.nama} ke Sampah`} title="Pindahkan ke Sampah (Del)" onClick={onHapus}>
+          <Trash2 />
+        </Button>
+      )}
     </div>
   );
 }

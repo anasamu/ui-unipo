@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { Archive, Building2, ChevronRight, Clock, HardDrive, Users } from 'lucide-react';
+import { Archive, Building2, ChevronRight, Clock, HardDrive, Trash2, Users } from 'lucide-react';
 import { nadaKuota } from '../components/alokasi';
 import { cn } from '../lib/cn';
 import { formatBytes } from '../lib/format';
@@ -82,6 +82,8 @@ export interface DaftarDriveProps {
   dibagikan?: { aktif: boolean; onPilih: () => void };
   /** Pintasan "Terbaru" untuk drive aktif. */
   terbaru?: { aktif: boolean; onPilih: () => void };
+  /** Pintasan "Sampah": berkas yang dihapus dari Berkas saya dan ruang unit yang dikelola. */
+  sampah?: { aktif: boolean; onPilih: () => void };
   /** Mode ikon saja (sidebar diringkas): tanpa label, pohon diratakan. */
   ringkas?: boolean;
   /** Lepas berkas/folder yang diseret ke sebuah drive (bukan drive aktif). */
@@ -104,14 +106,14 @@ export function IkonDrive({ d }: { d: Pick<DriveBerkasData, 'jenis' | 'hak'> }) 
   return <HardDrive aria-hidden />;
 }
 
-/** Bar pemakaian kecil satu drive: "x dari y" dengan warna 80/90/100%, atau "x · tanpa batas". */
+/** Bar pemakaian kecil satu drive: "x dari y" dengan warna 80/90/100%, atau "x · kuota belum diatur". */
 export function MeterDrive({ d, namaKolam }: { d: DriveBerkasData; namaKolam?: (kode: string) => string | undefined }) {
   const b = d.batas;
   if (!b && !d.pakai) return null;
   if (!b) {
     return (
       <span className="u-dd-meter" data-nada="aman" data-tanpa="">
-        <small>{formatBytes(d.pakai!.byte)} · tanpa batas</small>
+        <small title="Pustikom belum mengatur kuota untuk ruang ini">{formatBytes(d.pakai!.byte)} · kuota belum diatur</small>
       </span>
     );
   }
@@ -139,7 +141,7 @@ export function MeterDrive({ d, namaKolam }: { d: DriveBerkasData; namaKolam?: (
  * prodi/unit bagian) yang terindentasi dan bisa dilipat. Unit induk yang tidak bisa dibuka tampil sebagai penanda jalur
  * nonaktif. Pohon folder drive aktif tampil tepat di bawahnya.
  */
-export function DaftarDrive({ drive, aktif, onPilih, folder, dibagikan, terbaru, ringkas, onLepas, bisaLepas, memuat, className }: DaftarDriveProps) {
+export function DaftarDrive({ drive, aktif, onPilih, folder, dibagikan, terbaru, sampah, ringkas, onLepas, bisaLepas, memuat, className }: DaftarDriveProps) {
   const [sasaran, setSasaran] = React.useState<string | null>(null);
   const lepas = (d: DriveBerkasData) =>
     onLepas && d.hak !== null && d.id !== aktif && d.hak !== 'pembaca'
@@ -259,12 +261,13 @@ export function DaftarDrive({ drive, aktif, onPilih, folder, dibagikan, terbaru,
 
   return (
     <nav className={cn('u-dd', className)} aria-label="Drive berkas" data-ringkas={ringkas ? '' : undefined}>
-      {(terbaru || dibagikan) && (
+      {(terbaru || dibagikan || sampah) && (
         <div className="u-dd-bagian">
           <h4 className="u-dd-bagian-judul">Pintasan</h4>
           <ul role="tree" aria-label="Pintasan" className="u-dd-lain">
             {terbaru && pintas('Terbaru', <Clock aria-hidden />, terbaru)}
             {dibagikan && pintas('Dibagikan ke saya', <Users aria-hidden />, dibagikan)}
+            {sampah && pintas('Sampah', <Trash2 aria-hidden />, sampah)}
           </ul>
         </div>
       )}

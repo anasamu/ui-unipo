@@ -43,6 +43,50 @@ export interface InfoBerkas {
     /** Batas yang mengikat untuk ditampilkan: kuota ruang atau kolam unit (termasuk kolam induk yang diwariskan); null = tanpa batas. */
     batas?: { byte: number; terpakai_byte: number; sisa_byte: number; persen: number; sumber: string; kode: string | null; label: string } | null;
   } | null;
+  /**
+   * Batas unggah efektif dan sumbernya (SIAKAD 2027-01+): tingkat pengguna × unit × aplikasi pemanggil, digabung paling
+   * ketat. `teks` siap tampil, mis. "Maks 5 MB · PDF, JPG, PNG".
+   */
+  batas_unggah?: BatasUnggah | null;
+}
+
+/** Sumber sebuah nilai kebijakan penyimpanan (lingkup bawaan/unit/kelompok/peran/pengguna/aplikasi/konfigurasi). */
+export interface SumberBatas {
+  lingkup: string;
+  kunci: string;
+  label: string;
+}
+
+/** Batas unggah efektif (GET /v1/berkas/info → batas_unggah). */
+export interface BatasUnggah {
+  maks_byte: number | null;
+  maks_sumber?: SumberBatas | null;
+  /** Semua sumber ukuran yang berlaku (yang terkecil mengikat). */
+  maks?: Array<{ byte: number; sumber: SumberBatas }>;
+  izin?: Array<{ daftar: string[]; sumber: SumberBatas }>;
+  izin_dibatasi?: boolean;
+  larang?: string[];
+  larang_aplikasi?: string[];
+  aplikasi?: { klien: string; nama: string; diatur: boolean } | null;
+  teks: string;
+  /** Masa simpan sampah ruang ini (hari); null = tidak dikosongkan otomatis. */
+  sampah_hari?: number | null;
+}
+
+/** Teks batas unggah untuk area unggah: "Maks 5 MB · PDF, JPG, PNG" (SIAKAD lama: "Maks 50 MB per berkas"). */
+export function teksBatasUnggah(info: Pick<InfoBerkas, 'maks_byte' | 'batas_unggah'>): string {
+  return info.batas_unggah?.teks ?? `Maks ${fmtByte(info.maks_byte)} per berkas`;
+}
+
+const jenisTeks = (l: string[]) => [...new Set(l.map((e) => (e === 'jpeg' ? 'jpg' : e)))].map((e) => e.toUpperCase()).join(', ');
+
+/** Pesan awam yang menyebut sumber batasnya, sama dengan pesan server (Penjaga::pesanBatas). */
+function pesanBatas(s: SumberBatas | null | undefined, izin: string[], maks: number | null, ext: string | null, ukuran: number | null): string {
+  const ini = ukuran !== null ? ` (berkas ini ${fmtByte(ukuran)})` : ext !== null ? ` (berkas ini .${ext || 'tanpa ekstensi'})` : '';
+  if (s?.lingkup === 'aplikasi') return `${s.label} hanya menerima ${izin.length ? jenisTeks(izin) : 'berkas'}${maks !== null ? ` hingga ${fmtByte(maks)}` : ''}${ini}.`;
+  if (s?.lingkup === 'unit') return `Batas ${s.label.replace(/^Unit /, '')}: ${ukuran !== null ? `maks ${fmtByte(maks ?? 0)} per berkas` : `hanya menerima ${jenisTeks(izin)}`}${ini}.`;
+  if (ukuran !== null) return `Ukuran ${fmtByte(ukuran)} melebihi batas ${fmtByte(maks ?? 0)} per berkas.`;
+  return `Jenis .${ext || '(tanpa ekstensi)'} tidak diizinkan. Jenis yang boleh: ${jenisTeks(izin)}.`;
 }
 
 /**
@@ -52,8 +96,16 @@ export interface InfoBerkas {
 export function periksaUnggahan(info: InfoBerkas, file: { name: string; size: number }, terpakaiAntrean = 0): string | null {
   const ext = file.name.includes('.') ? (file.name.split('.').pop() ?? '').toLowerCase() : '';
   const e = ext === 'jpeg' ? 'jpg' : ext;
-  if (info.ekstensi.length && !info.ekstensi.includes(e) && !(e === 'jpg' && info.ekstensi.includes('jpeg'))) return `Jenis .${ext || '(tanpa ekstensi)'} tidak diizinkan. Jenis yang boleh: ${info.ekstensi.join(', ')}.`;
-  if (file.size > info.maks_byte) return `Ukuran ${fmtByte(file.size)} melebihi batas ${fmtByte(info.maks_byte)} per berkas.`;
+  const b = info.batas_unggah;
+  if (b?.larang?.includes(e)) return b.larang_aplikasi?.includes(e) ? `Aplikasi ${b.aplikasi?.nama ?? 'ini'} tidak menerima berkas .${ext}.` : `Jenis berkas .${ext} dilarang oleh aturan penyimpanan.`;
+  if (b?.izin?.length) {
+    // Sumber paling khusus (aplikasi, unit) disebut lebih dulu.
+    for (const c of [...b.izin].reverse()) if (!c.daftar.includes(e)) return pesanBatas(c.sumber, c.daftar, b.maks_byte, ext, null);
+  } else if (info.ekstensi.length && !info.ekstensi.includes(e) && !(e === 'jpg' && info.ekstensi.includes('jpeg'))) return `Jenis .${ext || '(tanpa ekstensi)'} tidak diizinkan. Jenis yang boleh: ${info.ekstensi.join(', ')}.`;
+  if (file.size > info.maks_byte) {
+    const izinApp = b?.maks_sumber?.lingkup === 'aplikasi' ? (b.izin?.find((c) => c.sumber.lingkup === 'aplikasi')?.daftar ?? []) : [];
+    return pesanBatas(b?.maks_sumber, izinApp, info.maks_byte, null, file.size);
+  }
   const sisa = info.kuota?.boleh_unggah_byte;
   if (sisa !== null && sisa !== undefined && file.size + terpakaiAntrean > sisa) {
     const k = info.kuota!;
@@ -218,7 +270,7 @@ export function UnggahBerkas({
   ...opsi
 }: UnggahBerkasProps) {
   const unggah = useUnggahBerkas(opsi);
-  const { data: info } = useInfoBerkas();
+  const { data: info } = useInfoBerkas(opsi.unit);
   const [daftar, setDaftar] = React.useState<UploadedFile[]>([]);
   const batal = React.useRef(new Map<string, AbortController>());
   React.useEffect(() => () => batal.current.forEach((c) => c.abort()), []);
@@ -255,7 +307,7 @@ export function UnggahBerkas({
         maxSize={maxSize ?? info?.maks_byte}
         disabled={disabled}
         title={title}
-        hint={hint}
+        hint={hint ?? (info ? teksBatasUnggah(info) : undefined)}
         onReject={(m) => onGalat?.(m, new File([], ''))}
       />
       <FileList

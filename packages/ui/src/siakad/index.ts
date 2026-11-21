@@ -48,6 +48,8 @@ export * from './manajer-berkas';
 export * from './berkas-finder';
 export * from './berkas-ruang';
 export * from './drive-berkas';
+export * from './sampah-berkas';
+export * from './batas-unggah';
 export * from './daftar-drive';
 export * from './penyimpanan';
 export * from './profil-kampus';

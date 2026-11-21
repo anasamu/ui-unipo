@@ -64,8 +64,9 @@ import { Input } from '../components/forms';
 import { ConfirmDialog, Dialog, Menu, Tooltip, type MenuEntry } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { formatBytes, formatDate } from '../lib/format';
-import { periksaUnggahan, unggahKeBerkas, useInfoBerkas, useUrlBerkas, type BerkasTerunggah, type InfoBerkas } from './berkas';
+import { periksaUnggahan, teksBatasUnggah, unggahKeBerkas, useInfoBerkas, useUrlBerkas, type BerkasTerunggah, type InfoBerkas } from './berkas';
 import { KuotaBerkas } from './penyimpanan';
+import { useAkunSaya } from './akun';
 import {
   BERKAS_BARU,
   DialogBagikanBerkas,
@@ -250,6 +251,7 @@ export function useAksiBerkas(modul?: string, unit?: string) {
       invalidateSiakad('berkas-folder');
       invalidateSiakad('berkas-isi');
       invalidateSiakad('berkas-periode');
+      invalidateSiakad('berkas-sampah');
     };
     const m = modul || undefined;
     const ruang = unit ? { unit } : { modul: m };
@@ -302,6 +304,8 @@ export function useAksiBerkas(modul?: string, unit?: string) {
       /** Enkripsi (`aktif` true) atau buka enkripsi isi berkas yang sudah ada. */
       enkripsi: (id: string, aktif: boolean) => jalan(() => siakad.request<BerkasManajer>({ method: 'POST', path: `/v1/berkas/${encodeURIComponent(id)}/enkripsi`, body: { aktif } })),
       hapusBerkas: (id: string[]) => jalan(() => siakad.request<{ dihapus: string[]; gagal: Array<{ id: string; pesan: string }> }>({ method: 'POST', path: '/v1/berkas/hapus-banyak', body: { id } })),
+      /** Kembalikan berkas dari Sampah (juga untuk "Urungkan" setelah menghapus). */
+      pulihkanBerkas: (id: string[]) => jalan(() => siakad.request<{ dipulihkan: string[] } & HasilBanyak>({ method: 'POST', path: '/v1/berkas/sampah/pulihkan', body: { id } })),
       unduh: async (b: BerkasManajer) => {
         const r = await siakad.request<{ url: string }>({ method: 'GET', path: `/v1/berkas/${encodeURIComponent(b.id)}/url`, query: { unduh: 1, ttl: 300 } });
         const a = document.createElement('a');
@@ -367,6 +371,9 @@ function IkonBerkas({ b, besar }: { b: BerkasManajer; besar?: boolean }) {
     </span>
   );
 }
+
+/** Ikon jenis berkas Kelola berkas (dipakai juga di Sampah). */
+export const IkonBerkasManajer = IkonBerkas;
 
 /** Gambar mini: tautan sementara diminta hanya saat kartu terlihat. */
 function GambarMini({ b }: { b: BerkasManajer }) {
@@ -1130,6 +1137,13 @@ export function ManajerBerkas({
   const bolehKelola = bolehKelolaProp && !bagi && !pembaca;
   const bolehHapus = bolehHapusProp && !bagi && !pembaca;
   const bolehKelolaRuang = bolehKelola && akses !== 'anggota';
+  // Hapus per berkas: pengelola ruang/pemilik ruang pribadi semua berkas; anggota unit hanya yang ia unggah. Berkas arsip
+  // institusi (SK, sertifikat) tidak punya pemilik, jadi pengunggahnya tidak bisa menghapus (server juga menolak).
+  const saya = useAkunSaya({ foto: false }).data?.akun?.username ?? null;
+  const bisaHapus = (b: BerkasManajer) => bolehHapus && (akses === 'pemilik' || akses === 'kelola' || (akses === 'anggota' && !!saya && b.pemilik === saya));
+  const bolehDihapus = (daftar: BerkasManajer[]) => daftar.filter(bisaHapus);
+  const masaSampah = info?.batas_unggah?.sampah_hari ?? null;
+  const teksMasaSampah = masaSampah ? ` selama ${masaSampah} hari` : '';
   const bolehBagikan = bolehBagikanProp && !bagi && !pembaca;
   // Atur siapa yang bisa melihat: pengelola unit (semua pilihan) dan staf unit (pengelola/staf saja).
   const bolehAturLihat = Boolean(unit) && !bagi && (akses === 'kelola' || akses === 'anggota');
@@ -1222,7 +1236,7 @@ export function ManajerBerkas({
   const [dialog, setDialog] = React.useState<DialogManajer>(null);
   const [gantiNama, setGantiNama] = React.useState<BerkasManajer | null>(null);
   const [pratinjau, setPratinjau] = React.useState<BerkasManajer | null>(null);
-  const [pesan, setPesan] = React.useState<{ nada: 'sukses' | 'galat'; teks: string } | null>(null);
+  const [pesan, setPesan] = React.useState<{ nada: 'sukses' | 'galat'; teks: string; aksi?: { label: string; jalan: () => void } } | null>(null);
   const sasaranMenu = React.useRef<Sasaran>({ jenis: 'kosong' });
   const [menuSasaran, setMenuSasaran] = React.useState<Sasaran>({ jenis: 'kosong' });
   const inputFile = React.useRef<HTMLInputElement>(null);
@@ -1299,7 +1313,7 @@ export function ManajerBerkas({
 
   React.useEffect(() => {
     if (!pesan) return;
-    const t = setTimeout(() => setPesan(null), 5000);
+    const t = setTimeout(() => setPesan(null), pesan.aksi ? 8000 : 5000);
     return () => clearTimeout(t);
   }, [pesan]);
 
@@ -1663,15 +1677,15 @@ export function ManajerBerkas({
                 : []),
             ] as MenuEntry[])
           : []),
-        ...(bolehHapus
+        ...(bolehDihapus(banyak).length
           ? ([
               sep,
               {
-                label: banyak.length > 1 ? `Hapus ${banyak.length} berkas` : 'Hapus',
+                label: bolehDihapus(banyak).length > 1 ? `Pindahkan ${bolehDihapus(banyak).length} berkas ke Sampah` : 'Pindahkan ke Sampah',
                 icon: <Trash2 aria-hidden />,
                 shortcut: 'Del',
                 destructive: true,
-                onSelect: () => setDialog({ jenis: 'hapus', berkas: banyak }),
+                onSelect: () => setDialog({ jenis: 'hapus', berkas: bolehDihapus(banyak) }),
               },
             ] as MenuEntry[])
           : []),
@@ -1716,9 +1730,9 @@ export function ManajerBerkas({
       void tempel(folder);
     } else if (e.key === 'Escape' && terpilih.size) {
       setTerpilih(new Set());
-    } else if ((e.key === 'Delete' || e.key === 'Backspace') && terpilih.size && bolehHapus) {
+    } else if ((e.key === 'Delete' || e.key === 'Backspace') && terpilih.size && bolehDihapus(berkasTerpilih).length) {
       e.preventDefault();
-      setDialog({ jenis: 'hapus', berkas: berkasTerpilih });
+      setDialog({ jenis: 'hapus', berkas: bolehDihapus(berkasTerpilih) });
     } else if (e.key === 'F2' && terpilih.size === 1 && bolehKelola) {
       e.preventDefault();
       setGantiNama(berkasTerpilih[0] ?? null);
@@ -2058,10 +2072,23 @@ export function ManajerBerkas({
       } else {
         const r = await aksi.hapusBerkas(dialog.berkas.map((b) => b.id));
         setTerpilih(new Set());
+        const urungkan = r.dihapus.length
+          ? {
+              label: 'Urungkan',
+              jalan: () => {
+                setPesan(null);
+                aksi
+                  .pulihkanBerkas(r.dihapus)
+                  .then((h) => setPesan({ nada: h.gagal.length ? 'galat' : 'sukses', teks: h.gagal.length ? h.gagal[0].pesan : `${h.dipulihkan.length === 1 ? 'Berkas' : `${h.dipulihkan.length} berkas`} dikembalikan.` }))
+                  .catch((e) => setPesan({ nada: 'galat', teks: pesanGalat(e) }));
+              },
+            }
+          : undefined;
+        const nama = r.dihapus.length === 1 ? (dialog.berkas.find((b) => b.id === r.dihapus[0])?.nama ?? 'Berkas') : `${r.dihapus.length} berkas`;
         setPesan(
           r.gagal.length
-            ? { nada: 'galat', teks: `${r.dihapus.length} berkas dihapus, ${r.gagal.length} gagal: ${r.gagal[0].pesan}` }
-            : { nada: 'sukses', teks: `${r.dihapus.length} berkas dipindah ke sampah.` },
+            ? { nada: 'galat', teks: `${r.dihapus.length} berkas dipindahkan ke Sampah, ${r.gagal.length} gagal: ${r.gagal[0].pesan}`, aksi: urungkan }
+            : { nada: 'sukses', teks: `${nama} dipindahkan ke Sampah.`, aksi: urungkan },
         );
       }
     } catch (e) {
@@ -2731,8 +2758,8 @@ export function ManajerBerkas({
                 </Button>
               </Tooltip>
             )}
-            {bolehHapus && (
-              <Button variant="ghost" size="sm" className="u-mb-bahaya" onClick={() => setDialog({ jenis: 'hapus', berkas: berkasTerpilih })}>
+            {bolehDihapus(berkasTerpilih).length > 0 && (
+              <Button variant="ghost" size="sm" className="u-mb-bahaya" title="Pindahkan ke Sampah (Del)" onClick={() => setDialog({ jenis: 'hapus', berkas: bolehDihapus(berkasTerpilih) })}>
                 <Trash2 aria-hidden />
                 Hapus
               </Button>
@@ -2904,14 +2931,14 @@ export function ManajerBerkas({
             {terpilih.size > 0 && !memuat ? `${terpilih.size} dari ${total} dipilih · ` : ''}
             {ringkasKaki}
           </span>
-          {bolehUnggah && info && <span className="u-mb-sembunyi-kecil">Maks {formatBytes(info.maks_byte)} per file</span>}
+          {bolehUnggah && info && <span className="u-mb-sembunyi-kecil" title={info.batas_unggah?.maks_sumber ? `Batas dari ${info.batas_unggah.maks_sumber.label}` : undefined}>{teksBatasUnggah(info)}</span>}
         </div>
 
         {seretLuar && (
           <div className="u-mb-lepas" aria-hidden>
             <CloudUpload />
             <b>Lepas untuk mengunggah ke {sasaranLepas ? namaDari(sasaranLepas) : tujuanUnggah}</b>
-            <small>File dan folder dari komputer, maksimal {info ? formatBytes(info.maks_byte) : '…'} per file</small>
+            <small>File dan folder dari komputer · {info ? teksBatasUnggah(info) : '…'}</small>
           </div>
         )}
 
@@ -2919,6 +2946,11 @@ export function ManajerBerkas({
           <div className="u-mb-pesan" data-nada={pesan.nada} role={pesan.nada === 'galat' ? 'alert' : 'status'}>
             {pesan.nada === 'galat' ? <CircleAlert aria-hidden /> : <CircleCheck aria-hidden />}
             <span>{pesan.teks}</span>
+            {pesan.aksi && (
+              <button type="button" className="u-mb-pesan-aksi" onClick={pesan.aksi.jalan}>
+                {pesan.aksi.label}
+              </button>
+            )}
             <button type="button" aria-label="Tutup pesan" onClick={() => setPesan(null)}>
               <X aria-hidden />
             </button>
@@ -3083,18 +3115,20 @@ export function ManajerBerkas({
         open={dialog?.jenis === 'hapus'}
         onOpenChange={(o) => !o && setDialog(null)}
         title={
-          dialog?.jenis === 'hapus' ? (dialog.f ? `Hapus folder ${dialog.f.nama}?` : dialog.berkas.length === 1 ? `Hapus ${dialog.berkas[0].nama}?` : `Hapus ${dialog.berkas.length} berkas?`) : ''
+          dialog?.jenis === 'hapus' ? (dialog.f ? `Hapus folder ${dialog.f.nama}?` : dialog.berkas.length === 1 ? `Pindahkan ${dialog.berkas[0].nama} ke Sampah?` : `Pindahkan ${dialog.berkas.length} berkas ke Sampah?`) : ''
         }
         description={
           dialog?.jenis === 'hapus'
             ? dialog.f
               ? dialog.f.total_berkas
-                ? `${dialog.f.total_berkas} berkas di dalamnya (termasuk subfolder) ikut pindah ke sampah. Admin masih bisa memulihkannya.`
+                ? `${dialog.f.total_berkas} berkas di dalamnya (termasuk subfolder) ikut pindah ke Sampah${teksMasaSampah}. Pulihkan dari Sampah bila perlu.`
                 : 'Folder ini kosong.'
-              : 'Berkas pindah ke sampah dan tidak tampil lagi. Admin masih bisa memulihkannya. Berkas yang masih dipakai data lain tidak bisa dihapus.'
+              : `Anda masih bisa memulihkannya dari Sampah${teksMasaSampah}. Berkas yang masih dipakai data lain tidak bisa dihapus.`
             : undefined
         }
-        confirmLabel={dialog?.jenis === 'hapus' ? (dialog.f ? 'Hapus folder' : dialog.berkas.length > 1 ? `Hapus ${dialog.berkas.length} berkas` : 'Hapus berkas') : 'Hapus'}
+        tone={dialog?.jenis === 'hapus' && !dialog.f ? 'primary' : 'danger'}
+        icon={dialog?.jenis === 'hapus' && !dialog.f ? <Trash2 /> : undefined}
+        confirmLabel={dialog?.jenis === 'hapus' ? (dialog.f ? 'Hapus folder' : 'Pindahkan ke Sampah') : 'Hapus'}
         onConfirm={jalankanHapus}
       />
       <DialogGantiNamaBerkas
