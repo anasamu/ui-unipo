@@ -236,6 +236,18 @@ function Kepala({ isi, aksi }: { isi: IsiBlok; aksi?: React.ReactNode }) {
   );
 }
 
+/** Animasi muncul saat digulir; mati di penyunting (isi harus selalu terlihat) dan bila gaya.animasi = false. */
+const AnimasiAktif = React.createContext(true);
+function Muncul({ as = 'div', tunda, className, children }: { as?: 'div' | 'li'; tunda?: number; className?: string; children: React.ReactNode }) {
+  const aktif = React.useContext(AnimasiAktif);
+  if (!aktif) return React.createElement(as, { className }, children);
+  return (
+    <Animasi as={as} jenis="masuk" tunda={tunda} pemicu="terlihat" className={className}>
+      {children}
+    </Animasi>
+  );
+}
+
 function Ikon({ nama }: { nama: unknown }) {
   const I = IKON_LANDING[s(nama)]?.Ikon ?? IKON_LANDING.bintang!.Ikon;
   return <I aria-hidden />;
@@ -326,7 +338,7 @@ function BlokFitur({ isi }: { isi: IsiBlok }) {
             </>
           );
           return (
-            <Animasi as="li" key={i} jenis="masuk" tunda={i} pemicu="terlihat" className="ul-fitur-butir">
+            <Muncul as="li" key={i} tunda={i} className="ul-fitur-butir">
               {href ? (
                 <a href={href} className="ul-fitur-isi">
                   {isiButir}
@@ -334,7 +346,7 @@ function BlokFitur({ isi }: { isi: IsiBlok }) {
               ) : (
                 <div className="ul-fitur-isi">{isiButir}</div>
               )}
-            </Animasi>
+            </Muncul>
           );
         })}
       </ul>
@@ -348,14 +360,14 @@ function DeretAngka({ butir, tampilan }: { butir: ButirAngka[]; tampilan: string
     return (
       <ul className="ul-angka-kartu">
         {butir.map((b, i) => (
-          <Animasi as="li" key={i} jenis="masuk" tunda={i} pemicu="terlihat">
+          <Muncul as="li" key={i} tunda={i}>
             <span className="u-feature-icon" aria-hidden>
               <Ikon nama={b.ikon} />
             </span>
             <strong>{b.nilai}</strong>
             <span>{b.label}</span>
             {b.keterangan && <small>{b.keterangan}</small>}
-          </Animasi>
+          </Muncul>
         ))}
       </ul>
     );
@@ -394,7 +406,7 @@ function BlokLangkah({ isi }: { isi: IsiBlok }) {
       <Kepala isi={isi} />
       <ol className="ul-langkah" data-tampilan={s(isi.tampilan) || 'alur'} style={{ '--n': butir.length } as React.CSSProperties}>
         {butir.map((b, i) => (
-          <Animasi as="li" key={i} jenis="masuk" tunda={i} pemicu="terlihat">
+          <Muncul as="li" key={i} tunda={i}>
             <span className="ul-langkah-no" aria-hidden>
               {i + 1}
             </span>
@@ -402,7 +414,7 @@ function BlokLangkah({ isi }: { isi: IsiBlok }) {
               <strong>{s(b.judul)}</strong>
               {s(b.teks) && <p>{s(b.teks)}</p>}
             </div>
-          </Animasi>
+          </Muncul>
         ))}
       </ol>
     </>
@@ -449,7 +461,7 @@ function BlokFaq({ isi }: { isi: IsiBlok }) {
   return (
     <>
       <Kepala isi={isi} />
-      <div className="ul-faq">
+      <div className="ul-faq" data-tampilan={tampilan}>
         <Faq items={items} variant={tampilan === 'kartu' ? 'card' : 'line'} openFirst={tampilan === 'kartu'} searchable={!!isi.cari} />
       </div>
     </>
@@ -688,7 +700,9 @@ export function BlokLandingView({ blok, terpilih, onPilih }: { blok: BlokLanding
     >
       <div className="ul-wadah">
         <BatasGalatBlok label={SKEMA_BLOK[blok.tipe].label} pratinjau={k.pratinjau}>
-          <R isi={blok.isi ?? {}} />
+          <AnimasiAktif.Provider value={!k.pratinjau && g.animasi !== false}>
+            <R isi={blok.isi ?? {}} />
+          </AnimasiAktif.Provider>
         </BatasGalatBlok>
       </div>
     </section>

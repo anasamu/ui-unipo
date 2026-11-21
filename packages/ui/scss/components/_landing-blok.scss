@@ -29,27 +29,22 @@
   &[data-latar='lembut'] {
     background: color-mix(in oklab, var(--u-primary) 3%, var(--u-muted));
   }
-  &[data-latar='utama'],
-  &[data-latar='gelap'],
-  &[data-latar='aksen'],
-  &[data-latar='gambar'] {
-    --ul-redup: color-mix(in oklab, currentColor 78%, transparent);
-    --ul-aksen: currentColor;
-  }
+  // Latar berwarna: hanya teks yang berada langsung di atas latar (kepala, hero, prosa, langkah, dll.) yang ikut
+  // berwarna terang; kartu (FAQ kartu, testimoni, berita, kartu fitur) tetap memakai warna permukaannya sendiri.
   &[data-latar='utama'] {
+    --ul-teks: var(--u-primary-foreground);
     background: var(--u-primary);
-    color: var(--u-primary-foreground);
   }
   &[data-latar='aksen'] {
+    --ul-teks: var(--u-secondary-foreground);
     background: var(--u-secondary);
-    color: var(--u-secondary-foreground);
   }
   &[data-latar='gelap'] {
+    --ul-teks: #f8fafc;
     background: color-mix(in oklab, var(--u-primary) 16%, #070a12);
-    color: #f8fafc;
   }
   &[data-latar='gambar'] {
-    color: #fff;
+    --ul-teks: #fff;
     background:
       linear-gradient(180deg, rgb(2 6 23 / 0.72), rgb(2 6 23 / 0.6)),
       var(--ul-latar-gambar, linear-gradient(135deg, var(--u-primary), color-mix(in oklab, var(--u-primary) 45%, black))) center / cover;
@@ -58,18 +53,35 @@
   &[data-latar='gelap'],
   &[data-latar='aksen'],
   &[data-latar='gambar'] {
+    --ul-redup: color-mix(in oklab, var(--ul-teks) 78%, transparent);
+    --ul-aksen: var(--ul-teks);
+    .ul-kepala,
+    .u-hero-text,
+    .ul-prosa,
+    .ul-langkah:not([data-tampilan='kartu']),
+    .ul-fitur:not([data-tampilan='kartu']),
+    .ul-angka-pita,
+    .ul-kontak-info,
+    .ul-media-teks,
+    .ul-kabar-daftar,
+    .ul-faq[data-tampilan='garis'],
+    .ul-dua,
+    .ul-logo {
+      color: var(--ul-teks);
+    }
     .u-hero-desc,
     .u-hero-stats dt,
-    .u-feature-text,
-    .ul-catatan {
+    .ul-fitur:not([data-tampilan='kartu']) .u-feature-text,
+    .ul-catatan,
+    .u-statstrip dt {
       color: var(--ul-redup);
     }
     .u-hero-stats {
-      border-color: color-mix(in oklab, currentColor 22%, transparent);
+      border-color: color-mix(in oklab, var(--ul-teks) 22%, transparent);
     }
     .ul-fitur[data-tampilan='polos'] .u-feature-icon,
     .ul-fitur[data-tampilan='garis'] .u-feature-icon {
-      background: color-mix(in oklab, currentColor 14%, transparent);
+      background: color-mix(in oklab, var(--ul-teks) 14%, transparent);
       color: inherit;
     }
   }
@@ -122,13 +134,13 @@
   gap: 0.625rem;
   max-width: 46rem;
 }
-.ul-eyebrow {
+.ul-halaman .ul-eyebrow {
   margin: 0;
   font-size: 0.875rem;
   font-weight: var(--u-weight-semibold);
   color: var(--ul-aksen);
 }
-.ul-judul {
+.ul-halaman .ul-judul {
   margin: 0;
   font-family: var(--u-font-heading);
   font-size: clamp(1.625rem, 1.2rem + 1.6cqi, 2.375rem);
@@ -137,7 +149,7 @@
   letter-spacing: -0.022em;
   text-wrap: balance;
 }
-.ul-desk {
+.ul-halaman .ul-desk {
   margin: 0;
   font-size: clamp(1rem, 0.95rem + 0.25cqi, 1.125rem);
   line-height: 1.65;
@@ -515,8 +527,9 @@ a.ul-fitur-isi:focus-visible {
   list-style: none;
   img {
     display: block;
+    width: auto;
+    height: 2.75rem;
     max-width: 9rem;
-    max-height: 3rem;
     object-fit: contain;
     transition:
       filter var(--u-duration-base) var(--u-ease-out),

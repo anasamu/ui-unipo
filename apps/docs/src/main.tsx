@@ -15,6 +15,7 @@ import './mock/pilih';
 import './mock/katalog';
 import './mock/berkas';
 import './mock/tema';
+import './mock/landing';
 import './mock/profil-kampus';
 import './mock/surat';
 import './mock/alur';

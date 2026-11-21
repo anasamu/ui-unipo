@@ -32,6 +32,7 @@ import { Badge, Button, Spinner } from '../components/actions';
 import { Alert, Empty, Tabs } from '../components/display';
 import { Field, Input, SegmentedControl, Switch, Textarea } from '../components/forms';
 import { Select } from '../components/select';
+import { PilihIkon, type IkonPilihan } from '../components/pilih-tampilan';
 import { ConfirmDialog, Dialog, Sheet, useToast } from '../components/overlays';
 import { HalamanLanding, type AksiLanding, type SlotLanding } from '../components/landing-blok';
 import { POTONGAN_LANDING, TEMPLAT_LANDING, landingBawaan, templatLanding } from '../components/landing-kit';
@@ -92,6 +93,8 @@ export function BingkaiPratinjau({ lebar, gelap, cssTema, judul = 'Pratinjau hal
     doc.open();
     doc.write('<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0"></body></html>');
     doc.close();
+    // Kelas akar aplikasi (huruf, warna dasar unipo-ui) ikut dipasang di dokumen pratinjau.
+    doc.body.className = ['u-root', ...Array.from(document.body.classList).filter((c) => c !== 'dark')].join(' ');
     let jadwal = 0;
     const salin = () => {
       jadwal = 0;
@@ -147,6 +150,9 @@ export function BingkaiPratinjau({ lebar, gelap, cssTema, judul = 'Pratinjau hal
 }
 
 // ---------------------------------------------------------------- isian
+
+/** Ikon blok landing dalam bentuk PilihIkon (G4). */
+const IKON_PILIH: Record<string, IkonPilihan> = Object.fromEntries(Object.entries(IKON_LANDING).map(([k, v]) => [k, { ikon: v.Ikon, label: v.label, kata: k }]));
 
 const ILUSTRASI_PILIHAN = ['portal', 'lms', 'pmb', 'tracer', 'karier', 'alumni', 'akademik', 'kemahasiswaan', 'layanan', 'fakultas', 'lppm', 'spmi', 'humas', 'sdm', 'keu', 'perpustakaan', 'wisuda', 'pendaftaran', 'e-learning', 'selamat-datang', 'pengumuman'];
 
@@ -299,13 +305,7 @@ function Kolom({ kolom, isi, ubah, k }: { kolom: KolomBlok; isi: IsiBlok; ubah: 
     case 'ikon':
       return (
         <Field label={kolom.label}>
-          <Select
-            size="sm"
-            value={str || 'bintang'}
-            onValueChange={(x) => x && set(x)}
-            options={Object.entries(IKON_LANDING).map(([value, { label, Ikon }]) => ({ value, label, icon: <Ikon aria-hidden /> }))}
-            aria-label={kolom.label}
-          />
+          <PilihIkon value={str || 'bintang'} onValueChange={(x) => set(x ?? undefined)} ikon={IKON_PILIH} bisaDihapus={false} aria-label={kolom.label} />
         </Field>
       );
     case 'ilustrasi':
@@ -452,8 +452,8 @@ function PanelGaya({ blok, ubah, k }: { blok: BlokLanding; ubah: (g: GayaBlok) =
       <Field label="Perataan judul">
         <SegmentedControl fullWidth value={g.rata ?? 'kiri'} onValueChange={(v) => set('rata', v === 'kiri' ? undefined : v)} options={[{ value: 'kiri', label: 'Kiri' }, { value: 'tengah', label: 'Tengah' }]} aria-label="Perataan judul" />
       </Field>
-      <Field label="Tampil di" description="Bagian yang disembunyikan tampil samar di pratinjau penyunting.">
-        <SegmentedControl fullWidth value={g.sembunyi ? (g.sembunyi === 'ponsel' ? 'desktop' : 'ponsel') : 'semua'} onValueChange={(v) => set('sembunyi', v === 'semua' ? undefined : v === 'desktop' ? 'ponsel' : 'desktop')} options={[{ value: 'semua', label: 'Semua layar' }, { value: 'desktop', label: 'Hanya layar lebar' }, { value: 'ponsel', label: 'Hanya ponsel' }]} aria-label="Tampil di" />
+      <Field label="Tampil di layar" description="Bagian yang disembunyikan tampil samar di pratinjau penyunting.">
+        <SegmentedControl fullWidth value={g.sembunyi ? (g.sembunyi === 'ponsel' ? 'desktop' : 'ponsel') : 'semua'} onValueChange={(v) => set('sembunyi', v === 'semua' ? undefined : v === 'desktop' ? 'ponsel' : 'desktop')} options={[{ value: 'semua', label: 'Semua' }, { value: 'desktop', label: 'Layar lebar' }, { value: 'ponsel', label: 'Ponsel' }]} aria-label="Tampil di" />
       </Field>
       <div className="upl-dua">
         <Field label="Label di menu atas" description="Kosong = tidak masuk menu.">
@@ -688,8 +688,9 @@ export function PenyuntingLanding({ aplikasi, lingkup, halaman = 'beranda', nama
   const q = useSiakadQuery<DataHalamanLanding>(kunciQ, (s, signal) => s.request<DataHalamanLanding>({ method: 'GET', path: pathHalaman(aplikasi, halaman), query: { draf: 1, ...(lingkup ? { lingkup } : {}) } }, { signal }), { staleTime: 0 });
   const [riwayat, setRiwayat] = React.useState(() => mulaiRiwayat({ versi: 1, blok: [] } as DokumenLanding));
   const [dasar, setDasar] = React.useState<{ dok: DokumenLanding; revisi: number; adaDraf: boolean } | null>(null);
+  const [versiTerbit, setVersiTerbit] = React.useState(0);
   const [pilih, setPilih] = React.useState<string | null>(null);
-  const [layar, setLayar] = React.useState<Layar>('desktop');
+  const [layar, setLayar] = React.useState<Layar>(() => (typeof window !== 'undefined' && window.innerWidth < 640 ? 'ponsel' : typeof window !== 'undefined' && window.innerWidth < 1024 ? 'tablet' : 'desktop'));
   const [gelap, setGelap] = React.useState(false);
   const [panel, setPanel] = React.useState<Panel>('pratinjau');
   const [tabProp, setTabProp] = React.useState<'isi' | 'gaya'>('isi');
@@ -713,6 +714,7 @@ export function PenyuntingLanding({ aplikasi, lingkup, halaman = 'beranda', nama
       const awal = d.draf ? normalisasiDokumen(d.draf) : d.terbit ? normalisasiDokumen(d.terbit) : landingBawaan(bawaan ?? aplikasi);
       setRiwayat(mulaiRiwayat(awal));
       setDasar({ dok: awal, revisi: d.revisi ?? 0, adaDraf: !!d.draf });
+      setVersiTerbit(d.versi ?? 0);
       setPilih((p) => (p && awal.blok.some((b) => b.id === p) ? p : (awal.blok[0]?.id ?? null)));
       setKonflik(false);
     },
@@ -801,6 +803,7 @@ export function PenyuntingLanding({ aplikasi, lingkup, halaman = 'beranda', nama
       const terbit = r.data.terbit ? normalisasiDokumen(r.data.terbit) : dok;
       setRiwayat((x) => ({ ...x, kini: terbit }));
       setDasar({ dok: terbit, revisi: r.data.revisi ?? dasar.revisi + 1, adaDraf: false });
+      setVersiTerbit(r.data.versi);
       setCatatan('');
       invalidateSiakad('tema-halaman');
       toast.add({ title: `Versi ${r.data.versi} terbit`, description: 'Halaman depan baru langsung tampil untuk semua pengunjung.', type: 'success' });
@@ -870,9 +873,9 @@ export function PenyuntingLanding({ aplikasi, lingkup, halaman = 'beranda', nama
     <Badge variant="info" dot>
       Draf tersimpan
     </Badge>
-  ) : q.data.versi ? (
+  ) : versiTerbit ? (
     <Badge variant="success" dot>
-      Versi {q.data.versi} tampil
+      Versi {versiTerbit} tampil
     </Badge>
   ) : (
     <Badge variant="neutral">Belum pernah terbit</Badge>
@@ -914,7 +917,7 @@ export function PenyuntingLanding({ aplikasi, lingkup, halaman = 'beranda', nama
               <Button size="sm" variant="outline" loading={proses === 'simpan'} disabled={!berubah || !!proses} onClick={() => void simpanDraf()} title="Simpan draf (Ctrl+S)">
                 <Save /> <span className="upl-sembunyi-sempit">Simpan draf</span>
               </Button>
-              <Button size="sm" disabled={!!proses || (!berubah && !dasar.adaDraf && !!q.data.versi)} onClick={() => setBuka('terbit')}>
+              <Button size="sm" disabled={!!proses || (!berubah && !dasar.adaDraf && !!versiTerbit)} onClick={() => setBuka('terbit')}>
                 <Send /> Terbitkan
               </Button>
             </>
