@@ -264,7 +264,7 @@ export function useTemplatAturan() {
 // ================================================================ Lencana & kalimat
 
 const NADA_DASAR: Record<StatusDasarSk, 'success' | 'warning' | 'danger' | 'neutral'> = { berlaku: 'success', diubah: 'warning', tidak_berlaku: 'danger', belum: 'neutral' };
-const LABEL_DASAR: Record<StatusDasarSk, string> = { berlaku: 'Berdasar SK', diubah: 'SK dasar diubah', tidak_berlaku: 'Dasar SK tidak berlaku', belum: 'Belum berdasar SK' };
+const LABEL_DASAR: Record<StatusDasarSk, string> = { berlaku: 'SK dasar berlaku', diubah: 'SK dasar diubah SK lain', tidak_berlaku: 'SK dasar dicabut', belum: 'Belum ada SK dasar' };
 
 /** Lencana status dasar SK aturan. `ringkas` = tanpa nomor SK. */
 export function LencanaDasarSk({ dasar, ringkas, className }: { dasar?: DasarSkAturan | null; ringkas?: boolean; className?: string }) {
@@ -280,8 +280,10 @@ export function LencanaDasarSk({ dasar, ringkas, className }: { dasar?: DasarSkA
   );
 }
 
-const fmtAngka = (v: unknown, s?: SlotTemplat) => {
-  if (v === null || v === undefined || v === '') return null;
+const fmtAngka = (v0: unknown, s?: SlotTemplat) => {
+  if (v0 === null || v0 === undefined || v0 === '') return null;
+  // "2.5" / "2,5" diketik pengguna tampil sebagai angka berkoma (2,50).
+  const v = typeof v0 === 'string' && (s?.tipe === 'angka' || s?.tipe === 'uang') && /^-?[\d.,]+$/.test(v0.trim()) ? Number(s?.tipe === 'uang' ? v0.replace(/[.,]/g, '') : v0.replace(',', '.')) : v0;
   if (s?.tipe === 'uang' && typeof v === 'number') return `Rp${v.toLocaleString('id-ID')}`;
   if (typeof v === 'number') return v.toLocaleString('id-ID', { maximumFractionDigits: 2, minimumFractionDigits: s?.kode?.includes('ips') || s?.kode?.includes('ipk') ? 2 : 0 });
   return String(v);
@@ -381,12 +383,18 @@ export function PemilihSkDasar({
               {h.unit_pengaju ? `; ${h.unit_pengaju.nama} berada di bawahnya.` : '.'}
             </Alert>
           ) : (
-            <Alert variant="danger" title="SK ini belum bisa menjadi dasar aturan">
-              <ul className="u-ask-masalah">
-                {h.masalah.map((m) => (
-                  <li key={m.kode}>{m.pesan}</li>
-                ))}
-              </ul>
+            <Alert variant="danger" title="SK ini belum bisa menjadi dasar aturan. Pilih SK lain.">
+              {h.masalah[0]?.pesan}
+              {h.masalah.length > 1 && (
+                <details className="u-ask-rinci">
+                  <summary>Alasan lain ({h.masalah.length - 1})</summary>
+                  <ul className="u-ask-masalah">
+                    {h.masalah.slice(1).map((m) => (
+                      <li key={m.kode}>{m.pesan}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
             </Alert>
           )}
           {h.peringatan.map((p) => (
@@ -410,7 +418,7 @@ export function PratinjauRantai({ rantai, ringkas, className }: { rantai: Simula
     <div className={cn('u-ask-rantai', className)}>
       {!ringkas && (
         <p className="u-ask-rantai-asal">
-          <Route aria-hidden /> {rantai.pengaturan ? `${rantai.pengaturan.nama} · ${rantai.alasan}` : rantai.alasan}
+          <Route aria-hidden /> {rantai.tahap.map((t) => t.validator.map((v) => v.label_nyata ?? v.label).join('/')).join(' → ')} · {rantai.alasan}
           {rantai.opsi.ulang_dari === 'tahap_pengembali' ? ' · Bila dikembalikan, ajuan ulang mulai dari tahap yang mengembalikan' : ''}
         </p>
       )}
@@ -554,7 +562,7 @@ export function EditorRantaiValidator({ value, onChange, katalog, galat }: { val
   };
   const opsiUnit = [
     ...katalog.unit_relatif.map((u) => ({ value: u.kode, label: u.label })),
-    ...katalog.unit.filter((u) => !['prodi', 'kampus'].includes(u.jenis)).map((u) => ({ value: u.kode, label: `${u.singkatan || u.nama} (tetap)` })),
+    ...katalog.unit.filter((u) => !['prodi', 'kampus'].includes(u.jenis)).map((u) => ({ value: u.kode, label: `Unit ${u.singkatan || rapikanNamaUnit(u.nama)}` })),
   ];
   const opsiKode = (j: JenisValidator) =>
     j === 'jabatan' ? katalog.jabatan.map((x) => ({ value: x.kode, label: x.nama })) : j === 'peran' ? katalog.peran.map((x) => ({ value: x.kode, label: x.nama })) : [];
@@ -903,7 +911,7 @@ export function SimulasiValidator({ unitAwal, kategoriAwal = 'akademik', ringkas
           <Field label="Jenis aturan">
             <Pilihan tampilan="daftar" options={(katalog.data?.kategori ?? []).map((k) => ({ value: k.kode, label: k.label }))} value={kategori} required onValueChange={(x) => setKategori(x ?? 'akademik')} />
           </Field>
-          <Field label="Pengaju" optional description="Nama pengguna; pengaju dikeluarkan dari validator.">
+          <Field label="Akun pengaju" optional description="Isi untuk melihat bahwa pengaju tidak memvalidasi usulannya sendiri.">
             <Input value={pengaju} onChange={(e) => setPengaju(e.target.value)} placeholder="mis. operator.fik" />
           </Field>
         </div>
@@ -991,7 +999,7 @@ export function ValidatorAturan({ className }: { className?: string }) {
   return (
     <div className={cn('u-ask', className)}>
       <Alert variant="info" icon={<ShieldCheck />} title="Cara kerja">
-        Pengajuan aturan dari sebuah unit melewati tahap validasi berurutan. Rantai unit itu sendiri dipakai lebih dulu, lalu rantai yang diwariskan unit induk, lalu rantai untuk jenis unitnya. Tanpa rantai: pejabat penyetuju kategori. Pengaju tidak pernah memvalidasi pengajuannya sendiri.
+        Aturan yang diajukan sebuah unit diperiksa berurutan, mis. usulan prodi → Dekan → LP2M → Rektor. Unit yang punya rantai sendiri memakai rantainya; bila tidak, ikut rantai unit induk atau rantai untuk unit sejenis; bila tidak ada sama sekali, disetujui Wakil Rektor bidangnya. Pengaju tidak pernah memeriksa usulannya sendiri.
       </Alert>
       <Tabs
         items={[
@@ -1176,9 +1184,9 @@ export function DasarSkAturanDaftar({ kategori, awal = 'belum', className }: { k
     <div className={cn('u-ask', className)}>
       <SegmentedControl
         options={[
-          { value: 'belum', label: `Belum berdasar SK${j ? ` (${j.belum})` : ''}` },
-          { value: 'tinjau', label: `Perlu ditinjau${j ? ` (${j.tinjau})` : ''}` },
-          { value: 'berlaku', label: `Berdasar SK${j ? ` (${j.berlaku})` : ''}` },
+          { value: 'belum', label: `Belum ada SK dasar${j ? ` (${j.belum})` : ''}` },
+          { value: 'tinjau', label: `SK dasar dicabut/diubah${j ? ` (${j.tinjau})` : ''}` },
+          { value: 'berlaku', label: `SK dasar berlaku${j ? ` (${j.berlaku})` : ''}` },
         ]}
         value={status}
         onValueChange={setStatus}
@@ -1207,7 +1215,7 @@ export function DasarSkAturanDaftar({ kategori, awal = 'belum', className }: { k
             ))}
           </div>
         ) : (
-          <Empty icon={<CircleCheck />} title="Semua aturan aktif sudah berdasar SK" />
+          <Empty icon={<CircleCheck />} title="Semua aturan yang berlaku sudah punya SK dasar" />
         )
       ) : q.data.data.length ? (
         <ul className="u-ask-baris">
@@ -1217,13 +1225,14 @@ export function DasarSkAturanDaftar({ kategori, awal = 'belum', className }: { k
                 <strong>{b.nama}</strong>
                 <span className="u-ask-sub">
                   {b.unit?.singkatan || b.unit?.nama} · {b.dasar_sk.sk ? `SK ${b.dasar_sk.sk.nomor}${b.dasar_sk.sk.penerbit ? ` (${b.dasar_sk.sk.penerbit})` : ''}` : ''}
+                  {b.dasar_sk.ditandai_at ? ` · sejak ${b.dasar_sk.ditandai_at.slice(0, 10)}; aturan tetap berlaku sampai diputuskan` : ''}
                   {b.dasar_sk.catatan_tinjau ? ` · ${b.dasar_sk.catatan_tinjau}` : ''}
                 </span>
               </div>
               <LencanaDasarSk dasar={b.dasar_sk} ringkas />
               {status === 'tinjau' && (
                 <Button size="sm" variant="outline" onClick={() => setTinjau(b)}>
-                  <RefreshCw /> Tinjau
+                  <RefreshCw /> Putuskan
                 </Button>
               )}
             </li>
@@ -1394,7 +1403,7 @@ export function WizardTemplatAturan({
                 >
                   <strong>{x.judul}</strong>
                   <span>{x.keterangan}</span>
-                  {!x.siap && <Badge variant="outline">Segera</Badge>}
+                  {!x.siap && <Badge variant="outline">Segera tersedia</Badge>}
                 </button>
               ))}
             </div>
@@ -1423,12 +1432,12 @@ export function WizardTemplatAturan({
                   }}
                 >
                   <strong>
-                    {t.judul} {!t.siap && <Badge variant="outline">Segera</Badge>}
+                    {t.judul} {!t.siap && <Badge variant="outline">Segera tersedia</Badge>}
                   </strong>
                   <KalimatTemplat templat={t} isian={bawaanIsian(t)} />
                   <span className="u-ask-sub">
-                    Akibat: {t.akibat_label}
-                    {t.titik_judul ? ` · diperiksa saat ${t.titik_judul.toLowerCase()}` : ''}
+                    Bila tidak dipenuhi: {t.akibat_label.toLowerCase()}
+                    {t.titik_judul ? ` · diperiksa saat ${t.titik_judul.charAt(0).toLowerCase()}${t.titik_judul.slice(1)}` : ''}
                   </span>
                 </button>
               ))}
@@ -1452,7 +1461,7 @@ export function WizardTemplatAturan({
         },
         {
           id: 'cakupan',
-          title: 'Berlaku untuk',
+          title: 'Lingkup',
           description: 'Aturan hanya berlaku di unit Anda; batasi ke fakultas atau prodi tertentu.',
           validate: () => (nama.trim().length >= 3 ? null : 'Beri nama aturan.'),
           content: (
@@ -1487,7 +1496,7 @@ export function WizardTemplatAturan({
         },
         {
           id: 'sk',
-          title: 'Dasar SK',
+          title: 'SK dasar',
           description: 'SK pimpinan yang menjadi dasar aturan ini dan siapa yang akan memvalidasinya.',
           validate: () => (simpanSaja ? null : !sk ? 'Pilih SK dasar, atau centang "Simpan sebagai draf dulu".' : hasilSk && !hasilSk.ok ? hasilSk.masalah[0]?.pesan ?? 'SK ini belum bisa menjadi dasar aturan.' : null),
           content: (
@@ -1525,7 +1534,11 @@ export function WizardTemplatAturan({
                     items: [{ label: 'Lingkup', value: prodiPilih.length ? prodiPilih.map((p) => prodi.data?.find((x) => x.kode_prodi === p)?.nama_prodi ?? p).join(', ') : fakPilih.length ? fakPilih.map((f) => fak.data?.find((x) => x.kode_fakultas === f)?.nama_fakultas ?? f).join(', ') : 'Semua' }],
                     onEdit: () => setLangkah(3),
                   },
-                  { title: 'Validasi', items: [{ label: 'Tahap', value: sim.data ? sim.data.tahap.map((t) => t.validator.map((v) => v.label_nyata ?? v.label).join('/')).join(' → ') : '–' }, { label: 'Diajukan', value: simpanSaja ? 'Belum, simpan sebagai draf' : 'Ya, setelah disimpan' }] },
+                  { title: 'SK dasar', items: [{ label: 'SK', value: hasilSk?.sk ? `${hasilSk.sk.nomor}${hasilSk.sk.perihal ? ` · ${hasilSk.sk.perihal}` : ''}${hasilSk.penerbit ? ` (${hasilSk.penerbit.nama})` : ''}` : simpanSaja ? 'Dipilih nanti saat mengajukan' : '–' }], onEdit: () => setLangkah(4), missing: !sk && !simpanSaja ? 'Belum dipilih' : undefined },
+                  {
+                    title: 'Yang memvalidasi',
+                    items: (sim.data?.tahap ?? []).map((t) => ({ label: `${t.urut}. ${t.validator.map((v) => v.label_nyata ?? v.label).join(' / ')}`, value: t.orang.map((o) => o.nama ?? o.username).join(', ') || 'Belum ada orang' })),
+                  },
                 ]}
               />
               <Alert variant="info">Setelah disimpan, coba aturan pada mahasiswa contoh di tab “Uji” sebelum validator memutus.</Alert>

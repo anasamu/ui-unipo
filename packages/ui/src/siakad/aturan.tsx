@@ -4523,13 +4523,13 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
         </div>
       )}
       {a.dasar_sk && (a.dasar_sk.status === 'tidak_berlaku' || a.dasar_sk.status === 'diubah') && a.status === 'aktif' && (
-        <Alert variant={a.dasar_sk.status === 'tidak_berlaku' ? 'danger' : 'warning'} title={a.dasar_sk.status === 'tidak_berlaku' ? 'Dasar SK tidak berlaku lagi' : 'SK dasar telah diubah'}>
+        <Alert variant={a.dasar_sk.status === 'tidak_berlaku' ? 'danger' : 'warning'} title={a.dasar_sk.status === 'tidak_berlaku' ? 'SK dasar dicabut' : 'SK dasar diubah SK lain'}>
           SK {a.dasar_sk.sk?.nomor} {a.dasar_sk.status === 'tidak_berlaku' ? 'dicabut atau tidak berlaku' : 'diubah oleh SK lain'}. Aturan tetap berlaku sampai ditinjau ulang
-          {a.dasar_sk.ditinjau ? ` (sudah ditinjau: ${a.dasar_sk.catatan_tinjau ?? ''})` : ': ganti SK dasar, atau nonaktifkan, di Dasar SK aturan'}.
+          {a.dasar_sk.ditinjau ? ` (sudah ditinjau: ${a.dasar_sk.catatan_tinjau ?? ''})` : ': pilih SK pengganti atau nonaktifkan, di tab SK dasar'}.
         </Alert>
       )}
       {a.dasar_sk?.status === 'belum' && a.status === 'aktif' && a.boleh_atur && (
-        <Alert variant="warning" title="Belum berdasar SK">Aturan ini sudah berlaku sebelum dasar SK diwajibkan. Lengkapi SK dasarnya di Dasar SK aturan.</Alert>
+        <Alert variant="warning" title="Belum ada SK dasar">Aturan ini sudah berlaku sebelum SK dasar diwajibkan. Lampirkan SK dasarnya di tab SK dasar.</Alert>
       )}
       {!adaDasar && (a.status === 'draf' || a.status === 'dikembalikan') && a.boleh_atur && !dihapus && (
         <Alert variant="warning" title={a.bawaan ? 'Aturan bawaan menunggu SK' : 'Belum bisa diajukan'}>
@@ -4543,7 +4543,7 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
       )}
       {diajukan && usulan?.validasi && (
         <Alert variant="info" title={usulan.pemeriksa_label ?? 'Menunggu validasi'}>
-          {a.status === 'aktif' ? 'Versi sekarang tetap berlaku sampai versi baru divalidasi.' : 'Aturan belum diperiksa sampai semua tahap validasi menyetujui.'} Tahap {usulan.validasi.tahap_ke} dari {usulan.validasi.jumlah_tahap}
+          {a.status === 'aktif' ? 'Versi sekarang tetap berlaku sampai versi baru disetujui semua pemeriksa.' : 'Aturan mulai berlaku setelah semua pemeriksa menyetujui.'} Tahap {usulan.validasi.tahap_ke} dari {usulan.validasi.jumlah_tahap}
           {usulan.validasi.berikutnya.length ? `: ${usulan.validasi.berikutnya.map((o) => o.nama ?? o.username).join(', ')}` : ''}
           {usulan.diajukan_at ? ` · diajukan ${formatWaktuAturan(usulan.diajukan_at, { jam: true })}` : ''}. Dasar: SK {usulan.validasi.sk_dasar?.nomor ?? '–'}
           {usulan.validasi.sk_dasar?.penerbit ? ` (${usulan.validasi.sk_dasar.penerbit.nama})` : ''}.
@@ -5112,21 +5112,21 @@ export function PengingatSkAturan({ unit, kategori, href, onBuka, className }: {
     <Alert
       variant="warning"
       className={className}
-      title={pakaiDasar ? `${n} aturan berlaku belum berdasar SK` : `${n} aturan bawaan belum punya SK`}
+      title={pakaiDasar ? `${n} aturan berlaku belum ada SK dasar` : `${n} aturan bawaan belum punya SK`}
       actions={
         href ? (
           <Button size="sm" render={<a href={href} />}>
-            Lengkapi SK dasar
+            Lampirkan SK dasar
           </Button>
         ) : onBuka ? (
           <Button size="sm" onClick={onBuka}>
-            Lengkapi SK dasar
+            Lampirkan SK dasar
           </Button>
         ) : undefined
       }
     >
       <span className="u-aturan-pengingat-isi">
-        Sudah berlaku; lengkapi SK dasarnya:{' '}
+        Misalnya{' '}
         {daftar
           .slice(0, 3)
           .map(([nm, j]) => (j > 1 ? `${nm} (${j} unit)` : nm))
@@ -5266,7 +5266,7 @@ export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik d
           ...(saya.data?.admin
             ? [{ value: 'sampah' as const, label: 'Sampah', icon: <Trash2 />, content: <DaftarAturan filter={{ kategori, titik, terhapus: true }} onBuka={(a) => setBuka(a.id)} /> }]
             : []),
-          ...(bolehTambah ? [{ value: 'dasar' as const, label: 'Dasar SK', icon: <FileBadge />, content: <DasarSkAturanDaftar kategori={kategori} /> }] : []),
+          ...(bolehTambah ? [{ value: 'dasar' as const, label: 'SK dasar', icon: <FileBadge />, content: <DasarSkAturanDaftar kategori={kategori} /> }] : []),
           { value: 'pengatur', label: 'Pengatur', icon: <ShieldCheck />, content: <PengaturAturan /> },
           ...(saya.data?.admin ? [{ value: 'penyetuju' as const, label: 'Pejabat penyetuju', icon: <BadgeCheck />, content: <PejabatPenyetujuAturan tautanPejabat={tautanPejabat} /> }] : []),
           ...(saya.data?.boleh_validator_lihat ? [{ value: 'validator' as const, label: 'Validator aturan', icon: <GitBranch />, content: <ValidatorAturan /> }] : []),
