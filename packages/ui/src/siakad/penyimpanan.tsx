@@ -106,6 +106,18 @@ export interface RincianPenyimpanan {
   pustikom?: boolean;
   aturan?: string[];
   pengecualian?: { kuota_byte: number | null } | null;
+  /** Batas yang mengikat (kuota pribadi atau kolam unit, termasuk kolam induk); null = tanpa batas. SIAKAD lama: tidak ada. */
+  batas?: BatasPenyimpanan | null;
+}
+/** Batas yang mengikat sebuah ruang (Kebijakan::batasTampil di SIAKAD). */
+export interface BatasPenyimpanan {
+  byte: number;
+  terpakai_byte: number;
+  sisa_byte: number;
+  persen: number;
+  sumber: string;
+  kode: string | null;
+  label: string;
 }
 export interface KelompokUnit {
   kelompok: string;
@@ -123,6 +135,10 @@ export interface RingkasUnitPenyimpanan {
   jenis: string;
   induk: string | null;
   kolam_byte: number | null;
+  /** Kolam unit induk terdekat yang diwariskan bila unit ini tidak punya kolam sendiri. */
+  kolam_induk?: { kode: string; nama: string; kolam_byte: number; terpakai_byte: number; sisa_byte: number } | null;
+  mengikuti_induk?: boolean;
+  /** Tidak punya kolam sendiri dan tidak ada kolam induk. */
   mengikuti_bawaan: boolean;
   bersama_byte: number | null;
   boleh_lebih: boolean;
@@ -230,6 +246,11 @@ export function RincianPenyimpananPengguna({ data, aksi }: { data: RincianPenyim
           kuota={data.kuota_byte}
           keterangan={data.dihitung_at ? `Dihitung ${formatDate(data.dihitung_at)} ${formatTime(data.dihitung_at)}. Sampah tidak mengurangi kuota.` : undefined}
         />
+        {data.kuota_byte === null && data.batas && (
+          <p className="u-meter-kuota-ket">
+            Tanpa kuota pribadi; dibatasi {data.batas.label} (sisa {formatBytes(data.batas.sisa_byte)}).
+          </p>
+        )}
         {data.kolam.map((k) => (
           <MeterKuota key={k.kode} size="sm" label={`Kolam unit ${k.nama}`} terpakai={k.terpakai_byte ?? 0} kuota={k.kolam_byte} keterangan="Dipakai bersama seluruh anggota unit; unggahan ditolak bila kolam penuh." />
         ))}
@@ -244,7 +265,7 @@ export function RincianPenyimpananPengguna({ data, aksi }: { data: RincianPenyim
         </div>
         <div className="u-pny-angka">
           <span>Sisa</span>
-          <b>{data.sisa_byte === null ? 'Tanpa batas' : formatBytes(data.sisa_byte)}</b>
+          <b>{data.batas ? formatBytes(data.batas.sisa_byte) : data.sisa_byte === null ? 'Tanpa batas' : formatBytes(data.sisa_byte)}</b>
           <small>{data.unit_utama_nama ? `Unit utama: ${data.unit_utama_nama}` : 'Tanpa unit utama'}</small>
         </div>
         <div className="u-pny-angka">
@@ -602,7 +623,11 @@ export function PanelPenyimpananUnit({ kode, onOpenChange, onPengguna }: PanelPe
         ) : (
           <div className="u-pny">
             <section className="u-pny-bagian">
-              {d.kolam_byte === null ? (
+              {d.kolam_byte === null && d.kolam_induk ? (
+                <>
+                  <MeterKuota label={`Mengikuti kolam ${d.kolam_induk.nama}`} terpakai={d.kolam_induk.terpakai_byte} kuota={d.kolam_induk.kolam_byte} keterangan={`Unit ini belum punya kolam sendiri; pemakaiannya (${formatBytes(d.terpakai_byte)}) dibebankan ke kolam ${d.kolam_induk.nama}.`} />
+                </>
+              ) : d.kolam_byte === null ? (
                 <Alert variant="info" title="Mengikuti bawaan">
                   Unit ini belum punya kolam kuota khusus; anggotanya memakai kebijakan bawaan, peran, dan pengecualian. {d.pustikom ? 'Tetapkan kolam lewat Bagi kuota unit.' : 'Minta Pustikom menetapkan kolam unit.'}
                 </Alert>
@@ -992,7 +1017,7 @@ export function BagiKuotaUnit({ kode, open, onOpenChange, onSaved }: BagiKuotaUn
               <ul className="u-pny-daftar">
                 <li>
                   <span>Kolam unit</span>
-                  <b>{batas === null ? 'Mengikuti bawaan' : formatBytes(batas)}</b>
+                  <b>{batas === null ? (d?.kolam_induk ? `Mengikuti kolam ${d.kolam_induk.nama}` : 'Mengikuti bawaan') : formatBytes(batas)}</b>
                 </li>
                 <li>
                   <span>Ruang bersama</span>
@@ -1041,7 +1066,7 @@ export function BagiKuotaUnit({ kode, open, onOpenChange, onSaved }: BagiKuotaUn
 // ---------------------------------------------------------------- ringkas di manajer berkas
 
 export interface KuotaBerkasProps {
-  kuota: { ruang: 'pribadi' | 'unit'; kuota_byte: number | null; terpakai_byte: number; sisa_kolam_byte: number | null; kolam: KolamPenyimpanan[]; sumber?: SumberNilai | null } | null | undefined;
+  kuota: { ruang: 'pribadi' | 'unit'; kuota_byte: number | null; terpakai_byte: number; sisa_kolam_byte: number | null; kolam: KolamPenyimpanan[]; sumber?: SumberNilai | null; batas?: BatasPenyimpanan | null } | null | undefined;
   unit?: string;
   className?: string;
 }
@@ -1056,13 +1081,24 @@ export function KuotaBerkas({ kuota, unit, className }: KuotaBerkasProps) {
   const kolam = kuota.kolam[kuota.kolam.length - 1];
   return (
     <div className={`u-mb-kuota ${className ?? ''}`}>
-      <MeterKuota
-        size="sm"
-        label={kuota.ruang === 'unit' ? 'Ruang bersama unit' : 'Penyimpanan saya'}
-        terpakai={kuota.terpakai_byte}
-        kuota={kuota.kuota_byte}
-        keterangan={kolam && kuota.sisa_kolam_byte !== null ? `Kolam ${kolam.nama}: sisa ${formatBytes(kuota.sisa_kolam_byte)}` : undefined}
-      />
+      {kuota.batas && kuota.batas.sumber === 'kolam' ? (
+        // Tanpa kuota ruang sendiri: yang mengikat adalah kolam unit (bisa kolam unit induk yang diwariskan).
+        <MeterKuota
+          size="sm"
+          label={kuota.ruang === 'unit' ? 'Ruang bersama unit' : 'Penyimpanan saya'}
+          terpakai={kuota.batas.terpakai_byte}
+          kuota={kuota.batas.byte}
+          keterangan={`Mengikuti ${kuota.batas.label}${kuota.ruang === 'unit' ? '. Isi ruang ini' : '. Berkas Anda'} ${formatBytes(kuota.terpakai_byte)}.`}
+        />
+      ) : (
+        <MeterKuota
+          size="sm"
+          label={kuota.ruang === 'unit' ? 'Ruang bersama unit' : 'Penyimpanan saya'}
+          terpakai={kuota.terpakai_byte}
+          kuota={kuota.batas ? kuota.batas.byte : kuota.kuota_byte}
+          keterangan={kolam && kuota.sisa_kolam_byte !== null ? `Kolam ${kolam.nama}: sisa ${formatBytes(kuota.sisa_kolam_byte)}` : undefined}
+        />
+      )}
       {kuota.ruang === 'pribadi' ? (
         <Button size="sm" variant="ghost" onClick={() => setSaya(true)}>
           <HardDrive aria-hidden />

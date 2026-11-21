@@ -40,6 +40,8 @@ export interface InfoBerkas {
     maks_jumlah: number | null;
     kolam: Array<{ kode: string; nama: string; kolam_byte: number }>;
     sumber?: { lingkup: string; kunci: string; label: string } | null;
+    /** Batas yang mengikat untuk ditampilkan: kuota ruang atau kolam unit (termasuk kolam induk yang diwariskan); null = tanpa batas. */
+    batas?: { byte: number; terpakai_byte: number; sisa_byte: number; persen: number; sumber: string; kode: string | null; label: string } | null;
   } | null;
 }
 
