@@ -1,5 +1,12 @@
 # Catatan perubahan
 
+## 1.63.0 (2026-11-22)
+
+- **Penghubung data untuk pengembang** (`siakad/provider.tsx`): `UnipoProvider` menerima `baseUrl` (proxy di backend Anda, mis. `"/api/siakad"`), `fetcher`, dan `getToken` sehingga aplikasi tidak perlu membuat instans SDK sendiri; `buatSiakadPenghubung()` untuk pemakaian di luar React. Tanpa `getToken`, browser tidak mengirim header Authorization (proxy server yang menempelkan token; client_secret tetap di server). Pasangannya `proxySiakad`/`proxySiakadNode`/`ProxySiakad` di unipo-siakad-sdk 2.2.0.
+- **Data tiruan** (`siakad/tiruan.ts`): `buatFetcherTiruan(rute)` untuk playground, dokumentasi, dan uji tanpa API sungguhan.
+- **CLI `npx unipo-ui init`**: memasang kelas `u-root` di `<body>` (React/Vite) atau memberi petunjuk (Next.js); untuk Next.js membuat route handler `app/api/siakad/[...jalur]/route.ts` dengan `proxySiakad` (data tiruan selama `SIAKAD_CLIENT_ID` kosong) dan `Providers` memakai `<UnipoProvider baseUrl="/api/siakad">`.
+- Galeri `apps/docs` memakai penghubung tiruan. Uji `packages/ui/test/penghubung.test.tsx`.
+
 ## 1.62.0 (2026-11-22)
 
 - **TypeScript ES2023 + metode salin larik (legacy-scan modern-web-guidance, keputusan Anas 2026-11-22)**: `target`/`lib` tsconfig `packages/ui` dan `apps/docs` naik dari ES2020/ES2022 ke ES2023. Sintaks keluaran build tidak lagi mengikuti `target` tsconfig: `tsup.config.ts` kini memakai `target: ['chrome110', 'edge110', 'firefox115', 'safari16']` sesuai peramban yang didukung (Chrome 110+, Safari 16+, Firefox 115+; sebelumnya ES2020). 51 temuan `copying-array-methods` diterapkan: salinan `[...x].sort()`/`.slice().sort()` menjadi `toSorted()`, `[...x].reverse()` menjadi `toReversed()`, dan `[...x].reverse().find()` menjadi `findLast()` (grafik, DataTable, progres, pustaka & cari editor, dasbor, akademik, akreditasi, aplikasi, aturan, berkas, kalender, skala nilai, kurikulum, LMS, notifikasi, obrolan, peringatan, pilih unit, PMB, profil, SKP, ujian TA, widget unit). Tidak ada temuan yang dilewati: semua penerimanya larik biasa (bukan Set/Map/NodeList/string), tanpa lubang larik, dan callback `findLast` hanya memakai argumen butir. Tipe publik `.d.ts` tidak memakai tipe ES2023, sehingga aplikasi dengan `lib` ES2022 tetap lolos typecheck.
