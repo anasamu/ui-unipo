@@ -92,7 +92,7 @@ export function statusTenggat(tenggat: string | Date | null | undefined, kini: D
 const waktu = (d: string | Date | null | undefined) => keTanggal(d)?.getTime() ?? Number.POSITIVE_INFINITY;
 const tingkatButir = (b: ButirPeringatan, j: JenisPeringatan) => b.tingkat ?? j.tingkat;
 const urutButir = (j: JenisPeringatan) =>
-  [...j.butir].sort((a, b) => PERINGKAT[tingkatButir(a, j)] - PERINGKAT[tingkatButir(b, j)] || waktu(a.tenggat) - waktu(b.tenggat));
+  j.butir.toSorted((a, b) => PERINGKAT[tingkatButir(a, j)] - PERINGKAT[tingkatButir(b, j)] || waktu(a.tenggat) - waktu(b.tenggat));
 
 /** Urutkan jenis dari yang paling mendesak: tingkat, lalu tenggat terdekat, lalu jumlah butir terbanyak. Jenis tanpa butir dibuang. */
 export function urutPeringatan(jenis: JenisPeringatan[]): JenisPeringatan[] {

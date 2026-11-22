@@ -379,7 +379,7 @@ export function PendaftaranAktifPmbProvider({ children }: { children: React.Reac
   });
   const aktif = React.useMemo(() => {
     if (!daftar.length) return null;
-    return daftar.find((x) => x.id === dipilih) ?? [...daftar].sort((a, b) => Number(a.status === 'mengundurkan_diri') - Number(b.status === 'mengundurkan_diri') || b.dibuat_at.localeCompare(a.dibuat_at))[0];
+    return daftar.find((x) => x.id === dipilih) ?? daftar.toSorted((a, b) => Number(a.status === 'mengundurkan_diri') - Number(b.status === 'mengundurkan_diri') || b.dibuat_at.localeCompare(a.dibuat_at))[0];
   }, [daftar, dipilih]);
   const d = usePendaftaranPmb(aktif?.id);
   const pilih = React.useCallback((id: string) => {
@@ -1039,7 +1039,7 @@ function PilihMetodeBayar({ pendaftaranId, tagihan, metode, onSelesai }: { penda
   const [galat, setGalat] = React.useState<string | null>(null);
   const opsi = React.useMemo<OpsiBayar[]>(() => {
     const out: OpsiBayar[] = [];
-    for (const p of [...metode].sort((a, b) => Number(b.utama) - Number(a.utama)))
+    for (const p of metode.toSorted((a, b) => Number(b.utama) - Number(a.utama)))
       for (const m of p.metode) {
         if (m.metode === 'va') m.kanal.forEach((k) => out.push({ kunci: `${p.penyedia}|va|${k}`, penyedia: p.penyedia, metode: 'va', kanal: k, label: `Virtual account ${k.toUpperCase()}`, sub: 'Transfer dari m-banking / ATM' }));
         else out.push({ kunci: `${p.penyedia}|${m.metode}`, penyedia: p.penyedia, metode: m.metode, kanal: null, label: m.metode === 'qris' ? 'QRIS' : 'Metode lain', sub: m.keterangan ?? (m.metode === 'qris' ? 'Semua bank & e-wallet' : `Kartu, e-wallet, gerai (${p.nama})`) });

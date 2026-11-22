@@ -561,7 +561,7 @@ export function PilihUnit(props: PilihUnitProps) {
   };
   const urutPohon = (keys: string[]) => {
     const pos = new Map(nodes.map((n, i) => [n.key, i]));
-    return [...keys].sort((a, b) => (pos.get(a) ?? 1e9) - (pos.get(b) ?? 1e9));
+    return keys.toSorted((a, b) => (pos.get(a) ?? 1e9) - (pos.get(b) ?? 1e9));
   };
   React.useEffect(() => setPesanKaki(null), [aktif, k]);
 

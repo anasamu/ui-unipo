@@ -196,7 +196,7 @@ export function PilihDosenBersyarat({
   const daftar = calon.data ?? [];
   const terpilih = daftar.find((d) => d.nidn === value) ?? null;
   const opsi: SelectOption<string>[] = React.useMemo(() => {
-    const urut = [...daftar].sort((a, b) => Number(b.memenuhi) - Number(a.memenuhi));
+    const urut = daftar.toSorted((a, b) => Number(b.memenuhi) - Number(a.memenuhi));
     const o: SelectOption<string>[] = urut
       .filter((d) => d.memenuhi || tidakMemenuhi !== 'sembunyikan')
       .map((d) => ({

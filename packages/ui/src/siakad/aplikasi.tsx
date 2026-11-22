@@ -1826,7 +1826,7 @@ export function FormAplikasi({ aplikasi: a, onTersimpan, onBatal, className }: F
     if (a.api && siakad) {
       const ubah: Record<string, unknown> = {};
       if (nama !== a.api.name) ubah.name = nama;
-      if (!sama([...scopes].sort(), [...a.api.scopes].sort())) ubah.scopes = scopes;
+      if (!sama(scopes.toSorted(), a.api.scopes.toSorted())) ubah.scopes = scopes;
       if (!sama(daftarTeks(ips), a.api.allowed_ips)) ubah.allowed_ips = daftarTeks(ips);
       if (!sama(daftarTeks(origins), a.api.allowed_origins)) ubah.allowed_origins = daftarTeks(origins);
       if ((rate ? Number(rate) : null) !== (a.api.rate_limit ?? null)) ubah.rate_limit = rate ? Number(rate) : null;

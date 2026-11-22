@@ -50,7 +50,7 @@ export function skalaBerlaku(baris: ReadonlyArray<BarisSkalaNilai>, opsi: { prod
   const sumber = calon.length ? calon : baris;
   const versi = [...new Set(sumber.map((b) => b.tahun_id ?? ''))].sort();
   const batas = opsi.tahunId ?? null;
-  const dipakai = batas ? ([...versi].reverse().find((v) => !v || v <= batas) ?? versi[0]) : versi[versi.length - 1];
+  const dipakai = batas ? (versi.findLast((v) => !v || v <= batas) ?? versi[0]) : versi[versi.length - 1];
   const hasil = new Map<string, SkalaNilai>();
   for (const b of sumber) {
     if ((b.tahun_id ?? '') !== (dipakai ?? '')) continue;
@@ -113,7 +113,7 @@ export function predikatDariIpk(ipk: number | string | null | undefined, daftar:
   if (ipk == null || ipk === '' || !daftar?.length) return null;
   const n = Math.round(angka(ipk) * 100) / 100;
   const perJenjang = jenjang ? daftar.filter((p) => !p.kode_jenjang || p.kode_jenjang === jenjang) : daftar;
-  const cocok = [...perJenjang].sort((a, b) => angka(b.bobot_min) - angka(a.bobot_min)).find((p) => n >= angka(p.bobot_min) && n <= angka(p.bobot_max));
+  const cocok = perJenjang.toSorted((a, b) => angka(b.bobot_min) - angka(a.bobot_min)).find((p) => n >= angka(p.bobot_min) && n <= angka(p.bobot_max));
   return cocok?.predikat ?? null;
 }
 

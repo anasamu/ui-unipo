@@ -886,7 +886,7 @@ export function PanelSkp({ id, onOpenChange }: { id: number; onOpenChange: (o: b
     const p = isi.perilaku.map((x) => nilaiPerilaku(x.kode)).filter((x): x is number => x != null);
     const np = p.length ? p.reduce((a, b) => a + b, 0) / p.length : null;
     const akhir = hasil == null || (isi.rumus.bobot_perilaku > 0 && np == null) ? null : (isi.rumus.bobot_hasil / 100) * hasil + (isi.rumus.bobot_perilaku / 100) * (np ?? 0);
-    const pred = akhir == null ? null : ([...isi.predikat].sort((a, b) => b.min - a.min).find((x) => akhir >= x.min)?.kode ?? null);
+    const pred = akhir == null ? null : (isi.predikat.toSorted((a, b) => b.min - a.min).find((x) => akhir >= x.min)?.kode ?? null);
     return { hasil, np, akhir, pred };
   }, [D, isi, capaian, perilaku]); // eslint-disable-line react-hooks/exhaustive-deps
   const kirim = async (a: string, body: Record<string, unknown>, sukses: string) => {

@@ -188,7 +188,7 @@ export function useReferensiKurikulum() {
 /** Editor skala nilai huruf: huruf, rentang angka, bobot, lulus. Kosong = ikut m_nilai SIAKAD. */
 export function EditorSkalaNilai({ value, onChange, disabled }: { value: SkalaNilaiKurikulum[]; onChange: (v: SkalaNilaiKurikulum[]) => void; disabled?: boolean }) {
   const ubah = (i: number, x: Partial<SkalaNilaiKurikulum>) => onChange(value.map((s, k) => (k === i ? { ...s, ...x } : s)));
-  const urut = [...value].sort((a, b) => b.min - a.min);
+  const urut = value.toSorted((a, b) => b.min - a.min);
   const tumpuk = urut.some((s, i) => i > 0 && s.maks >= urut[i - 1].min);
   return (
     <div className="u-kur-skala">
@@ -356,7 +356,7 @@ function RingkasanIsi({ isi, boleh }: { isi: IsiAturanKurikulum; boleh?: string[
         <CardContent>
           {isi.penilaian.skala.length ? (
             <div className="u-kur-chip-baris">
-              {[...isi.penilaian.skala].sort((a, b) => b.min - a.min).map((x) => (
+              {isi.penilaian.skala.toSorted((a, b) => b.min - a.min).map((x) => (
                 <span key={x.huruf} className="u-kur-chip" data-lulus={x.lulus ? '' : undefined}>
                   <strong>{x.huruf}</strong> {angka(x.min)}–{angka(x.maks)} · {angka(x.bobot)}
                 </span>

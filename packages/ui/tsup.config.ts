@@ -9,6 +9,9 @@ export default defineConfig({
   treeshake: true,
   splitting: true,
   external: ['react', 'react-dom', 'unipo-siakad-sdk'],
+  // Sintaks keluaran mengikuti peramban yang didukung, bukan `target` tsconfig (ES2023 hanya untuk tipe/lib).
+  // Metode ES2023 yang dipakai (toSorted, toReversed, findLast) tersedia sejak Chrome 110, Safari 16, Firefox 115.
+  target: ['chrome110', 'edge110', 'firefox115', 'safari16'],
   // Semua komponen interaktif: aman dipakai langsung di Next.js App Router.
   // 'use client' ditambahkan oleh add-use-client.mjs setelah build.
 });
