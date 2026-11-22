@@ -17,7 +17,7 @@ export const meta: DemoMeta = {
     TabVertikal: 'Tabs vertikal berkelompok (ikon, jumlah; pilihan tarik-turun di wadah sempit)',
     TabBersarang: 'Tab bersarang otomatis vertikal (tab di dalam panel tab; deret gulir di wadah sempit)',
     TabBersarangDua: 'Tab bersarang 2 tab tetap horizontal',
-    TabDiPanel: 'Tab di panel samping: horizontal, jadi pilihan tarik-turun bila tidak muat',
+    TabDiPanel: 'Tab di panel samping: horizontal (juga orientation="horizontal" eksplisit), jadi pilihan tarik-turun bila tidak muat',
     SaringanSejajar: 'Saringan sejajar: lencana periode di dalam isian (Select lencana)',
     Langkah: 'Stepper',
     LangkahVertikal: 'Stepper vertikal',
@@ -203,6 +203,19 @@ export function TabDiPanel() {
           items={[
             { value: 'riwayat', label: 'Riwayat', content: riwayat },
             { value: 'berkas', label: 'Berkas', content: isi('Ijazah, SK, sertifikat.') },
+          ]}
+        />
+      </Sheet>
+      <Sheet title="Rincian pegawai" description='Ditulis orientation="horizontal": di panel tetap jadi tarik-turun bila tidak muat' trigger={<Button variant="outline">Buka panel (horizontal eksplisit)</Button>}>
+        <Tabs
+          orientation="horizontal"
+          aria-label="Data pegawai"
+          items={[
+            { value: 'identitas', label: 'Identitas pribadi', content: isi('NIK, tempat & tanggal lahir.') },
+            { value: 'kepegawaian', label: 'Status kepegawaian', content: isi('Tetap · TMT 2018') },
+            { value: 'penugasan', label: 'Penugasan unit', count: 2, content: isi('Prodi Teknik Informatika; LPPM') },
+            { value: 'kompensasi', label: 'Kompensasi & tunjangan', content: isi('Golongan III/b') },
+            { value: 'dokumen', label: 'Dokumen pendukung', count: 6, content: isi('KTP, NPWP, ijazah, SK.') },
           ]}
         />
       </Sheet>

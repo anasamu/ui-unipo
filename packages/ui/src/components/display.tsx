@@ -157,7 +157,8 @@ export interface TabsProps<V extends string> {
    * otomatis vertikal (daftar di kiri, isi di kanan) supaya tidak ada dua baris tab bertumpuk; di wadah sempit
    * (< 40rem) daftarnya horizontal dan dapat digulir (jumlah tetap terlihat). Tab bersarang yang hanya 2 tetap
    * horizontal. Tab di dalam tab yang sudah vertikal tetap horizontal. Di dalam panel samping (Sheet) tab selalu
-   * horizontal dan berubah menjadi pilihan tarik-turun (Select) bila deretnya tidak muat selebar panel.
+   * horizontal dan berubah menjadi pilihan tarik-turun (Select) bila deretnya tidak muat selebar panel; ini juga
+   * berlaku untuk orientation="horizontal" (hanya "vertical" eksplisit yang dihormati di panel).
    * horizontal: selalu deret tab di atas isi. vertical: selalu daftar kiri, cocok untuk sub tab yang banyak atau
    * labelnya panjang (jenis riwayat, data master); di wadah sempit menjadi pilihan tarik-turun.
    */
@@ -221,11 +222,14 @@ function useTabTakMuat(akar: React.RefObject<HTMLElement | null>, daftar: React.
  * Tata letak tab yang dipakai (orientation auto):
  * - 'panel': di dalam panel samping (Sheet): horizontal, menjadi pilihan tarik-turun bila tidak muat;
  * - 'bersarang': tingkat kedua, punya isi, lebih dari 2 tab: vertikal otomatis dengan deret gulir di wadah sempit;
- * - 'horizontal' selain itu. Orientasi eksplisit selalu menang.
+ * - 'horizontal' selain itu. Orientasi eksplisit menang, kecuali `horizontal` di panel samping yang tetap 'panel'
+ *   (horizontal + tarik-turun bila tidak muat).
  */
 export function tataTab(orientation: TabsProps<string>['orientation'], induk: TingkatTab, punyaIsi: boolean, jumlah = Infinity): 'horizontal' | 'vertical' | 'bersarang' | 'panel' {
+  // Panel samping (keputusan Anas 2026-11-22 13:17): SEMUA tab horizontal dan menjadi tarik-turun bila tidak muat,
+  // termasuk yang ditulis orientation="horizontal". Hanya vertical eksplisit yang tetap dihormati.
+  if (induk.dalamPanel && orientation !== 'vertical') return 'panel';
   if (orientation === 'horizontal' || orientation === 'vertical') return orientation;
-  if (induk.dalamPanel) return 'panel';
   return induk.tingkat >= 1 && !induk.dalamVertikal && punyaIsi && jumlah >= TAB_BERSARANG_MIN ? 'bersarang' : 'horizontal';
 }
 
