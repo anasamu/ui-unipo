@@ -1059,15 +1059,18 @@ export function StatusMigrasiKurikulum({ onPilihProdi, className }: { onPilihPro
             <li key={p.kode_prodi}>
               <Tag className="u-migrasi-row" {...(onPilihProdi ? { type: 'button' as const, onClick: () => onPilihProdi(p) } : {})}>
                 <span className="u-migrasi-prodi">
-                  <LabelProdi kode={p.kode_prodi} nama={p.nama_prodi} prodi={{ kode_jenjang: p.jenjang }} sub={false} />
-                  <small>
-                    {[
+                  <LabelProdi
+                    kode={p.kode_prodi}
+                    nama={p.nama_prodi}
+                    prodi={{ kode_jenjang: p.jenjang }}
+                    sub={false}
+                    keterangan={[
                       p.lama?.jumlah_semester ? `${p.lama.jumlah_semester} semester data lama` : null,
                       p.terbit_terakhir ? `terbit ${p.terbit_terakhir.tahun_id}` : p.impor_terakhir ? `impor ${p.impor_terakhir.tahun_id}` : null,
                     ]
                       .filter(Boolean)
                       .join(' · ')}
-                  </small>
+                  />
                 </span>
                 <span className="u-migrasi-steps" aria-label={`Tahap: ${LABEL_TAHAP[idx]}`}>
                   {LABEL_TAHAP.map((l, i) => (

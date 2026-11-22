@@ -423,6 +423,8 @@ export interface LabelProdiProps {
   akreditasi?: boolean;
   /** Baris fakultas: `fakultas` (bawaan), `kode`, atau isi sendiri. false = tanpa baris itu. */
   sub?: 'fakultas' | 'kode' | React.ReactNode | false;
+  /** Keterangan singkat di bawah nama prodi (mis. "16 semester data lama · terbit 20251"), sejajar dengan nama, bukan di bawah logo. */
+  keterangan?: React.ReactNode;
   ukuran?: 'sm' | 'md' | 'lg';
   /** Bentuk logo fakultas. Bawaan kotak membulat. */
   bentukLogo?: 'kotak' | 'bulat';
@@ -451,7 +453,7 @@ const angka = (n: number) => n.toLocaleString('id-ID');
  * fakultas, nama prodi, lencana jenjang (S1, D3) dan akreditasi (dengan peringatan masa berlaku). Cukup isi `kode`;
  * data lain dilengkapi otomatis lewat SDK. Pilih tampilan lewat `varian`.
  */
-export function LabelProdi({ kode, nama, prodi, varian = 'baku', akreditasi = true, sub = 'fakultas', ukuran = 'md', bentukLogo = 'kotak', statistik, onClick, href, className }: LabelProdiProps) {
+export function LabelProdi({ kode, nama, prodi, varian = 'baku', akreditasi = true, sub = 'fakultas', ukuran = 'md', bentukLogo = 'kotak', statistik, keterangan, onClick, href, className }: LabelProdiProps) {
   const k = String(prodi?.kode_prodi ?? kode ?? '');
   const lengkap = !!prodi && (prodi.kode_akreditasi !== undefined || prodi.akreditasi !== undefined) && prodi.kode_jenjang !== undefined;
   const peta = usePetaProdi(!lengkap && !!k);
@@ -514,6 +516,7 @@ export function LabelProdi({ kode, nama, prodi, varian = 'baku', akreditasi = tr
             <span className="u-label-prodi-nama" title={namaP || undefined}>
               {namaP || '–'}
             </span>
+            {keterangan ? <span className="u-label-prodi-ket">{keterangan}</span> : null}
           </>
         )}
         {varian !== 'vertikal' && masaBerlaku}
