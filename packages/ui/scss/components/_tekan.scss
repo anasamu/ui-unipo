@@ -1,0 +1,129 @@
+@use '../mixins' as *;
+
+// ---------------------------------------------------------------- Tekan (permukaan yang bisa diklik)
+// Reset dibungkus :where() (spesifisitas 0) supaya kelas bergaya milik widget (mis. .u-ob-baris) tetap menang;
+// fokus, nonaktif, dan bentuk bawaan memakai token.
+:where(.u-tekan) {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.u-tekan {
+  &:focus-visible {
+    @include focus-ring;
+  }
+  &:disabled,
+  &[aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+  &[data-bentuk]:not([data-bentuk='polos']) {
+    transition:
+      background-color var(--u-duration-fast),
+      border-color var(--u-duration-fast),
+      box-shadow var(--u-duration-fast),
+      color var(--u-duration-fast);
+    &:disabled,
+    &[aria-disabled='true'] {
+      opacity: 0.55;
+    }
+  }
+
+  // Kartu: blok penuh, isi bebas (judul, meta, lencana). Terpilih/kini = garis + latar primer lembut.
+  &[data-bentuk='kartu'] {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--u-space-2);
+    width: 100%;
+    min-width: 0;
+    padding: var(--u-space-4);
+    border: 1px solid var(--u-border);
+    border-radius: calc(var(--u-radius) + 4px);
+    background: var(--u-card);
+    color: var(--u-foreground);
+    &:hover:not(:disabled, [aria-disabled='true']) {
+      border-color: color-mix(in oklab, var(--u-primary) 45%, var(--u-border));
+      box-shadow: var(--u-shadow-sm);
+    }
+    &:focus-visible {
+      outline-offset: 1px;
+    }
+  }
+
+  // Baris: satu baris daftar (ikon/avatar + teks + meta kanan).
+  &[data-bentuk='baris'] {
+    display: flex;
+    align-items: center;
+    gap: var(--u-space-3);
+    width: 100%;
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: var(--u-space-2) var(--u-space-3);
+    border-radius: var(--u-radius);
+    color: var(--u-foreground);
+    &:hover:not(:disabled, [aria-disabled='true']) {
+      background: var(--u-muted);
+    }
+    &:focus-visible {
+      outline-offset: -2px;
+    }
+  }
+
+  // Chip: pil kecil untuk saringan cepat / pilihan.
+  &[data-bentuk='chip'] {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--u-space-1);
+    min-height: 2rem;
+    padding: 0 var(--u-space-3);
+    border: 1px solid var(--u-input);
+    border-radius: var(--u-radius-full);
+    background: var(--u-background);
+    color: var(--u-foreground);
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-medium);
+    white-space: nowrap;
+    svg {
+      width: 0.875rem;
+      height: 0.875rem;
+      flex: none;
+    }
+    &:hover:not(:disabled, [aria-disabled='true']) {
+      background: var(--u-muted);
+    }
+  }
+
+  &[data-bentuk='kartu'],
+  &[data-bentuk='baris'],
+  &[data-bentuk='chip'] {
+    &[data-terpilih],
+    &[data-kini] {
+      border-color: var(--u-primary);
+      background: var(--u-primary-soft);
+      color: var(--u-primary-soft-foreground);
+      &:hover:not(:disabled, [aria-disabled='true']) {
+        background: var(--u-primary-soft);
+      }
+    }
+  }
+  &[data-bentuk='baris'][data-kini] {
+    box-shadow: inset 3px 0 0 var(--u-primary);
+  }
+}
+
+@media (forced-colors: active) {
+  .u-tekan[data-terpilih],
+  .u-tekan[data-kini] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
