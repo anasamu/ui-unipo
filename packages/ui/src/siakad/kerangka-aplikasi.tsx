@@ -21,6 +21,7 @@ import { ChatMengambang, TombolPesan } from './obrolan';
 import { PengumumanTampil } from './pengumuman-lintas';
 import { StatusSidebar, type StatusSidebarProps } from './status-sidebar';
 import { BintangPintasan, MAKS_SEMATAN, PenyediaPintasan, TombolPintasan, usePintasanMenu } from './pintasan-menu';
+import { Tekan } from '../components/tekan';
 
 
 export interface KerangkaAplikasiProps {
@@ -481,9 +482,9 @@ export function KerangkaAplikasi({
                   it.href ? (
                     renderLink({ key: it.key, label: it.label, href: it.href }, { href: it.href, className: 'u-kerangka-nav-bawah', children: isi })
                   ) : (
-                    <button type="button" className="u-kerangka-nav-bawah" onClick={it.onClick}>
+                    <Tekan className="u-kerangka-nav-bawah" onClick={it.onClick}>
                       {isi}
-                    </button>
+                    </Tekan>
                   )
               : undefined
           }

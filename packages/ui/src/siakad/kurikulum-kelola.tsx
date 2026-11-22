@@ -92,6 +92,7 @@ import {
 import { IsianAngka } from '../components/isian-angka';
 import { IsianTanggal } from '../components/formulir';
 import { keAngka, teksAngka } from '../lib/angka';
+import { Tekan } from '../components/tekan';
 
 /*
  * Kelola Kurikulum OBE (/v1/kurikulum-obe, Permendiktisaintek 39/2025) untuk prodi, fakultas, dan BAAK:
@@ -1173,9 +1174,9 @@ function DialogAngkatan({ open, onOpenChange, k }: { open: boolean; onOpenChange
           {[kini - 3, kini - 2, kini - 1, kini, kini + 1].map((t) => {
             const ada = daftar.includes(String(t));
             return (
-              <button key={t} type="button" className="u-kk-chip" data-active={dataFlag(ada)} onClick={() => setTeks((ada ? daftar.filter((x) => x !== String(t)) : [...daftar, String(t)]).sort().join(', '))}>
+              <Tekan key={t} className="u-kk-chip" terpilih={ada} data-active={dataFlag(ada)} onClick={() => setTeks((ada ? daftar.filter((x) => x !== String(t)) : [...daftar, String(t)]).sort().join(', '))}>
                 {t}
-              </button>
+              </Tekan>
             );
           })}
         </div>
@@ -2442,10 +2443,10 @@ export function KelolaRps({ mkId, bolehSusun, bolehSahkan, className }: KelolaRp
       <div className="u-kk-toolbar">
         <div className="u-kk-versi" role="tablist" aria-label="Versi RPS">
           {versi.map((v) => (
-            <button key={v.id} type="button" role="tab" aria-selected={v.id === pilih} data-active={dataFlag(v.id === pilih)} onClick={() => setPilih(v.id)}>
+            <Tekan key={v.id} role="tab" terpilih={v.id === pilih} data-active={dataFlag(v.id === pilih)} onClick={() => setPilih(v.id)}>
               Versi {v.versi}
               <Badge variant={v.status === 'disahkan' ? 'success' : v.status === 'draf' ? 'warning' : 'outline'}>{label(v.status)}</Badge>
-            </button>
+            </Tekan>
           ))}
         </div>
         {bolehSusun && !versi.some((v) => v.status === 'draf') && (
@@ -2723,7 +2724,6 @@ function EditorPertemuan({ r }: { r: Rps }) {
       </div>
       {baris.length > 0 && (
         <TableContainer>
-          {/* unipo-ui-izinkan tabel-primitif: kisi isian (sel = isian angka/teks), bukan tabel data */}
           <Table density="compact" className="u-kk-tabel-isi">
             <thead>
               <tr>
@@ -2880,7 +2880,6 @@ function EditorEvaluasi({ r }: { r: Rps }) {
       <Progress value={Math.min(100, total)} size="sm" tone={Math.abs(total - 100) < 0.01 ? 'success' : total > 100 ? 'danger' : 'warning'} />
       {baris.length > 0 && (
         <TableContainer>
-          {/* unipo-ui-izinkan tabel-primitif: kisi isian (sel = isian angka/teks), bukan tabel data */}
           <Table density="compact" className="u-kk-tabel-isi">
             <thead>
               <tr>
@@ -2912,16 +2911,16 @@ function EditorEvaluasi({ r }: { r: Rps }) {
                     <td>
                       <span className="u-kk-chip-row">
                         {cpmk.map((c) => (
-                          <button
+                          <Tekan
                             key={c.id}
-                            type="button"
                             className="u-kk-chip"
+                            terpilih={dipilih.has(c.id)}
                             data-active={dataFlag(dipilih.has(c.id))}
                             title={c.deskripsi}
                             onClick={() => set(i, { cpmk: dipilih.has(c.id) ? (b.cpmk ?? []).filter((x) => x.cpmk_id !== c.id) : [...(b.cpmk ?? []), { cpmk_id: c.id, bobot: 1 }] })}
                           >
                             {c.kode}
-                          </button>
+                          </Tekan>
                         ))}
                         {!cpmk.length && <span className="u-kk-warn">MK belum punya CPMK</span>}
                       </span>
@@ -4284,9 +4283,9 @@ export function KelolaPerangkatMk({ mkId, bolehUbah, jenisAwal = 'rps', classNam
               <li key={p.id}>
                 <FileText aria-hidden className="u-kk-perangkat-ikon" />
                 <span className="u-kk-perangkat-teks">
-                  <button type="button" className="u-kk-perangkat-judul" onClick={() => buka(p, false)} disabled={membuka === p.id}>
+                  <Tekan className="u-kk-perangkat-judul" onClick={() => buka(p, false)} disabled={membuka === p.id}>
                     {p.judul}
-                  </button>
+                  </Tekan>
                   <small>{[p.nama, formatBytes(p.ukuran), p.updated_at ? formatDate(p.updated_at) : null].filter(Boolean).join(' · ')}</small>
                   {p.keterangan && <small className="u-kk-perangkat-ket">{p.keterangan}</small>}
                 </span>
@@ -4505,7 +4504,6 @@ export function BukuKurikulum({ kurikulumId, institusi = 'Universitas Pohuwato',
 
         <section>
           <h2>{++bab}. Identitas dan beban belajar</h2>
-          {/* unipo-ui-izinkan tabel-bawaan: tata letak dokumen buku kurikulum (cetak/PDF), bukan tabel data */}
           <table className="u-kk-buku-tabel u-kk-buku-kv">
             <tbody>
               <tr>
@@ -4538,7 +4536,7 @@ export function BukuKurikulum({ kurikulumId, institusi = 'Universitas Pohuwato',
 
         <section>
           <h2>{++bab}. Profil lulusan</h2>
-          {b.profil_lulusan.length ? ( // unipo-ui-izinkan tabel-bawaan: tata letak dokumen buku kurikulum (cetak/PDF), bukan tabel data
+          {b.profil_lulusan.length ? (
             <table className="u-kk-buku-tabel">
               <thead>
                 <tr>
@@ -4568,7 +4566,6 @@ export function BukuKurikulum({ kurikulumId, institusi = 'Universitas Pohuwato',
             ranah.map((r) => (
               <div key={r}>
                 <h3>{r}</h3>
-                {/* unipo-ui-izinkan tabel-bawaan: tata letak dokumen buku kurikulum (cetak/PDF), bukan tabel data */}
                 <table className="u-kk-buku-tabel">
                   <tbody>
                     {b.cpl
@@ -4591,7 +4588,6 @@ export function BukuKurikulum({ kurikulumId, institusi = 'Universitas Pohuwato',
         {b.bahan_kajian.length > 0 && (
           <section>
             <h2>{++bab}. Bahan kajian</h2>
-            {/* unipo-ui-izinkan tabel-bawaan: tata letak dokumen buku kurikulum (cetak/PDF), bukan tabel data */}
             <table className="u-kk-buku-tabel">
               <tbody>
                 {b.bahan_kajian.map((x) => (
@@ -4615,7 +4611,6 @@ export function BukuKurikulum({ kurikulumId, institusi = 'Universitas Pohuwato',
               <h3>
                 {s.semester ? `Semester ${s.semester}` : 'Pilihan bebas'} <small>({formatNumber(s.sks_wajib + s.sks_pilihan)} SKS)</small>
               </h3>
-              {/* unipo-ui-izinkan tabel-bawaan: tata letak dokumen buku kurikulum (cetak/PDF), bukan tabel data */}
               <table className="u-kk-buku-tabel">
                 <thead>
                   <tr>
@@ -4684,7 +4679,6 @@ export function BukuKurikulum({ kurikulumId, institusi = 'Universitas Pohuwato',
         {b.ekuivalensi.length > 0 && (
           <section>
             <h2>{++bab}. Ekuivalensi mata kuliah</h2>
-            {/* unipo-ui-izinkan tabel-bawaan: tata letak dokumen buku kurikulum (cetak/PDF), bukan tabel data */}
             <table className="u-kk-buku-tabel">
               <thead>
                 <tr>
@@ -4715,7 +4709,6 @@ export function BukuKurikulum({ kurikulumId, institusi = 'Universitas Pohuwato',
         {b.peninjauan.length > 0 && (
           <section>
             <h2>{++bab}. Riwayat evaluasi dan peninjauan</h2>
-            {/* unipo-ui-izinkan tabel-bawaan: tata letak dokumen buku kurikulum (cetak/PDF), bukan tabel data */}
             <table className="u-kk-buku-tabel">
               <tbody>
                 {b.peninjauan.map((p, i) => (

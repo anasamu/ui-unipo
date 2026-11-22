@@ -14,6 +14,7 @@ import { isiTemplat, penandaIsian, tanggalSurat } from '../editor/dokumen/templa
 import { saringHtml } from '../editor/dokumen/saring';
 import { useTemplatSurat, type JenisNaskah, type TemplatSurat } from './surat';
 import { IsianCari } from '../components/isian-cari';
+import { Tekan } from '../components/tekan';
 
 // ---------------------------------------------------------------- isian bertipe
 
@@ -471,10 +472,10 @@ export function PilihTemplatSurat({ open, onOpenChange, unitId, onPilih, tanpaKo
           <IsianCari className="u-surat-cari" value={q} onValueChange={setQ} placeholder="Cari templat, mis. undangan, tugas, keterangan" aria-label="Cari templat" />
           <div className="u-tgs-kategori" role="tablist" aria-label="Kategori templat">
             {[{ value: 'semua' as const, label: 'Semua', ikon: null }, ...(adaServer ? [{ value: 'unit' as const, label: 'Milik unit', ikon: <Building2 aria-hidden /> }] : []), ...KATEGORI_TEMPLAT_SURAT].map((k) => (
-              <button key={k.value} type="button" role="tab" aria-selected={kat === k.value} data-aktif={kat === k.value || undefined} onClick={() => setKat(k.value)}>
+              <Tekan key={k.value} role="tab" terpilih={kat === k.value} data-aktif={kat === k.value || undefined} onClick={() => setKat(k.value)}>
                 {k.ikon}
                 {k.label}
-              </button>
+              </Tekan>
             ))}
           </div>
           {server.loading && !server.data && <Skeleton height={56} />}
@@ -493,10 +494,10 @@ export function PilihTemplatSurat({ open, onOpenChange, unitId, onPilih, tanpaKo
                   <ul>
                     {isi.map((i) => (
                       <li key={i.kunci}>
-                        <button type="button" data-aktif={aktif?.kunci === i.kunci || undefined} onClick={() => setPilih(i.kunci)} onDoubleClick={() => onPilih(i.t)}>
+                        <Tekan terpilih={aktif?.kunci === i.kunci} data-aktif={aktif?.kunci === i.kunci || undefined} onClick={() => setPilih(i.kunci)} onDoubleClick={() => onPilih(i.t)}>
                           <span className="u-tgs-nama">{i.nama}</span>
                           {i.deskripsi && <span className="u-tgs-desk">{i.deskripsi}</span>}
-                        </button>
+                        </Tekan>
                       </li>
                     ))}
                   </ul>

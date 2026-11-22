@@ -9,6 +9,7 @@ import { Select } from '../components/select';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { IsianAngka, IsianJam } from '../components/isian-angka';
 import { keAngka } from '../lib/angka';
+import { Tekan } from '../components/tekan';
 
 /*
  * Cek bentrok dan jadwal otomatis (API SIAKAD /v1/akademik/jadwal/... atau /v1/fakultas/{kode}/jadwal/...).
@@ -266,9 +267,9 @@ export function KartuTemuanJadwal({ temuan: t, prodi, onPilih, className }: { te
   const Bagian = ({ s }: { s: SesiJadwalRingkas }) => {
     const klik = pilih(s);
     return klik ? (
-      <button type="button" className="u-jb-sesi-tombol" onClick={klik} title="Buka jadwal ini">
+      <Tekan className="u-jb-sesi-tombol" onClick={klik} title="Buka jadwal ini">
         <SesiTemuan s={s} prodi={prodi} />
-      </button>
+      </Tekan>
     ) : (
       <SesiTemuan s={s} prodi={prodi} />
     );

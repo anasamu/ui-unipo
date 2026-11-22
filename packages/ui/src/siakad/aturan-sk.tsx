@@ -7,11 +7,13 @@ import {
   CircleAlert,
   CircleCheck,
   Copy,
+  ExternalLink,
   FileBadge,
   GitBranch,
   GripVertical,
   History,
   Layers,
+  Lock,
   Plus,
   RefreshCw,
   Route,
@@ -38,6 +40,7 @@ import { useFakultasReferensi, useProdiReferensi } from './prodi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { IsianAngka } from '../components/isian-angka';
 import { keAngka } from '../lib/angka';
+import { Tekan } from '../components/tekan';
 
 /*
  * Aturan berdasarkan SK dan rantai validator per unit (SIAKAD docs/ATURAN-SK.md). Keluarga komponen yang dipakai ulang
@@ -928,6 +931,47 @@ function FormValidator({ open, onOpenChange, awal, katalog, templat }: { open: b
   );
 }
 
+/** Bagian tata kelola aturan yang hanya diubah di Pustikom (keputusan Anas 2026-11-22). */
+export type BagianTataKelolaAturan = 'pengatur' | 'penyetuju' | 'validator';
+const MENU_TATA_KELOLA: Record<BagianTataKelolaAturan, { menu: string; jalur: string }> = {
+  pengatur: { menu: 'Pustikom » Aturan & pengatur » Pengatur', jalur: '/aturan?tab=pengatur' },
+  penyetuju: { menu: 'Pustikom » Aturan & pengatur » Pejabat penyetuju', jalur: '/aturan?tab=penyetuju' },
+  validator: { menu: 'Pustikom » Aturan » Validator aturan', jalur: '/aturan/validator' },
+};
+type TautanTataKelola = { tautan?: Partial<Record<BagianTataKelolaAturan, { menu?: string; url?: string | null }>> };
+
+/**
+ * Satu baris "Diatur di Pustikom" di atas daftar Pengatur / Pejabat penyetuju / Validator aturan yang tampil hanya-baca di
+ * aplikasi unit. Alamat dari GET /v1/aturan/kebijakan/jenis `tautan` (server yang belum punya tautan pengatur/penyetuju:
+ * diturunkan dari asal tautan validator).
+ */
+export function CatatanDiaturPustikom({ bagian, className }: { bagian: BagianTataKelolaAturan; className?: string }) {
+  const q = useSiakadQuery<TautanTataKelola>(['aturan', 'kebijakan', 'jenis'], (s, signal) => s.request<TautanTataKelola>({ method: 'GET', path: '/v1/aturan/kebijakan/jenis' }, { signal }), { staleTime: 300_000 });
+  const t = q.data?.tautan;
+  const m = MENU_TATA_KELOLA[bagian];
+  let url = t?.[bagian]?.url ?? null;
+  if (!url && t?.validator?.url) {
+    try {
+      url = new URL(m.jalur, t.validator.url).toString();
+    } catch {
+      url = null;
+    }
+  }
+  return (
+    <p className={cn('u-aturan-diatur-pustikom', className)}>
+      <Lock aria-hidden />
+      <span>
+        Hanya dilihat di sini. Diatur di <strong>{t?.[bagian]?.menu ?? m.menu}</strong>.
+      </span>
+      {url && (
+        <a href={url} target="_blank" rel="noreferrer">
+          Buka di Pustikom <ExternalLink aria-hidden />
+        </a>
+      )}
+    </p>
+  );
+}
+
 /**
  * Penjelasan singkat beda Pengatur dan Validator aturan (dipasang di atas tab Pengatur dan halaman Validator aturan).
  * `tautan` = tautan ke halaman satunya (mis. <Link to="/aturan/validator">Validator aturan</Link>).
@@ -986,7 +1030,22 @@ const LABEL_JENIS_UNIT_BARIS = (p: PengaturanValidator, katalog?: KatalogValidat
  * Pustikom » Aturan » Validator aturan: rantai validator per unit pengaju (dan per jenis aturan), templat rantai,
  * simulasi, riwayat. Tulis butuh izin aturan.validator.atur; lihat butuh aturan.validator.lihat.
  */
-export function ValidatorAturan({ className, tautanPengatur }: { className?: string; /** Tautan ke tab Pengatur (Aturan & pengatur). */ tautanPengatur?: React.ReactNode }) {
+export function ValidatorAturan({
+  className,
+  tautanPengatur,
+  hanyaBaca = false,
+  kategori,
+}: {
+  className?: string;
+  /** Tautan ke tab Pengatur (Aturan & pengatur). */ tautanPengatur?: React.ReactNode;
+  /**
+   * Aplikasi unit: hanya melihat, tanpa tombol tambah/ubah/hapus, dengan baris "Diatur di Pustikom" (server juga menolak
+   * tulis dari klien selain Pustikom). Bawaan false (Pustikom).
+   */
+  hanyaBaca?: boolean;
+  /** Saring rantai ke kategori aturan milik aplikasi (rantai "semua jenis aturan" tetap tampil). Kosong = semua. */
+  kategori?: string[];
+}) {
   const q = useValidatorAturan();
   const katalog = useKatalogValidator();
   const riwayat = useRiwayatValidator();
@@ -995,8 +1054,9 @@ export function ValidatorAturan({ className, tautanPengatur }: { className?: str
   const [form, setForm] = React.useState<IsianValidator | null>(null);
   if (q.error) return <GalatAturan error={q.error} onRetry={q.refetch} className={className} />;
   if (!q.data || !katalog.data) return <Skeleton height={240} className={className} />;
-  const boleh = q.data.boleh_atur;
-  const rantai = q.data.data.filter((p) => p.jenis_baris === 'aturan');
+  const boleh = q.data.boleh_atur && !hanyaBaca;
+  const sesuaiKategori = (p: PengaturanValidator) => !kategori?.length || !p.kategori || kategori.includes(p.kategori);
+  const rantai = q.data.data.filter((p) => p.jenis_baris === 'aturan' && sesuaiKategori(p));
   const templat = q.data.data.filter((p) => p.jenis_baris === 'templat');
   const kartu = (p: PengaturanValidator) => (
     <Card key={p.id} className="u-ask-kartu" data-nonaktif={p.aktif ? undefined : ''}>
@@ -1056,7 +1116,7 @@ export function ValidatorAturan({ className, tautanPengatur }: { className?: str
   );
   return (
     <div className={cn('u-ask', className)}>
-      <PenjelasanPengaturValidator halaman="validator" tautan={tautanPengatur} />
+      {hanyaBaca ? <CatatanDiaturPustikom bagian="validator" /> : <PenjelasanPengaturValidator halaman="validator" tautan={tautanPengatur} />}
       <Alert icon={<ShieldCheck />} title="Cara kerja rantai validator">
         Aturan yang diajukan sebuah unit diperiksa berurutan, mis. usulan prodi → Dekan → LP2M → Rektor. Unit yang punya rantai sendiri memakai rantainya; bila tidak, ikut rantai unit induk atau rantai untuk unit sejenis; bila tidak ada sama sekali, disetujui Wakil Rektor bidangnya. Pengaju tidak pernah memeriksa usulannya sendiri.
       </Alert>
@@ -1094,7 +1154,7 @@ export function ValidatorAturan({ className, tautanPengatur }: { className?: str
               </div>
             ),
           },
-          { value: 'simulasi', label: 'Simulasi', icon: <Route />, content: <SimulasiValidator /> },
+          { value: 'simulasi', label: 'Simulasi', icon: <Route />, content: <SimulasiValidator kategoriAwal={kategori?.[0]} /> },
           {
             value: 'riwayat',
             label: 'Riwayat',
@@ -1478,11 +1538,10 @@ export function WizardTemplatAturan({
           ) : (
             <div className="u-ask-jenis" role="radiogroup" aria-label="Jenis aturan">
               {kat.data.jenis.map((x) => (
-                <button
+                <Tekan
                   key={x.kode}
-                  type="button"
                   role="radio"
-                  aria-checked={jenis === x.kode}
+                  terpilih={jenis === x.kode}
                   className="u-ask-jenis-kartu"
                   data-pilih={jenis === x.kode ? '' : undefined}
                   onClick={() => {
@@ -1493,7 +1552,7 @@ export function WizardTemplatAturan({
                   <strong>{x.judul}</strong>
                   <span>{x.keterangan}</span>
                   {!x.siap && <Badge variant="outline">Segera tersedia</Badge>}
-                </button>
+                </Tekan>
               ))}
             </div>
           ),
@@ -1506,11 +1565,10 @@ export function WizardTemplatAturan({
           content: (
             <div className="u-ask-kasus" role="radiogroup" aria-label="Kasus">
               {(j?.templat ?? []).map((t) => (
-                <button
+                <Tekan
                   key={t.kode}
-                  type="button"
                   role="radio"
-                  aria-checked={kasus?.kode === t.kode}
+                  terpilih={kasus?.kode === t.kode}
                   className="u-ask-jenis-kartu"
                   data-pilih={kasus?.kode === t.kode ? '' : undefined}
                   disabled={!t.siap}
@@ -1528,7 +1586,7 @@ export function WizardTemplatAturan({
                     Bila tidak dipenuhi: {t.akibat_label.toLowerCase()}
                     {t.titik_judul ? ` · diperiksa saat ${t.titik_judul.charAt(0).toLowerCase()}${t.titik_judul.slice(1)}` : ''}
                   </span>
-                </button>
+                </Tekan>
               ))}
             </div>
           ),

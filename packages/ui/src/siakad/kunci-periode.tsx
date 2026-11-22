@@ -4,7 +4,7 @@ import { CircleDot, Lock, LockOpen } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Alert } from '../components/display';
 import { Badge } from '../components/actions';
-import { Select, type SelectOption } from '../components/select';
+import { Select, type BuatPilihan, type SelectOption } from '../components/select';
 import { useToast } from '../components/overlays';
 import { useOptionalSiakad, useSiakadQuery } from './provider';
 
@@ -169,20 +169,32 @@ export interface PilihPeriodeAkademikProps {
   'aria-label'?: string;
   /** Tampilkan lencana status di dalam isian pemilih (rata kanan, tidak menggeser penjajaran saringan). Bawaan true. */
   lencana?: boolean;
+  id?: string;
+  /**
+   * Pola pilihan kosong: bila belum ada periode, yang berhak (mis. BAAK) membuat periode dari panel samping; periode
+   * baru langsung terpilih. Bawaan teks: "Belum ada periode akademik." Yang tidak berhak melihat `pengelola`.
+   */
+  buat?: BuatPilihan<SelectOption<string> | string>;
+  /** Daftar `daftar` dari aplikasi sedang dimuat (bukan kosong). */
+  memuat?: boolean;
 }
 
 /** Pemilih periode akademik dengan status kunci (aktif, ditutup, dibuka kembali). */
-export function PilihPeriodeAkademik({ value, onValueChange, daftar, label, className, lencana = true, ...rest }: PilihPeriodeAkademikProps) {
+export function PilihPeriodeAkademik({ value, onValueChange, daftar, label, className, lencana = true, id, buat, memuat, ...rest }: PilihPeriodeAkademikProps) {
   const k = useKunciPeriode();
   const sumber = daftar ?? (k.data ?? []).map((s) => ({ tahun_id: s.tahun_id, nama: s.nama }));
   const opsi = useOpsiPeriode(sumber, label);
   return (
     <div className={cn('u-pilih-periode-akademik', className)}>
       <Select
+        id={id}
         options={opsi}
         value={value}
         onValueChange={(v) => v && onValueChange(String(v))}
         aria-label={rest['aria-label'] ?? 'Periode akademik'}
+        buat={buat && { nama: 'periode akademik', ...buat, segarkan: () => (k.refetch(), buat.segarkan?.()) }}
+        memuat={memuat ?? (!daftar && k.loading)}
+        galat={!daftar && k.error && !k.data ? true : undefined}
         lencana={lencana ? <LencanaPeriode status={value ? k.peta.get(value) : null} /> : null}
       />
     </div>

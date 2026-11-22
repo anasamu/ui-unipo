@@ -18,6 +18,7 @@ import { PilihBerkas } from './pilih-berkas';
 import { AlurPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import { DaftarPerubahanAturan, DaftarVersiAturan, LencanaStatusVersi, PanelBandingAturan, type PerubahanAturan, type VersiAturanRow } from './aturan-versi';
 import { IsianTanggal } from '../components/formulir';
+import { Tekan } from '../components/tekan';
 
 /*
  * Aturan kurikulum BERVERSI (SIAKAD /v1/kurikulum-aturan, docs/KURIKULUM.md "Aturan kurikulum berversi"). Mekanisme versi
@@ -190,7 +191,7 @@ export function EditorSkalaNilai({ value, onChange, disabled }: { value: SkalaNi
   const tumpuk = urut.some((s, i) => i > 0 && s.maks >= urut[i - 1].min);
   return (
     <div className="u-kur-skala">
-      {value.length ? ( // unipo-ui-izinkan tabel-bawaan: kisi isian skala nilai (sel = isian), bukan tabel data
+      {value.length ? (
         <table className="u-kur-tabel">
           <thead>
             <tr>
@@ -557,7 +558,7 @@ function RincianAturanKurikulum({ id, onPilih, referensi }: { id: number; onPili
                       <ul className="u-kur-perangkat-ringkas">
                         {a.turunan.map((x) => (
                           <li key={x.id}>
-                            <button type="button" className="u-kur-tautan" onClick={() => onPilih(x.id)}>{x.nama} v{x.versi}</button> <LencanaStatusVersi status={x.status} /> <small>{x.unit}</small>
+                            <Tekan className="u-kur-tautan" onClick={() => onPilih(x.id)}>{x.nama} v{x.versi}</Tekan> <LencanaStatusVersi status={x.status} /> <small>{x.unit}</small>
                           </li>
                         ))}
                       </ul>

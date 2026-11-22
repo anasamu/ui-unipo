@@ -25,6 +25,7 @@ import {
   type Aturan,
   type HasilPeriksaAturan,
 } from './aturan';
+import { Tekan } from '../components/tekan';
 
 /*
  * Aturan fakultas (SIAKAD docs/ATURAN-FAKULTAS.md): syarat dosen PA, pembimbing, dan penguji yang ditetapkan fakultas
@@ -343,9 +344,9 @@ function LencanaSk({ a, onLampirkan }: { a: AturanBerlingkup; onLampirkan?: () =
   if (a.sk?.nomor) return <Tag size="sm" icon={<FileBadge />}>SK {a.sk.nomor}</Tag>;
   if (!tanpaSk(a)) return null;
   return (
-    <button type="button" className="u-lencana-sk" data-nada="warning" onClick={onLampirkan} title="Lampirkan SK Dekan dari registri SK">
+    <Tekan className="u-lencana-sk" data-nada="warning" onClick={onLampirkan} title="Lampirkan SK Dekan dari registri SK">
       <CircleAlert aria-hidden /> Belum ada SK, lampirkan (SK Dekan)
-    </button>
+    </Tekan>
   );
 }
 
@@ -370,10 +371,10 @@ function KartuAturanFakultas({
   const berubah = bawaan && (a.status !== 'aktif' || a.versi > 1 || Boolean(a.usulan));
   return (
     <li className="u-aturan-fak-kartu" data-status={a.status} data-universitas={universitas || undefined}>
-      <button type="button" className="u-aturan-fak-isi" onClick={onBuka}>
+      <Tekan className="u-aturan-fak-isi" onClick={onBuka}>
         <strong>{a.nama}</strong>
         <span>{kalimatSyarat(a.kondisi, katalog.data, 'Dosen boleh ditetapkan jika')}</span>
-      </button>
+      </Tekan>
       <div className="u-aturan-fak-lencana">
         <StatusAturanBadge status={statusTampil(a)} />
         {a.usulan?.status === 'diajukan' && (
@@ -541,20 +542,25 @@ export function KelolaAturanFakultas({ kodeFakultas, judul = 'Aturan fakultas', 
   const dekan = d.penyetuju.orang.filter((o) => o.sebagai.includes('Dekan'));
   return (
     <div className={cn('u-aturan-modul u-aturan-fak', className)}>
-      <div className="u-aturan-modul-kepala">
-        <div>
-          <h2>{judul}</h2>
-          <p>
-            Syarat dosen PA, pembimbing, dan penguji di {rapikanNamaUnit(d.fakultas.nama)}. Aturan ini hanya berlaku untuk mahasiswa dan prodi fakultas ini,
-            diperiksa bersama aturan universitas: semua harus terpenuhi.
-          </p>
+      {/* judul={null}: kepala halaman aplikasi sudah memuat judul & keterangan; hanya tombol yang tampil (rata kanan). */}
+      {(judul !== null || d.boleh_atur) && (
+        <div className="u-aturan-modul-kepala" data-tanpa-judul={judul === null ? '' : undefined}>
+          {judul !== null && (
+            <div>
+              <h2>{judul}</h2>
+              <p>
+                Syarat dosen PA, pembimbing, dan penguji di {rapikanNamaUnit(d.fakultas.nama)}. Aturan ini hanya berlaku untuk mahasiswa dan prodi fakultas ini,
+                diperiksa bersama aturan universitas: semua harus terpenuhi.
+              </p>
+            </div>
+          )}
+          {d.boleh_atur && (
+            <Button onClick={() => setForm({ aturan: null })}>
+              <Plus /> Tambah aturan
+            </Button>
+          )}
         </div>
-        {d.boleh_atur && (
-          <Button onClick={() => setForm({ aturan: null })}>
-            <Plus /> Tambah aturan
-          </Button>
-        )}
-      </div>
+      )}
 
       <section className="u-aturan-fak-panduan" aria-label="Cara mengikuti aturan bawaan fakultas">
         <p className="u-aturan-di-titik-label">

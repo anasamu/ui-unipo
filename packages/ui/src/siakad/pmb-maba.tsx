@@ -73,6 +73,7 @@ import {
 } from './pmb-publik';
 import { IsianBerkas, TombolPilihBerkas } from '../components/pilih-berkas-lokal';
 import { Select } from '../components/select';
+import { Tekan } from '../components/tekan';
 
 /**
  * Area pendaftar PMB (`/v1/pmb/saya/*`): dasbor tahapan, pilih gelombang, formulir, berkas, tagihan dan pembayaran
@@ -821,7 +822,7 @@ export function PilihGelombangPendaftarPmb({ awal, onDibuat, banner }: { awal?: 
               const terdaftar = sudah.has(g.id);
               const bisa = g.sedang_buka && !terdaftar;
               return (
-                <button key={g.id} type="button" className="u-pmb-pilih-gel" disabled={!bisa} aria-pressed={pilih === g.id} onClick={() => setPilih(g.id)}>
+                <Tekan key={g.id} className="u-pmb-pilih-gel" disabled={!bisa} terpilih={pilih === g.id} onClick={() => setPilih(g.id)}>
                   {pilih === g.id && <CheckCircle2 aria-hidden className="u-pmb-pilih-cek" />}
                   <Cluster gap={2}>
                     <Badge variant={k.variant} dot>
@@ -844,7 +845,7 @@ export function PilihGelombangPendaftarPmb({ awal, onDibuat, banner }: { awal?: 
                       <ClipboardCheck aria-hidden /> {g.perlu_tes ? 'Dengan tes seleksi' : 'Tanpa tes'} · maks. {g.maks_pilihan} pilihan prodi
                     </span>
                   </span>
-                </button>
+                </Tekan>
               );
             })}
           </Grid>
@@ -1069,7 +1070,7 @@ function PilihMetodeBayar({ pendaftaranId, tagihan, metode, onSelesai }: { penda
         {opsi.map((o) => {
           const I = IKON[o.metode];
           return (
-            <button key={o.kunci} type="button" className="u-pmb-metode" aria-pressed={pilih === o.kunci} onClick={() => setPilih(o.kunci)}>
+            <Tekan key={o.kunci} className="u-pmb-metode" terpilih={pilih === o.kunci} onClick={() => setPilih(o.kunci)}>
               <span className="u-pmb-metode-ikon">
                 <I aria-hidden />
               </span>
@@ -1077,7 +1078,7 @@ function PilihMetodeBayar({ pendaftaranId, tagihan, metode, onSelesai }: { penda
                 <strong>{o.label}</strong>
                 <small>{o.sub}</small>
               </span>
-            </button>
+            </Tekan>
           );
         })}
       </Grid>
@@ -1618,7 +1619,6 @@ export function KartuPesertaPmb({ pendaftaranId }: { pendaftaranId: string }) {
             </Text>
           ) : (
             <TableContainer>
-              {/* unipo-ui-izinkan tabel-primitif: jadwal di kartu tes yang dicetak/diunduh peserta, tata letak kartu */}
               <Table density="compact">
                 <thead>
                   <tr>
@@ -1805,7 +1805,7 @@ export function NotifikasiPendaftarPmbDaftar() {
         <ul className="u-pmb-notif">
           {data.map((n) => (
             <li key={n.id}>
-              <button type="button" data-baru={!n.dibaca_at || undefined} onClick={() => !n.dibaca_at && void baca(n.id)}>
+              <Tekan data-baru={!n.dibaca_at || undefined} onClick={() => !n.dibaca_at && void baca(n.id)}>
                 <span className="u-pmb-notif-titik" aria-hidden />
                 <span>
                   <span className="u-pmb-notif-kepala">
@@ -1814,7 +1814,7 @@ export function NotifikasiPendaftarPmbDaftar() {
                   </span>
                   {n.isi && <span className="u-pmb-notif-isi">{n.isi}</span>}
                 </span>
-              </button>
+              </Tekan>
             </li>
           ))}
         </ul>

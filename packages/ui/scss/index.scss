@@ -5,6 +5,7 @@
 @use 'base';
 @use 'vendor/leaflet';
 @use 'components/actions';
+@use 'components/tekan';
 @use 'components/forms';
 @use 'components/overlays';
 @use 'components/modal-fitur';
@@ -108,6 +109,7 @@
 @use 'components/penyunting-landing';
 @use 'components/kaki-situs';
 @use 'components/beranda';
+@use 'components/peringatan-beranda';
 @use 'components/pmb-publik';
 @use 'components/pmb-maba';
 @use 'components/lms-belajar';

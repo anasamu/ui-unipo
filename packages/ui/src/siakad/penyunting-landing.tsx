@@ -57,6 +57,7 @@ import { cn, dataFlag } from '../lib/cn';
 import { PilihBerkas } from './pilih-berkas';
 import { PENYEDIA_SIAKAD, pathHalaman, type DataHalamanLanding } from './landing-aplikasi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { Tekan } from '../components/tekan';
 
 // ---------------------------------------------------------------- pratinjau dalam bingkai
 
@@ -219,9 +220,9 @@ function IsianUrl({ nilai, ubah, aksi, contoh }: { nilai: string; ubah: (v: stri
       {opsiAksi.length > 0 && (
         <div className="upl-aksi-cepat" aria-label="Aksi aplikasi">
           {opsiAksi.map(([k, a]) => (
-            <button key={k} type="button" aria-pressed={teks === `aksi:${k}`} onClick={() => ubah(`aksi:${k}`)}>
+            <Tekan key={k} terpilih={teks === `aksi:${k}`} onClick={() => ubah(`aksi:${k}`)}>
               {a.label}
-            </button>
+            </Tekan>
           ))}
         </div>
       )}
@@ -349,10 +350,10 @@ function DaftarButir({ kolom, nilai, ubah, k }: { kolom: Extract<KolomBlok, { je
         {nilai.map((b, i) => (
           <li key={i} data-buka={dataFlag(buka === i)}>
             <div className="upl-daftar-kepala">
-              <button type="button" className="upl-daftar-judul" aria-expanded={buka === i} onClick={() => setBuka(buka === i ? null : i)}>
+              <Tekan className="upl-daftar-judul" aria-expanded={buka === i} onClick={() => setBuka(buka === i ? null : i)}>
                 <span className="upl-no">{i + 1}</span>
                 {kolom.judulButir(b, i)}
-              </button>
+              </Tekan>
               <Button size="xs" variant="ghost" aria-label={`Naikkan ${kolom.butir} ${i + 1}`} title="Naikkan" disabled={i === 0} onClick={() => ubah(geser(nilai, i, i - 1))}>
                 <ArrowUp />
               </Button>
@@ -431,10 +432,10 @@ function PanelGaya({ blok, ubah, k }: { blok: BlokLanding; ubah: (g: GayaBlok) =
       <Field label="Latar">
         <div className="upl-latar" role="radiogroup" aria-label="Latar">
           {LATAR.map((l) => (
-            <button key={l.v} type="button" role="radio" aria-checked={(g.latar ?? 'polos') === l.v} data-latar={l.v} onClick={() => set('latar', l.v === 'polos' ? undefined : l.v)}>
+            <Tekan key={l.v} role="radio" terpilih={(g.latar ?? 'polos') === l.v} data-latar={l.v} onClick={() => set('latar', l.v === 'polos' ? undefined : l.v)}>
               <span aria-hidden />
               {l.label}
-            </button>
+            </Tekan>
           ))}
         </div>
       </Field>
@@ -493,9 +494,8 @@ function PanelTambah({ open, tutup, tambah }: { open: boolean; tutup: () => void
               {URUT_BLOK.filter((t) => SKEMA_BLOK[t].grup === grup).map((t) => {
                 const d = SKEMA_BLOK[t];
                 return (
-                  <button
+                  <Tekan
                     key={t}
-                    type="button"
                     onClick={() => {
                       tambah(blokBaru(t));
                       tutup();
@@ -504,7 +504,7 @@ function PanelTambah({ open, tutup, tambah }: { open: boolean; tutup: () => void
                     <d.ikon aria-hidden />
                     <strong>{d.label}</strong>
                     <span>{d.keterangan}</span>
-                  </button>
+                  </Tekan>
                 );
               })}
             </div>
@@ -516,9 +516,8 @@ function PanelTambah({ open, tutup, tambah }: { open: boolean; tutup: () => void
             {POTONGAN_LANDING.map((p) => {
               const d = SKEMA_BLOK[p.tipe];
               return (
-                <button
+                <Tekan
                   key={p.kunci}
-                  type="button"
                   onClick={() => {
                     tambah(p.buat());
                     tutup();
@@ -527,7 +526,7 @@ function PanelTambah({ open, tutup, tambah }: { open: boolean; tutup: () => void
                   <d.ikon aria-hidden />
                   <strong>{p.nama}</strong>
                   <span>{d.label}</span>
-                </button>
+                </Tekan>
               );
             })}
           </div>
@@ -980,8 +979,7 @@ export function PenyuntingLanding({ aplikasi, lingkup, halaman = 'beranda', nama
                     <span className="upl-pegangan" aria-hidden title="Seret untuk mengurutkan">
                       <GripVertical />
                     </span>
-                    <button
-                      type="button"
+                    <Tekan
                       className="upl-blok-tombol"
                       aria-current={b.id === pilih ? 'true' : undefined}
                       onClick={() => {
@@ -1004,7 +1002,7 @@ export function PenyuntingLanding({ aplikasi, lingkup, halaman = 'beranda', nama
                           {b.gaya.menu ? ` · menu "${b.gaya.menu}"` : ''}
                         </small>
                       </span>
-                    </button>
+                    </Tekan>
                     {boleh && (
                       <span className="upl-blok-aksi">
                         <Button size="xs" variant="ghost" aria-label={`Naikkan ${judulBlok(b)}`} title="Naikkan" disabled={i === 0} onClick={() => ubah({ t: 'geser', id: b.id, arah: -1 })}>

@@ -42,6 +42,7 @@ import type { KeuanganMahasiswaData } from './profil-modul';
 import { KwitansiResmi, type KwitansiResmiData } from './kwitansi';
 import { buktiPeramban, namaPerambanBawaan, useDaftarPerambanKasir, usePerambanKasir, type SesiPerambanKasir } from './kasir-peramban';
 import { IsianCari } from '../components/isian-cari';
+import { Tekan } from '../components/tekan';
 
 // Kasir modern (keuangan, fakultas, PMB), riwayat pembayaran mahasiswa, buku kas unit, dan jurnal umum.
 // Endpoint: /v1/keuangan (tagihan, transaksi, kasir, kwitansi), /v1/pmb/admin/tagihan, /v1/keu/kas, /v1/keu/jurnal.
@@ -802,9 +803,9 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
           </Field>
           <div className="u-kasir-cepat">
             {cepat.map((v) => (
-              <button key={v} type="button" data-aktif={uang === v || undefined} onClick={() => setDiterima(String(v))}>
+              <Tekan key={v} terpilih={uang === v} data-aktif={uang === v || undefined} onClick={() => setDiterima(String(v))}>
                 {v === total ? 'Uang pas' : formatRupiah(v)}
-              </button>
+              </Tekan>
             ))}
           </div>
           <div className="u-kasir-kembali" data-kurang={kurang || undefined}>
@@ -994,9 +995,9 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
                       <small>{b.sub}</small>
                     </span>
                     <b>{formatRupiah(b.jumlah)}</b>
-                    <button type="button" aria-label={`Hapus ${b.label}`} onClick={() => setKeranjang((x) => x.filter((y) => y.kunci !== b.kunci))}>
+                    <Tekan aria-label={`Hapus ${b.label}`} onClick={() => setKeranjang((x) => x.filter((y) => y.kunci !== b.kunci))}>
                       <Trash2 />
-                    </button>
+                    </Tekan>
                   </li>
                 ))}
               </ul>
@@ -1599,7 +1600,7 @@ export function JurnalUmum({ unitId, bolehPosting: boleh, judul = 'Jurnal umum',
       <ul className="u-jurnal-daftar" data-mobile={p.mobile || undefined}>
         {(q.data ?? []).map((j) => (
           <li key={j.id}>
-            <button type="button" onClick={() => setBuka(j.id)}>
+            <Tekan onClick={() => setBuka(j.id)}>
               <span className="u-jurnal-nomor">
                 <b>{j.nomor}</b>
                 <small>{formatDate(j.tanggal)}</small>
@@ -1613,7 +1614,7 @@ export function JurnalUmum({ unitId, bolehPosting: boleh, judul = 'Jurnal umum',
               </span>
               <b className="u-jurnal-total">{formatRupiah(j.total)}</b>
               <Badge variant={NADA_JURNAL[j.status]}>{j.status}</Badge>
-            </button>
+            </Tekan>
           </li>
         ))}
       </ul>

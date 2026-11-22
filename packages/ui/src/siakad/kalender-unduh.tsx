@@ -7,6 +7,7 @@ import { Button } from '../components/actions';
 import { UnipoMark } from '../components/identity';
 import { Checkbox } from '../components/forms';
 import { Select } from '../components/select';
+import { Tekan } from '../components/tekan';
 
 // ================================================================ Tipe
 
@@ -892,10 +893,10 @@ export function UnduhKalender({ tahapan, info, namaBerkas = 'kalender-akademik',
       <div className="u-unduh-kal-alat">
         <div className="u-unduh-kal-varian" role="radiogroup" aria-label="Varian desain">
           {VARIAN_DESAIN_KALENDER.map((v) => (
-            <button key={v.value} type="button" role="radio" aria-checked={varian === v.value} disabled={u.gambar && v.value !== 'poster' && v.value !== 'linimasa'} onClick={() => setVarian(v.value)} title={v.keterangan}>
+            <Tekan key={v.value} role="radio" terpilih={varian === v.value} disabled={u.gambar && v.value !== 'poster' && v.value !== 'linimasa'} onClick={() => setVarian(v.value)} title={v.keterangan}>
               <strong>{v.label}</strong>
               <span>{v.keterangan}</span>
-            </button>
+            </Tekan>
           ))}
         </div>
         <div className="u-unduh-kal-baris">

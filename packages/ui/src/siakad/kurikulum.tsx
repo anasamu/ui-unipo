@@ -12,6 +12,7 @@ import { LabelProdi } from './prodi';
 import { KodeLaporan } from '../components/galat';
 import { IsianCari } from '../components/isian-cari';
 import { DataTable } from '../components/data-table';
+import { Tekan } from '../components/tekan';
 
 /*
  * Widget Kurikulum OBE (/v1/kurikulum-obe, Permendiktisaintek 39/2025): daftar kurikulum, ringkasan & alur status,
@@ -491,10 +492,10 @@ export function ValidasiKurikulum({ kurikulumId, className }: { kurikulumId: num
           <p className="u-kur-validasi-sub">{r.regulasi ?? 'Permendiktisaintek 39/2025'}</p>
           <div className="u-kur-filter" role="group" aria-label="Saring temuan">
             {(['semua', 'galat', 'peringatan', 'info'] as const).map((t) => (
-              <button key={t} type="button" data-active={dataFlag(tingkat === t)} data-tingkat={t} onClick={() => setTingkat(t)}>
+              <Tekan key={t} terpilih={tingkat === t} data-active={dataFlag(tingkat === t)} data-tingkat={t} onClick={() => setTingkat(t)}>
                 {t === 'semua' ? 'Semua' : t.charAt(0).toUpperCase() + t.slice(1)}
                 <span>{t === 'semua' ? d.temuan.length : n(r[t])}</span>
-              </button>
+              </Tekan>
             ))}
           </div>
         </div>
@@ -642,7 +643,6 @@ export function MatriksKurikulum({ kurikulumId, jenis = 'cpl-mk', editable, clas
         </Alert>
       )}
       <div className="u-matriks-scroll" tabIndex={0} role="region" aria-label={def.judul}>
-        {/* unipo-ui-izinkan tabel-bawaan: matriks pemetaan dua sisi (CPL × MK) dengan sel centang, bukan tabel data */}
         <table>
           <thead>
             <tr>
@@ -671,9 +671,9 @@ export function MatriksKurikulum({ kurikulumId, jenis = 'cpl-mk', editable, clas
                   return (
                     <td key={k.id}>
                       {editable ? (
-                        <button type="button" className="u-matriks-cell" aria-pressed={on} aria-label={`${b.kode} – ${k.kode}`} onClick={() => void ganti(b.id, k.id)}>
+                        <Tekan className="u-matriks-cell" terpilih={on} aria-label={`${b.kode} – ${k.kode}`} onClick={() => void ganti(b.id, k.id)}>
                           {on && <Check aria-hidden />}
-                        </button>
+                        </Tekan>
                       ) : (
                         <span className="u-matriks-cell" data-on={dataFlag(on)} aria-label={on ? `${b.kode} – ${k.kode}` : undefined}>
                           {on && <Check aria-hidden />}
@@ -1017,12 +1017,12 @@ export function CapaianCplMahasiswa({ nim, kurikulumId, className }: { nim: stri
               target={n(c.target)}
               status={c.tercapai == null ? 'kosong' : c.tercapai ? 'tercapai' : 'belum'}
               kanan={
-                <button type="button" className="u-cpl-bar-more" aria-expanded={buka === c.cpl_id} onClick={() => setBuka((b) => (b === c.cpl_id ? null : c.cpl_id))}>
+                <Tekan className="u-cpl-bar-more" aria-expanded={buka === c.cpl_id} onClick={() => setBuka((b) => (b === c.cpl_id ? null : c.cpl_id))}>
                   <b>{c.nilai == null ? '–' : formatNumber(n(c.nilai), { maximumFractionDigits: 1 })}</b>
                   <small>
                     {c.mk_sudah_dinilai}/{c.mk_total} MK
                   </small>
-                </button>
+                </Tekan>
               }
             />
             {buka === c.cpl_id && (
@@ -1340,7 +1340,7 @@ export function TabelStrukturKurikulum({ kurikulumId, detail = 'baris', onPilihM
               <tbody key={s} className="u-tsk-group" data-terlipat={dataFlag(terlipat)}>
                 <tr className="u-tsk-head" data-lebih={dataFlag(!!maks && sks > maks)}>
                   <td colSpan={kolom}>
-                    <button type="button" aria-expanded={!terlipat} onClick={() => setTutup((t) => toggle(t, s))}>
+                    <Tekan aria-expanded={!terlipat} onClick={() => setTutup((t) => toggle(t, s))}>
                       <ChevronRight className="u-tsk-chevron" aria-hidden />
                       <b>{s ? `Semester ${s}` : 'Pilihan bebas'}</b>
                       <span className="u-tsk-head-meta">
@@ -1348,7 +1348,7 @@ export function TabelStrukturKurikulum({ kurikulumId, detail = 'baris', onPilihM
                         {maks ? `/${maks}` : ''} SKS{pilihan ? ` + ${formatNumber(pilihan)} pilihan` : ''}
                       </span>
                       {!!maks && <Progress value={Math.min(100, (sks / maks) * 100)} size="sm" tone={sks > maks ? 'danger' : 'primary'} className="u-tsk-progress" />}
-                    </button>
+                    </Tekan>
                   </td>
                 </tr>
                 {!terlipat &&
