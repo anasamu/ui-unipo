@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.60.0 (2026-11-22)
+
+- **Kasir unit: pemilih "Unit yang diatur"** (`siakad/kasir-unit.tsx`): pengguna berlingkup lebih dari satu unit tanpa unit aplikasi (BAUK lintas unit) memilih unit di kepala halaman, menggantikan teks "Lingkup: semua unit"; kelima tab tersaring dan jenis biaya baru memakai unit itu sebagai penerbit bawaan.
+
 ## 1.59.0 (2026-11-22)
 
 - **Kasir unit terkunci ke unit aplikasi** (`siakad/kasir-unit.tsx`): `PengaturanKasirUnit` menerima `unitKode` (kode struktur organisasi, mis. `"BAAK"`, `"PMB"`) dan memakai `unit_aplikasi` dari server (fakultas aplikasi Fakultas). Aplikasi unit hanya menampilkan jenis biaya, loket, aturan, jadwal, dan templat unit itu, dan pilihan "Unit penerbit" saat menambah jenis biaya hanya unit itu (tanpa Universitas). Bila kode unit tidak ada dalam lingkup pengguna, tampil keterangan, bukan daftar semua unit.
