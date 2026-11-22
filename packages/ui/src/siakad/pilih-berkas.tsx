@@ -10,6 +10,7 @@ import { useInfoBerkas, useUnggahBerkas, type BerkasTerunggah, type OpsiUnggahBe
 import { pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { usePilihBerkas } from '../components/pilih-berkas-lokal';
 import { IsianCari } from '../components/isian-cari';
+import { Tekan } from '../components/tekan';
 
 const ikonBerkas = (mime?: string | null) => (mime?.startsWith('image/') ? <ImageIcon aria-hidden /> : <FileText aria-hidden />);
 
@@ -95,14 +96,14 @@ function DialogBerkasSaya({ open, tutup, pilih, kategori, accept }: { open: bool
         ) : (
           <div className="u-pilih-berkas-daftar" role="listbox" aria-label="Berkas saya">
             {isi.map((b) => (
-              <button key={b.id} type="button" role="option" aria-selected={terpilih?.id === b.id} className="u-pilih-berkas-baris" onClick={() => setTerpilih(b)} onDoubleClick={() => pilih(b)}>
+              <Tekan key={b.id} role="option" terpilih={terpilih?.id === b.id} className="u-pilih-berkas-baris" onClick={() => setTerpilih(b)} onDoubleClick={() => pilih(b)}>
                 <span className="u-pilih-berkas-ikon">{ikonBerkas(b.mime)}</span>
                 <span className="u-pilih-berkas-teks">
                   <strong>{b.nama}</strong>
                   <small>{[formatBytes(b.ukuran), b.kategori].filter(Boolean).join(' · ')}</small>
                 </span>
                 {terpilih?.id === b.id && <Check aria-hidden className="u-pilih-berkas-centang" />}
-              </button>
+              </Tekan>
             ))}
             {memuat && Array.from({ length: isi.length ? 2 : 5 }, (_, i) => <span key={`m${i}`} className="u-pilih-berkas-baris u-skeleton" aria-hidden />)}
           </div>

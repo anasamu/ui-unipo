@@ -16,6 +16,7 @@ import { AlurPemeriksa, LabelPemeriksa, PratinjauPemeriksa, type TahapPemeriksa 
 import { IsianAngka } from '../components/isian-angka';
 import { IsianTanggal } from '../components/formulir';
 import { keAngka, teksAngka } from '../lib/angka';
+import { Tekan } from '../components/tekan';
 
 /*
  * Pengajuan mandiri mahasiswa ke unit lain, ujung ke ujung (docs/PRASYARAT.md di SIAKAD):
@@ -426,7 +427,7 @@ function DaftarPengajuan({ jenis, nim }: { jenis: JenisPengajuanMahasiswa; nim: 
         <ul className="u-pengajuan-daftar">
           {q.data.map((r) => (
             <li key={r.id}>
-              <button type="button" className="u-pengajuan-baris" onClick={() => setPilih(r)}>
+              <Tekan className="u-pengajuan-baris" onClick={() => setPilih(r)}>
                 <span className="u-pengajuan-ikon" aria-hidden>
                   {d.ikon}
                 </span>
@@ -441,7 +442,7 @@ function DaftarPengajuan({ jenis, nim }: { jenis: JenisPengajuanMahasiswa; nim: 
                   {/* Tahap berjalan/ditolak: lencana pemeriksa ("Menunggu BAAK") menggantikan status umum. */}
                   {r.pemeriksa?.some((t) => t.status === 'sedang' || t.status === 'ditolak') ? <LabelPemeriksa pemeriksa={r.pemeriksa} /> : <LencanaStatusPengajuan status={r.status} />}
                 </span>
-              </button>
+              </Tekan>
             </li>
           ))}
         </ul>

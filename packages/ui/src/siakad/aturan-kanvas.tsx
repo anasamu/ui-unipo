@@ -26,6 +26,7 @@ import { Pilihan, PilihanBanyak } from '../components/formulir';
 import { ConfirmDialog, useToast } from '../components/overlays';
 import { GalatApi } from './galat';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { Tekan } from '../components/tekan';
 
 /*
  * Kanvas seret-lepas templat kasus (mode ADMIN aturan; SIAKAD /v1/aturan/templat/{palet,kelola,pratinjau},
@@ -1071,9 +1072,9 @@ export function KanvasTemplat({ kode, onKembali, onTersimpan, className }: { kod
                 <ul className="u-akv-galat-daftar">
                   {daftarGalat.map(([id, p]) => (
                     <li key={id}>
-                      <button type="button" onClick={() => document.getElementById(`akv-${id}`)?.focus()}>
+                      <Tekan onClick={() => document.getElementById(`akv-${id}`)?.focus()}>
                         <Ban aria-hidden /> {p}
-                      </button>
+                      </Tekan>
                     </li>
                   ))}
                 </ul>

@@ -1300,7 +1300,7 @@ export function PratinjauTemplatLaporanKasir({ isi, kolom, unit, baris, periode,
           {isi.subjudul ? <small>{isi.subjudul}</small> : null}
           <small>{periode ?? 'Periode 17–19 November 2026'}</small>
         </div>
-        {kol.length ? ( // unipo-ui-izinkan tabel-bawaan: pratinjau kertas laporan kasir sesuai cetakan
+        {kol.length ? (
           <table className="u-ksu-kertas-tabel">
             <thead>
               <tr>

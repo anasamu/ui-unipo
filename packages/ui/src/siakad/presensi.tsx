@@ -47,6 +47,7 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
 import { PilihLokasiPeta, titikDariTeks } from '../components/peta';
 import { IsianJam, IsianAngka } from '../components/isian-angka';
 import { keAngka, teksAngka } from '../lib/angka';
+import { Tekan } from '../components/tekan';
 
 /*
  * Presensi QR (/v1/presensi) untuk mahasiswa (kuliah), dosen (mengajar dan kerja), tendik (kerja), dan kegiatan.
@@ -1727,7 +1728,7 @@ export function KelolaSesiPresensi({ idj, lmsKelasId, jenis, renderQr, className
         <ul className="u-presensi-daftar-sesi" data-interaktif>
           {daftar.map((s) => (
             <li key={s.id}>
-              <button type="button" className="u-presensi-sesi-tombol" onClick={() => setPilih(s.id)}>
+              <Tekan className="u-presensi-sesi-tombol" onClick={() => setPilih(s.id)}>
                 <div>
                   <p className="u-presensi-sesi-judul">{judulSesiPresensi(s)}</p>
                   <p className="u-presensi-sesi-meta">
@@ -1737,7 +1738,7 @@ export function KelolaSesiPresensi({ idj, lmsKelasId, jenis, renderQr, className
                   </p>
                 </div>
                 <BadgeStatusSesi status={s.status} />
-              </button>
+              </Tekan>
             </li>
           ))}
         </ul>

@@ -39,6 +39,7 @@ import { RincianPembayaran, rincianDariKeuanganMahasiswa } from './kwitansi';
 import { GalatApi } from './galat';
 import { LabelProdi } from './prodi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { Tekan } from '../components/tekan';
 
 // ================================================================ Data /v1/profil/saya
 
@@ -942,11 +943,11 @@ export function KeuanganMahasiswa({ nim: nimProp, className }: { nim?: string; c
           const terbuka = p.tahun_id === aktif;
           return (
             <li key={p.tahun_id} data-terbuka={terbuka || undefined}>
-              <button type="button" aria-expanded={terbuka} onClick={() => setBuka(terbuka ? '' : p.tahun_id)}>
+              <Tekan aria-expanded={terbuka} onClick={() => setBuka(terbuka ? '' : p.tahun_id)}>
                 <b>{labelTahunAkademik(p.tahun_id)}</b>
                 <span>{formatRupiah(p.ringkasan.tagihan)}</span>
                 {p.ringkasan.sisa > 0 ? <Badge variant="warning">Sisa {formatRupiah(p.ringkasan.sisa)}</Badge> : <Badge variant="success">Lunas</Badge>}
-              </button>
+              </Tekan>
               {terbuka && (() => {
                 const rb = rincianDariKeuanganMahasiswa({ periode: [p] });
                 const ker = (d.keringanan ?? []).filter((k) => k.tahun_id === p.tahun_id && k.status === 'diterapkan');

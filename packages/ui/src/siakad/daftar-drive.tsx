@@ -24,6 +24,7 @@ import {
 } from './drive-pohon';
 import { useSiakadQuery } from './provider';
 import { IsianCari } from '../components/isian-cari';
+import { Tekan } from '../components/tekan';
 
 // ================================================================ Tipe (GET /v1/berkas/drive, KONTRAK-RUANG)
 
@@ -324,9 +325,9 @@ export function DaftarDrive({
         {o.lipatan === undefined ? null : o.lipatan === 'kosong' ? (
           <span className="u-dd-lipat" aria-hidden />
         ) : (
-          <button type="button" className="u-dd-lipat" tabIndex={-1} aria-label={`${o.lipatan.terbuka ? 'Lipat' : 'Buka'} ${nama}`} aria-expanded={o.lipatan.terbuka} onClick={() => alihLipat(d.id, (o.lipatan as { terbuka: boolean }).terbuka)}>
+          <Tekan className="u-dd-lipat" tabIndex={-1} aria-label={`${o.lipatan.terbuka ? 'Lipat' : 'Buka'} ${nama}`} aria-expanded={o.lipatan.terbuka} onClick={() => alihLipat(d.id, (o.lipatan as { terbuka: boolean }).terbuka)}>
             <ChevronRight aria-hidden data-buka={o.lipatan.terbuka ? '' : undefined} />
-          </button>
+          </Tekan>
         )}
         {d.hak === null ? (
           <span className="u-dd-jalur" title={d.unit_jenis === 'kelompok' ? d.nama : `${d.nama}: Anda tidak punya akses ke berkas unit ini`}>
@@ -336,18 +337,18 @@ export function DaftarDrive({
             <span className="u-dd-label">{nama}</span>
           </span>
         ) : (
-          <button type="button" className="u-dd-drive" aria-current={ini ? 'page' : undefined} title={tooltip} onClick={() => onPilih(d)}>
+          <Tekan className="u-dd-drive" aria-current={ini ? 'page' : undefined} title={tooltip} onClick={() => onPilih(d)}>
             <span className="u-dd-ikon">{ringkas && d.jenis !== 'pribadi' ? <b className="u-dd-huruf">{hurufIkon(d)}</b> : <IkonDrive d={d} />}</span>
             <span className="u-dd-label">{nama}</span>
             {d.singkatan && d.jenis !== 'pribadi' && d.singkatan.toLowerCase() !== nama.toLowerCase() && <small className="u-dd-singkat">{d.singkatan}</small>}
             {d.hak !== umum && <LencanaHak hak={d.hak} />}
             {jml ? <span className="u-dd-jumlah">{jml}</span> : null}
-          </button>
+          </Tekan>
         )}
         {d.hak !== null && d.jenis !== 'pribadi' && !ringkas && (o.bagian === 'tersemat' || banyak) && (
-          <button type="button" className="u-dd-semat" data-tersemat={tersemat ? '' : undefined} aria-label={`${tersemat ? 'Lepas sematan' : 'Sematkan'} ${nama}`} title={tersemat ? 'Lepas dari Tersemat' : 'Sematkan ke atas'} onClick={() => alihSemat(d.id)}>
+          <Tekan className="u-dd-semat" data-tersemat={tersemat ? '' : undefined} aria-label={`${tersemat ? 'Lepas sematan' : 'Sematkan'} ${nama}`} title={tersemat ? 'Lepas dari Tersemat' : 'Sematkan ke atas'} onClick={() => alihSemat(d.id)}>
             {tersemat ? <PinOff aria-hidden /> : <Pin aria-hidden />}
-          </button>
+          </Tekan>
         )}
       </div>
     );
@@ -370,10 +371,10 @@ export function DaftarDrive({
   const pintas = (label: string, ikon: React.ReactNode, x: { aktif: boolean; onPilih: () => void }) => (
     <li role="treeitem" aria-selected={x.aktif}>
       <div className="u-dd-baris" data-aktif={x.aktif ? '' : undefined} data-pintas="">
-        <button type="button" className="u-dd-drive" aria-current={x.aktif ? 'page' : undefined} title={label} onClick={x.onPilih}>
+        <Tekan className="u-dd-drive" aria-current={x.aktif ? 'page' : undefined} title={label} onClick={x.onPilih}>
           <span className="u-dd-ikon">{ikon}</span>
           <span className="u-dd-label">{label}</span>
-        </button>
+        </Tekan>
       </div>
     </li>
   );
@@ -432,12 +433,12 @@ export function DaftarDrive({
             {onLebarkan && (
               <li role="treeitem" aria-selected={false}>
                 <div className="u-dd-baris" data-pintas="">
-                  <button type="button" className="u-dd-drive" title={`Semua unit (${nBuka})`} onClick={onLebarkan}>
+                  <Tekan className="u-dd-drive" title={`Semua unit (${nBuka})`} onClick={onLebarkan}>
                     <span className="u-dd-ikon">
                       <Building2 aria-hidden />
                     </span>
                     <span className="u-dd-label">Semua unit</span>
-                  </button>
+                  </Tekan>
                 </div>
               </li>
             )}
