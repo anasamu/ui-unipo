@@ -104,7 +104,7 @@ export const CariDok = Extension.create<Record<string, never>, PenyimpananCari>(
           const s = editor.storage.cariDok;
           if (!s.hasil.length) return false;
           if (dispatch) {
-            for (const h of [...s.hasil].reverse()) tr.insertText(ganti, h.from, h.to);
+            for (const h of s.hasil.toReversed()) tr.insertText(ganti, h.from, h.to);
             dispatch(tr.setMeta(kunciCari, true));
           }
           return true;

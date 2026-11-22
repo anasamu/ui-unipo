@@ -242,7 +242,7 @@ export function useTrenAkademik({ semester = 8, kodeProdi }: KueriAkademik) {
   const r = useSiakadQuery<TrenAkademik[]>(['dasbor-tren', semester, kodeProdi], (s, signal) => s.dasbor.getTren({ semester, kode_prodi: kodeProdi }, { signal }) as never, { staleTime: 300_000 });
   const data = React.useMemo(() => {
     if (!r.data) return undefined;
-    const urut = [...r.data].sort((a, b) => String(a.tahun_id).localeCompare(String(b.tahun_id)));
+    const urut = r.data.toSorted((a, b) => String(a.tahun_id).localeCompare(String(b.tahun_id)));
     // Semester mendatang (belum ada KRS, maba, lulusan, maupun IPS) tidak dijadikan entri sumbu.
     const kosong = (t: TrenAkademik) => !n(t.mengisi_krs) && !n(t.mahasiswa_baru) && !n(t.lulusan) && nAtauNull(t.rata_ips) == null;
     while (urut.length > 1 && kosong(urut[urut.length - 1]!)) urut.pop();
@@ -260,7 +260,7 @@ export function RingkasanAkademik({ hrefEws, className, ...k }: KueriAkademik & 
   const muat = muatDari(ringkas);
   const akhir = seri[seri.length - 1];
   // Bandingkan dengan semester sejenis tahun lalu (ganjil dengan ganjil).
-  const lalu = akhir ? [...seri].reverse().find((r) => r !== akhir && String(r.tahun_id).slice(4) === String(akhir.tahun_id).slice(4)) : undefined;
+  const lalu = akhir ? seri.findLast((r) => r !== akhir && String(r.tahun_id).slice(4) === String(akhir.tahun_id).slice(4)) : undefined;
   const banding = (key: keyof TrenAkademik) => (akhir && lalu ? ubah(n(akhir[key]), n(lalu[key])) : null);
   const labelLalu = lalu ? `dari ${labelSemester(lalu.tahun_id)}` : undefined;
   const aktif = n(t.mahasiswa_aktif);
@@ -350,8 +350,8 @@ export const MahasiswaPerProdi = buatWidget('MahasiswaPerProdi', useRingkasAkade
   <BarList
     loading={muat}
     limit={8}
-    items={[...(d?.per_prodi ?? [])]
-      .sort((a, b) => n(b.mahasiswa_aktif) - n(a.mahasiswa_aktif))
+    items={(d?.per_prodi ?? [])
+      .toSorted((a, b) => n(b.mahasiswa_aktif) - n(a.mahasiswa_aktif))
       .map((p) => ({
         label: <LabelProdi kode={p.kode_prodi} nama={p.nama_prodi} prodi={{ kode_jenjang: p.jenjang }} sub={false} />,
         value: n(p.mahasiswa_aktif),
@@ -470,8 +470,8 @@ export const SerapanPerUnit = buatWidget('SerapanPerUnit', useSerapanAnggaran, {
     loading={muat}
     max={100}
     format={(v) => formatPersen(v, 0)}
-    items={[...(d?.per_unit ?? [])]
-      .sort((a, b) => n(b.persen) - n(a.persen))
+    items={(d?.per_unit ?? [])
+      .toSorted((a, b) => n(b.persen) - n(a.persen))
       .map((u) => ({ label: u.unit ?? `Unit ${u.unit_id}`, value: n(u.persen), secondary: `${formatRupiahRingkas(n(u.realisasi))} dari ${formatRupiahRingkas(n(u.anggaran))}` }))}
   />
 ));
@@ -482,8 +482,8 @@ export const RealisasiPerAkun = buatWidget('RealisasiPerAkun', useSerapanAnggara
     loading={muat}
     limit={8}
     format={formatRupiahRingkas}
-    items={[...(d?.per_akun ?? [])]
-      .sort((a, b) => n(b.realisasi) - n(a.realisasi))
+    items={(d?.per_akun ?? [])
+      .toSorted((a, b) => n(b.realisasi) - n(a.realisasi))
       .map((a) => ({ label: a.akun_nama ?? a.akun_kode ?? '-', value: n(a.realisasi), secondary: [a.akun_kode, a.persen != null ? formatPersen(n(a.persen), 0) : null].filter(Boolean).join(' · ') }))}
   />
 ));
@@ -965,7 +965,7 @@ export const SkemaHibah = buatWidget('SkemaHibah', useRekapLppm, { title: 'Skema
   <BarList
     loading={muat}
     limit={8}
-    items={[...(d?.kegiatan_per_skema ?? [])].sort((a, b) => n(b.jumlah) - n(a.jumlah)).map((x) => ({ label: x.nama, value: n(x.jumlah), secondary: `${formatNumber(n(x.didanai))} didanai` }))}
+    items={(d?.kegiatan_per_skema ?? []).toSorted((a, b) => n(b.jumlah) - n(a.jumlah)).map((x) => ({ label: x.nama, value: n(x.jumlah), secondary: `${formatNumber(n(x.didanai))} didanai` }))}
   />
 ));
 /** Luaran penelitian/PkM per jenis. */
@@ -973,8 +973,8 @@ export const LuaranLppm = buatWidget('LuaranLppm', useRekapLppm, { title: 'Luara
   <BarList
     loading={muat}
     limit={10}
-    items={[...(d?.luaran_per_jenis ?? [])]
-      .sort((a, b) => n(b.jumlah) - n(a.jumlah))
+    items={(d?.luaran_per_jenis ?? [])
+      .toSorted((a, b) => n(b.jumlah) - n(a.jumlah))
       .map((x) => ({ label: x.nama, value: n(x.jumlah), secondary: `${formatNumber(n(x.terverifikasi))} terverifikasi` }))}
   />
 ));
@@ -1368,8 +1368,8 @@ export const PeminatPerProdi = buatWidget('PeminatPerProdi', useStatistikPmb, { 
   <BarList
     loading={muat}
     limit={10}
-    items={[...(d?.per_prodi ?? [])]
-      .sort((a, b) => n(b.peminat) - n(a.peminat))
+    items={(d?.per_prodi ?? [])
+      .toSorted((a, b) => n(b.peminat) - n(a.peminat))
       .map((p) => ({ label: <LabelProdi kode={p.kode_prodi} nama={p.nama_prodi} sub={false} />, value: n(p.peminat), secondary: `${formatNumber(n(p.pilihan_pertama))} pilihan 1` }))}
   />
 ));
@@ -1379,7 +1379,7 @@ export const SumberInformasiPmb = buatWidget('SumberInformasiPmb', useStatistikP
     loading={muat}
     size={128}
     centerLabel="pendaftar"
-    data={[...(d?.per_sumber_informasi ?? [])].sort((a, b) => n(b.jumlah) - n(a.jumlah)).map((x) => ({ label: x.sumber, value: n(x.jumlah) }))}
+    data={(d?.per_sumber_informasi ?? []).toSorted((a, b) => n(b.jumlah) - n(a.jumlah)).map((x) => ({ label: x.sumber, value: n(x.jumlah) }))}
   />
 ));
 /** Kode referal teratas (sekolah, alumni, mitra). */
@@ -1388,7 +1388,7 @@ export const ReferalPmb = buatWidget('ReferalPmb', useStatistikPmb, { title: 'Re
     loading={muat}
     limit={8}
     empty="Belum ada pendaftar lewat referal."
-    items={[...(d?.per_referal ?? [])].sort((a, b) => n(b.jumlah) - n(a.jumlah)).map((x) => ({ label: x.nama, value: n(x.jumlah), secondary: `${x.kode} · ${formatNumber(n(x.diajukan))} diajukan` }))}
+    items={(d?.per_referal ?? []).toSorted((a, b) => n(b.jumlah) - n(a.jumlah)).map((x) => ({ label: x.nama, value: n(x.jumlah), secondary: `${x.kode} · ${formatNumber(n(x.diajukan))} diajukan` }))}
   />
 ));
 
@@ -1485,7 +1485,7 @@ export const StatusAlumni = buatWidget('StatusAlumni', useStatistikTracer, { tit
 ));
 /** Alumni dan yang terlacak per tahun lulus. */
 export const AlumniPerTahunLulus = buatWidget('AlumniPerTahunLulus', useStatistikTracer, { title: 'Per tahun lulus', description: 'Jumlah alumni dan yang terlacak', span: 2 }, (d, muat) => {
-  const thn = [...(d?.per_tahun_lulus ?? [])].sort((a, b) => a.tahun - b.tahun).slice(-8);
+  const thn = (d?.per_tahun_lulus ?? []).toSorted((a, b) => a.tahun - b.tahun).slice(-8);
   return (
     <GroupedBarChart
       loading={muat}

@@ -599,7 +599,7 @@ export function LineChart({
     if (kini.length) hasil.push(kini);
     return hasil;
   };
-  const akhirTerisi = (s: ChartSeries) => [...s.values].reverse().find(ada);
+  const akhirTerisi = (s: ChartSeries) => s.values.findLast(ada);
   return (
     <div className={cn('u-line', className)} ref={tip.ref}>
       {series.length > 1 && (
@@ -786,7 +786,7 @@ export function DonutChart({
   const sorted = data.filter((d) => d.value > 0);
   let segs = sorted;
   if (sorted.length > maxSegments) {
-    const rest = [...sorted].sort((a, b) => b.value - a.value);
+    const rest = sorted.toSorted((a, b) => b.value - a.value);
     const keep = new Set(rest.slice(0, maxSegments - 1));
     segs = [...sorted.filter((d) => keep.has(d)), { label: 'Lainnya', value: rest.slice(maxSegments - 1).reduce((s, d) => s + d.value, 0), color: 'var(--u-muted-foreground)' }];
   }

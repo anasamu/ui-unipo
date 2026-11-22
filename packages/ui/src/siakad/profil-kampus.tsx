@@ -56,7 +56,7 @@ function useStrukturPortal(situs: string, grup?: string, turunan?: boolean) {
  * itu sebagai kepala cabang. Untuk susunan lain, kirim fungsi `susun` sendiri ke StrukturPortal.
  */
 export function strukturDariPortal(baris: BarisStrukturPortal[]): NodeStruktur[] {
-  const urut = [...baris].sort((a, b) => (a.urutan ?? 0) - (b.urutan ?? 0) || a.id - b.id);
+  const urut = baris.toSorted((a, b) => (a.urutan ?? 0) - (b.urutan ?? 0) || a.id - b.id);
   const keNode = (b: BarisStrukturPortal): NodeStruktur => ({
     id: String(b.id),
     jabatan: b.jabatan,

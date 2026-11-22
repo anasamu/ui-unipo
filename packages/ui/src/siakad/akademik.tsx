@@ -556,7 +556,7 @@ export function JadwalMengajar({ nidn, tahunId, className }: { nidn: string; tah
   const data = q.data ?? [];
   if (!data.length) return <Empty icon={<CalendarDays />} title="Tidak ada jadwal mengajar" className={className} />;
   const grup = new Map<string, Row[]>();
-  for (const r of [...data].sort((a, b) => String(a.hari).localeCompare(String(b.hari)) || String(a.jam_mulai ?? a.jam_ke).localeCompare(String(b.jam_mulai ?? b.jam_ke))))
+  for (const r of data.toSorted((a, b) => String(a.hari).localeCompare(String(b.hari)) || String(a.jam_mulai ?? a.jam_ke).localeCompare(String(b.jam_mulai ?? b.jam_ke))))
     grup.set(String(r.hari ?? '-'), [...(grup.get(String(r.hari ?? '-')) ?? []), r]);
   return (
     <div className={cn('u-jadwal-hari', className)}>

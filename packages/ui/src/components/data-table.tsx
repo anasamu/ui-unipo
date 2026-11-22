@@ -331,7 +331,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     if (serverSort || !sort) return all;
     const col = columns.find((c) => c.key === sort.key);
     if (!col) return all;
-    const out = [...all].sort((a, b) => compare(raw(col, a), raw(col, b)));
+    const out = all.toSorted((a, b) => compare(raw(col, a), raw(col, b)));
     return sort.dir === 'desc' ? out.reverse() : out;
   }, [all, sort, serverSort, columns]);
   // ---- pohon (data bertingkat)

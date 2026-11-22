@@ -202,7 +202,7 @@ const WARNA_STATUS: Record<string, 'neutral' | 'info' | 'warning' | 'success' | 
 
 /** Petugas terakhir yang memproses (dari `pemeriksa`), untuk keterangan kecil di daftar petugas. */
 function PetugasPemeriksa({ pemeriksa }: { pemeriksa?: TahapPemeriksa[] | null }) {
-  const t = [...(pemeriksa ?? [])].reverse().find((x) => x.diproses_oleh && (x.status === 'selesai' || x.status === 'ditolak'));
+  const t = (pemeriksa ?? []).findLast((x) => x.diproses_oleh && (x.status === 'selesai' || x.status === 'ditolak'));
   if (!t) return null;
   return (
     <small className="u-ta-redup" style={{ display: 'block' }} title={teksAlurPemeriksa(pemeriksa)}>
@@ -1104,7 +1104,7 @@ export function FormJadwalUjianTa({ u, open, onOpenChange }: { u: UjianTa | null
               {cek.syarat_dosen.length > 0 && (
                 <Alert variant={cek.syarat_dosen.some((s) => s.mode === 'blokir') ? 'danger' : 'info'} title="Syarat dosen (aturan fakultas)">
                   <ul>
-                    {[...cek.syarat_dosen].sort((a, b) => (a.mode === b.mode ? 0 : a.mode === 'blokir' ? -1 : 1)).map((s, i) => (
+                    {cek.syarat_dosen.toSorted((a, b) => (a.mode === b.mode ? 0 : a.mode === 'blokir' ? -1 : 1)).map((s, i) => (
                       <li key={i} data-mode={s.mode}>
                         <strong>{s.nama}</strong>: {s.mode === 'blokir' ? <strong>{s.pesan}</strong> : s.pesan}
                       </li>

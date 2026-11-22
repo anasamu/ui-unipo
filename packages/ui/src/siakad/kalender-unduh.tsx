@@ -241,7 +241,7 @@ export const DesainKalender = React.forwardRef<SVGSVGElement, DesainKalenderProp
   const u = UKURAN_DESAIN_KALENDER[ukuran];
   const W = u.w;
   const H = u.h;
-  const tahapan = React.useMemo(() => [...semua].sort((a, b) => a.mulai.localeCompare(b.mulai)), [semua]);
+  const tahapan = React.useMemo(() => semua.toSorted((a, b) => a.mulai.localeCompare(b.mulai)), [semua]);
   const gelapTema = tema === 'gelap' && (varian === 'poster' || varian === 'linimasa');
   const latar = gelapTema ? '#0b1220' : '#ffffff';
   const teks = gelapTema ? '#e5e7eb' : '#0f172a';

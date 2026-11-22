@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.62.0 (2026-11-22)
+
+- **TypeScript ES2023 + metode salin larik (legacy-scan modern-web-guidance, keputusan Anas 2026-11-22)**: `target`/`lib` tsconfig `packages/ui` dan `apps/docs` naik dari ES2020/ES2022 ke ES2023. Sintaks keluaran build tidak lagi mengikuti `target` tsconfig: `tsup.config.ts` kini memakai `target: ['chrome110', 'edge110', 'firefox115', 'safari16']` sesuai peramban yang didukung (Chrome 110+, Safari 16+, Firefox 115+; sebelumnya ES2020). 51 temuan `copying-array-methods` diterapkan: salinan `[...x].sort()`/`.slice().sort()` menjadi `toSorted()`, `[...x].reverse()` menjadi `toReversed()`, dan `[...x].reverse().find()` menjadi `findLast()` (grafik, DataTable, progres, pustaka & cari editor, dasbor, akademik, akreditasi, aplikasi, aturan, berkas, kalender, skala nilai, kurikulum, LMS, notifikasi, obrolan, peringatan, pilih unit, PMB, profil, SKP, ujian TA, widget unit). Tidak ada temuan yang dilewati: semua penerimanya larik biasa (bukan Set/Map/NodeList/string), tanpa lubang larik, dan callback `findLast` hanya memakai argumen butir. Tipe publik `.d.ts` tidak memakai tipe ES2023, sehingga aplikasi dengan `lib` ES2022 tetap lolos typecheck.
+
 ## 1.61.0 (2026-11-22)
 
 - **Komponen biaya** (`siakad/komponen-biaya.tsx` baru; butuh SIAKAD dengan `GET /v1/keuangan/tarif/biaya`): satu halaman BAUK untuk mengatur satu jenis biaya dari hulu ke hilir. `DaftarKomponenBiaya` (daftar jenis biaya dalam lingkup, tambah lewat form bertahap) dan `DetailKomponenBiaya` dengan tab Identitas & penerbit, Tarif (nominal per prodi, angkatan, kelas, kampus, dan syarat KRS/ujian/her per periode; form di panel samping), Pembagian (aturan biaya jenis itu), dan Penerimaan kasir (jadwal aktif jenis itu + aturan penerimaan). `HalamanKomponenBiaya` memilih daftar/detail dari `kodeBiaya`.

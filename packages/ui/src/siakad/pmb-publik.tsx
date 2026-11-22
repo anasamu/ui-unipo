@@ -344,7 +344,7 @@ const ya = (v: unknown) => v === true || v === 1 || v === '1';
 export function urutkanGelombang<G extends GelombangPmb>(d: G[] = []): G[] {
   const kini = new Date().toISOString().slice(0, 10);
   const skor = (g: G) => (g.sedang_buka ? 0 : (g.pendaftaran.mulai ?? '') > kini ? 1 : 2);
-  return [...d].sort((a, b) => skor(a) - skor(b) || (a.pendaftaran.selesai ?? '').localeCompare(b.pendaftaran.selesai ?? ''));
+  return d.toSorted((a, b) => skor(a) - skor(b) || (a.pendaftaran.selesai ?? '').localeCompare(b.pendaftaran.selesai ?? ''));
 }
 /** Label dan warna lencana gelombang PMB: sedang dibuka, segera dibuka, atau ditutup. */
 export function keadaanGelombang(g: GelombangPmb): { label: string; variant: 'success' | 'warning' | 'neutral' } {
@@ -467,7 +467,7 @@ export function useDataLandingPmb() {
     return [...m.values()].sort((a, b) => (a.nama_prodi ?? '').localeCompare(b.nama_prodi ?? ''));
   }, [detail.data, landing.data]);
   const adaBiaya = new Set((detail.data ?? []).filter((d) => d.biaya.length).map((d) => d.id));
-  const gelombangSimulasi = [...(buka.length ? buka : urut)].sort((a, b) => Number(adaBiaya.has(b.id)) - Number(adaBiaya.has(a.id)));
+  const gelombangSimulasi = (buka.length ? buka : urut).toSorted((a, b) => Number(adaBiaya.has(b.id)) - Number(adaBiaya.has(a.id)));
   const biayaTermurah = buka.length ? Math.min(...buka.map((g) => g.biaya_pendaftaran ?? 0)) : null;
   return {
     landing: landing.data,

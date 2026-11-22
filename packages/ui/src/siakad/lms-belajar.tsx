@@ -1324,7 +1324,7 @@ export function DaftarTugasKelasLms({ kelasId, className }: { kelasId: number; c
   const rute = useRuteLms();
   if (q.error) return <Galat q={q} />;
   if (muatDari(q)) return <Skeleton className={className} style={{ height: 180 }} />;
-  const data = [...(q.data ?? [])].sort((a, b) => Number(tugasSelesai(a)) - Number(tugasSelesai(b)) || (a.tenggat ?? '9').localeCompare(b.tenggat ?? '9'));
+  const data = (q.data ?? []).toSorted((a, b) => Number(tugasSelesai(a)) - Number(tugasSelesai(b)) || (a.tenggat ?? '9').localeCompare(b.tenggat ?? '9'));
   if (!data.length) return <Empty icon={<ClipboardList />} title="Belum ada tugas" description="Tugas dari dosen akan muncul di sini." bordered className={className} />;
   return (
     <div className={cn('u-lmsb-grid-aktivitas', className)}>
@@ -1650,7 +1650,7 @@ export function DaftarKuisKelasLms({ kelasId, className }: { kelasId: number; cl
   const rute = useRuteLms();
   if (q.error) return <Galat q={q} />;
   if (muatDari(q)) return <Skeleton className={className} style={{ height: 160 }} />;
-  const data = [...(q.data ?? [])].sort((a, b) => Number(keadaanKuis(b).buka) - Number(keadaanKuis(a).buka) || (a.selesai ?? '9').localeCompare(b.selesai ?? '9'));
+  const data = (q.data ?? []).toSorted((a, b) => Number(keadaanKuis(b).buka) - Number(keadaanKuis(a).buka) || (a.selesai ?? '9').localeCompare(b.selesai ?? '9'));
   if (!data.length) return <Empty icon={<FileQuestion />} title="Belum ada kuis" description="Kuis dari dosen akan muncul di sini." bordered className={className} />;
   return (
     <div className={cn('u-lmsb-grid-aktivitas', className)}>

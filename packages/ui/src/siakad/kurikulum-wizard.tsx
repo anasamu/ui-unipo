@@ -79,7 +79,7 @@ const cocokAngkatan = (r: Pick<AturanKurikulumRow, 'angkatan_mulai' | 'angkatan_
 export function pilihVersiAturan(rows: AturanKurikulumRow[], kurikulumId?: number | null, angkatan?: number): AturanKurikulumRow | null {
   const milik = rows.filter((r) => kurikulumId != null && r.kurikulum_id === kurikulumId && r.status !== 'arsip');
   const terbitDulu = (a: AturanKurikulumRow, b: AturanKurikulumRow) => (a.status === b.status ? b.versi - a.versi : a.status === 'terbit' ? -1 : 1);
-  if (milik.length) return [...milik].sort(terbitDulu)[0]!;
+  if (milik.length) return milik.toSorted(terbitDulu)[0]!;
   const sempit: Record<string, number> = { prodi: 0, fakultas: 1, universitas: 2 };
   const terbit = rows
     .filter((r) => r.status === 'terbit' && cocokAngkatan(r, angkatan))

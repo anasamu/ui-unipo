@@ -373,7 +373,7 @@ export function TugasMendatang({ batas = 6, href, className }: { batas?: number;
   const q = useLmsSaya();
   if (q.error) return <Galat q={q} />;
   if (muatDari(q)) return <Skeleton className={className} style={{ height: 220 }} />;
-  const data = [...(q.data?.tugas_mendatang ?? [])].sort((a, b) => a.tenggat.localeCompare(b.tenggat)).slice(0, batas);
+  const data = (q.data?.tugas_mendatang ?? []).toSorted((a, b) => a.tenggat.localeCompare(b.tenggat)).slice(0, batas);
   if (!data.length) return <Empty icon={<ListTodo />} title="Tidak ada tugas mendekati tenggat" description="Tugas dengan tenggat 14 hari ke depan akan muncul di sini." className={className} />;
   return (
     <ul className={cn('u-lms-tugas', className)}>

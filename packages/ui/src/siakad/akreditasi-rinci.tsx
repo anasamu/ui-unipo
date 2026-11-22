@@ -161,7 +161,7 @@ export function KartuAkreditasi({ a, aksi, onPerbaiki, kelolaBerkas, pathBerkas 
   const tidak = a.status === 'tidak_terakreditasi';
   const sisa = teksSisaMasa(a.sisa_hari);
   // Versi: urut terbaru dulu; berkas SK dari registri ikut tampil bila ada.
-  const berkas = [...(a.sertifikat ?? [])].sort((x, y) => String(y.diunggah_pada ?? '').localeCompare(String(x.diunggah_pada ?? '')));
+  const berkas = (a.sertifikat ?? []).toSorted((x, y) => String(y.diunggah_pada ?? '').localeCompare(String(x.diunggah_pada ?? '')));
   return (
     <article className={cn('u-akr', className)} data-terkini={a.terkini ? '' : undefined} data-keadaan={a.keadaan}>
       <header className="u-akr-kepala">
@@ -305,7 +305,7 @@ export function KartuAkreditasi({ a, aksi, onPerbaiki, kelolaBerkas, pathBerkas 
 
 /** Riwayat akreditasi unit sebagai garis waktu (terbaru di atas). */
 export function GarisWaktuAkreditasi({ riwayat, className }: { riwayat: RiwayatAkreditasi[]; className?: string }) {
-  const urut = [...riwayat].sort((x, y) => String(y.berlaku_mulai ?? y.tanggal_sk ?? '').localeCompare(String(x.berlaku_mulai ?? x.tanggal_sk ?? '')));
+  const urut = riwayat.toSorted((x, y) => String(y.berlaku_mulai ?? y.tanggal_sk ?? '').localeCompare(String(x.berlaku_mulai ?? x.tanggal_sk ?? '')));
   return (
     <Linimasa
       className={className}

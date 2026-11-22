@@ -526,7 +526,7 @@ export function kelompokHari<T extends { created_at: string }>(daftar: T[], kini
   const URUT = ['Hari ini', 'Kemarin', 'Minggu ini', 'Lebih lama'];
   const out: Array<{ label: string; items: T[] }> = [];
   // Terbaru di atas, apa pun urutan dari server (id tidak selalu searah waktu).
-  for (const x of [...daftar].sort((a, b) => waktu(b.created_at) - waktu(a.created_at))) {
+  for (const x of daftar.toSorted((a, b) => waktu(b.created_at) - waktu(a.created_at))) {
     const l = label(x.created_at);
     const g = out.find((y) => y.label === l);
     if (g) g.items.push(x);

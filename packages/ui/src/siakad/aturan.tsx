@@ -4750,7 +4750,7 @@ export function PanelDetailAturan({ id, onUbah, onDihapus }: PanelDetailAturanPr
   const kembali =
     usulan?.status === 'dikembalikan' && usulan.catatan_putusan
       ? { oleh: usulan.diputus_oleh ?? null, nama_oleh: null as string | null, catatan: usulan.catatan_putusan }
-      : [...sumberAlur].reverse().find((l) => l.aksi === 'dikembalikan');
+      : sumberAlur.findLast((l) => l.aksi === 'dikembalikan');
   const telaah = a.telaah ?? usulan?.telaah ?? [];
   return (
     <div className="u-aturan-detail">
