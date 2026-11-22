@@ -1,14 +1,14 @@
 # Catatan perubahan
 
+## 1.55.0 (belum dirilis)
+
+- **Tab di panel samping selalu menjadi pilihan bila tidak muat** (`components/display.tsx` `tataTab`; keputusan Anas 2026-11-22 13.17): `Tabs` dengan `orientation="horizontal"` yang berada di dalam panel samping (`Sheet`) kini ikut tata letak panel, yaitu deret horizontal yang berubah menjadi pilihan tarik-turun bila tidak muat selebar panel. Sebelumnya orientasi horizontal eksplisit melewati aturan ini sehingga deret tab bisa terpotong. Hanya `orientation="vertical"` eksplisit yang tetap dihormati di panel. Uji `packages/ui/test/tab-bersarang.test.tsx`, contoh di galeri Navigasi.
+
 ## 1.54.0 (belum dirilis)
 
 - **Kelola berkas: tab tambahan aplikasi + buka dari luar** (`siakad/berkas-cepat.tsx`, `scss/components/_kerangka-aplikasi.scss`; tanpa perubahan SIAKAD): `TombolBerkas`/`KerangkaAplikasi berkas` prop baru `tab: TabKelolaBerkas[]` (`value`, `label`, `icon`, `count`, `content`) yang tampil sebagai tab setelah tab bawaan **Berkas** (file manager) di dialog Kelola berkas; isinya dirender hanya saat aktif, di wadah yang dapat digulir, dan tab bersarang di dalamnya otomatis vertikal. `bukaKelolaBerkas({ tab, ruang })` membuka dialog dari luar bilah atas (mis. rute lama yang dialihkan); permintaan sebelum bilah atas terpasang ditunda lalu dijalankan sekali (`dengarKelolaBerkas`). Pengguna tanpa akses berkas pribadi: ikon tetap tersembunyi, tetapi tab tambahan tetap bisa dibuka lewat `bukaKelolaBerkas`. `tabKelolaAktif` memilih tab (tab tak dikenal kembali ke file manager). Dipakai Fakultas untuk tab **Arsip** (arsip unit, verifikasi dokumen dosen/mahasiswa, arsip pribadi). Uji `packages/ui/test/kelola-berkas-tab.test.tsx`.
 
 ## 1.53.0 (2026-11-22)
-
-- 
-
-## 1.53.0 (belum dirilis)
 
 - **Tata kelola aturan hanya di Pustikom + judul bagian tidak ganda** (`siakad/aturan.tsx`, `aturan-sk.tsx`, `aturan-keputusan.tsx`, `biaya.tsx`, `aturan-fakultas.tsx`; butuh SIAKAD branch fix/aturan-tatakelola untuk penolakan server `403 diatur_di_pustikom` dan tautan `pengatur`/`penyetuju` di `GET /v1/aturan/kebijakan/jenis`; keputusan Anas 2026-11-22):
   - `PengaturAturan`, `PejabatPenyetujuAturan`, `ValidatorAturan`: prop baru `hanyaBaca` (tanpa tombol Atur/Ubah/Tambah/Hapus, dengan satu baris `CatatanDiaturPustikom` "Diatur di Pustikom » … · Buka di Pustikom") dan `kategori` (saring ke kategori aturan milik aplikasi; rantai validator "semua jenis aturan" tetap tampil).
