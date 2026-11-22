@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { Check, FileText, FolderOpen, ImageIcon, Search, Upload, X } from 'lucide-react';
+import { Check, FileText, FolderOpen, ImageIcon, Upload, X } from 'lucide-react';
 import { Button } from '../components/actions';
 import { ProgressUnggah } from '../components/progres';
 import { Dialog } from '../components/overlays';
@@ -8,6 +8,9 @@ import { formatBytes } from '../lib/format';
 import { cn } from '../lib/cn';
 import { useInfoBerkas, useUnggahBerkas, type BerkasTerunggah, type OpsiUnggahBerkas } from './berkas';
 import { pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { usePilihBerkas } from '../components/pilih-berkas-lokal';
+import { IsianCari } from '../components/isian-cari';
+import { Tekan } from '../components/tekan';
 
 const ikonBerkas = (mime?: string | null) => (mime?.startsWith('image/') ? <ImageIcon aria-hidden /> : <FileText aria-hidden />);
 
@@ -85,10 +88,7 @@ function DialogBerkasSaya({ open, tutup, pilih, kategori, accept }: { open: bool
       }
     >
       <div className="u-pilih-berkas-dialog">
-        <div className="u-pilih-berkas-cari">
-          <Search aria-hidden />
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama atau keterangan berkas" aria-label="Cari berkas" autoFocus />
-        </div>
+        <IsianCari className="u-pilih-berkas-cari" value={q} onValueChange={setQ} placeholder="Cari nama atau keterangan berkas" aria-label="Cari berkas" autoFocus />
         {galat ? (
           <p className="u-field-error">{galat}</p>
         ) : !memuat && !isi.length ? (
@@ -96,14 +96,14 @@ function DialogBerkasSaya({ open, tutup, pilih, kategori, accept }: { open: bool
         ) : (
           <div className="u-pilih-berkas-daftar" role="listbox" aria-label="Berkas saya">
             {isi.map((b) => (
-              <button key={b.id} type="button" role="option" aria-selected={terpilih?.id === b.id} className="u-pilih-berkas-baris" onClick={() => setTerpilih(b)} onDoubleClick={() => pilih(b)}>
+              <Tekan key={b.id} role="option" terpilih={terpilih?.id === b.id} className="u-pilih-berkas-baris" onClick={() => setTerpilih(b)} onDoubleClick={() => pilih(b)}>
                 <span className="u-pilih-berkas-ikon">{ikonBerkas(b.mime)}</span>
                 <span className="u-pilih-berkas-teks">
                   <strong>{b.nama}</strong>
                   <small>{[formatBytes(b.ukuran), b.kategori].filter(Boolean).join(' · ')}</small>
                 </span>
                 {terpilih?.id === b.id && <Check aria-hidden className="u-pilih-berkas-centang" />}
-              </button>
+              </Tekan>
             ))}
             {memuat && Array.from({ length: isi.length ? 2 : 5 }, (_, i) => <span key={`m${i}`} className="u-pilih-berkas-baris u-skeleton" aria-hidden />)}
           </div>
@@ -140,7 +140,12 @@ export interface PilihBerkasProps extends OpsiUnggahBerkas {
 export function PilihBerkas({ value, onValueChange, accept, disabled, invalid, tanpaBerkasSaya, id, className, ...opsi }: PilihBerkasProps) {
   const unggah = useUnggahBerkas(opsi);
   const { data: info } = useInfoBerkas();
-  const masuk = React.useRef<HTMLInputElement>(null);
+  const masuk = usePilihBerkas({
+    accept: accept,
+    onFiles: (files) => {
+      void mulai(files[0]);
+    },
+  });
   const [persen, setPersen] = React.useState<number | null>(null);
   const [unggahan, setUnggahan] = React.useState<{ nama: string; ukuran: number } | null>(null);
   const [galat, setGalat] = React.useState<string | null>(null);
@@ -201,17 +206,7 @@ export function PilihBerkas({ value, onValueChange, accept, disabled, invalid, t
         void mulai(e.dataTransfer.files[0]);
       }}
     >
-      <input
-        ref={masuk}
-        id={id}
-        type="file"
-        hidden
-        accept={accept}
-        onChange={(e) => {
-          void mulai(e.target.files?.[0]);
-          e.target.value = '';
-        }}
-      />
+      {masuk.elemen}
       {persen !== null ? (
         <ProgressUnggah nama={unggahan?.nama ?? 'Berkas'} ukuran={unggahan?.ukuran} persen={persen} onBatal={() => batal.current?.abort()} />
       ) : value ? (
@@ -223,7 +218,7 @@ export function PilihBerkas({ value, onValueChange, accept, disabled, invalid, t
           </div>
           {!disabled && (
             <>
-              <Button variant="ghost" size="sm" onClick={() => masuk.current?.click()}>
+              <Button id={id} variant="ghost" size="sm" onClick={() => masuk.buka()}>
                 Ganti
               </Button>
               <Button variant="ghost" size="sm" iconOnly aria-label="Buang berkas" onClick={() => pakai(null)}>
@@ -252,7 +247,7 @@ export function PilihBerkas({ value, onValueChange, accept, disabled, invalid, t
             </small>
           </div>
           <div className="u-pilih-berkas-aksi">
-            <Button variant="outline" size="sm" disabled={disabled} onClick={() => masuk.current?.click()}>
+            <Button id={id} variant="outline" size="sm" disabled={disabled} onClick={() => masuk.buka()}>
               <Upload aria-hidden />
               Unggah
             </Button>

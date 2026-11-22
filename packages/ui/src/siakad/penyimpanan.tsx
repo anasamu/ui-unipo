@@ -773,9 +773,9 @@ export function PanelPenyimpananUnit({ kode, onOpenChange, onPengguna }: PanelPe
                 <ul className="u-pny-daftar">
                   {anggota.data.map((a) => (
                     <li key={a.username}>
-                      <button type="button" className="u-pny-tautan" onClick={() => (onPengguna ? onPengguna(a.username) : setPengguna(a.username))}>
+                      <Button variant="link" size="sm" className="u-pny-tautan" onClick={() => (onPengguna ? onPengguna(a.username) : setPengguna(a.username))}>
                         {a.nama ?? a.username}
-                      </button>
+                      </Button>
                       <small>{a.kuota_byte === null ? 'tanpa batas' : `${a.persen ?? 0}% dari ${formatBytes(a.kuota_byte)}`}</small>
                       <b>{formatBytes(a.terpakai_byte)}</b>
                     </li>

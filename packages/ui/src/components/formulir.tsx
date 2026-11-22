@@ -2,15 +2,15 @@
 import * as React from 'react';
 import { ToggleGroup as BaseToggleGroup } from '@base-ui/react/toggle-group';
 import { Toggle as BaseToggle } from '@base-ui/react/toggle';
-import { Check, CircleDot } from 'lucide-react';
+import { Check, CircleDot, Plus } from 'lucide-react';
 import { cn, dataFlag } from '../lib/cn';
 import { Button, Tag } from './actions';
-import { DatePicker } from './calendar';
+import { DatePicker, type DatePickerProps } from './calendar';
 import { Alert } from './display';
 import { Input, type ControlSize } from './forms';
 import { KodeLaporan } from './galat';
 import { ConfirmDialog, Dialog, Sheet } from './overlays';
-import { Combobox, OptionContent, Select, type SelectOption } from './select';
+import { Combobox, OptionContent, Select, labelBuatPilihan, useBuatPilihan, type BuatPilihan, type SelectOption } from './select';
 
 /**
  * Bahan formulir tambah/ubah per fitur: pilihan yang memilih bentuknya sendiri (tombol, daftar, atau cari),
@@ -39,6 +39,15 @@ export interface PilihanProps {
   name?: string;
   className?: string;
   'aria-label'?: string;
+  /**
+   * Pola pilihan kosong (lihat {@link BuatPilihan}): tombol buat bagi yang berhak di semua bentuk (tombol, daftar,
+   * cari); data baru langsung terpilih. Daftar kosong selalu tampil sebagai daftar dengan teks kosong/pengelola.
+   */
+  buat?: BuatPilihan<SelectOption<string> | string>;
+  /** Daftar sedang dimuat (bukan kosong). */
+  memuat?: boolean;
+  /** Daftar gagal dimuat (bukan kosong). */
+  galat?: React.ReactNode;
 }
 
 const teksLabel = (o: SelectOption<string>) => (typeof o.label === 'string' || typeof o.label === 'number' ? String(o.label) : o.value);
@@ -55,11 +64,19 @@ export function tampilanPilihan(options: SelectOption<string>[], tampilan: Tampi
  * Satu pilihan dari daftar yang sudah diketahui. Bentuknya mengikuti jumlah opsi: tombol untuk 2–4 opsi pendek,
  * daftar tarik-turun untuk 5–8, dan isian cari untuk lebih dari 8 (provinsi, kelompok MK, bentuk pembelajaran).
  */
-export function Pilihan({ options, value, onValueChange, tampilan, required, placeholder, disabled, size, id, name, className, ...rest }: PilihanProps) {
-  const t = tampilanPilihan(options, tampilan);
+export function Pilihan({ options, value, onValueChange, tampilan, required, placeholder, disabled, size, id, name, className, buat, memuat, galat, ...rest }: PilihanProps) {
+  // Daftar kosong/memuat/galat (dengan `buat`) selalu jadi daftar: bentuk tombol tidak punya tempat untuk keadaan itu.
+  const t = buat && (!options.length || memuat || galat) ? 'daftar' : tampilanPilihan(options, tampilan);
+  const kelompok = React.useRef<HTMLDivElement>(null);
+  const bTombol = useBuatPilihan<SelectOption<string> | string>(t === 'tombol' ? buat : undefined, {
+    fokusKe: kelompok,
+    onDibuat: (baru) => onValueChange?.(typeof baru === 'string' ? baru : baru.value),
+  });
   if (t === 'tombol') {
     return (
+      <>
       <BaseToggleGroup
+        ref={kelompok}
         id={id}
         className={cn('u-pilihan-tombol', className)}
         data-size={size}
@@ -82,8 +99,16 @@ export function Pilihan({ options, value, onValueChange, tampilan, required, pla
             {o.label}
           </BaseToggle>
         ))}
+        {buat?.boleh && !buat.hanyaKosong && (
+          <Button variant="ghost" size="sm" className="u-pilihan-tombol-buat" disabled={disabled} onClick={() => void bTombol.mulai('')}>
+            <Plus aria-hidden />
+            {labelBuatPilihan(buat, '')}
+          </Button>
+        )}
         {name && <input type="hidden" name={name} value={value ?? ''} />}
       </BaseToggleGroup>
+      {bTombol.elemen}
+      </>
     );
   }
   if (t === 'cari') {
@@ -105,6 +130,16 @@ export function Pilihan({ options, value, onValueChange, tampilan, required, pla
         renderItem={(o) => <OptionContent media={o.icon} title={o.label} meta={o.description ?? (options.some((x) => x.group) ? undefined : o.group)} />}
         placeholder={placeholder ?? 'Ketik untuk mencari…'}
         icon={<CircleDot />}
+        buat={
+          buat && {
+            ...buat,
+            panel: buat.panel && (({ kata, selesai }) => buat.panel!({ kata, selesai: (b) => selesai(b == null ? null : typeof b === 'string' ? (options.find((o) => o.value === b) ?? { value: b, label: b }) : b) })),
+            onBuat: buat.onBuat && (async (k) => {
+              const b = await buat.onBuat!(k);
+              return b == null ? null : typeof b === 'string' ? (options.find((o) => o.value === b) ?? { value: b, label: b }) : b;
+            }),
+          }
+        }
       />
     );
   }
@@ -120,6 +155,9 @@ export function Pilihan({ options, value, onValueChange, tampilan, required, pla
       value={value ?? null}
       onValueChange={(v) => onValueChange?.(v)}
       placeholder={placeholder}
+      buat={buat}
+      memuat={memuat}
+      galat={galat}
     />
   );
 }
@@ -190,7 +228,7 @@ const keTanggal = (s: unknown) => {
 };
 const dariTanggal = (d: Date | null) => (d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '');
 
-export interface IsianTanggalProps {
+export interface IsianTanggalProps extends Pick<DatePickerProps, 'aria-label' | 'aria-describedby' | 'size' | 'name' | 'required' | 'tampilanAwal' | 'onGalat' | 'tampilGalat'> {
   /** Tanggal format API, `YYYY-MM-DD` (bagian jam diabaikan). */
   value?: string | null;
   onValueChange?: (value: string) => void;

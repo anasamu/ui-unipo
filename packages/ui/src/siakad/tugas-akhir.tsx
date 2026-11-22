@@ -34,6 +34,8 @@ import { PilihEntitas, type SumberEntitas } from './pilih';
 import { PilihDosenBersyarat } from './aturan-fakultas';
 import { invalidateSiakad, pesanGalat, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
 import { LabelProdi, namaRapi } from './prodi';
+import { IsianBerkas, TombolPilihBerkas } from '../components/pilih-berkas-lokal';
+import { Tekan } from '../components/tekan';
 
 /*
  * Tugas akhir/skripsi (/v1/ta) dan syarat kelulusan mahasiswa (/v1/kelulusan): mahasiswa mengajukan judul dengan
@@ -487,20 +489,9 @@ function BerkasPengajuan({ pengajuan, daftar, bolehUbah }: { pengajuan: Pengajua
                 {d.keterangan && <span>{d.keterangan}</span>}
               </div>
               {bolehUbah && (
-                <label className="u-ta-unggah">
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.odt,.jpg,.jpeg,.png"
-                    disabled={p !== undefined}
-                    onChange={(e) => {
-                      void pilih(d.kode, e.target.files?.[0]);
-                      e.target.value = '';
-                    }}
-                  />
-                  <span className="u-button" data-variant="outline" data-size="sm">
-                    <Upload aria-hidden /> {p !== undefined ? `Mengunggah ${p}%` : ada.length ? 'Tambah' : 'Unggah'}
-                  </span>
-                </label>
+                <TombolPilihBerkas className="u-ta-unggah" accept=".pdf,.doc,.docx,.odt,.jpg,.jpeg,.png" loading={p !== undefined} onFiles={(f) => void pilih(d.kode, f[0])}>
+                  <Upload aria-hidden /> {p !== undefined ? `Mengunggah ${p}%` : ada.length ? 'Tambah' : 'Unggah'}
+                </TombolPilihBerkas>
               )}
             </div>
             {ada.length > 0 && (
@@ -508,9 +499,9 @@ function BerkasPengajuan({ pengajuan, daftar, bolehUbah }: { pengajuan: Pengajua
                 {ada.map((b) => (
                   <li key={b.id}>
                     <FileText aria-hidden />
-                    <button type="button" className="u-ta-tautan" onClick={() => void lihat(b, true)}>
+                    <Tekan className="u-ta-tautan" onClick={() => void lihat(b, true)}>
                       {b.nama}
-                    </button>
+                    </Tekan>
                     <span className="u-ta-redup">{ukuran(b.ukuran)}</span>
                     <Button variant="ghost" size="sm" iconOnly aria-label={`Unduh ${b.nama}`} onClick={() => void lihat(b, false)}>
                       <Download />
@@ -971,22 +962,10 @@ export function DaftarValidasiJudul({ awal = 'saya', className }: DaftarValidasi
   );
   useSaatInvalidasi('ta', q.refetch);
 
-  const tab = [
-    { value: 'saya' as const, label: 'Menunggu saya', count: saya.data?.menunggu_saya },
-    { value: 'pa' as const, label: 'Mahasiswa PA saya' },
-    ...(kelola ? [{ value: 'kelola' as const, label: 'Semua di prodi' }] : []),
-  ];
   const baris = q.data ?? [];
-  return (
-    <div className={cn('u-ta', className)}>
-      <Tabs<UntukValidasiTa>
-        items={tab}
-        value={untuk}
-        onValueChange={(v) => {
-          setUntuk(v);
-          setStatus(v === 'saya' ? '' : 'diajukan');
-        }}
-      />
+  // Isi tab dirender di dalam Tabs supaya sub tab tingkat kedua (≥3) otomatis vertikal (keputusan Anas 2026-11-22).
+  const isi = (
+    <>
       <div className="u-ta-saring">
         <Input placeholder="Cari judul, NIM, atau nama" aria-label="Cari pengajuan" value={cari} onChange={(e) => setCari(e.target.value)} />
         {untuk !== 'saya' && (
@@ -1015,7 +994,7 @@ export function DaftarValidasiJudul({ awal = 'saya', className }: DaftarValidasi
         <ul className="u-ta-daftar">
           {baris.map((r) => (
             <li key={r.id}>
-              <button type="button" onClick={() => setBuka(r)}>
+              <Tekan onClick={() => setBuka(r)}>
                 <div className="u-ta-daftar-utama">
                   <strong>{r.judul}</strong>
                   <span className="u-ta-redup">
@@ -1029,11 +1008,28 @@ export function DaftarValidasiJudul({ awal = 'saya', className }: DaftarValidasi
                   </Badge>
                   <span className="u-ta-redup">{tgl(r.diajukan_at ?? r.created_at)}</span>
                 </div>
-              </button>
+              </Tekan>
             </li>
           ))}
         </ul>
       )}
+    </>
+  );
+  const tab = [
+    { value: 'saya' as const, label: 'Menunggu saya', count: saya.data?.menunggu_saya, content: isi },
+    { value: 'pa' as const, label: 'Mahasiswa PA saya', content: isi },
+    ...(kelola ? [{ value: 'kelola' as const, label: 'Semua di prodi', content: isi }] : []),
+  ];
+  return (
+    <div className={cn('u-ta', className)}>
+      <Tabs<UntukValidasiTa>
+        items={tab}
+        value={untuk}
+        onValueChange={(v) => {
+          setUntuk(v);
+          setStatus(v === 'saya' ? '' : 'diajukan');
+        }}
+      />
       <Sheet open={buka != null} onOpenChange={(o) => !o && setBuka(null)} title="Pengajuan judul" description={buka ? `${buka.nama_mahasiswa ?? buka.nim} (${buka.nim})` : undefined} size="lg">
         {buka && <DetailPengajuanJudul id={buka.id} onSelesai={() => setBuka(null)} />}
       </Sheet>
@@ -1231,12 +1227,12 @@ function KirimBuktiSyarat({ nim, s, onTutup }: { nim: string; s: SyaratTambahan;
           <Textarea rows={3} value={ket} onChange={(e) => setKet(e.target.value)} placeholder="Mis. nomor sertifikat, tanggal kegiatan" />
         </Field>
         <Field label="Berkas bukti" required={s.jenis === 'unggah' && !s.pengajuan} optional={s.jenis !== 'unggah'} error={galat ?? undefined} description="PDF atau gambar, paling besar sesuai batas server.">
-          <input
-            type="file"
-            className="u-ta-file"
+          <IsianBerkas
+            value={file}
             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-            onChange={(e) => {
-              setFile(e.target.files?.[0] ?? null);
+            info={false}
+            onValueChange={(f) => {
+              setFile(f);
               setGalat(null);
             }}
           />

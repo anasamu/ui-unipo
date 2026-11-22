@@ -82,18 +82,10 @@
   white-space: nowrap;
 }
 .u-panitia-tautan {
-  all: unset;
-  cursor: pointer;
-  color: var(--u-primary);
+  justify-content: flex-start;
   font-weight: 500;
-  &:hover {
-    text-decoration: underline;
-  }
-  &:focus-visible {
-    outline: 2px solid var(--u-primary);
-    outline-offset: 2px;
-    border-radius: var(--u-radius-sm);
-  }
+  text-align: start;
+  white-space: normal;
 }
 .u-panitia-sk {
   display: inline-flex;
@@ -129,18 +121,15 @@
     background: color-mix(in oklab, var(--u-primary) 9%, transparent);
     border-color: color-mix(in oklab, var(--u-primary) 28%, transparent);
   }
-  button {
-    all: unset;
-    display: inline-flex;
-    cursor: pointer;
-    margin-inline-end: -0.25rem;
+  .u-panitia-chip-lepas {
+    width: 1.125rem;
+    height: 1.125rem;
+    min-height: 0;
+    margin-inline-end: -0.3125rem;
     border-radius: 999px;
     color: var(--u-muted-foreground);
     &:hover {
       color: var(--u-danger);
-    }
-    &:focus-visible {
-      outline: 2px solid var(--u-primary);
     }
   }
 }
@@ -157,39 +146,11 @@
 
 // Jabatan → peran → aplikasi.
 .u-panitia-tabel {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--u-text-sm);
-  th {
-    text-align: start;
-    font-weight: 500;
-    font-size: var(--u-text-xs);
-    color: var(--u-muted-foreground);
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--u-border);
-  }
   td {
     vertical-align: top;
-    padding: 0.625rem 0.75rem;
-    border-bottom: 1px solid var(--u-border);
   }
-  tr:last-child td {
-    border-bottom: 0;
-  }
-  @media (max-width: 640px) {
-    thead {
-      display: none;
-    }
-    tr {
-      display: block;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid var(--u-border);
-    }
-    td {
-      display: block;
-      padding: 0.25rem 0;
-      border: 0;
-    }
+  td > .u-panitia-redup {
+    display: block;
   }
 }
 
@@ -382,15 +343,8 @@
     flex: none;
   }
 }
-.u-panitia-jenis .u-panitia-tabel {
-  table-layout: fixed;
-  th:first-child,
-  td:first-child {
-    width: 30%;
-  }
-  .u-panitia-chip {
-    white-space: normal;
-  }
+.u-panitia-jenis .u-panitia-tabel .u-panitia-chip {
+  white-space: normal;
 }
 
 // judul={null}: hanya tombol aksi, rata kanan.

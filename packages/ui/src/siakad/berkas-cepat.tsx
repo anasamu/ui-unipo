@@ -13,6 +13,9 @@ import { useDibagikanBerkas, type BagiBerkas } from './berkas-ruang';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad } from './provider';
 import { waktuRelatif } from './notifikasi';
 import { useAkunSaya } from './akun';
+import { usePilihBerkas } from '../components/pilih-berkas-lokal';
+import { SegmentedControl } from '../components/forms';
+import { Tekan } from '../components/tekan';
 
 /**
  * Kelola berkas cepat dari bilah atas: unggah (tombol atau tarik-lepas), berkas terbaru dengan tombol unduh, dan
@@ -50,6 +53,7 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
   const siakad = useOptionalSiakad();
   const [tersedia, setTersedia] = React.useState(true);
   const [info, setInfo] = React.useState<InfoBerkas | null>(null);
+  const pemilih = usePilihBerkas({ multiple: true, accept: info?.ekstensi?.length ? info.ekstensi.map((e) => `.${e}`).join(',') : undefined, onFiles: (f) => void unggah(f) });
   const [buka, setBuka] = React.useState(false);
   const [drive, setDrive] = React.useState<false | 'saya' | 'dibagikan' | 'sampah'>(false);
   const [konfirmasi, setKonfirmasi] = React.useState<string | null>(null);
@@ -58,7 +62,6 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
   const [daftar, setDaftar] = React.useState<Berkas[] | null>(null);
   const [unggahan, setUnggahan] = React.useState<Unggahan[]>([]);
   const [seret, setSeret] = React.useState(false);
-  const inputRef = React.useRef<HTMLInputElement>(null);
   const saya = useAkunSaya({ foto: false }).data?.akun?.username ?? null;
   const bagi = useDibagikanBerkas('masuk', buka && tab === 'dibagikan' && tersedia);
 
@@ -194,22 +197,12 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
       >
         <div className="u-kabar-kepala">
           <span className="u-kabar-judul">Berkas</span>
-          <Button variant="soft" size="xs" onClick={() => inputRef.current?.click()}>
+          <Button variant="soft" size="xs" onClick={() => pemilih.buka()}>
             <Upload /> Unggah
           </Button>
-          <input
-            ref={inputRef}
-            type="file"
-            multiple
-            hidden
-            accept={info?.ekstensi?.length ? info.ekstensi.map((e) => `.${e}`).join(',') : undefined}
-            onChange={(e) => {
-              if (e.target.files) void unggah(e.target.files);
-              e.target.value = '';
-            }}
-          />
+          {pemilih.elemen}
         </div>
-        <div
+        <Tekan
           className="u-berkas-cepat-jatuh"
           data-seret={seret ? '' : undefined}
           onDragOver={(e) => {
@@ -222,17 +215,14 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
             setSeret(false);
             void unggah(e.dataTransfer.files);
           }}
-          onClick={() => inputRef.current?.click()}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), inputRef.current?.click())}
+          onClick={() => pemilih.buka()}
         >
           <Upload aria-hidden />
           <span>
             Tarik berkas ke sini atau <b>pilih berkas</b>
             {info && <small title={info.batas_unggah?.maks_sumber ? `Batas dari ${info.batas_unggah.maks_sumber.label}` : undefined}>{teksBatasUnggah(info)}</small>}
           </span>
-        </div>
+        </Tekan>
         {info?.kuota && (
           // Batas yang mengikat (kuota pribadi atau kolam unit), sama dengan yang ditegakkan saat unggah.
           <MeterKuota
@@ -255,13 +245,16 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
             ))}
           </div>
         )}
-        <div className="u-kabar-tab u-berkas-cepat-tab" role="tablist">
-          <button type="button" role="tab" aria-selected={tab === 'terbaru'} onClick={() => setTab('terbaru')}>
-            Terbaru
-          </button>
-          <button type="button" role="tab" aria-selected={tab === 'dibagikan'} onClick={() => setTab('dibagikan')}>
-            Dibagikan dengan saya
-          </button>
+        <div className="u-kabar-tab u-berkas-cepat-tab">
+          <SegmentedControl<typeof tab>
+            aria-label="Daftar berkas"
+            value={tab}
+            onValueChange={setTab}
+            options={[
+              { value: 'terbaru', label: 'Terbaru' },
+              { value: 'dibagikan', label: 'Dibagikan dengan saya' },
+            ]}
+          />
         </div>
         {tab === 'terbaru' ? (
           daftar === null ? (
@@ -303,7 +296,7 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
                   onUnduh={() => void unduh(x.berkas as Berkas)}
                 />
               ) : (
-                <button key={x.id} type="button" role="listitem" className="u-kabar-item u-berkas-cepat-item" onClick={() => kelola('dibagikan')}>
+                <Tekan key={x.id} role="listitem" className="u-kabar-item u-berkas-cepat-item" onClick={() => kelola('dibagikan')}>
                   <span className="u-berkas-cepat-ikon" aria-hidden>
                     <Folder />
                   </span>
@@ -313,7 +306,7 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
                     </span>
                     <span className="u-kabar-item-isi">{['Folder', x.dibuat_oleh ? `dari ${x.dibuat_oleh}` : '', x.dibuat_at ? waktuRelatif(x.dibuat_at) : ''].filter(Boolean).join(' · ')}</span>
                   </span>
-                </button>
+                </Tekan>
               ),
             )}
           </div>

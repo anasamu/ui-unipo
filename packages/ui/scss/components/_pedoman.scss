@@ -556,19 +556,7 @@
   font-weight: var(--u-weight-semibold);
 }
 .u-pdm-param-tabel {
-  border-collapse: collapse;
-  width: auto;
-  min-width: 16rem;
-  th,
-  td {
-    padding: 0.25rem 0.75rem;
-    border: 1px solid var(--u-border);
-    text-align: start;
-  }
-  th {
-    background: var(--u-muted);
-    font-size: var(--u-text-xs);
-  }
+  max-width: 100%;
 }
 
 // ---------------------------------------------------------------- halaman baca

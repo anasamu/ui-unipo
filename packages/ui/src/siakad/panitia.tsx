@@ -540,58 +540,66 @@ export function FormPanitia({ panitia, unitId, jenisUnit, trigger, open, onOpenC
 
 /** Tabel jabatan → peran → aplikasi (pratinjau hak akses sebuah jenis panitia). */
 export function TabelJabatanPanitia({ jabatan, jumlah }: { jabatan: JabatanPanitia[]; jumlah?: Record<number, number> }) {
-  return (
-    <table className="u-panitia-tabel">
-      <thead>
-        <tr>
-          <th>Jabatan</th>
-          <th>Peran yang diajukan</th>
-          <th>Tugas</th>
-          <th>Aplikasi</th>
-        </tr>
-      </thead>
-      <tbody>
-        {jabatan.map((j) => (
-          <tr key={j.id}>
-            <td>
-              <strong>{j.nama}</strong>
-              <span className="u-panitia-redup">
-                {[j.wajib && 'wajib', j.maks != null && `maks. ${j.maks}`, jumlah && `${jumlah[j.id] ?? 0} orang`].filter(Boolean).join(' · ')}
+  const kolom: DataColumn<JabatanPanitia>[] = [
+    {
+      key: 'nama',
+      header: 'Jabatan',
+      width: '30%',
+      mobile: 'title',
+      cell: (j) => (
+        <>
+          <strong>{j.nama}</strong>
+          <span className="u-panitia-redup">{[j.wajib && 'wajib', j.maks != null && `maks. ${j.maks}`, jumlah && `${jumlah[j.id] ?? 0} orang`].filter(Boolean).join(' · ')}</span>
+        </>
+      ),
+    },
+    {
+      key: 'peran',
+      header: 'Peran yang diajukan',
+      value: (j) => j.peran.map((p) => p.nama).join(', '),
+      cell: (j) =>
+        j.peran.length ? (
+          <span className="u-panitia-peran">
+            {j.peran.map((p) => (
+              <span key={p.id} className="u-panitia-chip" data-nada="peran" title={p.lingkup === 'unit' ? 'Berlaku di unit panitia' : 'Berlaku di semua unit'}>
+                <KeyRound aria-hidden /> {p.nama}
               </span>
-            </td>
-            <td>
-              {j.peran.length ? (
-                <span className="u-panitia-peran">
-                  {j.peran.map((p) => (
-                    <span key={p.id} className="u-panitia-chip" data-nada="peran" title={p.lingkup === 'unit' ? 'Berlaku di unit panitia' : 'Berlaku di semua unit'}>
-                      <KeyRound aria-hidden /> {p.nama}
-                    </span>
-                  ))}
-                </span>
-              ) : (
-                <span className="u-panitia-redup">Tanpa hak akses tambahan</span>
-              )}
-            </td>
-            <td>
-              {j.tugas?.length ? (
-                <span className="u-panitia-peran">
-                  {j.tugas.map((t) => (
-                    <span key={t.kode} className="u-panitia-chip" data-nada="tugas" title={t.keterangan ?? undefined}>
-                      <ClipboardList aria-hidden /> {t.nama}
-                    </span>
-                  ))}
-                </span>
-              ) : (
-                <span className="u-panitia-redup">—</span>
-              )}
-            </td>
-            <td>
-              <DeretAplikasiPanitia aplikasi={j.aplikasi} kosong="—" />
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+            ))}
+          </span>
+        ) : (
+          <span className="u-panitia-redup">Tanpa hak akses tambahan</span>
+        ),
+    },
+    {
+      key: 'tugas',
+      header: 'Tugas',
+      value: (j) => (j.tugas ?? []).map((t) => t.nama).join(', '),
+      cell: (j) =>
+        j.tugas?.length ? (
+          <span className="u-panitia-peran">
+            {j.tugas.map((t) => (
+              <span key={t.kode} className="u-panitia-chip" data-nada="tugas" title={t.keterangan ?? undefined}>
+                <ClipboardList aria-hidden /> {t.nama}
+              </span>
+            ))}
+          </span>
+        ) : (
+          <span className="u-panitia-redup">—</span>
+        ),
+    },
+    { key: 'aplikasi', header: 'Aplikasi', value: (j) => j.aplikasi.map((x) => x.nama).join(', '), cell: (j) => <DeretAplikasiPanitia aplikasi={j.aplikasi} kosong="—" /> },
+  ];
+  return (
+    <DataTable
+      className="u-panitia-tabel"
+      columns={kolom}
+      rows={jabatan}
+      rowKey={(j) => String(j.id)}
+      pagination={false}
+      columnToggle={false}
+      densityToggle={false}
+      empty={{ title: 'Belum ada jabatan', description: 'Tambahkan jabatan pada jenis panitia ini.' }}
+    />
   );
 }
 
@@ -1472,9 +1480,9 @@ export function PersetujuanAksesPanitia({ judul = 'Hak akses panitia', deskripsi
       header: 'Panitia dan SK',
       cell: (x) => (
         <div className="u-panitia-sel-nama">
-          <button type="button" className="u-panitia-tautan" onClick={(e) => (e.stopPropagation(), setPanel(x.panitia.id))}>
+          <Button variant="link" size="sm" className="u-panitia-tautan" onClick={(e) => (e.stopPropagation(), setPanel(x.panitia.id))}>
             {x.panitia.nama}
-          </button>
+          </Button>
           <span>{[x.panitia.nomor_sk ? `SK ${x.panitia.nomor_sk}` : 'Tanpa SK', x.panitia.unit].join(' · ')}</span>
         </div>
       ),
@@ -1764,9 +1772,9 @@ export function FormJenisPanitia({ jenis, trigger, open, onOpenChange }: { jenis
                 {j.peran.map((k) => (
                   <span key={k} className="u-panitia-chip" data-nada="peran">
                     <KeyRound aria-hidden /> {namaPeran(k)}
-                    <button type="button" aria-label={`Lepas ${namaPeran(k)}`} onClick={() => ubahJabatan(j.kunci, { peran: j.peran.filter((x) => x !== k) })}>
+                    <Button variant="ghost" size="xs" iconOnly className="u-panitia-chip-lepas" aria-label={`Lepas ${namaPeran(k)}`} onClick={() => ubahJabatan(j.kunci, { peran: j.peran.filter((x) => x !== k) })}>
                       <X />
-                    </button>
+                    </Button>
                   </span>
                 ))}
                 <Pilihan

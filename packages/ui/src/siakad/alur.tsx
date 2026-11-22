@@ -11,6 +11,7 @@ import { labelTahunAkademik } from './akademik';
 import { GalatApi } from './galat';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { LabelProdi } from './prodi';
+import { Tekan } from '../components/tekan';
 
 const HARI: Record<string, string> = { '1': 'Senin', '2': 'Selasa', '3': 'Rabu', '4': 'Kamis', '5': 'Jumat', '6': 'Sabtu', '7': 'Minggu' };
 const hari = (h?: string | number | null) => (h === null || h === undefined || h === '' ? '' : (HARI[String(h)] ?? String(h)));
@@ -454,10 +455,10 @@ export function PersetujuanKrs({ prodi, tahunId, className }: PersetujuanKrsProp
                       </td>
                     )}
                     <td>
-                      <button type="button" className="u-alur-tautan" onClick={() => setBuka(b.nim)}>
+                      <Tekan className="u-alur-tautan" onClick={() => setBuka(b.nim)}>
                         <strong>{b.nama}</strong>
                         <span className="u-alur-meta">{b.nim}</span>
-                      </button>
+                      </Tekan>
                     </td>
                     <td>{b.angkatan}</td>
                     <td data-angka>
@@ -955,7 +956,7 @@ export function DaftarKelasNilai({ tahunId, prodi, onPilih, className }: { tahun
     <ul className={cn('u-alur-kelas', className)}>
       {q.data.data.map((k) => (
         <li key={k.id}>
-          <button type="button" onClick={() => onPilih(k.id)}>
+          <Tekan onClick={() => onPilih(k.id)}>
             <span className="u-alur-mk-nama">
               <strong>
                 {k.nama_mk ?? k.kode_mk} · {k.kelas}
@@ -970,7 +971,7 @@ export function DaftarKelasNilai({ tahunId, prodi, onPilih, className }: { tahun
                 {k.bernilai}/{k.peserta} bernilai
               </span>
             </span>
-          </button>
+          </Tekan>
         </li>
       ))}
     </ul>
@@ -1053,7 +1054,7 @@ export function IsiEdom({ tahunId, className }: { tahunId?: string; className?: 
         <ul className="u-alur-kelas">
           {d.mata_kuliah.map((m) => (
             <li key={m.idkrs}>
-              <button type="button" onClick={() => setAktif(m.idkrs)}>
+              <Tekan onClick={() => setAktif(m.idkrs)}>
                 <span className="u-alur-mk-nama">
                   <strong>{m.nama_mk ?? m.kode_mk}</strong>
                   <span className="u-alur-meta">
@@ -1069,7 +1070,7 @@ export function IsiEdom({ tahunId, className }: { tahunId?: string; className?: 
                     {m.soal_terjawab ? `${m.soal_terjawab}/${d.jumlah_soal}` : 'Belum diisi'}
                   </Badge>
                 )}
-              </button>
+              </Tekan>
             </li>
           ))}
         </ul>

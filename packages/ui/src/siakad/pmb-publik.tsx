@@ -40,7 +40,7 @@ import {
 } from 'lucide-react';
 import { formatDate, formatRupiah, formatTime } from '../lib/format';
 import { Badge, Button, Skeleton } from '../components/actions';
-import { Alert, Card, CardContent, CardHeader, Empty, Pagination, Table, TableContainer } from '../components/display';
+import { Alert, Card, CardContent, CardHeader, Empty, Pagination } from '../components/display';
 import { Checkbox, InputGroup, Input, SegmentedControl } from '../components/forms';
 import { Select } from '../components/select';
 import { Sheet } from '../components/overlays';
@@ -51,6 +51,8 @@ import { ChatWidget, CtaBand, FactBoard, FeatureGrid, Gallery, SectionNav, Socia
 import { Cluster, Container, Grid, KontenHtml, PageHeader, Split, Stack, Text, teksPolos } from '../components/tata-letak';
 import { pesanGalat, useSiakadQuery } from './provider';
 import { LabelProdi, LencanaAkreditasi, LogoFakultas, useProdiDariKode } from './prodi';
+import { DataTable } from '../components/data-table';
+import { Tekan } from '../components/tekan';
 
 /**
  * Halaman publik PMB (pmb.unipo.ac.id) di atas `GET /v1/pmb/info/*`: landing lengkap, detail gelombang, dan
@@ -704,9 +706,9 @@ export function KartuGelombangPmb({ g, dipilih, onPilih, tautan = true }: { g: G
   return (
     <div className="u-pmb-gelombang" data-dipilih={dipilih || undefined}>
       {onPilih ? (
-        <button type="button" onClick={onPilih} aria-pressed={dipilih} className="u-pmb-gelombang-pilih">
+        <Tekan onClick={onPilih} terpilih={dipilih} className="u-pmb-gelombang-pilih">
           {isi}
-        </button>
+        </Tekan>
       ) : (
         <div className="u-pmb-gelombang-pilih">{isi}</div>
       )}
@@ -740,10 +742,9 @@ export function JalurJadwalPmb({ jalur = [], gelombang = [], loading, id = 'jalu
           const jml = gelombang.filter((x) => x.jalur?.id === j.id && x.sedang_buka).length;
           return (
             <Animasi key={j.id} jenis="masuk" tunda={i} pemicu="terlihat">
-              <button
-                type="button"
+              <Tekan
                 className="u-pmb-jalur"
-                aria-pressed={aktif}
+                terpilih={aktif}
                 onClick={() => {
                   setPilihJalur(aktif ? null : j.id);
                   setPilihG(null);
@@ -760,7 +761,7 @@ export function JalurJadwalPmb({ jalur = [], gelombang = [], loading, id = 'jalu
                   ))}
                   {jml > 0 && <span data-tone="success">{jml} gelombang buka</span>}
                 </span>
-              </button>
+              </Tekan>
             </Animasi>
           );
         })}
@@ -805,7 +806,7 @@ function KartuProdi({ p, onBuka }: { p: ProdiLandingPmb; onBuka: () => void }) {
   const i = p.info;
   const ref = useProdiDariKode(p.kode_prodi);
   return (
-    <button type="button" className="u-pmb-prodi" onClick={onBuka}>
+    <Tekan className="u-pmb-prodi" onClick={onBuka}>
       {i?.gambar && <img src={i.gambar} alt="" loading="lazy" className="u-pmb-prodi-img" />}
       <span className="u-pmb-prodi-meta">
         <LogoFakultas kode={p.kode_fakultas ?? ref?.kode_fak} nama={ref?.nama_fakultas} ukuran="sm" />
@@ -837,7 +838,7 @@ function KartuProdi({ p, onBuka }: { p: ProdiLandingPmb; onBuka: () => void }) {
           Detail <ArrowRight aria-hidden />
         </span>
       </span>
-    </button>
+    </Tekan>
   );
 }
 
@@ -1146,13 +1147,13 @@ export function SimulasiBiayaPmb({ gelombang = [], simulasi, loading, id = 'biay
                       {[{ nama: 'Tanpa potongan', persen: 0, keterangan: null as string | null | undefined }, ...simulasi.potongan].map((p, i) => {
                         const v = String(i - 1);
                         return (
-                          <button key={p.nama} type="button" className="u-pmb-potongan" aria-pressed={potongan === v} onClick={() => setPotongan(v)}>
+                          <Tekan key={p.nama} className="u-pmb-potongan" terpilih={potongan === v} onClick={() => setPotongan(v)}>
                             <span>
                               {p.nama}
                               {p.persen > 0 && <Badge variant="warning">-{p.persen}%</Badge>}
                             </span>
                             {p.keterangan && <small>{p.keterangan}</small>}
-                          </button>
+                          </Tekan>
                         );
                       })}
                     </Grid>
@@ -1677,30 +1678,26 @@ export function DetailGelombangPmb({ id }: { id: string | number }) {
             <Text size="sm" tone="muted">
               Maksimal {g.maks_pilihan} pilihan program studi.
             </Text>
-            <TableContainer>
-              <Table>
-                <thead>
-                  <tr>
-                    <th>Program studi</th>
-                    <th>Jenjang</th>
-                    <th style={{ textAlign: 'right' }}>Kuota</th>
-                    <th style={{ textAlign: 'right' }}>Peminat</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {g.prodi.map((p) => (
-                    <tr key={p.kode_prodi}>
-                      <td>
-                        <LabelProdi kode={p.kode_prodi} nama={hurufJudul(p.nama_prodi ?? p.kode_prodi)} prodi={{ kode_jenjang: '' }} sub={false} />
-                      </td>
-                      <td>{labelJenjang(p.jenjang)}</td>
-                      <td style={{ textAlign: 'right' }}>{p.kuota ?? '-'}</td>
-                      <td style={{ textAlign: 'right' }}>{p.jumlah_peminat}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </TableContainer>
+            <DataTable<(typeof g.prodi)[number]>
+              columns={[
+                {
+                  key: 'nama_prodi',
+                  header: 'Program studi',
+                  sortable: true,
+                  mobile: 'title',
+                  value: (p) => p.nama_prodi ?? p.kode_prodi,
+                  cell: (p) => <LabelProdi kode={p.kode_prodi} nama={hurufJudul(p.nama_prodi ?? p.kode_prodi)} prodi={{ kode_jenjang: '' }} sub={false} />,
+                },
+                { key: 'jenjang', header: 'Jenjang', sortable: true, value: (p) => labelJenjang(p.jenjang), cell: (p) => labelJenjang(p.jenjang) },
+                { key: 'kuota', header: 'Kuota', align: 'end', sortable: true, value: (p) => p.kuota ?? null, cell: (p) => p.kuota ?? '-' },
+                { key: 'jumlah_peminat', header: 'Peminat', format: 'angka', sortable: true },
+              ]}
+              rows={g.prodi}
+              rowKey={(p) => p.kode_prodi}
+              pagination={g.prodi.length > 20}
+              columnToggle={false}
+              densityToggle={false}
+            />
           </Stack>
           <Stack gap={3}>
             <Text as="div" weight="semibold" size="lg">

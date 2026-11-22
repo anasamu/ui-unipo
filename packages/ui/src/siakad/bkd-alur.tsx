@@ -20,7 +20,9 @@ import { PilihBerkas } from './pilih-berkas';
 import { PilihEntitas } from './pilih';
 import { AlurPemeriksa, LabelPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import { BannerPeriodeTerkunci, usePeriodeTerkunci } from './kunci-periode';
+import { TombolHapusDraf } from './hapus-draf';
 import { DaftarKegiatanBkd, KesimpulanBkd, RingkasanBebanBkd, SyaratBkd, TahapBkd, sksBkd, type BidangBkd, type KegiatanBkd, type SyaratBkdItem } from './bkd';
+import { Tekan } from '../components/tekan';
 
 /*
  * Alur BKD lengkap (SIAKAD /v1/sdm/bkd, docs/BKD.md), dipakai bersama SDM dan portal Fakultas:
@@ -147,6 +149,8 @@ export interface LaporanBkdData {
     atur_asesor: boolean;
     tindak_lanjut: boolean;
     tautan_asesor?: number[];
+    /** Hapus draf (belum pernah dikirim): dosen pemilik atau petugas SDM unitnya. */
+    hapus?: boolean;
   };
   aturan?: { id: number; nama: string; versi: number; dasar_hukum: string | null; bidang: { kode: string; nama: string }[]; kategori: KategoriBkd[]; batas: { min_total: number | null; maks_total: number | null }; asesor: { jumlah: number }; tahap: { kaprodi: boolean; dekan: boolean } };
   periksa?: { blokir: { kode: string; pesan: string; item_id?: number }[]; peringatan: { kode: string; pesan: string; item_id?: number }[] };
@@ -273,10 +277,10 @@ export function RuangBkdDosen({ className }: { className?: string }) {
           {laporan.length > 1 ? (
             <div className="u-bkd-riwayat" role="tablist" aria-label="Riwayat semester">
               {laporan.map((l) => (
-                <button key={l.id} type="button" role="tab" aria-selected={l.id === aktif.id} onClick={() => setPilih(l.id)}>
+                <Tekan key={l.id} role="tab" terpilih={l.id === aktif.id} onClick={() => setPilih(l.id)}>
                   <span>{l.periode.nama}</span>
                   <KesimpulanBkd nilai={l.bkd.kesimpulan} />
-                </button>
+                </Tekan>
               ))}
             </div>
           ) : null}
@@ -399,7 +403,7 @@ export function LaporanBkd({ id, ringkas = false, className }: { id: number | st
   const L = lap.data;
   const h = L.hasil;
   const b: LaporanBkdData['bisa'] = kunci.terkunci
-    ? { ...L.bisa, ubah_isi: false, impor: false, fase: false, kirim: false, nilai: false, kembalikan: false, mengetahui: [], tetapkan: false, atur_asesor: false, tindak_lanjut: false }
+    ? { ...L.bisa, ubah_isi: false, impor: false, fase: false, kirim: false, nilai: false, kembalikan: false, mengetahui: [], tetapkan: false, atur_asesor: false, tindak_lanjut: false, hapus: false }
     : L.bisa;
   const kat = Object.fromEntries((L.aturan?.kategori ?? []).map((k) => [k.kode, k.nama]));
   const jadwal = L.bkd.jadwal;
@@ -493,6 +497,13 @@ export function LaporanBkd({ id, ringkas = false, className }: { id: number | st
             <Button variant="ghost" onClick={() => cetakLaporanBkd(L)}>
               <Printer /> Unduh laporan
             </Button>
+            <TombolHapusDraf
+              apa="laporan BKD"
+              nama={L.periode.nama}
+              ikut={[`${L.item.length} kegiatan yang sudah diisi`, 'bukti kegiatan']}
+              sembunyi={!b.hapus}
+              onHapus={() => aksi('DELETE', `/v1/sdm/bkd/laporan/${L.id}`, undefined, 'Draf laporan BKD dihapus.')}
+            />
           </div>
         </CardContent>
       </Card>
@@ -2074,7 +2085,7 @@ export function cetakLaporanBkd(L: LaporanBkdData) {
   const tahap = L.pemeriksa.map((t) => `<li>${e(t.judul)}: ${t.status === 'selesai' ? `selesai${t.diproses_oleh ? `, ${e(t.diproses_oleh)}` : ''}${t.waktu ? `, ${e(tglPendek(t.waktu))}` : ''}` : t.status === 'sedang' ? 'sedang diproses' : 'belum'}</li>`).join('');
   w.document.write(`<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Laporan BKD ${e(L.pegawai.nama)} ${e(L.periode.nama)}</title>
 <style>body{font:12px/1.45 system-ui,sans-serif;color:#111;margin:24px}h1{font-size:16px;margin:0 0 4px}h2{font-size:13px;margin:18px 0 6px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #bbb;padding:4px 6px;vertical-align:top}th{background:#f1f1f1;text-align:left}.a{text-align:right}.t{text-align:center}.bidang td{background:#fafafa;font-weight:600}.kecil{color:#555;font-size:11px}.meta td{border:0;padding:2px 8px 2px 0}@media print{body{margin:0}button{display:none}}</style></head><body>
-<button onclick="print()">Cetak / simpan PDF</button>
+<Tekan onclick="print()">Cetak / simpan PDF</Tekan>
 <h1>Laporan Beban Kerja Dosen</h1><div class="kecil">${e(L.periode.nama)} · aturan ${e(L.aturan?.nama)} versi ${e(L.aturan?.versi)}</div>
 <table class="meta"><tr><td>Nama</td><td>${e(L.pegawai.nama)}</td></tr><tr><td>NIDN</td><td>${e(L.pegawai.nidn ?? '-')}</td></tr><tr><td>Program studi</td><td>${e(L.unit?.prodi?.nama ?? L.pegawai.kode_prodi ?? '-')}</td></tr><tr><td>Jabatan akademik</td><td>${e(L.pegawai.jabatan_akademik?.nama ?? '-')}</td></tr><tr><td>Status</td><td>${e(L.tahap.judul)}</td></tr></table>
 <h2>Rekapitulasi per bidang (${e(h.dasar)})</h2><table><tr><th>Bidang</th><th class="a">Rencana</th><th class="a">Realisasi</th><th class="a">Diakui</th></tr>${h.bidang.map((b) => `<tr><td>${e(b.nama)}</td><td class="a">${e(b.rencana)}</td><td class="a">${e(b.realisasi)}</td><td class="a">${e(b.diakui)}</td></tr>`).join('')}<tr><th>Total</th><th class="a">${e(h.total.rencana)}</th><th class="a">${e(h.total.realisasi)}</th><th class="a">${e(h.total.diakui)}</th></tr></table>

@@ -14,6 +14,8 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
 import { useUnggahBerkas } from './berkas';
 import { PilihBerkas } from './pilih-berkas';
 import { AlurPemeriksa, LabelPemeriksa, type TahapPemeriksa } from './pemeriksa';
+import { TombolPilihBerkas } from '../components/pilih-berkas-lokal';
+import { IsianWarnaHex } from '../components/isian-warna';
 
 /*
  * Identitas fakultas & prodi (SIAKAD docs/IDENTITAS-PRODI.md):
@@ -358,7 +360,6 @@ function PanelGantiLogo({ data, path, onTutup }: { data: DataIdentitasFakultas; 
   const [warna, setWarna] = React.useState(s.warna_utama ?? '');
   const [catatan, setCatatan] = React.useState('');
   const [galat, setGalat] = React.useState<Record<string, string>>({});
-  const masukan = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     let batal = false;
@@ -438,10 +439,9 @@ function PanelGantiLogo({ data, path, onTutup }: { data: DataIdentitasFakultas; 
             <div className="u-idp-tumpuk">
               <Field label="Berkas logo" description="Kosongkan bila hanya mengubah nama singkat atau warna." error={galatBerkas ?? galat.berkas_id}>
                 <div className="u-idp-aksi">
-                  <input ref={masukan} type="file" accept={b.mime.join(',')} hidden onChange={(e) => void pilihBerkas(e.target.files?.[0])} />
-                  <Button variant="outline" onClick={() => masukan.current?.click()}>
+                  <TombolPilihBerkas size="md" accept={b.mime.join(',')} onFiles={(f) => void pilihBerkas(f[0])}>
                     <ImageUp /> {asli ? 'Ganti berkas' : 'Pilih berkas logo'}
-                  </Button>
+                  </TombolPilihBerkas>
                   {asli ? (
                     <Button variant="ghost" onClick={() => (setAsli(null), setGalatBerkas(null))}>
                       Batalkan berkas
@@ -514,15 +514,17 @@ function PanelGantiLogo({ data, path, onTutup }: { data: DataIdentitasFakultas; 
                 <Input value={singkatan} onChange={(e) => setSingkatan(e.target.value)} maxLength={30} placeholder="mis. FKIP" />
               </Field>
               <Field label="Warna aksen" optional description="Dipakai portal bila Tema portal & dasbor belum diatur. Kosong = mengikuti tema." error={galat.warna_utama}>
-                <div className="u-idp-aksi">
-                  <input type="color" aria-label="Pilih warna aksen" value={/^#[0-9a-f]{6}$/i.test(warna) ? warna : '#1e5aa0'} onChange={(e) => setWarna(e.target.value)} style={{ width: '2.5rem', height: '2.25rem', padding: 0, border: 'none', background: 'none' }} />
-                  <Input value={warna} onChange={(e) => setWarna(e.target.value)} maxLength={7} placeholder="#1E5AA0" style={{ maxWidth: '9rem' }} />
-                  {warna ? (
-                    <Button variant="ghost" size="sm" onClick={() => setWarna('')}>
+                <IsianWarnaHex
+                  value={warna}
+                  onValueChange={setWarna}
+                  bawaan="#1e5aa0"
+                  aria-label="Warna aksen"
+                  otomatis={
+                    <>
                       <Palette /> Ikuti tema
-                    </Button>
-                  ) : null}
-                </div>
+                    </>
+                  }
+                />
               </Field>
             </div>
           ),

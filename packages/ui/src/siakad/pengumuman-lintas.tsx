@@ -13,6 +13,9 @@ import { cn } from '../lib/cn';
 import { GalatApi } from './galat';
 import { PilihUnit, useUnitOrganisasi } from './pilih-unit';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakad, useSiakadQuery } from './provider';
+import { IsianAngka, IsianTanggalWaktu } from '../components/isian-angka';
+import { keAngka } from '../lib/angka';
+import { Tekan } from '../components/tekan';
 
 // ================================================================ Pengumuman lintas aplikasi (/v1/notif/pita)
 //
@@ -320,9 +323,9 @@ export function BannerPengumuman({ p, onTutup, className }: { p: PengumumanTayan
         {p.tautan && <Tautan p={p} className="u-button u-pgm-cta" />}
       </div>
       {onTutup && p.dapat_ditutup && (
-        <button type="button" className="u-pgm-tutup" aria-label="Tutup pengumuman" onClick={onTutup}>
+        <Button variant="ghost" size="xs" iconOnly className="u-pgm-tutup" aria-label="Tutup pengumuman" onClick={onTutup}>
           <X />
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -347,9 +350,9 @@ export function ToastPengumuman({ p, onTutup, bawah, className }: { p: Pengumuma
         <Tautan p={p} className="u-pgm-tautan" />
       </div>
       {onTutup && (
-        <button type="button" className="u-pgm-tutup" aria-label="Tutup pengumuman" onClick={onTutup}>
+        <Button variant="ghost" size="xs" iconOnly className="u-pgm-tutup" aria-label="Tutup pengumuman" onClick={onTutup}>
           <X />
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -726,8 +729,7 @@ function PilihTautan({ f }: { f: StateForm }) {
         description={
           <>
             {manualBoleh ? 'URL http(s) atau jalur diawali /.' : 'Tautan lama tetap dipakai.'}{' '}
-            <button
-              type="button"
+            <Tekan
               className="u-pgm-tautan-ganti"
               onClick={() => {
                 setManual(false);
@@ -735,7 +737,7 @@ function PilihTautan({ f }: { f: StateForm }) {
               }}
             >
               Pilih dari konten portal
-            </button>
+            </Tekan>
           </>
         }
       >
@@ -746,9 +748,9 @@ function PilihTautan({ f }: { f: StateForm }) {
     );
   }
   const kePilihManual = manualBoleh ? (
-    <button type="button" className="u-pgm-tautan-ganti" onClick={() => (setManual(true), pilih(null))}>
+    <Button variant="link" size="sm" className="u-pgm-tautan-ganti" onClick={() => (setManual(true), pilih(null))}>
       Tautan lain (URL)
-    </button>
+    </Button>
   ) : null;
   return (
     <Field
@@ -810,14 +812,14 @@ function PilihVisual({ f }: { f: StateForm }) {
       {efektif === 'ikon' && (
         <Field label="Ikon" description="Warna mengikuti nada." error={galat['opsi.ikon']} className="u-form-lebar">
           <div className="u-pgm-ikon-pilih" role="radiogroup" aria-label="Ikon" data-nada={d.nada}>
-            <button type="button" role="radio" aria-checked={!d.opsi?.ikon} aria-label="Sesuai nada" title="Sesuai nada" data-aktif={!d.opsi?.ikon ? '' : undefined} onClick={() => ubahOpsi({ ikon: undefined })}>
+            <Tekan role="radio" terpilih={!d.opsi?.ikon} aria-label="Sesuai nada" title="Sesuai nada" data-aktif={!d.opsi?.ikon ? '' : undefined} onClick={() => ubahOpsi({ ikon: undefined })}>
               {IKON_NADA[d.nada]}
               <small>Nada</small>
-            </button>
+            </Tekan>
             {IKON_PENGUMUMAN.map((k) => (
-              <button key={k.value} type="button" role="radio" aria-checked={d.opsi?.ikon === k.value} aria-label={k.label} title={k.label} data-aktif={d.opsi?.ikon === k.value ? '' : undefined} onClick={() => ubahOpsi({ ikon: k.value })}>
+              <Tekan key={k.value} role="radio" terpilih={d.opsi?.ikon === k.value} aria-label={k.label} title={k.label} data-aktif={d.opsi?.ikon === k.value ? '' : undefined} onClick={() => ubahOpsi({ ikon: k.value })}>
                 {k.ikon}
-              </button>
+              </Tekan>
             ))}
           </div>
         </Field>
@@ -828,10 +830,10 @@ function PilihVisual({ f }: { f: StateForm }) {
             {ILUSTRASI_PENGUMUMAN.map((k) => {
               const aktif = (d.opsi?.ilustrasi ?? ILUSTRASI_PENGUMUMAN[0]!.value) === k.value;
               return (
-                <button key={k.value} type="button" role="radio" aria-checked={aktif} data-aktif={aktif ? '' : undefined} onClick={() => ubahOpsi({ ilustrasi: k.value })}>
+                <Tekan key={k.value} role="radio" terpilih={aktif} data-aktif={aktif ? '' : undefined} onClick={() => ubahOpsi({ ilustrasi: k.value })}>
                   <Ilustrasi nama={k.value} lebar="100%" bergerak={false} />
                   <small>{k.label}</small>
-                </button>
+                </Tekan>
               );
             })}
           </div>
@@ -905,11 +907,11 @@ function IsiFormPengumuman({ f }: { f: StateForm }) {
         <Field label="Cara tampil" className="u-form-lebar">
           <div className="u-pgm-mode" role="radiogroup" aria-label="Cara tampil">
             {PILIHAN_MODE.map((m) => (
-              <button key={m.value} type="button" role="radio" aria-checked={d.mode === m.value} className="u-pgm-mode-pil" data-aktif={d.mode === m.value ? '' : undefined} onClick={() => ubah('mode', m.value)}>
+              <Tekan key={m.value} role="radio" terpilih={d.mode === m.value} className="u-pgm-mode-pil" data-aktif={d.mode === m.value ? '' : undefined} onClick={() => ubah('mode', m.value)}>
                 {m.ikon}
                 <strong>{m.label}</strong>
                 <small>{m.keterangan}</small>
-              </button>
+              </Tekan>
             ))}
           </div>
         </Field>
@@ -933,7 +935,7 @@ function IsiFormPengumuman({ f }: { f: StateForm }) {
         )}
         {d.mode === 'toast' && (
           <Field label="Hilang otomatis" description="Detik; 0 = tetap sampai ditutup." className="u-form-lebar">
-            <Input type="number" min={0} max={120} value={d.opsi?.hilang_detik ?? 0} onChange={(e) => ubah('opsi', { ...d.opsi, hilang_detik: Number(e.target.value) || undefined })} />
+            <IsianAngka value={keAngka(d.opsi?.hilang_detik ?? 0)} min={0} max={120} onValueChange={(n) => ubah('opsi', { ...d.opsi, hilang_detik: n || undefined })} />
           </Field>
         )}
         <label className="u-pgm-saklar u-form-lebar">
@@ -1021,10 +1023,10 @@ function IsiFormPengumuman({ f }: { f: StateForm }) {
 
       <BagianForm judul="Jadwal" keterangan="Kapan pengumuman tayang dan urutannya." ikon={<CalendarClock />} kolom={2} className="u-pgm-bag-jadwal">
         <Field label="Mulai tayang" description="Kosong = sekarang." error={galat.mulai}>
-          <Input type="datetime-local" value={keInputWaktu(d.mulai)} onChange={(e) => ubah('mulai', dariInputWaktu(e.target.value))} />
+          <IsianTanggalWaktu value={keInputWaktu(d.mulai) || null} onValueChange={(v) => ubah('mulai', dariInputWaktu(v ?? ''))} />
         </Field>
         <Field label="Selesai" description="Kosong = sampai diarsipkan." error={galat.selesai}>
-          <Input type="datetime-local" value={keInputWaktu(d.selesai)} onChange={(e) => ubah('selesai', dariInputWaktu(e.target.value))} />
+          <IsianTanggalWaktu value={keInputWaktu(d.selesai) || null} onValueChange={(v) => ubah('selesai', dariInputWaktu(v ?? ''))} />
         </Field>
         <Field label="Prioritas" description="Lebih tinggi tampil lebih dulu (pita berganti, popup antre)." className="u-form-lebar">
           <Select value={String(d.prioritas ?? 0)} onValueChange={(v) => v != null && ubah('prioritas', Number(v))} options={[{ value: '0', label: 'Normal' }, { value: '10', label: 'Tinggi' }, { value: '50', label: 'Paling atas' }]} aria-label="Prioritas" />
@@ -1243,11 +1245,11 @@ export function KelolaPengumuman({ aplikasi, className }: KelolaPengumumanProps)
           {tayang.length > 0 ? (
             <div className="u-pgm-tayang-daftar">
               {tayang.slice(0, 6).map((p) => (
-                <button key={p.id} type="button" className="u-pgm-tayang-item" data-nada={p.nada} onClick={() => setLihat(p)} title="Pratinjau">
+                <Tekan key={p.id} className="u-pgm-tayang-item" data-nada={p.nada} onClick={() => setLihat(p)} title="Pratinjau">
                   {PILIHAN_MODE.find((m) => m.value === p.mode)?.ikon}
                   <span>{p.judul}</span>
                   <small>{p.selesai ? `s.d. ${waktuSingkat(p.selesai)}` : 'tanpa batas'}</small>
-                </button>
+                </Tekan>
               ))}
             </div>
           ) : berikut ? (
@@ -1298,9 +1300,9 @@ export function KelolaPengumuman({ aplikasi, className }: KelolaPengumumanProps)
                 </span>
                 <div className="u-pgm-item-isi">
                   <div className="u-pgm-item-judul">
-                    <button type="button" className="u-pgm-item-buka" onClick={() => buka(p)}>
+                    <Tekan className="u-pgm-item-buka" onClick={() => buka(p)}>
                       {p.judul}
-                    </button>
+                    </Tekan>
                     <Badge variant={t.variant} dot={p.tayang === 'aktif'}>
                       {t.label}
                     </Badge>

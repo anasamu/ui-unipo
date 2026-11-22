@@ -153,9 +153,11 @@ export interface TabsProps<V extends string> {
   variant?: 'underline' | 'pill';
   /**
    * auto (bawaan): horizontal, KECUALI tab bersarang, yaitu tab yang berada di dalam panel tab lain atau di bawah tab
-   * halaman dari menu (`TabMenuHalaman`) dan punya isi (`content` atau `children`): otomatis vertikal (daftar di kiri,
-   * isi di kanan) supaya tidak ada dua baris tab bertumpuk; di wadah sempit (< 40rem) daftarnya horizontal dan dapat
-   * digulir (jumlah tetap terlihat). Tab di dalam tab yang sudah vertikal tetap horizontal.
+   * halaman dari menu (`TabMenuHalaman`), punya isi (`content` atau `children`), dan berisi lebih dari 2 tab:
+   * otomatis vertikal (daftar di kiri, isi di kanan) supaya tidak ada dua baris tab bertumpuk; di wadah sempit
+   * (< 40rem) daftarnya horizontal dan dapat digulir (jumlah tetap terlihat). Tab bersarang yang hanya 2 tetap
+   * horizontal. Tab di dalam tab yang sudah vertikal tetap horizontal. Di dalam panel samping (Sheet) tab selalu
+   * horizontal dan berubah menjadi pilihan tarik-turun (Select) bila deretnya tidak muat selebar panel.
    * horizontal: selalu deret tab di atas isi. vertical: selalu daftar kiri, cocok untuk sub tab yang banyak atau
    * labelnya panjang (jenis riwayat, data master); di wadah sempit menjadi pilihan tarik-turun.
    */
@@ -188,21 +190,58 @@ function useWadahSempit(ref: React.RefObject<HTMLElement | null>, rem: number, a
   return sempit;
 }
 
-/** Tata letak tab yang dipakai: 'bersarang' = vertikal otomatis (tingkat kedua) dengan deret gulir di wadah sempit. */
-export function tataTab(orientation: TabsProps<string>['orientation'], induk: TingkatTab, punyaIsi: boolean): 'horizontal' | 'vertical' | 'bersarang' {
+/** Tab bersarang sebanyak ini atau kurang tetap horizontal (keputusan Anas 2026-11-22: 2 tab tidak perlu daftar samping). */
+export const TAB_BERSARANG_MIN = 3;
+
+/** Isomorfik: ukur sebelum dilukis di peramban, tanpa peringatan di SSR. */
+const useLayoutEffectAman = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
+
+/**
+ * Deret tab lebih lebar dari wadahnya? Membandingkan lebar alami daftar (`scrollWidth`) dengan lebar akar Tabs, diukur
+ * ulang oleh ResizeObserver saat panel diubah ukurannya atau label/jumlah berubah. null = belum diukur (SSR).
+ */
+function useTabTakMuat(akar: React.RefObject<HTMLElement | null>, daftar: React.RefObject<HTMLElement | null>, aktif: boolean): boolean | null {
+  const [takMuat, setTakMuat] = React.useState<boolean | null>(null);
+  useLayoutEffectAman(() => {
+    const a = akar.current;
+    const d = daftar.current;
+    if (!aktif || !a || !d) return;
+    const ukur = () => setTakMuat(d.scrollWidth > a.clientWidth + 1);
+    ukur();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(ukur);
+    ro.observe(a);
+    ro.observe(d);
+    return () => ro.disconnect();
+  }, [akar, daftar, aktif]);
+  return aktif ? takMuat : null;
+}
+
+/**
+ * Tata letak tab yang dipakai (orientation auto):
+ * - 'panel': di dalam panel samping (Sheet): horizontal, menjadi pilihan tarik-turun bila tidak muat;
+ * - 'bersarang': tingkat kedua, punya isi, lebih dari 2 tab: vertikal otomatis dengan deret gulir di wadah sempit;
+ * - 'horizontal' selain itu. Orientasi eksplisit selalu menang.
+ */
+export function tataTab(orientation: TabsProps<string>['orientation'], induk: TingkatTab, punyaIsi: boolean, jumlah = Infinity): 'horizontal' | 'vertical' | 'bersarang' | 'panel' {
   if (orientation === 'horizontal' || orientation === 'vertical') return orientation;
-  return induk.tingkat >= 1 && !induk.dalamVertikal && punyaIsi ? 'bersarang' : 'horizontal';
+  if (induk.dalamPanel) return 'panel';
+  return induk.tingkat >= 1 && !induk.dalamVertikal && punyaIsi && jumlah >= TAB_BERSARANG_MIN ? 'bersarang' : 'horizontal';
 }
 
 export function Tabs<V extends string>({ items, value, defaultValue, onValueChange, variant = 'underline', orientation = 'auto', className, children, ...rest }: TabsProps<V>) {
   const induk = useTingkatTab();
   const punyaIsi = children != null || items.some((t) => t.content !== undefined);
-  const tata = tataTab(orientation, induk, punyaIsi);
-  const samping = tata !== 'horizontal';
+  const tata = tataTab(orientation, induk, punyaIsi, items.length);
+  const samping = tata === 'vertical' || tata === 'bersarang';
   const wadah = React.useRef<HTMLDivElement>(null);
+  const akar = React.useRef<HTMLDivElement>(null);
+  const refDaftar = React.useRef<HTMLDivElement>(null);
   const sempit = useWadahSempit(wadah, TAB_SAMPING_REM, tata === 'bersarang');
+  // Panel samping: deret tab yang tidak muat diganti pilihan tarik-turun (deret tetap dirender tersembunyi untuk diukur).
+  const takMuat = useTabTakMuat(akar, refDaftar, tata === 'panel') === true;
   // Orientasi untuk aria-orientation dan tombol panah: tab bersarang di wadah sempit tampil sebagai deret (kiri/kanan).
-  const arah: 'horizontal' | 'vertical' = tata === 'horizontal' || (tata === 'bersarang' && sempit) ? 'horizontal' : 'vertical';
+  const arah: 'horizontal' | 'vertical' = !samping || (tata === 'bersarang' && sempit) ? 'horizontal' : 'vertical';
   const [inner, setInner] = React.useState<V | undefined>(defaultValue ?? items[0]?.value);
   const aktif = value ?? inner;
   const ganti = (v: V) => {
@@ -217,7 +256,16 @@ export function Tabs<V extends string>({ items, value, defaultValue, onValueChan
     ) : null,
   );
   const daftar = (
-    <BaseTabs.List className="u-tabs-list" data-variant={samping ? 'side' : variant} aria-label={rest['aria-label']}>
+    <BaseTabs.List
+      ref={refDaftar}
+      className="u-tabs-list"
+      data-variant={samping ? 'side' : variant}
+      aria-label={rest['aria-label']}
+      data-tak-muat={dataFlag(takMuat)}
+      // Saat diganti pilihan tarik-turun: tetap ada untuk diukur dan menamai panel, tetapi tidak terbaca/terfokus.
+      aria-hidden={takMuat || undefined}
+      inert={takMuat || undefined}
+    >
       {items.map((t, i) => (
         <React.Fragment key={t.value}>
         {samping && t.group && t.group !== items[i - 1]?.group ? (
@@ -239,6 +287,28 @@ export function Tabs<V extends string>({ items, value, defaultValue, onValueChan
       <BaseTabs.Indicator className="u-tabs-indicator" />
     </BaseTabs.List>
   );
+  const pilihan = (className: string) => (
+    <Select<string>
+      className={className}
+      aria-label={rest['aria-label'] ?? 'Pilih bagian'}
+      options={items.map((t) => ({
+        value: t.value,
+        label:
+          t.count != null ? (
+            <>
+              {t.label} <span className="u-tabs-pilih-jumlah">({t.count})</span>
+            </>
+          ) : (
+            t.label
+          ),
+        disabled: t.disabled,
+        icon: t.icon,
+        group: t.group,
+      }))}
+      value={aktif ?? null}
+      onValueChange={(v) => v && ganti(v as V)}
+    />
+  );
   const isi = (
     <PenyediaTingkatTab vertikal={samping}>
       {panel}
@@ -247,9 +317,11 @@ export function Tabs<V extends string>({ items, value, defaultValue, onValueChan
   );
   const root = (
     <BaseTabs.Root
+      ref={akar}
       className={cn('u-tabs', className)}
       data-orientation={samping ? 'vertical' : 'horizontal'}
       data-bersarang={dataFlag(tata === 'bersarang')}
+      data-panel={dataFlag(tata === 'panel')}
       orientation={arah}
       value={aktif}
       onValueChange={(v) => ganti(v as V)}
@@ -258,21 +330,14 @@ export function Tabs<V extends string>({ items, value, defaultValue, onValueChan
         <>
           <div className="u-tabs-samping">
             {daftar}
-            {tata === 'vertical' && (
-              <Select<string>
-                className="u-tabs-pilih"
-                aria-label={rest['aria-label'] ?? 'Pilih bagian'}
-                options={items.map((t) => ({ value: t.value, label: t.label, disabled: t.disabled, icon: t.icon, group: t.group }))}
-                value={aktif ?? null}
-                onValueChange={(v) => v && ganti(v as V)}
-              />
-            )}
+            {tata === 'vertical' && pilihan('u-tabs-pilih')}
           </div>
           <div className="u-tabs-isi">{isi}</div>
         </>
       ) : (
         <>
           {daftar}
+          {takMuat && pilihan('u-tabs-pilih-panel')}
           {isi}
         </>
       )}

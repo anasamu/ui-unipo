@@ -46,7 +46,7 @@ import {
 } from 'lucide-react';
 import { Badge, Button, Skeleton, Spinner } from '../components/actions';
 import { Alert, Avatar, Empty, Tabs } from '../components/display';
-import { Checkbox, Field, Input, InputGroup, SegmentedControl, Switch } from '../components/forms';
+import { Checkbox, Field, Input, InputGroup, RadioGroup, SegmentedControl, Switch } from '../components/forms';
 import { ConfirmDialog, Dialog, Menu, Popover, Tooltip, useToast, type MenuEntry } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { formatBytes } from '../lib/format';
@@ -54,6 +54,8 @@ import { judulRuang, lawanDari, mesinObrolan, namaDepan, type KeadaanObrolan, ty
 import type { IsiPesan } from './obrolan-kripto';
 import { pesanGalat, useSiakad } from './provider';
 import { TabKabar } from './notifikasi';
+import { usePilihBerkas } from '../components/pilih-berkas-lokal';
+import { Tekan } from '../components/tekan';
 
 export type { KeadaanObrolan, MesinObrolan, OrangObrolan, PesanObrolan, RuangObrolanData } from './obrolan-mesin';
 export { mesinObrolan } from './obrolan-mesin';
@@ -314,20 +316,20 @@ export function DaftarPengguna({ onPilih, pilihBanyak, terpilih = [], onTerpilih
       {pakaiSaringan && (
         <div className="u-ob-saring" role="group" aria-label="Saring peran">
           {saringan.map((s) => (
-            <button key={s.label} type="button" className="u-ob-chip" aria-pressed={level === s.level} onClick={() => setLevel(s.level)}>
+            <Tekan key={s.label} className="u-ob-chip" terpilih={level === s.level} onClick={() => setLevel(s.level)}>
               {s.label}
-            </button>
+            </Tekan>
           ))}
         </div>
       )}
       {pilihBanyak && terpilih.length > 0 && (
         <div className="u-ob-terpilih">
           {terpilih.map((o) => (
-            <button key={o.id} type="button" className="u-ob-chip" data-terpilih onClick={() => pilih(o)} aria-label={`Batal pilih ${o.nama}`}>
+            <Tekan key={o.id} className="u-ob-chip" data-terpilih onClick={() => pilih(o)} aria-label={`Batal pilih ${o.nama}`}>
               <Avatar name={o.nama} size="xs" />
               {namaDepan(o.nama)}
               <X aria-hidden />
-            </button>
+            </Tekan>
           ))}
         </div>
       )}
@@ -351,7 +353,7 @@ export function DaftarPengguna({ onPilih, pilihBanyak, terpilih = [], onTerpilih
           <p className="u-ob-petunjuk">{qBersih || level ? 'Tidak ada pengguna yang cocok.' : 'Cari nama untuk memulai obrolan.'}</p>
         ) : (
           tampil.map((o) => (
-            <button key={o.id} type="button" className="u-ob-baris" data-interaktif onClick={() => pilih(o)} aria-pressed={pilihBanyak ? idTerpilih.has(o.id) : undefined}>
+            <Tekan key={o.id} className="u-ob-baris" data-interaktif onClick={() => pilih(o)} terpilih={pilihBanyak ? idTerpilih.has(o.id) : undefined}>
               <Avatar name={o.nama} size="md" status={o.daring ? 'online' : undefined} />
               <span className="u-ob-baris-teks">
                 <span className="u-ob-baris-nama">{o.nama}</span>
@@ -366,7 +368,7 @@ export function DaftarPengguna({ onPilih, pilihBanyak, terpilih = [], onTerpilih
                 </Tooltip>
               )}
               {pilihBanyak && <Checkbox checked={idTerpilih.has(o.id)} tabIndex={-1} aria-hidden />}
-            </button>
+            </Tekan>
           ))
         )}
       </div>
@@ -447,7 +449,7 @@ export function DaftarObrolan({ aktif, onPilih, onHapus, className }: DaftarObro
     );
     return (
       <MenuKonteks key={r.id} items={menu} className="u-ob-baris-bungkus">
-        <button type="button" className="u-ob-baris" data-interaktif data-aktif={aktif === r.id ? '' : undefined} onClick={() => onPilih(r.id)}>
+        <Tekan className="u-ob-baris" data-interaktif kini={aktif === r.id} data-aktif={aktif === r.id ? '' : undefined} onClick={() => onPilih(r.id)}>
           <AvatarRuang r={r} saya={saya} />
           <span className="u-ob-baris-teks">
             <span className="u-ob-baris-atas">
@@ -483,13 +485,13 @@ export function DaftarObrolan({ aktif, onPilih, onHapus, className }: DaftarObro
               </span>
             </span>
           </span>
-        </button>
+        </Tekan>
         <Menu
           items={menu}
           trigger={
-            <button type="button" className="u-ob-baris-menu" aria-label={`Menu obrolan ${judulRuang(r, saya)}`}>
+            <Tekan className="u-ob-baris-menu" aria-label={`Menu obrolan ${judulRuang(r, saya)}`}>
               <EllipsisVertical />
-            </button>
+            </Tekan>
           }
         />
       </MenuKonteks>
@@ -527,8 +529,7 @@ export function DaftarObrolan({ aktif, onPilih, onHapus, className }: DaftarObro
         )}
         {k.status === 'siap' &&
           (arsip === null ? (
-            <button
-              type="button"
+            <Tekan
               className="u-ob-tautan"
               onClick={() =>
                 void mesin
@@ -538,7 +539,7 @@ export function DaftarObrolan({ aktif, onPilih, onHapus, className }: DaftarObro
               }
             >
               <Archive aria-hidden /> Lihat obrolan yang diarsipkan
-            </button>
+            </Tekan>
           ) : (
             <>
               <p className="u-ob-subjudul">Diarsipkan</p>
@@ -613,7 +614,7 @@ function GambarLampiran({ b, onLihat }: { b: Berkas; onLihat: (b: Berkas) => voi
   const { url, galat } = useUrlLampiran(b);
   const rasio = b.lebar && b.tinggi ? `${b.lebar} / ${b.tinggi}` : '4 / 3';
   return (
-    <button type="button" className="u-ob-gambar" style={{ aspectRatio: rasio }} onClick={() => url && onLihat(b)} aria-label={`Lihat ${b.nama}`}>
+    <Tekan className="u-ob-gambar" style={{ aspectRatio: rasio }} onClick={() => url && onLihat(b)} aria-label={`Lihat ${b.nama}`}>
       {url ? (
         <img src={url} alt={b.nama} />
       ) : galat ? (
@@ -623,7 +624,7 @@ function GambarLampiran({ b, onLihat }: { b: Berkas; onLihat: (b: Berkas) => voi
       ) : (
         <Spinner size="sm" />
       )}
-    </button>
+    </Tekan>
   );
 }
 
@@ -660,14 +661,14 @@ function BerkasLampiran({ b, ruangId }: { b: Berkas; ruangId: string }) {
       </span>
       <span className="u-ob-berkas-aksi">
         <Tooltip content="Unduh">
-          <button type="button" className="u-ob-berkas-tombol" aria-label={`Unduh ${b.nama}`} disabled={memuat} onClick={(e) => (e.stopPropagation(), void unduh())}>
+          <Tekan className="u-ob-berkas-tombol" aria-label={`Unduh ${b.nama}`} disabled={memuat} onClick={(e) => (e.stopPropagation(), void unduh())}>
             {memuat ? <Spinner size="sm" /> : <Download aria-hidden />}
-          </button>
+          </Tekan>
         </Tooltip>
         <Tooltip content="Simpan ke Berkas saya">
-          <button type="button" className="u-ob-berkas-tombol" aria-label={`Simpan ${b.nama} ke Berkas saya`} disabled={proses} onClick={(e) => (e.stopPropagation(), void simpan(ruangId, [b]))}>
+          <Tekan className="u-ob-berkas-tombol" aria-label={`Simpan ${b.nama} ke Berkas saya`} disabled={proses} onClick={(e) => (e.stopPropagation(), void simpan(ruangId, [b]))}>
             {proses ? <Spinner size="sm" /> : <FolderDown aria-hidden />}
-          </button>
+          </Tekan>
         </Tooltip>
       </span>
     </div>
@@ -789,8 +790,7 @@ const Gelembung = React.memo(function Gelembung({ p, r, saya, awalKelompok, akhi
           ) : isi ? (
             <>
               {isi.kutip && (
-                <button
-                  type="button"
+                <Tekan
                   className="u-ob-kutip"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -799,7 +799,7 @@ const Gelembung = React.memo(function Gelembung({ p, r, saya, awalKelompok, akhi
                 >
                   <span className="u-ob-kutip-nama">{isi.kutip.pengirim === saya ? 'Anda' : (r.anggota.find((a) => a.id === isi.kutip!.pengirim)?.nama ?? '')}</span>
                   <span className="u-ob-kutip-isi">{isi.kutip.isi || 'Lampiran'}</span>
-                </button>
+                </Tekan>
               )}
               {gambar.length > 0 && (
                 <div className="u-ob-galeri" data-jumlah={Math.min(gambar.length, 4)}>
@@ -831,17 +831,16 @@ const Gelembung = React.memo(function Gelembung({ p, r, saya, awalKelompok, akhi
         {p.reaksi && Object.keys(p.reaksi).length > 0 && (
           <div className="u-ob-reaksi">
             {Object.entries(p.reaksi).map(([e, siapa]) => (
-              <button
+              <Tekan
                 key={e}
-                type="button"
                 className="u-ob-reaksi-chip"
-                aria-pressed={siapa.includes(saya)}
+                terpilih={siapa.includes(saya)}
                 title={siapa.map((s) => (s === saya ? 'Anda' : (r.anggota.find((a) => a.id === s)?.nama ?? s))).join(', ')}
                 onClick={() => void mesin.reaksi(r.id, p, e).catch(() => {})}
               >
                 {e}
                 {siapa.length > 1 && <span>{siapa.length}</span>}
-              </button>
+              </Tekan>
             ))}
           </div>
         )}
@@ -854,14 +853,14 @@ const Gelembung = React.memo(function Gelembung({ p, r, saya, awalKelompok, akhi
               </span>
             </p>
             <span className="u-ob-gagal-aksi">
-              <button type="button" onClick={() => void mesin.kirimUlang(r.id, p).catch(() => {})}>
+              <Tekan onClick={() => void mesin.kirimUlang(r.id, p).catch(() => {})}>
                 <RotateCcw aria-hidden />
                 Kirim ulang
-              </button>
-              <button type="button" onClick={() => mesin.buangGagal(r.id, p.uuid)}>
+              </Tekan>
+              <Tekan onClick={() => mesin.buangGagal(r.id, p.uuid)}>
                 <Trash2 aria-hidden />
                 Hapus
-              </button>
+              </Tekan>
             </span>
           </div>
         )}
@@ -871,29 +870,29 @@ const Gelembung = React.memo(function Gelembung({ p, r, saya, awalKelompok, akhi
           <Popover
             side="top"
             trigger={
-              <button type="button" className="u-ob-aksi-tombol" aria-label="Beri reaksi">
+              <Tekan className="u-ob-aksi-tombol" aria-label="Beri reaksi">
                 <SmilePlus />
-              </button>
+              </Tekan>
             }
           >
             <div className="u-ob-emoji">
               {EMOJI_CEPAT.map((e) => (
-                <button key={e} type="button" aria-label={`Reaksi ${e}`} aria-pressed={p.reaksi?.[e]?.includes(saya)} onClick={() => void mesin.reaksi(r.id, p, e).catch(() => {})}>
+                <Tekan key={e} aria-label={`Reaksi ${e}`} terpilih={p.reaksi?.[e]?.includes(saya)} onClick={() => void mesin.reaksi(r.id, p, e).catch(() => {})}>
                   {e}
-                </button>
+                </Tekan>
               ))}
             </div>
           </Popover>
-          <button type="button" className="u-ob-aksi-tombol" aria-label="Balas" onClick={onBalas}>
+          <Tekan className="u-ob-aksi-tombol" aria-label="Balas" onClick={onBalas}>
             <Reply />
-          </button>
+          </Tekan>
           <Menu
             align={milikSaya ? 'end' : 'start'}
             items={menu}
             trigger={
-              <button type="button" className="u-ob-aksi-tombol" aria-label="Aksi lain">
+              <Tekan className="u-ob-aksi-tombol" aria-label="Aksi lain">
                 <EllipsisVertical />
-              </button>
+              </Tekan>
             }
           />
         </div>
@@ -963,7 +962,7 @@ function InfoRuang({ r, open, onOpenChange, onKeluar }: { r: RuangObrolanData; o
   React.useEffect(() => setJudul(r.judul ?? ''), [r.judul]);
   const jalan = (f: Promise<unknown>) => void f.then(() => setGalat(null)).catch((e) => setGalat(pesanGalat(e)));
   const [fotoProses, setFotoProses] = React.useState(false);
-  const fotoRef = React.useRef<HTMLInputElement>(null);
+  const pilihFoto = usePilihBerkas({ accept: 'image/jpeg,image/png,image/webp', onFiles: (f) => void gantiFoto(f[0]) });
   const kembaliRef = React.useRef<HTMLButtonElement>(null);
   const bolehFoto = r.jenis === 'grup' && admin;
   const gantiFoto = async (f: File | undefined) => {
@@ -976,7 +975,6 @@ function InfoRuang({ r, open, onOpenChange, onKeluar }: { r: RuangObrolanData; o
       setGalat(pesanGalat(e));
     } finally {
       setFotoProses(false);
-      if (fotoRef.current) fotoRef.current.value = '';
     }
   };
   React.useEffect(() => {
@@ -1004,13 +1002,13 @@ function InfoRuang({ r, open, onOpenChange, onKeluar }: { r: RuangObrolanData; o
             <div className="u-ob-info-kepala">
               {bolehFoto ? (
                 <div className="u-ob-info-foto">
-                  <button type="button" className="u-ob-info-foto-tombol" onClick={() => fotoRef.current?.click()} disabled={fotoProses} aria-label={r.foto ? 'Ganti foto grup' : 'Pasang foto grup'}>
+                  <Tekan className="u-ob-info-foto-tombol" onClick={() => pilihFoto.buka()} disabled={fotoProses} aria-label={r.foto ? 'Ganti foto grup' : 'Pasang foto grup'}>
                     <AvatarRuang r={r} saya={saya} size="xl" />
                     <span className="u-ob-info-foto-ikon" aria-hidden>
                       {fotoProses ? <Spinner size="sm" /> : <Camera />}
                     </span>
-                  </button>
-                  <input ref={fotoRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => void gantiFoto(e.target.files?.[0])} />
+                  </Tekan>
+                  {pilihFoto.elemen}
                   {r.foto && (
                     <Button size="sm" variant="ghost" disabled={fotoProses} onClick={() => jalan(mesin.hapusFoto(r.id))}>
                       Hapus foto
@@ -1305,7 +1303,7 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
   const [dipilih, setDipilih] = React.useState<string | null>(null);
   const [seret, setSeret] = React.useState(false);
   const areaRef = React.useRef<HTMLTextAreaElement>(null);
-  const fileRef = React.useRef<HTMLInputElement>(null);
+  const pilihLampiran = usePilihBerkas({ multiple: true, onFiles: (f) => tambahBerkas(f) });
 
   React.useEffect(() => {
     setTeksMentah(draf.get(id) ?? '');
@@ -1485,7 +1483,7 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
             <ArrowLeft />
           </Button>
         )}
-        <button type="button" className="u-ob-kepala-identitas" onClick={() => setInfo(true)}>
+        <Tekan className="u-ob-kepala-identitas" onClick={() => setInfo(true)}>
           <AvatarRuang r={r} saya={saya} />
           <span className="u-ob-baris-teks">
             <span className="u-ob-baris-nama">{judulRuang(r, saya)}</span>
@@ -1493,7 +1491,7 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
               {subjudul}
             </span>
           </span>
-        </button>
+        </Tekan>
         <Tooltip content="Info obrolan">
           <Button variant="ghost" size="sm" iconOnly aria-label="Info obrolan" onClick={() => setInfo(true)}>
             <Lock />
@@ -1564,10 +1562,10 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
       </div>
 
       {!diBawah && (
-        <button type="button" className="u-ob-ke-bawah" onClick={keBawah} aria-label="Ke pesan terbaru">
+        <Tekan className="u-ob-ke-bawah" onClick={keBawah} aria-label="Ke pesan terbaru">
           <ArrowDown />
           {r.belum_dibaca > 0 && <span className="u-ob-lencana">{r.belum_dibaca}</span>}
-        </button>
+        </Tekan>
       )}
 
       <footer className="u-ob-penulis">
@@ -1604,9 +1602,9 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
               <span key={`${f.name}-${i}`} className="u-ob-chip" data-terpilih>
                 {f.type.startsWith('image/') ? <img src={URL.createObjectURL(f)} alt="" onLoad={(e) => URL.revokeObjectURL(e.currentTarget.src)} /> : <FileText aria-hidden />}
                 <span className="u-ob-antrean-nama">{f.name}</span>
-                <button type="button" aria-label={`Buang ${f.name}`} onClick={() => setBerkas((b) => b.filter((_, j) => j !== i))} disabled={unggah}>
+                <Tekan aria-label={`Buang ${f.name}`} onClick={() => setBerkas((b) => b.filter((_, j) => j !== i))} disabled={unggah}>
                   <X aria-hidden />
-                </button>
+                </Tekan>
               </span>
             ))}
           </div>
@@ -1618,9 +1616,9 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
             void kirim();
           }}
         >
-          <input ref={fileRef} type="file" multiple hidden onChange={(e) => (tambahBerkas(e.target.files), (e.target.value = ''))} />
+          {pilihLampiran.elemen}
           <Tooltip content={`Lampirkan berkas (maks. ${k.lampiranMb} MB)`}>
-            <Button type="button" variant="ghost" size="sm" iconOnly aria-label="Lampirkan berkas" onClick={() => fileRef.current?.click()} disabled={Boolean(ubah) || unggah || !siap}>
+            <Button type="button" variant="ghost" size="sm" iconOnly aria-label="Lampirkan berkas" onClick={() => pilihLampiran.buka()} disabled={Boolean(ubah) || unggah || !siap}>
               <Paperclip />
             </Button>
           </Tooltip>
@@ -1795,23 +1793,21 @@ function DialogBersihkan({
             <legend>
               {info.lampiran} lampiran di obrolan ini{info.sudah_disimpan ? ` (${info.sudah_disimpan} sudah ada di Berkas saya)` : ''}
             </legend>
-            <label data-aktif={lampiran === 'simpan' ? '' : undefined}>
-              <input type="radio" name="lampiran" checked={lampiran === 'simpan'} onChange={() => setLampiran('simpan')} />
-              <span>
-                <strong>{hapus ? 'Simpan ke Berkas saya' : 'Simpan lampiran ke Berkas saya'}</strong>
-                <small>
-                  {belum ? `${belum} lampiran disalin ke Berkas saya › Obrolan/${nama}.` : 'Semua lampiran yang bisa disalin sudah ada di Berkas saya.'}
-                  {info.tidak_bisa_disimpan ? ` ${info.tidak_bisa_disimpan} lampiran lama tidak bisa disalin.` : ''}
-                </small>
-              </span>
-            </label>
-            <label data-aktif={lampiran === 'hapus' ? '' : undefined}>
-              <input type="radio" name="lampiran" checked={lampiran === 'hapus'} onChange={() => setLampiran('hapus')} />
-              <span>
-                <strong>{hapus ? 'Hapus lampiran juga (hanya dari tampilan Anda)' : 'Hapus lampiran juga'}</strong>
-                <small>Lampiran ikut hilang dari tampilan Anda (tidak disalin).</small>
-              </span>
-            </label>
+            <RadioGroup<'simpan' | 'hapus'>
+              variant="card"
+              columns={1}
+              value={lampiran}
+              onValueChange={setLampiran}
+              aria-label="Lampiran"
+              options={[
+                {
+                  value: 'simpan',
+                  label: hapus ? 'Simpan ke Berkas saya' : 'Simpan lampiran ke Berkas saya',
+                  description: `${belum ? `${belum} lampiran disalin ke Berkas saya › Obrolan/${nama}.` : 'Semua lampiran yang bisa disalin sudah ada di Berkas saya.'}${info.tidak_bisa_disimpan ? ` ${info.tidak_bisa_disimpan} lampiran lama tidak bisa disalin.` : ''}`,
+                },
+                { value: 'hapus', label: hapus ? 'Hapus lampiran juga (hanya dari tampilan Anda)' : 'Hapus lampiran juga', description: 'Lampiran ikut hilang dari tampilan Anda (tidak disalin).' },
+              ]}
+            />
           </fieldset>
         ) : null}
       </div>
@@ -2009,7 +2005,7 @@ function PanelObrolan({
           {layar === 'baru' ? (
             <>
               {k.saya?.jenis !== 'pendaftar' && (
-                <button type="button" className="u-ob-baris" data-interaktif onClick={() => (setAnggota([]), setJudulGrup(''), setLayar('grup'))}>
+                <Tekan className="u-ob-baris" data-interaktif onClick={() => (setAnggota([]), setJudulGrup(''), setLayar('grup'))}>
                   <span className="u-ob-avatar-grup" data-size="md" data-nada="primer" aria-hidden>
                     <Users />
                   </span>
@@ -2017,7 +2013,7 @@ function PanelObrolan({
                     <span className="u-ob-baris-nama">Grup baru</span>
                     <span className="u-ob-baris-sub">Kelas, organisasi, atau tim kerja</span>
                   </span>
-                </button>
+                </Tekan>
               )}
               <DaftarPengguna autoFocus onPilih={(o) => void mulai(() => mesin.mulaiLangsung(o.id))} />
             </>
@@ -2217,9 +2213,8 @@ export function ChatMengambang({ posisi = 'kanan', bawah, navBawah, judul, class
           <PanelObrolan mode="tunggal" aktif={aktif} setAktif={setAktif} onTutup={tutup} judul={judul} />
         </div>
       )}
-      <button
+      <Tekan
         ref={tombolRef}
-        type="button"
         className="u-ob-apung-tombol"
         aria-expanded={buka}
         aria-label={buka ? 'Tutup obrolan' : total ? `Obrolan, ${total} pesan belum dibaca` : 'Buka obrolan'}
@@ -2227,7 +2222,7 @@ export function ChatMengambang({ posisi = 'kanan', bawah, navBawah, judul, class
       >
         {buka ? <X aria-hidden /> : <MessageCircle aria-hidden />}
         {!buka && total > 0 && <span className="u-ob-lencana">{total > 99 ? '99+' : total}</span>}
-      </button>
+      </Tekan>
     </div>
   );
 }
@@ -2305,7 +2300,7 @@ export function TombolPesan({ jumlah = 6, onBuka = bukaRuangObrolan, className }
             const p = r.pesan_terakhir;
             const belum = r.belum_dibaca > 0 && !r.bisu;
             return (
-              <button key={r.id} type="button" role="listitem" className="u-kabar-item" data-belum={belum ? '' : undefined} onClick={() => pilih(r.id)}>
+              <Tekan key={r.id} role="listitem" className="u-kabar-item" data-belum={belum ? '' : undefined} onClick={() => pilih(r.id)}>
                 <AvatarRuang r={r} saya={saya} size="sm" />
                 <span className="u-kabar-item-teks">
                   <span className="u-kabar-item-atas">
@@ -2315,7 +2310,7 @@ export function TombolPesan({ jumlah = 6, onBuka = bukaRuangObrolan, className }
                   <span className="u-kabar-item-isi">{cuplikan(p, r, saya)}</span>
                 </span>
                 {belum && <span className="u-kabar-item-angka">{r.belum_dibaca > 99 ? '99+' : r.belum_dibaca}</span>}
-              </button>
+              </Tekan>
             );
           })}
         </div>

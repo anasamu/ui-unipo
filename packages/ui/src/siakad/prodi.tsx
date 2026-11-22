@@ -7,6 +7,7 @@ import { cn } from '../lib/cn';
 import { formatDate } from '../lib/format';
 import { useSiakadQuery } from './provider';
 import { GalatApi } from './galat';
+import { Tekan } from '../components/tekan';
 
 // ================================================================ Data referensi prodi dan fakultas
 /** Baris GET /v1/referensi/prodi (kolom m_program_studi + nama_fakultas). */
@@ -333,9 +334,9 @@ export function DaftarProdi({ data, kodeFakultas, varian = 'daftar', cari = true
       );
     if (onPilih)
       return (
-        <button type="button" {...props} onClick={() => onPilih(p)}>
+        <Tekan {...props} onClick={() => onPilih(p)}>
           {isi}
-        </button>
+        </Tekan>
       );
     return <div {...props}>{isi}</div>;
   };
@@ -423,6 +424,8 @@ export interface LabelProdiProps {
   akreditasi?: boolean;
   /** Baris fakultas: `fakultas` (bawaan), `kode`, atau isi sendiri. false = tanpa baris itu. */
   sub?: 'fakultas' | 'kode' | React.ReactNode | false;
+  /** Keterangan singkat di bawah nama prodi (mis. "16 semester data lama · terbit 20251"), sejajar dengan nama, bukan di bawah logo. */
+  keterangan?: React.ReactNode;
   ukuran?: 'sm' | 'md' | 'lg';
   /** Bentuk logo fakultas. Bawaan kotak membulat. */
   bentukLogo?: 'kotak' | 'bulat';
@@ -451,7 +454,7 @@ const angka = (n: number) => n.toLocaleString('id-ID');
  * fakultas, nama prodi, lencana jenjang (S1, D3) dan akreditasi (dengan peringatan masa berlaku). Cukup isi `kode`;
  * data lain dilengkapi otomatis lewat SDK. Pilih tampilan lewat `varian`.
  */
-export function LabelProdi({ kode, nama, prodi, varian = 'baku', akreditasi = true, sub = 'fakultas', ukuran = 'md', bentukLogo = 'kotak', statistik, onClick, href, className }: LabelProdiProps) {
+export function LabelProdi({ kode, nama, prodi, varian = 'baku', akreditasi = true, sub = 'fakultas', ukuran = 'md', bentukLogo = 'kotak', statistik, keterangan, onClick, href, className }: LabelProdiProps) {
   const k = String(prodi?.kode_prodi ?? kode ?? '');
   const lengkap = !!prodi && (prodi.kode_akreditasi !== undefined || prodi.akreditasi !== undefined) && prodi.kode_jenjang !== undefined;
   const peta = usePetaProdi(!lengkap && !!k);
@@ -514,6 +517,7 @@ export function LabelProdi({ kode, nama, prodi, varian = 'baku', akreditasi = tr
             <span className="u-label-prodi-nama" title={namaP || undefined}>
               {namaP || '–'}
             </span>
+            {keterangan ? <span className="u-label-prodi-ket">{keterangan}</span> : null}
           </>
         )}
         {varian !== 'vertikal' && masaBerlaku}
@@ -532,6 +536,6 @@ export function LabelProdi({ kode, nama, prodi, varian = 'baku', akreditasi = tr
     'data-logo': bentukLogo === 'bulat' ? 'bulat' : undefined,
   };
   if (href) return <a {...atribut} href={href}>{isi}</a>;
-  if (onClick) return <button type="button" {...atribut} onClick={onClick}>{isi}</button>;
+  if (onClick) return <Tekan {...atribut} onClick={onClick}>{isi}</Tekan>;
   return <span {...atribut}>{isi}</span>;
 }

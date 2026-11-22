@@ -774,15 +774,8 @@
 .u-audit-user {
   font: inherit;
   color: var(--u-foreground);
-  background: none;
-  border: 0;
-  padding: 0;
-  &:is(button) {
-    cursor: pointer;
+  &.u-button {
     color: var(--u-primary);
-    &:hover {
-      text-decoration: underline;
-    }
   }
 }
 .u-audit-meta {

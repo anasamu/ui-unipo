@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { Badge, Button, Spinner } from '../components/actions';
 import { Alert, Empty } from '../components/display';
-import { Field, Input, SegmentedControl, Textarea } from '../components/forms';
+import { Checkbox, Field, Input, SegmentedControl, Textarea } from '../components/forms';
 import { IsianTanggal } from '../components/formulir';
 import { Dialog, useToast } from '../components/overlays';
 import { Combobox, OptionContent, Select } from '../components/select';
@@ -41,6 +41,8 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
 import type { KeuanganMahasiswaData } from './profil-modul';
 import { KwitansiResmi, type KwitansiResmiData } from './kwitansi';
 import { buktiPeramban, namaPerambanBawaan, useDaftarPerambanKasir, usePerambanKasir, type SesiPerambanKasir } from './kasir-peramban';
+import { IsianCari } from '../components/isian-cari';
+import { Tekan } from '../components/tekan';
 
 // Kasir modern (keuangan, fakultas, PMB), riwayat pembayaran mahasiswa, buku kas unit, dan jurnal umum.
 // Endpoint: /v1/keuangan (tagihan, transaksi, kasir, kwitansi), /v1/pmb/admin/tagihan, /v1/keu/kas, /v1/keu/jurnal.
@@ -801,9 +803,9 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
           </Field>
           <div className="u-kasir-cepat">
             {cepat.map((v) => (
-              <button key={v} type="button" data-aktif={uang === v || undefined} onClick={() => setDiterima(String(v))}>
+              <Tekan key={v} terpilih={uang === v} data-aktif={uang === v || undefined} onClick={() => setDiterima(String(v))}>
                 {v === total ? 'Uang pas' : formatRupiah(v)}
-              </button>
+              </Tekan>
             ))}
           </div>
           <div className="u-kasir-kembali" data-kurang={kurang || undefined}>
@@ -928,11 +930,10 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
                 return (
                   <li key={k} data-pilih={dipilih ? '' : undefined} data-nonaktif={it.boleh === false || undefined}>
                     <label className="u-kasir-tagihan-baris">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={Boolean(dipilih)}
                         disabled={it.boleh === false && !dipilih}
-                        onChange={() =>
+                        onCheckedChange={() =>
                           alih({ kunci: k, label: it.jenis_biaya, sub: `Periode ${per}`, jumlah: it.sisa, max: it.sisa, sumber: { jenis: 'mhs', nim, tahun_id: per, kode_biaya: it.kode_biaya } })
                         }
                       />
@@ -994,9 +995,9 @@ export function Kasir({ konteks = 'keuangan', kodeProdi, kodeFakultas, judul, ur
                       <small>{b.sub}</small>
                     </span>
                     <b>{formatRupiah(b.jumlah)}</b>
-                    <button type="button" aria-label={`Hapus ${b.label}`} onClick={() => setKeranjang((x) => x.filter((y) => y.kunci !== b.kunci))}>
+                    <Tekan aria-label={`Hapus ${b.label}`} onClick={() => setKeranjang((x) => x.filter((y) => y.kunci !== b.kunci))}>
                       <Trash2 />
-                    </button>
+                    </Tekan>
                   </li>
                 ))}
               </ul>
@@ -1593,16 +1594,13 @@ export function JurnalUmum({ unitId, bolehPosting: boleh, judul = 'Jurnal umum',
           aria-label="Saring status jurnal"
         />
         <PilihPeriode value={rentang} onChange={setRentang} />
-        <label className="u-jurnal-cari">
-          <Search aria-hidden />
-          <input type="search" value={kata} onChange={(e) => setKata(e.target.value)} placeholder="Nomor, uraian, bukti" aria-label="Cari jurnal" />
-        </label>
+        <IsianCari className="u-jurnal-cari" value={kata} onValueChange={setKata} placeholder="Nomor, uraian, bukti" aria-label="Cari jurnal" />
       </div>
       {q.error && <GalatApi error={q.error} onRetry={q.refetch} />}
       <ul className="u-jurnal-daftar" data-mobile={p.mobile || undefined}>
         {(q.data ?? []).map((j) => (
           <li key={j.id}>
-            <button type="button" onClick={() => setBuka(j.id)}>
+            <Tekan onClick={() => setBuka(j.id)}>
               <span className="u-jurnal-nomor">
                 <b>{j.nomor}</b>
                 <small>{formatDate(j.tanggal)}</small>
@@ -1616,7 +1614,7 @@ export function JurnalUmum({ unitId, bolehPosting: boleh, judul = 'Jurnal umum',
               </span>
               <b className="u-jurnal-total">{formatRupiah(j.total)}</b>
               <Badge variant={NADA_JURNAL[j.status]}>{j.status}</Badge>
-            </button>
+            </Tekan>
           </li>
         ))}
       </ul>

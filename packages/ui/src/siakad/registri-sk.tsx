@@ -67,9 +67,9 @@ export function RiwayatSK({ sk, onBuka }: { sk: Pick<DetailSK, 'mengubah' | 'diu
       <span>
         {arah === 'keluar' ? (x.jenis === 'mencabut' ? 'Mencabut' : 'Mengubah') : x.jenis === 'mencabut' ? 'Dicabut oleh' : 'Diubah oleh'}{' '}
         {onBuka ? (
-          <button type="button" className="u-sk-tautan" onClick={() => onBuka(x.id)}>
+          <Button variant="link" size="sm" className="u-sk-tautan" onClick={() => onBuka(x.id)}>
             {x.nomor}
-          </button>
+          </Button>
         ) : (
           <strong>{x.nomor}</strong>
         )}
@@ -498,6 +498,9 @@ export function KelolaSK({ penerbitUnitId = null, pengawasan, jenis, tampilPenga
   const unitCatat = (daftar.meta as { unit_catat?: number[] | null } | undefined)?.unit_catat;
   const bolehCatat = unitCatat === null || (Array.isArray(unitCatat) && unitCatat.length > 0);
   const menunggu = (daftar.data ?? []).filter((s) => s.status === 'draf').length;
+  // Aplikasi satu fakultas (SIAKAD meta.lingkup): registri hanya SK fakultas itu dan unit di bawahnya, maka saringan
+  // penerbit berakar di fakultas itu dan semua unitnya bisa dipilih untuk menyaring (bukan hanya unit pencatat).
+  const akarLingkup = (daftar.meta as { lingkup?: { unit_id?: number | null } | null } | undefined)?.lingkup?.unit_id ?? null;
   return (
     <div className={cn('u-kelola-sk', className)}>
       <div className="u-kelola-sk-alat">
@@ -518,7 +521,8 @@ export function KelolaSK({ penerbitUnitId = null, pengawasan, jenis, tampilPenga
           className="u-kelola-sk-penerbit"
           dataCadangan={(unitPenerbit.data ?? []).map((u) => ({ id: u.unit_id, induk_id: u.induk_id ?? null, kode: u.kode, jenis: u.jenis, nama: u.nama }))}
           memuat={unitPenerbit.loading}
-          boleh={(u) => pengawasan || Number(u.id) === penerbitUnitId || pencatat.has(Number(u.id))}
+          akar={akarLingkup}
+          boleh={(u) => pengawasan || akarLingkup !== null || Number(u.id) === penerbitUnitId || pencatat.has(Number(u.id))}
           alasan="Anda bukan pencatat SK unit ini."
           sembunyikanTerlarang
           keterangan={pengawasan && pencatat.size < (unitPenerbit.data ?? []).length ? (u) => (pencatat.has(Number(u.id)) ? 'Anda pencatat' : null) : undefined}
@@ -575,6 +579,7 @@ export function KelolaSK({ penerbitUnitId = null, pengawasan, jenis, tampilPenga
           onOpenChange={(o) => !o && setCatat(false)}
           jenis={jenis}
           penerbitUnitId={penerbit ?? penerbitUnitId}
+          rujuk={false}
           onTercatat={(s) => {
             setCatat(false);
             invalidateSiakad('sk');

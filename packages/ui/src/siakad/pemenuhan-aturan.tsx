@@ -5,6 +5,8 @@ import { Alert } from '../components/display';
 import { Field, Input, SegmentedControl, Switch, Textarea } from '../components/forms';
 import { Select } from '../components/select';
 import type { GrupKondisi, IndikatorAturan } from './aturan';
+import { IsianAngka } from '../components/isian-angka';
+import { keAngka } from '../lib/angka';
 
 /*
  * "Cara memenuhi" aturan syarat (wizard aturan, langkah Ketentuan). Disimpan di aturan.parameter untuk jenis syarat
@@ -99,7 +101,6 @@ const CARA: Array<{ value: CaraPemenuhan; label: string }> = [
   { value: 'plagiasi', label: 'Cek plagiasi' },
 ];
 
-const angka = (v: string, bawaan: number) => (v.trim() === '' || Number.isNaN(Number(v)) ? bawaan : Number(v));
 
 /** Batas similarity dari kondisi aturan (similarity_<jenis> <= N). */
 function batasSimilarity(k: GrupKondisi | null, jenis: string): number | null {
@@ -208,7 +209,7 @@ export function IsianPemenuhan({
                 <Input value={(m.format ?? ['pdf']).join(', ')} onChange={(e) => setM({ format: e.target.value.split(',').map((x) => x.trim().toLowerCase()).filter(Boolean) })} />
               </Field>
               <Field label="Ukuran maksimal (MB)">
-                <Input type="number" min={1} max={50} value={String(m.maks_mb ?? 5)} onChange={(e) => setM({ maks_mb: angka(e.target.value, 5) })} />
+                <IsianAngka value={keAngka(m.maks_mb ?? 5)} min={1} max={50} onValueChange={(n) => setM({ maks_mb: n ?? 5 })} />
               </Field>
             </div>
           )}
@@ -262,7 +263,7 @@ export function IsianPemenuhan({
           )}
           <div className="u-form-kisi" data-kolom="2">
             <Field label="Masa berlaku (bulan)" optional description="Kosong = tidak kedaluwarsa.">
-              <Input type="number" min={1} max={120} value={m.berlaku_bulan == null ? '' : String(m.berlaku_bulan)} onChange={(e) => setM({ berlaku_bulan: e.target.value === '' ? null : angka(e.target.value, 12) })} />
+              <IsianAngka value={keAngka(m.berlaku_bulan)} min={1} max={120} onValueChange={(n) => setM({ berlaku_bulan: n })} />
             </Field>
             <Field label="Bukti dipakai ulang" description="Bukti yang sudah diterima berlaku untuk aturan lain dengan kode sama.">
               <Switch checked={m.pakai_ulang ?? true} onCheckedChange={(c) => setM({ pakai_ulang: c })} />
@@ -286,32 +287,25 @@ export function IsianPemenuhan({
               <Select options={JENIS_NASKAH} value={pl.jenis_naskah} onValueChange={(v) => setPl({ jenis_naskah: v ?? 'skripsi' })} />
             </Field>
             <Field label="Similarity paling tinggi (%)" description="Disimpan sebagai kondisi aturan.">
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                value={batas == null ? '' : String(batas)}
-                onChange={(e) => onKondisi({ semua: [{ indikator: `similarity_${pl.jenis_naskah}`, op: '<=', nilai: angka(e.target.value, 30) }] })}
-                placeholder="30"
-              />
+              <IsianAngka value={keAngka(batas)} min={0} max={100} placeholder="30" onValueChange={(n) => onKondisi({ semua: [{ indikator: `similarity_${pl.jenis_naskah}`, op: '<=', nilai: n ?? 30 }] })} />
             </Field>
             <Field label="Hasil berlaku (bulan)">
-              <Input type="number" min={1} max={60} value={String(pl.berlaku_bulan)} onChange={(e) => setPl({ berlaku_bulan: angka(e.target.value, 6) })} />
+              <IsianAngka value={keAngka(pl.berlaku_bulan)} min={1} max={60} onValueChange={(n) => setPl({ berlaku_bulan: n ?? 6 })} />
             </Field>
             <Field label="Cek gratis">
-              <Input type="number" min={0} max={20} value={String(pl.cek_gratis)} onChange={(e) => setPl({ cek_gratis: angka(e.target.value, 2) })} />
+              <IsianAngka value={keAngka(pl.cek_gratis)} min={0} max={20} onValueChange={(n) => setPl({ cek_gratis: n ?? 2 })} />
             </Field>
             <Field label="Cek paling banyak">
-              <Input type="number" min={1} max={50} value={String(pl.cek_maks)} onChange={(e) => setPl({ cek_maks: angka(e.target.value, 5) })} />
+              <IsianAngka value={keAngka(pl.cek_maks)} min={1} max={50} onValueChange={(n) => setPl({ cek_maks: n ?? 5 })} />
             </Field>
             <Field label="Layanan selesai (hari kerja)">
-              <Input type="number" min={1} max={30} value={String(pl.sla_hari)} onChange={(e) => setPl({ sla_hari: angka(e.target.value, 3) })} />
+              <IsianAngka value={keAngka(pl.sla_hari)} min={1} max={30} onValueChange={(n) => setPl({ sla_hari: n ?? 3 })} />
             </Field>
             <Field label="Format naskah">
               <Input value={pl.format.join(', ')} onChange={(e) => setPl({ format: e.target.value.split(',').map((x) => x.trim().toLowerCase()).filter(Boolean) })} />
             </Field>
             <Field label="Ukuran maksimal (MB)">
-              <Input type="number" min={1} max={100} value={String(pl.maks_mb)} onChange={(e) => setPl({ maks_mb: angka(e.target.value, 20) })} />
+              <IsianAngka value={keAngka(pl.maks_mb)} min={1} max={100} onValueChange={(n) => setPl({ maks_mb: n ?? 20 })} />
             </Field>
           </div>
           <div className="u-form-kisi" data-kolom="2">

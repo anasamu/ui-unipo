@@ -13,6 +13,10 @@ import { SyaratSaya } from './aturan';
 import { useProdiReferensi, judulProdi } from './prodi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { AlurPemeriksa, LabelPemeriksa, PratinjauPemeriksa, type TahapPemeriksa } from './pemeriksa';
+import { IsianAngka } from '../components/isian-angka';
+import { IsianTanggal } from '../components/formulir';
+import { keAngka, teksAngka } from '../lib/angka';
+import { Tekan } from '../components/tekan';
 
 /*
  * Pengajuan mandiri mahasiswa ke unit lain, ujung ke ujung (docs/PRASYARAT.md di SIAKAD):
@@ -423,7 +427,7 @@ function DaftarPengajuan({ jenis, nim }: { jenis: JenisPengajuanMahasiswa; nim: 
         <ul className="u-pengajuan-daftar">
           {q.data.map((r) => (
             <li key={r.id}>
-              <button type="button" className="u-pengajuan-baris" onClick={() => setPilih(r)}>
+              <Tekan className="u-pengajuan-baris" onClick={() => setPilih(r)}>
                 <span className="u-pengajuan-ikon" aria-hidden>
                   {d.ikon}
                 </span>
@@ -438,7 +442,7 @@ function DaftarPengajuan({ jenis, nim }: { jenis: JenisPengajuanMahasiswa; nim: 
                   {/* Tahap berjalan/ditolak: lencana pemeriksa ("Menunggu BAAK") menggantikan status umum. */}
                   {r.pemeriksa?.some((t) => t.status === 'sedang' || t.status === 'ditolak') ? <LabelPemeriksa pemeriksa={r.pemeriksa} /> : <LencanaStatusPengajuan status={r.status} />}
                 </span>
-              </button>
+              </Tekan>
             </li>
           ))}
         </ul>
@@ -672,10 +676,10 @@ function FormPengajuan({ jenis, nim, open, onOpenChange, program, onSelesai }: {
             {isi.jenis === 'cuti' && (
               <div className="u-pengajuan-dua">
                 <Field label="Mulai cuti" required error={g('tanggal_mulai')}>
-                  <Input type="date" value={isi.tanggal_mulai ?? ''} onChange={(e) => set('tanggal_mulai')(e.target.value)} />
+                  <IsianTanggal value={isi.tanggal_mulai ?? ''} onValueChange={(v) => set('tanggal_mulai')(v)} />
                 </Field>
                 <Field label="Akhir cuti" required error={g('tanggal_akhir')}>
-                  <Input type="date" value={isi.tanggal_akhir ?? ''} onChange={(e) => set('tanggal_akhir')(e.target.value)} />
+                  <IsianTanggal value={isi.tanggal_akhir ?? ''} onValueChange={(v) => set('tanggal_akhir')(v)} />
                 </Field>
               </div>
             )}
@@ -741,10 +745,10 @@ function FormPengajuan({ jenis, nim, open, onOpenChange, program, onSelesai }: {
             </Field>
             <div className="u-pengajuan-dua">
               <Field label="Tanggal janji bayar" required error={g('janji_bayar')}>
-                <Input type="date" value={isi.janji_bayar ?? ''} onChange={(e) => set('janji_bayar')(e.target.value)} />
+                <IsianTanggal value={isi.janji_bayar ?? ''} onValueChange={(v) => set('janji_bayar')(v)} />
               </Field>
               <Field label="Jumlah yang dijanjikan (Rp)" error={g('jumlah_janji')}>
-                <Input type="number" min={0} value={isi.jumlah_janji ?? ''} onChange={(e) => set('jumlah_janji')(e.target.value)} />
+                <IsianAngka value={keAngka(isi.jumlah_janji)} min={0} onValueChange={(n) => set('jumlah_janji')(teksAngka(n))} />
               </Field>
             </div>
             <Field label="Alasan" required error={g('alasan')}>
