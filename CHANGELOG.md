@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.56.0 (belum dirilis)
+
+- **Pola platform modern (legacy-scan modern-web-guidance)**: tombol Enter pada isian yang menambah/menerapkan/mencari (`Alokasi` teks, isian label/tag `formulir`, cari di Pengolah dokumen, cari blok di Penyisip, ekstensi di `BatasUnggah`) tidak lagi bereaksi saat Enter dipakai papan ketik bahasa (IME) untuk mengonfirmasi huruf; pembantu baru `lib/ime.ts` `sedangMenyusunIme` (`isComposing` + `keyCode` 229 untuk Safari). Salinan dalam memakai `structuredClone` (landing, aturan BKD, DUPAK, karier, SKP) dan batas waktu pemeriksa status layanan memakai `AbortSignal.timeout`. Temuan `copying-array-methods` (51) belum diubah karena `lib` TypeScript masih ES2022. Uji `packages/ui/test/ime.test.ts`.
+
 ## 1.55.0 (belum dirilis)
 
 - **Tab di panel samping selalu menjadi pilihan bila tidak muat** (`components/display.tsx` `tataTab`; keputusan Anas 2026-11-22 13.17): `Tabs` dengan `orientation="horizontal"` yang berada di dalam panel samping (`Sheet`) kini ikut tata letak panel, yaitu deret horizontal yang berubah menjadi pilihan tarik-turun bila tidak muat selebar panel. Sebelumnya orientasi horizontal eksplisit melewati aturan ini sehingga deret tab bisa terpotong. Hanya `orientation="vertical"` eksplisit yang tetap dihormati di panel. Uji `packages/ui/test/tab-bersarang.test.tsx`, contoh di galeri Navigasi.

@@ -341,7 +341,7 @@ function RincianAturanBkd({ id, onPilih }: { id: number; onPilih: (id: number | 
 function PanelUbahAturanBkd({ aturan: a, onOpenChange }: { aturan: AturanBkdDetail; onOpenChange: (o: boolean) => void }) {
   const aksi = useAksiBkd();
   const [step, setStep] = React.useState(0);
-  const [isi, setIsi] = React.useState<IsiAturanBkd>(() => JSON.parse(JSON.stringify(a.isi)) as IsiAturanBkd);
+  const [isi, setIsi] = React.useState<IsiAturanBkd>(() => structuredClone(a.isi) as IsiAturanBkd);
   const [id, setId] = React.useState({ nama: a.nama, dasar_hukum: a.dasar_hukum ?? '', berlaku_mulai: a.berlaku_mulai, catatan_perubahan: a.catatan_perubahan ?? '', sk_id: a.sk?.id ?? null as string | null });
   const pd = isi.pedoman ?? { judul: null, url: null };
   const ubahBidang = (i: number, x: Partial<IsiAturanBkd['bidang'][number]>) => setIsi({ ...isi, bidang: isi.bidang.map((b, j) => (j === i ? { ...b, ...x } : b)) });
