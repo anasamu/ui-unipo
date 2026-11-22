@@ -47,6 +47,7 @@ import { cn } from '../lib/cn';
 import { useOptionalSiakad } from './provider';
 import { useSinyalRealtime } from './realtime';
 import { SegmentedControl } from '../components/forms';
+import { Tekan } from '../components/tekan';
 
 /**
  * Notifikasi terpusat SIAKAD (`/v1/notif`, docs/NOTIFIKASI.md di siakad_unipo): jumlah belum dibaca per label, kotak
@@ -708,10 +709,10 @@ function IsiNotifikasi({ n, mode, onNavigasi, onTutup, modul: modulTetap, perHal
         <div className="u-notif-kepala">
           {mode === 'panel' && <span className="u-kabar-judul">Notifikasi</span>}
           <div className="u-notif-alat">
-            <button type="button" className="u-notif-saklar" aria-pressed={hanyaBelum} onClick={() => setHanyaBelum((v) => !v)}>
+            <Tekan className="u-notif-saklar" terpilih={hanyaBelum} onClick={() => setHanyaBelum((v) => !v)}>
               <span aria-hidden className="u-notif-saklar-titik" />
               Belum dibaca
-            </button>
+            </Tekan>
             <Tooltip content={namaTab ? `Tandai semua ${namaTab} dibaca` : 'Tandai semua dibaca'}>
               <Button variant="ghost" size="xs" iconOnly aria-label={namaTab ? `Tandai semua ${namaTab} dibaca` : 'Tandai semua dibaca'} disabled={!belumTab} onClick={() => void bacaSemuaTab()}>
                 <CheckCheck />
@@ -734,18 +735,18 @@ function IsiNotifikasi({ n, mode, onNavigasi, onTutup, modul: modulTetap, perHal
       )}
       {!ringkas && !modulTetap && labelTab.length > 0 && (
         <div className="u-notif-tab" role="tablist" aria-label="Label notifikasi">
-          <button type="button" role="tab" aria-selected={tab === 'semua'} onClick={() => setTab('semua')}>
+          <Tekan role="tab" terpilih={tab === 'semua'} onClick={() => setTab('semua')}>
             Semua
             {n.belum > 0 && <span className="u-notif-tab-angka">{n.belum > 99 ? '99+' : n.belum}</span>}
-          </button>
+          </Tekan>
           {labelTab.map((l) => (
-            <button key={l.modul} type="button" role="tab" aria-selected={tab === l.modul} data-bisu={l.bisu ? '' : undefined} onClick={() => setTab(l.modul)} title={l.bisu ? `${namaLabelNotifikasi(l.modul)} dibisukan` : undefined}>
+            <Tekan key={l.modul} role="tab" terpilih={tab === l.modul} data-bisu={l.bisu ? '' : undefined} onClick={() => setTab(l.modul)} title={l.bisu ? `${namaLabelNotifikasi(l.modul)} dibisukan` : undefined}>
               <span className="u-notif-tab-ikon" aria-hidden>
                 {l.bisu ? <BellOff /> : ikonModulNotifikasi(l.modul)}
               </span>
               {namaLabelNotifikasi(l.modul)}
               {l.belum > 0 && <span className="u-notif-tab-angka">{l.belum > 99 ? '99+' : l.belum}</span>}
-            </button>
+            </Tekan>
           ))}
         </div>
       )}
@@ -808,10 +809,10 @@ function IsiNotifikasi({ n, mode, onNavigasi, onTutup, modul: modulTetap, perHal
                       {ikonModulNotifikasi(x.modul)}
                     </span>
                     <div className="u-notif-item-badan">
-                      <button type="button" className="u-notif-item-utama" aria-expanded={terbuka} onClick={() => ubahLuas(g)}>
+                      <Tekan className="u-notif-item-utama" aria-expanded={terbuka} onClick={() => ubahLuas(g)}>
                         <span className="u-notif-item-judul">{x.judul}</span>
                         {x.isi && <span className="u-notif-item-isi">{x.isi}</span>}
-                      </button>
+                      </Tekan>
                       {terbuka && g.semua.length > 1 && (
                         <ul className="u-notif-item-riwayat" aria-label="Notifikasi serupa">
                           {g.semua.map((y) => (
@@ -832,13 +833,13 @@ function IsiNotifikasi({ n, mode, onNavigasi, onTutup, modul: modulTetap, perHal
                         <time dateTime={x.created_at} title={waktuLengkap(x.created_at)}>
                           {waktuRelatif(x.created_at)}
                         </time>
-                        <button type="button" className="u-notif-item-lagi" aria-hidden tabIndex={-1} onClick={() => ubahLuas(g)}>
+                        <Tekan className="u-notif-item-lagi" aria-hidden tabIndex={-1} onClick={() => ubahLuas(g)}>
                           <ChevronDown />
-                        </button>
+                        </Tekan>
                         {x.tautan && (
-                          <button type="button" className="u-notif-item-buka" onClick={() => buka(x, g)}>
+                          <Tekan className="u-notif-item-buka" onClick={() => buka(x, g)}>
                             Buka <ArrowUpRight />
-                          </button>
+                          </Tekan>
                         )}
                       </div>
                     </div>

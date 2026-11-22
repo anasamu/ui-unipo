@@ -16,6 +16,7 @@ import { ModalAjukanLayanan, ModalAmbilKrs, ModalCekKelulusan, ModalDaftarWisuda
 import { KepegawaianSaya, useProfilSaya, type KeuanganMahasiswaData, type PeranProfil } from './profil-modul';
 import { useSiakadQuery } from './provider';
 import { PintasanBeranda } from './pintasan-menu';
+import { Tekan } from '../components/tekan';
 
 /**
  * Beranda siap pakai per peran: sapaan, pengingat kelengkapan data, aksi cepat yang membuka modal fitur, dan widget
@@ -162,9 +163,9 @@ export function AksiCepat({ items, kolom, min, renderLink, className }: AksiCepa
               {isi}
             </Tautan>
           ) : (
-            <button type="button" className="u-aksi-cepat-item" data-warna={a.warna} onClick={a.onClick}>
+            <Tekan className="u-aksi-cepat-item" data-warna={a.warna} onClick={a.onClick}>
               {isi}
-            </button>
+            </Tekan>
           );
         return <li key={a.key}>{a.modal ? a.modal(tombol) : tombol}</li>;
       })}

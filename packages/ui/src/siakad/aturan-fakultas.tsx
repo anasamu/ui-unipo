@@ -25,6 +25,7 @@ import {
   type Aturan,
   type HasilPeriksaAturan,
 } from './aturan';
+import { Tekan } from '../components/tekan';
 
 /*
  * Aturan fakultas (SIAKAD docs/ATURAN-FAKULTAS.md): syarat dosen PA, pembimbing, dan penguji yang ditetapkan fakultas
@@ -343,9 +344,9 @@ function LencanaSk({ a, onLampirkan }: { a: AturanBerlingkup; onLampirkan?: () =
   if (a.sk?.nomor) return <Tag size="sm" icon={<FileBadge />}>SK {a.sk.nomor}</Tag>;
   if (!tanpaSk(a)) return null;
   return (
-    <button type="button" className="u-lencana-sk" data-nada="warning" onClick={onLampirkan} title="Lampirkan SK Dekan dari registri SK">
+    <Tekan className="u-lencana-sk" data-nada="warning" onClick={onLampirkan} title="Lampirkan SK Dekan dari registri SK">
       <CircleAlert aria-hidden /> Belum ada SK, lampirkan (SK Dekan)
-    </button>
+    </Tekan>
   );
 }
 
@@ -370,10 +371,10 @@ function KartuAturanFakultas({
   const berubah = bawaan && (a.status !== 'aktif' || a.versi > 1 || Boolean(a.usulan));
   return (
     <li className="u-aturan-fak-kartu" data-status={a.status} data-universitas={universitas || undefined}>
-      <button type="button" className="u-aturan-fak-isi" onClick={onBuka}>
+      <Tekan className="u-aturan-fak-isi" onClick={onBuka}>
         <strong>{a.nama}</strong>
         <span>{kalimatSyarat(a.kondisi, katalog.data, 'Dosen boleh ditetapkan jika')}</span>
-      </button>
+      </Tekan>
       <div className="u-aturan-fak-lencana">
         <StatusAturanBadge status={statusTampil(a)} />
         {a.usulan?.status === 'diajukan' && (

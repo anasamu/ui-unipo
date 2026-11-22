@@ -5,6 +5,7 @@ import { cn } from '../../lib/cn';
 import { Badge } from '../../components/actions';
 import { Empty } from '../../components/display';
 import { SegmentedControl } from '../../components/forms';
+import { Tekan } from '../../components/tekan';
 import { KepalaAkademik, keadaanData, type KeadaanDataProps } from './bersama';
 import { angka, hariDari, jamPendek, menitDari, namaDosenSesi, namaHari, nomorHari, type SesiKuliah } from './tipe';
 
@@ -146,22 +147,10 @@ export function JadwalMingguan({ jadwal, hari, tampilan = 'otomatis', pilihTampi
     const judulPenuh = [s.nama_mk ?? s.kode_mk, teksJam(s), s.nama_ruang || s.ruang, s.kelas ? `Kelas ${s.kelas}` : '', !tanpaDosen ? namaDosenSesi(s) : ''].filter(Boolean).join(' · ');
     const props = { className: 'u-ak-sesi', 'data-warna': warnaMk(s.kode_mk ?? s.nama_mk), 'data-ringkas': ringkas || undefined, title: ringkas ? judulPenuh : undefined } as const;
     return onPilih ? (
-      // Seluruh kartu dapat diklik (area sentuh besar di ponsel); Enter/Spasi untuk papan ketik.
-      <div
-        key={`${s.idj ?? i}`}
-        {...props}
-        role="button"
-        tabIndex={0}
-        onClick={() => onPilih(s)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onPilih(s);
-          }
-        }}
-      >
+      // Seluruh kartu dapat diklik (area sentuh besar di ponsel); Tekan menambah Enter/Spasi dan cincin fokus token.
+      <Tekan key={`${s.idj ?? i}`} elemen="div" {...props} onClick={() => onPilih(s)}>
         {isi}
-      </div>
+      </Tekan>
     ) : (
       <div key={`${s.idj ?? i}`} {...props}>
         {isi}

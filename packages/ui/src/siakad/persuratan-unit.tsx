@@ -21,6 +21,7 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
 import { CatatArsipSurat, EditorSuratKeluar, PengaturanPenomoran } from './persuratan';
 import { KelolaTemplatSurat, type UnitArsip } from './surat';
 import { IsianTanggal } from '../components/formulir';
+import { Tekan } from '../components/tekan';
 
 // ---------------------------------------------------------------- tipe
 
@@ -385,9 +386,9 @@ function Angka({ label: l, nilai, nada, onClick }: { label: string; nilai?: numb
     </>
   );
   return onClick ? (
-    <button type="button" className="u-psu-angka" onClick={onClick}>
+    <Tekan className="u-psu-angka" onClick={onClick}>
       {isi}
-    </button>
+    </Tekan>
   ) : (
     <div className="u-psu-angka">{isi}</div>
   );
@@ -547,7 +548,7 @@ export function KotakDisposisiSaya({ onBuka }: { onBuka?: (uuid: string) => void
         <ul className="u-psu-disposisi">
           {(q.data ?? []).map((d) => (
             <li key={d.id} data-lewat={d.lewat_batas ? '' : undefined}>
-              <button type="button" className="u-psu-disposisi-isi" onClick={() => onBuka?.(d.surat_uuid)}>
+              <Tekan className="u-psu-disposisi-isi" onClick={() => onBuka?.(d.surat_uuid)}>
                 <Share2 aria-hidden />
                 <span>
                   <b>{d.perihal}</b>
@@ -558,7 +559,7 @@ export function KotakDisposisiSaya({ onBuka }: { onBuka?: (uuid: string) => void
                   </small>
                   {(d.instruksi?.length || d.catatan) && <small className="u-psu-instruksi">{[...(d.instruksi ?? []), d.catatan].filter(Boolean).join(' · ')}</small>}
                 </span>
-              </button>
+              </Tekan>
               <div className="u-psu-disposisi-aksi">
                 <Badge dot variant={d.lewat_batas ? 'danger' : (NADA_STATUS[d.status] ?? 'neutral')}>
                   {d.lewat_batas ? 'Lewat batas' : label(d.status)}

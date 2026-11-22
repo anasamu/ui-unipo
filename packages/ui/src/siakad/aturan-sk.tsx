@@ -38,6 +38,7 @@ import { useFakultasReferensi, useProdiReferensi } from './prodi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { IsianAngka } from '../components/isian-angka';
 import { keAngka } from '../lib/angka';
+import { Tekan } from '../components/tekan';
 
 /*
  * Aturan berdasarkan SK dan rantai validator per unit (SIAKAD docs/ATURAN-SK.md). Keluarga komponen yang dipakai ulang
@@ -1478,11 +1479,10 @@ export function WizardTemplatAturan({
           ) : (
             <div className="u-ask-jenis" role="radiogroup" aria-label="Jenis aturan">
               {kat.data.jenis.map((x) => (
-                <button
+                <Tekan
                   key={x.kode}
-                  type="button"
                   role="radio"
-                  aria-checked={jenis === x.kode}
+                  terpilih={jenis === x.kode}
                   className="u-ask-jenis-kartu"
                   data-pilih={jenis === x.kode ? '' : undefined}
                   onClick={() => {
@@ -1493,7 +1493,7 @@ export function WizardTemplatAturan({
                   <strong>{x.judul}</strong>
                   <span>{x.keterangan}</span>
                   {!x.siap && <Badge variant="outline">Segera tersedia</Badge>}
-                </button>
+                </Tekan>
               ))}
             </div>
           ),
@@ -1506,11 +1506,10 @@ export function WizardTemplatAturan({
           content: (
             <div className="u-ask-kasus" role="radiogroup" aria-label="Kasus">
               {(j?.templat ?? []).map((t) => (
-                <button
+                <Tekan
                   key={t.kode}
-                  type="button"
                   role="radio"
-                  aria-checked={kasus?.kode === t.kode}
+                  terpilih={kasus?.kode === t.kode}
                   className="u-ask-jenis-kartu"
                   data-pilih={kasus?.kode === t.kode ? '' : undefined}
                   disabled={!t.siap}
@@ -1528,7 +1527,7 @@ export function WizardTemplatAturan({
                     Bila tidak dipenuhi: {t.akibat_label.toLowerCase()}
                     {t.titik_judul ? ` · diperiksa saat ${t.titik_judul.charAt(0).toLowerCase()}${t.titik_judul.slice(1)}` : ''}
                   </span>
-                </button>
+                </Tekan>
               ))}
             </div>
           ),

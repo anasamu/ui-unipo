@@ -29,6 +29,7 @@ import {
   type ParameterPedoman,
   type VersiPedoman,
 } from './pedoman';
+import { Tekan } from '../components/tekan';
 
 /*
  * Ruang kerja penyusunan pedoman: pohon bab/bagian/pasal/ayat (seret untuk urut, nomor otomatis) di kiri, editor blok
@@ -305,12 +306,12 @@ function PohonButir({ versi: v, pilih, onPilih, bisaSeret }: { versi: VersiPedom
             setAtas(null);
           }}
         >
-          <button type="button" onClick={() => onPilih(b.id)}>
+          <Tekan onClick={() => onPilih(b.id)}>
             {bisaSeret && <GripVertical className="u-pdm-seret" aria-hidden />}
             <span className="u-pdm-pohon-nomor">{b.nomor}</span>
             <span className="u-pdm-pohon-judul">{b.judul || ringkasIsi(b)}</span>
             {v.parameter.some((p) => p.butir_id === b.id) && <Badge variant="primary" size="md">P</Badge>}
-          </button>
+          </Tekan>
         </li>
       ))}
     </ul>
@@ -455,14 +456,14 @@ function PanelKanan({ versi: v, butir, draf, onTambahParam, onUbahParam }: { ver
               )}
               {v.parameter.length === 0 ? <p className="u-pdm-redup">Belum ada parameter. Parameter berkunci katalog dibaca aturan sistem setelah pedoman berlaku.</p> : null}
               {v.parameter.map((p) => (
-                <button key={p.id} type="button" className="u-pdm-param-ringkas" onClick={() => draf && onUbahParam(p)}>
+                <Tekan key={p.id} className="u-pdm-param-ringkas" onClick={() => draf && onUbahParam(p)}>
                   <strong>{p.nama}</strong>
                   <span>
                     {p.pasal} · <code>{p.kunci}</code>
                   </span>
                   <span className="u-pdm-param-teks">{p.teks}</span>
                   {p.terpetakan ? <Badge variant="primary">{p.unit_pemilik ?? 'Dibaca sistem'}</Badge> : <Badge variant="neutral">Informatif</Badge>}
-                </button>
+                </Tekan>
               ))}
               {(v.periksa ?? []).filter((x) => x.tingkat === 'info').length > 0 && (
                 <p className="u-pdm-redup">
@@ -592,7 +593,6 @@ export function IsianNilaiParameter({ kat, value, onChange }: { kat: Pick<Katalo
       const ubah = (i: number, k: string, x: string) => onChange(rows.map((r, n) => (n === i ? { ...r, [k]: angka(x) } : r)));
       return (
         <div className="u-pdm-isian-tabel">
-          {/* unipo-ui-izinkan tabel-bawaan: kisi isian parameter berbentuk tabel (sel = Input), bukan tabel data */}
           <table>
             <thead>
               <tr>

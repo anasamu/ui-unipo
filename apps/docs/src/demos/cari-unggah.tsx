@@ -14,7 +14,7 @@ export const meta: DemoMeta = {
   importLine: "import { CariAtauUnggahDokumen, PilihEntitas } from 'unipo-ui/siakad';\nimport { Combobox } from 'unipo-ui';",
   demos: {
     Dokumen: 'CariAtauUnggahDokumen: cari di /v1/berkas, unggah bila tidak ada',
-    Entitas: 'PilihEntitas + tambah: formulir dialog untuk data baru',
+    Entitas: 'PilihEntitas + tambah: formulir panel samping untuk data baru',
     ComboboxTambah: 'Combobox + tambah: simpan langsung dari kata yang diketik',
   },
   props: [
@@ -22,7 +22,7 @@ export const meta: DemoMeta = {
     ['CariAtauUnggahDokumen.sumber', '{ path, query?, ubah? }', 'Sumber lain, mis. /v1/arsip/dokumen; ubah memetakan baris API.'],
     ['CariAtauUnggahDokumen.setelahUnggah', '(berkas, kata) => Promise<DokumenDitemukan>', 'Daftarkan berkas hasil unggah ke sumber (mis. POST /v1/arsip/dokumen).'],
     ['CariAtauUnggahDokumen.accept', 'string', 'Ekstensi yang diterima, mis. ".pdf,.docx".'],
-    ['PilihEntitas.tambah', '{ judul?, label?, hanyaKosong?, form?, onTambah? }', 'form({ kata, selesai }) membuka dialog; onTambah(kata) menyimpan langsung.'],
+    ['PilihEntitas.tambah', '{ judul?, label?, hanyaKosong?, form?, onTambah? }', 'Bentuk lama dari buat (lihat Pilihan kosong). form({ kata, selesai }) membuka panel samping; onTambah(kata) menyimpan langsung.'],
     ['Combobox.tambah', '{ onTambah(kata), label?, hanyaKosong? }', 'Kembalikan butir baru (atau Promise) agar langsung terpilih.'],
   ],
   notes: ['Unggah memakai useUnggahBerkas: otomatis unggah bertahap untuk berkas besar, bisa dibatalkan dan diulang.', 'Data di halaman ini rekaan.'],
