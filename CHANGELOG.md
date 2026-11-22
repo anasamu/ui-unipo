@@ -1,18 +1,14 @@
 # Catatan perubahan
 
-## Belum dirilis (kasir unit terkunci per aplikasi; nomor versi diberikan saat digabung)
+## 1.59.0 (2026-11-22)
 
 - **Kasir unit terkunci ke unit aplikasi** (`siakad/kasir-unit.tsx`): `PengaturanKasirUnit` menerima `unitKode` (kode struktur organisasi, mis. `"BAAK"`, `"PMB"`) dan memakai `unit_aplikasi` dari server (fakultas aplikasi Fakultas). Aplikasi unit hanya menampilkan jenis biaya, loket, aturan, jadwal, dan templat unit itu, dan pilihan "Unit penerbit" saat menambah jenis biaya hanya unit itu (tanpa Universitas). Bila kode unit tidak ada dalam lingkup pengguna, tampil keterangan, bukan daftar semua unit.
-
-## Belum dirilis (komponen akademik lanjutan; nomor versi diberikan saat digabung)
-
 - **Form isi KRS** (`siakad/komponen-akademik/isi-krs.tsx` baru; butuh SIAKAD dengan `POST /v1/mahasiswa/{nim}/krs/batal` dan jam kelas di penawaran/KRS): `FormIsiKrs` (daftar penawaran per semester, cari, pilih kelas, peringatan bentrok jadwal dari jam kelas, batas SKS dari server, aturan ber-SK), `PanelIsiKrs` bertahap di panel samping, dan `IsiKrsMahasiswa` yang terhubung ke SDK (ajukan ke dosen PA, batalkan mata kuliah yang belum disetujui). Server tetap memeriksa bentrok dan batas saat menyimpan.
 - **Skala nilai per periode** di transkrip dan KHS: huruf dihitung memakai skala yang berlaku pada periode mata kuliah diambil.
 - **Menit per SKS dari aturan kurikulum**: `JadwalMingguan` membaca `GET /v1/referensi/beban-sks` (hook `useBebanSks`, prop `kodeProdi`) untuk tinggi sesi tanpa jam selesai; bawaan 50 menit bila aturan belum mengatur atau tidak ada SDK. Isian aturan kurikulum mendapat kolom menit tatap muka per SKS.
 - Uji `packages/ui/test/komponen-akademik-lanjut.test.tsx`; contoh di galeri Komponen akademik.
-## Belum dirilis (kunci fitur Pustikom)
-
 - **Kunci fitur per periode: pemilik tunggal Pustikom** (`siakad/kunci-fitur.tsx`; keputusan Anas 2026-11-22, menggantikan 2026-11-21): teks komponen tidak lagi menyebut BAAK sebagai pengatur. `hanyaLihat` tetap ada untuk aplikasi pemantau lain; tanpa prop itu tombol atur tampil bila server menjawab `meta.boleh_atur` (izin `kalender.kunci.atur`, kini milik Admin Pustikom lewat migration SIAKAD `2027_01_29_780100_rbac_kunci_fitur_pustikom`).
+
 ## 1.58.0 (belum dirilis)
 
 - **Periode dipilih dari daftar, bukan diketik** (`siakad/aturan-akibat.tsx`, `aturan-sk.tsx`, `biaya.tsx`, `kurikulum-aturan.tsx`): periode simulasi aturan berakibat, isian templat kasus bertipe periode, angkatan di Form aturan biaya, dan periode di aturan kurikulum memakai `PilihTahunAkademik` (nama periode seperti "Ganjil 2026/2027"), bukan kotak isian 5 angka. Pesan validasi menjadi "pilih periode dari daftar".
