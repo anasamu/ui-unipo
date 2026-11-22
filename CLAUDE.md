@@ -1,43 +1,26 @@
-# Panduan agen untuk ui-unipo
+# ui-unipo: cara kerja agen
 
-Berkas ini dibaca agen pemrograman (Claude Code, Codex, Cursor, dan sejenisnya) sebelum mengubah repo ini. `AGENTS.md` menunjuk ke sini.
+Pustaka komponen UNIPO (`unipo-ui`, `unipo-ui-tokens`) yang dipakai semua aplikasi web dan desktop UNIPO.
 
-## Skill wajib (keputusan Anas, 22 Nov 2026)
+## Skill wajib (keputusan Anas 2026-11-22)
+- **modern-web-guidance** (terpasang di `.claude/skills/modern-web-guidance`): sebelum menulis atau mengubah HTML/CSS/JS klien, jalankan
+  `npx -y modern-web-guidance@latest search "<2–5 kata, mis. light dismiss dialog>"` lalu `retrieve "<id>"`, dan ikuti panduannya
+  (elemen/API platform modern: `<dialog>`/popover, container query, `:has()`, view transitions, aksesibilitas, CWV). Untuk audit pola lama:
+  `npx -y modern-web-guidance@latest legacy-scan packages/ui/src`.
+- **unslop** (`heydamir/unslop`): saat membuat atau merapikan tampilan, supaya antarmuka tidak terlihat buatan AI (tanpa gradien ungu, cahaya, teks bergradien, emoji di label, lencana "Baru", jarak tidak seragam). Ikuti urutan lapisannya: jarak, warna, ikon, teks, tipografi, tata letak, detail, visual, gerak.
+- **Skill desain** bila tersedia di sesi: ui-ux-pro-max, design-system, ui-styling, design, frontend-design.
+- `.claude/settings.json` mendaftarkan plugin `modern-web-guidance@googlechrome` dan `unslop@heydamir`. Deskripsi PR mencantumkan bagian **Modern Web Guidance** (id panduan yang dipakai).
 
-Setiap pengembangan komponen unipo-ui memakai dua skill berikut. `.claude/settings.json` sudah mendaftarkan keduanya sehingga Claude Code menawarkannya otomatis saat repo dibuka.
+## Aturan komponen
+- Semua komponen memakai token `unipo-ui-tokens` (warna, jarak, radius); tanpa nilai mentah, terang/gelap dari token.
+- Aksesibilitas: elemen semantik, fokus papan ketik standar (`<Tekan>` untuk kartu/baris/chip yang bisa diklik), label & ARIA benar.
+- Tabel: `DataTable` (+ `useSiakadTable`/FilterBar); bilah alat (saringan, kerapatan, Kolom, ekspor) satu baris, berjarak dari tepi bingkai; tanpa bingkai ganda.
+- Tab: sub tab tingkat kedua ≥3 vertikal (isi lewat `content`/children, bukan dirender di luar Tabs); 2 tab horizontal; di panel samping horizontal dan menjadi pilihan bila tidak muat.
+- Form di panel samping (Sheet) atau wizard; pemilih bercari, bukan ketik ID/kode; pilihan kosong memakai pola `buat` (tombol buat bagi yang berhak, unit pengelola bagi yang tidak).
+- Judul/keterangan halaman hanya sekali; komponen isi tab menerima `judul={null}`.
+- Bahasa antarmuka: Indonesia awam, tanpa istilah teknis.
 
-1. **modern-web-guidance** (Google Chrome, `googlechrome/modern-web-guidance`)
-   - Jalankan sebelum menulis atau mengubah komponen, CSS, tata letak, form, tabel, tab, dialog/panel samping, pilihan, peringatan, aksesibilitas, atau logika tanggal/zona waktu di sisi klien.
-   - Cari dengan 2 sampai 5 kata berbahasa Inggris untuk satu kemampuan, lalu ambil panduannya:
-     ```sh
-     npx -y modern-web-guidance@latest search "responsive data table"
-     npx -y modern-web-guidance@latest retrieve "responsive-table,accessibility"
-     ```
-   - Fitur yang belum Baseline Widely available wajib memakai cadangan (fallback) sesuai panduan.
-   - Deskripsi PR mencantumkan bagian **Modern Web Guidance**: id panduan yang dipakai dan keputusan yang diambil karenanya.
-2. **unslop** (`heydamir/unslop`)
-   - Dipakai saat membuat atau merapikan tampilan, supaya antarmuka tidak terlihat buatan AI: tanpa gradien ungu, cahaya, teks bergradien, emoji di label, lencana "Baru", label huruf kapital berjarak, atau jarak yang tidak seragam.
-   - Ikuti urutan lapisan unslop: jarak, warna, ikon, teks, tipografi, tata letak, detail, visual, gerak. Bingkai tetap tenang dengan token warna unipo-ui; satu elemen menonjol per layar.
-
-Skill desain yang juga wajib (sudah terpasang di Mac Anas, dipakai bersama dua skill di atas): **frontend-design**, **ui-ux-pro-max**, **design-system**, **ui-styling**, dan **design**. Di lingkungan yang tidak memilikinya, ikuti token dan pola unipo-ui yang ada lalu catat di PR bahwa skill itu tidak tersedia.
-
-Pasang di Claude Code lokal bila belum ada:
-```sh
-claude plugin marketplace add googlechrome/modern-web-guidance
-claude plugin install modern-web-guidance@googlechrome
-claude plugin marketplace add heydamir/unslop
-claude plugin install unslop@heydamir
-```
-Di lingkungan tanpa plugin, cukup jalankan perintah `npx` di atas dan baca `SKILL.md` dari kedua repo tersebut.
-
-## Aturan kerja yang sudah berlaku
-
-- Komponen dipakai lintas aplikasi dan lintas kampus: tanpa istilah teknis di layar, bahasa Indonesia awam, presisi dan responsif (1440, 1024, 390).
-- Form dibuka di panel samping; isian banyak memakai wizard bertahap.
-- Tab: 3 sub tab atau lebih vertikal, 2 horizontal; di panel samping horizontal dan menjadi pilihan tarik-turun bila tidak muat. Isi tab berada di dalam komponen Tabs.
-- Tabel memakai DataTable tanpa bingkai ganda; bilah alat (saringan, tampilan baris, Kolom, ekspor) satu baris.
-- Judul dan keterangan halaman hanya sekali di kepala halaman.
-- Pilihan yang datanya kosong menampilkan tombol buat bagi yang berhak dan unit pengelola bagi yang tidak.
-- Elemen klik memakai `Tekan`; tombol bawaan dicegah oleh `periksa-elemen`.
-- Versi `packages/ui` dan `packages/tokens` selalu sama (`npm run versi`).
-- Uji sebelum PR: `tsc`, `vitest`, `npm run periksa:elemen`.
+## Alur kerja
+- Uji: `npm run typecheck -w unipo-ui`, `npm test -w unipo-ui`, sass (`scss/index.scss`), `npx unipo-ui periksa-elemen`; contoh baru di galeri `apps/docs`.
+- Catat perubahan di `CHANGELOG.md` (bagian versi yang belum dirilis). Versi naik bersama lewat `npm run versi`.
+- Commit atas nama Anas Amu tanpa atribusi; PR draf; jangan push langsung ke `main`. PR yang aman (uji lulus, CI hijau, tanpa ketergantungan terbuka) boleh digabung agen atas izin Anas 22 Nov 2026; selain itu menunggu Anas.
