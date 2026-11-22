@@ -1,5 +1,8 @@
 # Catatan perubahan
 
+## Belum dirilis (kunci fitur Pustikom)
+
+- **Kunci fitur per periode: pemilik tunggal Pustikom** (`siakad/kunci-fitur.tsx`; keputusan Anas 2026-11-22, menggantikan 2026-11-21): teks komponen tidak lagi menyebut BAAK sebagai pengatur. `hanyaLihat` tetap ada untuk aplikasi pemantau lain; tanpa prop itu tombol atur tampil bila server menjawab `meta.boleh_atur` (izin `kalender.kunci.atur`, kini milik Admin Pustikom lewat migration SIAKAD `2027_01_29_780100_rbac_kunci_fitur_pustikom`).
 ## 1.58.0 (belum dirilis)
 
 - **Periode dipilih dari daftar, bukan diketik** (`siakad/aturan-akibat.tsx`, `aturan-sk.tsx`, `biaya.tsx`, `kurikulum-aturan.tsx`): periode simulasi aturan berakibat, isian templat kasus bertipe periode, angkatan di Form aturan biaya, dan periode di aturan kurikulum memakai `PilihTahunAkademik` (nama periode seperti "Ganjil 2026/2027"), bukan kotak isian 5 angka. Pesan validasi menjadi "pilih periode dari daftar".
