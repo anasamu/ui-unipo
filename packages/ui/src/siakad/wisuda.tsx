@@ -550,17 +550,22 @@ export function KelolaAcaraWisuda({ unitPanitiaId, judul = 'Acara wisuda', deskr
   if (hak.error) return <GalatApi error={hak.error} onRetry={hak.refetch} />;
   return (
     <div className={cn('u-wisuda', className)}>
-      <div className="u-wisuda-kepala">
-        <div>
-          <h2>{judul}</h2>
-          <p>{deskripsi ?? 'Jadwal, gladi, tempat, peserta dari pendaftar yang diterima, kursi, toga, undangan QR, hari-H, dan laporan. Panitia ber-SK bekerja sesuai tugas seksinya.'}</p>
+      {/* judul={null}: kepala halaman/tab aplikasi sudah memuat judul & keterangan; hanya tombol yang tampil (rata kanan). */}
+      {(judul !== null || hak.data?.kelola) && (
+        <div className="u-wisuda-kepala" data-tanpa-judul={judul === null ? '' : undefined}>
+          {judul !== null && (
+            <div>
+              <h2>{judul}</h2>
+              <p>{deskripsi ?? 'Jadwal, gladi, tempat, peserta dari pendaftar yang diterima, kursi, toga, undangan QR, hari-H, dan laporan. Panitia ber-SK bekerja sesuai tugas seksinya.'}</p>
+            </div>
+          )}
+          {hak.data?.kelola && (
+            <Button onClick={() => setBuat(true)}>
+              <Plus /> Acara baru
+            </Button>
+          )}
         </div>
-        {hak.data?.kelola && (
-          <Button onClick={() => setBuat(true)}>
-            <Plus /> Acara baru
-          </Button>
-        )}
-      </div>
+      )}
       {hak.data?.kelola && hak.data.sumber === 'pustikom' && (
         <Alert variant="info" title="Mengelola dari Pustikom">
           Perubahan di sini tercatat bersumber Pustikom di riwayat acara (mengambil alih bila operator BAAK belum ada).
@@ -1496,12 +1501,14 @@ export function TugasKepanitiaan({ aplikasi, buka, judul = 'Tugas kepanitiaan', 
   const ke = (href: string) => (buka ? buka(href) : (window.location.href = href));
   return (
     <div className={cn('u-wisuda', className)}>
-      <div className="u-wisuda-kepala">
-        <div>
-          <h2>{judul}</h2>
-          <p>Penugasan panitia yang sedang berjalan. Menu ini hilang otomatis setelah masa SK berakhir.</p>
+      {judul !== null && (
+        <div className="u-wisuda-kepala">
+          <div>
+            <h2>{judul}</h2>
+            <p>Penugasan panitia yang sedang berjalan. Menu ini hilang otomatis setelah masa SK berakhir.</p>
+          </div>
         </div>
-      </div>
+      )}
       {t.data.length > 1 && (
         <Tabs value={String(Math.min(pilih, t.data.length - 1))} onValueChange={(v) => setPilih(Number(v))} variant="pill" items={t.data.map((x, i) => ({ value: String(i), label: x.panitia.nama }))} />
       )}

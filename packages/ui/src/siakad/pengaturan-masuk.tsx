@@ -31,6 +31,7 @@ import {
 } from './halaman-masuk';
 import { TombolPilihBerkas } from '../components/pilih-berkas-lokal';
 import { IsianWarnaHex } from '../components/isian-warna';
+import { Tekan } from '../components/tekan';
 
 type TataTema = Record<string, unknown>;
 type PerubahanTata = ReturnType<typeof tulisTataMasuk>;
@@ -282,11 +283,11 @@ function SheetHalamanMasuk({
     // 1. Tata letak
     <div key="tata" className="u-atur-masuk-pilihan" role="radiogroup" aria-label="Tata letak">
       {PILIHAN_TATA_MASUK.map((p) => (
-        <button key={p.value} type="button" role="radio" aria-checked={t.tata === p.value} className="u-atur-masuk-opsi" onClick={() => ubah('tata', p.value)}>
+        <Tekan key={p.value} role="radio" terpilih={t.tata === p.value} className="u-atur-masuk-opsi" onClick={() => ubah('tata', p.value)}>
           <SketsaTata tata={p.value} />
           <strong>{p.label}</strong>
           <small>{p.keterangan}</small>
-        </button>
+        </Tekan>
       ))}
     </div>,
     // 2. Sisi visual
@@ -294,11 +295,11 @@ function SheetHalamanMasuk({
       {t.tata === 'minimal' && <Alert variant="info">Tata Minimal tidak memakai sisi visual. Ilustrasi dan daftar fitur tampil kecil di dalam panel.</Alert>}
       <div className="u-atur-masuk-pilihan" data-kecil="" role="radiogroup" aria-label="Jenis latar">
         {PILIHAN_LATAR_MASUK.map((p) => (
-          <button key={p.value} type="button" role="radio" aria-checked={t.latar === p.value} className="u-atur-masuk-opsi" onClick={() => ubah('latar', p.value as LatarMasuk)}>
+          <Tekan key={p.value} role="radio" terpilih={t.latar === p.value} className="u-atur-masuk-opsi" onClick={() => ubah('latar', p.value as LatarMasuk)}>
             <span className="u-atur-masuk-latar" data-latar={p.value} aria-hidden />
             <strong>{p.label}</strong>
             <small>{p.keterangan}</small>
-          </button>
+          </Tekan>
         ))}
       </div>
       {t.latar === 'ilustrasi' && (
@@ -306,10 +307,10 @@ function SheetHalamanMasuk({
           <Field label="Ilustrasi">
             <div className="u-atur-masuk-ilustrasi" role="radiogroup" aria-label="Ilustrasi">
               {ILUSTRASI_MASUK.map((i) => (
-                <button key={i.value} type="button" role="radio" aria-checked={t.ilustrasi === i.value && !t.ilustrasiGambar} title={i.label} onClick={() => setT((x) => ({ ...x, ilustrasi: i.value, ilustrasiGambar: '' }))}>
+                <Tekan key={i.value} role="radio" terpilih={t.ilustrasi === i.value && !t.ilustrasiGambar} title={i.label} onClick={() => setT((x) => ({ ...x, ilustrasi: i.value, ilustrasiGambar: '' }))}>
                   <Ilustrasi nama={i.value} lebar={84} bergerak={false} />
                   <small>{i.label}</small>
-                </button>
+                </Tekan>
               ))}
             </div>
           </Field>

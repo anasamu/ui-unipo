@@ -346,3 +346,8 @@
 .u-panitia-jenis .u-panitia-tabel .u-panitia-chip {
   white-space: normal;
 }
+
+// judul={null}: hanya tombol aksi, rata kanan.
+.u-panitia-kepala[data-tanpa-judul] {
+  justify-content: flex-end;
+}

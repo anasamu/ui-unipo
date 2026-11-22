@@ -35,6 +35,7 @@ export * from './komponen-akademik';
 export * from './navigasi';
 export * from './kerangka-portal';
 export * from './beranda';
+export * from './peringatan-beranda';
 export * from './aplikasi';
 export * from './log';
 export * from './pilih';

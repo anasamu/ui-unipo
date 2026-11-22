@@ -18,6 +18,7 @@ import { IsianAngka } from '../components/isian-angka';
 import { IsianTanggal } from '../components/formulir';
 import { keAngka } from '../lib/angka';
 import { DataTable } from '../components/data-table';
+import { Tekan } from '../components/tekan';
 
 // ================================================================ Kontrak API (/v1/integrasi/ai)
 
@@ -378,7 +379,6 @@ export function TeksAi({ teks, className }: { teks: string; className?: string }
         const k = kunci();
         out.push(
           <div key={k} className="u-ai-tabel-bungkus">
-            {/* unipo-ui-izinkan tabel-bawaan: tabel di dalam jawaban AI (markdown yang dirender), bukan tabel data */}
             <table>
               <thead>
                 <tr>
@@ -600,9 +600,9 @@ export function ObrolanAi({
             {saran.length > 0 && (
               <div className="u-ai-saran">
                 {saran.map((s) => (
-                  <button key={s} type="button" onClick={() => void kirim(s)}>
+                  <Tekan key={s} onClick={() => void kirim(s)}>
                     {s}
-                  </button>
+                  </Tekan>
                 ))}
               </div>
             )}
@@ -1312,9 +1312,9 @@ export function AnalisisAi({ konteks = 'umum', judul, data, sumber, keteranganDa
       {sumber && q.error && <GalatApi error={q.error} onRetry={q.refetch} />}
       <div className="u-ai-saran" data-rapat>
         {(saran ?? info.saran).map((s) => (
-          <button key={s} type="button" disabled={!siap || ai.sibuk} onClick={() => (setTanya(s), void jalankan(s))}>
+          <Tekan key={s} disabled={!siap || ai.sibuk} onClick={() => (setTanya(s), void jalankan(s))}>
             {s}
-          </button>
+          </Tekan>
         ))}
       </div>
       <form

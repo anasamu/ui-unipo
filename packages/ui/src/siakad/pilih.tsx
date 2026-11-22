@@ -1,11 +1,10 @@
 'use client';
 import * as React from 'react';
 import { BookOpen, Briefcase, Building2, GraduationCap, Landmark, Network, UserRound, Users, UsersRound } from 'lucide-react';
-import { Combobox, OptionContent } from '../components/select';
+import { Combobox, OptionContent, type BuatPilihan } from '../components/select';
 import type { ControlSize } from '../components/forms';
 import { Avatar } from '../components/display';
 import { Badge } from '../components/actions';
-import { Dialog } from '../components/overlays';
 import { useOptionalSiakad } from './provider';
 import { PilihUnit } from './pilih-unit';
 import { BarisProdi, LogoFakultas, judulProdi, namaRapi, type ProdiReferensi } from './prodi';
@@ -254,13 +253,16 @@ export interface PilihEntitasProps {
   className?: string;
   'aria-label'?: string;
   /**
-   * Izinkan menambah data baru bila yang dicari tidak ditemukan (tombol "Tambah …" di kaki daftar). Isi `form` untuk
-   * membuka dialog formulir (panggil `selesai(barisBaru)` setelah tersimpan), atau `onTambah` untuk menyimpan langsung.
-   * Data baru langsung terpilih.
+   * Pola pilihan kosong (lihat {@link BuatPilihan}): bagi yang berhak (`boleh`), tombol buat di daftar membuka panel
+   * samping (`panel({ kata, selesai })`, panggil `selesai(barisBaru)` setelah tersimpan) atau menyimpan langsung
+   * (`onBuat`); baris baru langsung terpilih. Yang tidak berhak melihat `pengelola`. Bawaan `nama` = nama entitas.
    */
+  buat?: BuatPilihan<Baris>;
+  /** @deprecated Pakai `buat`. Tetap berfungsi (form → panel samping). */
   tambah?: TambahEntitas;
 }
 
+/** @deprecated Bentuk lama `PilihEntitas.tambah`; pakai {@link BuatPilihan}. */
 export interface TambahEntitas {
   /** Judul dialog. Bawaan "Tambah <nama entitas>". */
   judul?: React.ReactNode;
@@ -284,7 +286,7 @@ export interface TambahEntitas {
  */
 export function PilihEntitas(props: PilihEntitasProps) {
   // Unit organisasi memakai pemilih berpohon yang sama di semua aplikasi (kecuali pemuat/tambah sendiri).
-  if (props.jenis === 'unit' && !props.load && !props.tambah) {
+  if (props.jenis === 'unit' && !props.load && !props.tambah && !props.buat) {
     const { value, defaultValue, onValueChange, placeholder, name, id, disabled, size, className } = props;
     return (
       <PilihUnit
@@ -304,8 +306,7 @@ export function PilihEntitas(props: PilihEntitasProps) {
   return <PilihEntitasDasar {...props} />;
 }
 
-function PilihEntitasDasar({ jenis, value, defaultValue, onValueChange, query, load, limit = 20, placeholder, name, id, disabled, size, className, tambah, ...rest }: PilihEntitasProps) {
-  const [dialogTambah, setDialogTambah] = React.useState<{ kata: string; selesai: (b: Baris | null) => void } | null>(null);
+function PilihEntitasDasar({ jenis, value, defaultValue, onValueChange, query, load, limit = 20, placeholder, name, id, disabled, size, className, tambah, buat, ...rest }: PilihEntitasProps) {
   const siakad = useOptionalSiakad();
   const src: SumberEntitas = typeof jenis === 'string' ? SUMBER_ENTITAS[jenis] : jenis;
   const kunciDari = React.useCallback((r: Baris) => teks(r[src.kunci]), [src.kunci]);
@@ -363,25 +364,32 @@ function PilihEntitasDasar({ jenis, value, defaultValue, onValueChange, query, l
 
   // Selama baris nilai awal dimuat: kunci yang bermakna (NIM, username) boleh tampil, ID angka/UUID tidak.
   const label = (r: Baris) => (r.__stub ? (src.kunci === 'id' ? 'Memuat…' : teks(r[src.kunci])) : src.judul(r) || kunciDari(r));
-  const opsiTambah = tambah
-    ? {
-        label: tambah.label ?? ((k: string) => (k ? `Tambah ${src.nama} “${k}”` : `Tambah ${src.nama} baru`)),
-        hanyaKosong: tambah.hanyaKosong,
-        onTambah: (kata: string): Promise<Baris | null> => {
-          if (tambah.form) return new Promise((resolve) => setDialogTambah({ kata, selesai: resolve }));
-          return tambah.onTambah ? tambah.onTambah(kata) : Promise.resolve(null);
-        },
-      }
-    : undefined;
-  const selesaiTambah = (b: Baris | null) => {
-    dialogTambah?.selesai(b);
-    setDialogTambah(null);
-    if (b) semua.current = null;
+  const dasar: BuatPilihan<Baris> | undefined =
+    buat ??
+    (tambah
+      ? {
+          boleh: true,
+          judul: tambah.judul,
+          hanyaKosong: tambah.hanyaKosong,
+          label: tambah.label,
+          panel: tambah.form ? ({ kata, selesai }) => tambah.form!({ kata, selesai }) : undefined,
+          onBuat: tambah.onTambah,
+        }
+      : undefined);
+  // Nama entitas jadi teks bawaan ("Tambah mitra baru", "Belum ada mitra."); daftar klien dimuat ulang setelah dibuat.
+  const opsiBuat: BuatPilihan<Baris> | undefined = dasar && {
+    nama: src.nama,
+    ...dasar,
+    label: dasar.label ?? ((k: string) => (k ? `Tambah ${src.nama} “${k}”` : `Tambah ${src.nama} baru`)),
+    segarkan: () => {
+      semua.current = null;
+      dasar.segarkan?.();
+    },
   };
   return (
     <>
       <Combobox<Baris>
-        tambah={opsiTambah}
+        buat={opsiBuat}
         {...rest}
         id={id}
         name={name}
@@ -424,11 +432,6 @@ function PilihEntitasDasar({ jenis, value, defaultValue, onValueChange, query, l
           )
         }
       />
-      {tambah?.form && (
-        <Dialog open={Boolean(dialogTambah)} onOpenChange={(o) => !o && selesaiTambah(null)} title={tambah.judul ?? `Tambah ${src.nama}`}>
-          {dialogTambah && tambah.form({ kata: dialogTambah.kata, selesai: selesaiTambah })}
-        </Dialog>
-      )}
     </>
   );
 }

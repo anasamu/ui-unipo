@@ -8,6 +8,7 @@ import { Empty, Progress, ProgressRing } from '../components/display';
 import { StatCard, StatGrid } from '../components/charts';
 import { pesanGalat, useSiakadQuery, type QueryState } from './provider';
 import { KodeLaporan } from '../components/galat';
+import { Tekan } from '../components/tekan';
 
 /*
  * Widget LMS (/v1/lms) untuk e-learning: ringkasan beranda, kartu kelas dengan sampul abstrak dan progres,
@@ -317,20 +318,9 @@ export function KartuKelas({ kelas: k, progres, href, onPilih, className }: Kart
     );
   if (onPilih)
     return (
-      <div
-        role="button"
-        tabIndex={0}
-        className={cn('u-lms-kelas', className)}
-        onClick={() => onPilih(k)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onPilih(k);
-          }
-        }}
-      >
+      <Tekan elemen="div" className={cn('u-lms-kelas', className)} onClick={() => onPilih(k)}>
         {isi}
-      </div>
+      </Tekan>
     );
   return <div className={cn('u-lms-kelas', className)}>{isi}</div>;
 }

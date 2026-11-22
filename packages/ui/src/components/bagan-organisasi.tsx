@@ -8,6 +8,7 @@ import { hueFromString, initials } from '../lib/format';
 import { Button } from './actions';
 import { SegmentedControl } from './forms';
 import { Dialog, Menu } from './overlays';
+import { kunciTekan } from './tekan';
 
 // ================================================================ Bagan organisasi (struktur organisasi v2)
 
@@ -858,7 +859,7 @@ function Kartu(props: SvgProps & { s: Simpul; redup?: boolean }) {
           tabIndex={bisaKlik ? 0 : undefined}
           aria-label={bisaKlik ? `${u.nama}: lihat detail` : undefined}
           onClick={bisaKlik ? () => onPilih?.(u) : undefined}
-          onKeyDown={bisaKlik ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPilih?.(u); } } : undefined}
+          onKeyDown={bisaKlik ? (e) => { if (kunciTekan(e.key)) { e.preventDefault(); onPilih?.(u); } } : undefined}
         >
           <rect width={W} height={s.h} rx={rx} fill={p.kartu}
             stroke={putus ? g.warna : resmi ? (ekspor ? '#334155' : 'color-mix(in srgb, var(--u-foreground, #171a21) 55%, transparent)') : p.tepi}
@@ -912,7 +913,7 @@ function Kartu(props: SvgProps & { s: Simpul; redup?: boolean }) {
                       tabIndex={0}
                       aria-label={`Isi ${j.jabatan} ${u.nama}`}
                       onClick={(e) => { e.stopPropagation(); onIsi?.(u, j); }}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onIsi?.(u, j); } }}
+                      onKeyDown={(e) => { if (kunciTekan(e.key)) { e.preventDefault(); e.stopPropagation(); onIsi?.(u, j); } }}
                     >
                       <rect x={W - 52} y={11} width={38} height={22} rx={11} fill={p.sorot} fillOpacity={0.12} />
                       <text x={W - 33} y={26} textAnchor="middle" fontSize={11} fontWeight={600} fill={p.sorot}>Isi</text>
@@ -944,7 +945,7 @@ function Kartu(props: SvgProps & { s: Simpul; redup?: boolean }) {
               tabIndex={!ekspor && onSemuaStaf ? 0 : undefined}
               aria-label={`Tendik dan staf ${u.nama}: ${u.staf.length} orang`}
               onClick={!ekspor && onSemuaStaf ? (e) => { e.stopPropagation(); onSemuaStaf(u); } : undefined}
-              onKeyDown={!ekspor && onSemuaStaf ? (e) => { if (e.key === 'Enter') { e.stopPropagation(); onSemuaStaf(u); } } : undefined}
+              onKeyDown={!ekspor && onSemuaStaf ? (e) => { if (kunciTekan(e.key)) { e.preventDefault(); e.stopPropagation(); onSemuaStaf(u); } } : undefined}
             >
               <line x1={14} x2={W - 14} y1={2} y2={2} stroke={p.tepi} strokeWidth={0.75} strokeDasharray="3 3" />
               <text x={14} y={18} fontSize={10.5} fill={p.redup}>Tendik & staf: <tspan fontWeight={700} fill={p.teks}>{u.staf.length}</tspan>{!ekspor && onSemuaStaf ? <tspan fill={p.sorot}>  · lihat</tspan> : null}</text>
@@ -968,7 +969,7 @@ function Kartu(props: SvgProps & { s: Simpul; redup?: boolean }) {
                     tabIndex={bisa ? 0 : undefined}
                     aria-label={bisa ? `${t.nama}: lihat profil` : undefined}
                     onClick={bisa ? (e) => { e.stopPropagation(); onPilihStaf?.(t, u); } : undefined}
-                    onKeyDown={bisa ? (e) => { if (e.key === 'Enter') { e.stopPropagation(); onPilihStaf?.(t, u); } } : undefined}
+                    onKeyDown={bisa ? (e) => { if (kunciTekan(e.key)) { e.preventDefault(); e.stopPropagation(); onPilihStaf?.(t, u); } } : undefined}
                   >
                     <Avatar x={22} y={8} r={8} nama={t.nama} p={p} id={`${uid}-s${i}`} />
                     <text x={36} y={12} fontSize={11} fill={p.teks}>
@@ -986,7 +987,7 @@ function Kartu(props: SvgProps & { s: Simpul; redup?: boolean }) {
                   tabIndex={!ekspor && onSemuaStaf ? 0 : undefined}
                   aria-label={`Semua tendik dan staf ${u.nama}`}
                   onClick={!ekspor && onSemuaStaf ? (e) => { e.stopPropagation(); onSemuaStaf(u); } : undefined}
-                  onKeyDown={!ekspor && onSemuaStaf ? (e) => { if (e.key === 'Enter') { e.stopPropagation(); onSemuaStaf(u); } } : undefined}
+                  onKeyDown={!ekspor && onSemuaStaf ? (e) => { if (kunciTekan(e.key)) { e.preventDefault(); e.stopPropagation(); onSemuaStaf(u); } } : undefined}
                 >
                   <text x={36} y={10} fontSize={10.5} fontWeight={600} fill={p.sorot}>+{u.staf.length - STAF_MAKS} lainnya</text>
                 </g>
@@ -1004,7 +1005,7 @@ function Kartu(props: SvgProps & { s: Simpul; redup?: boolean }) {
           aria-expanded={!s.tutup}
           transform={s.tumpuk ? `translate(${IND / 2},${s.h})` : props.hasil.vert ? `translate(${W / 2},${s.h})` : `translate(${W},${s.h / 2})`}
           onClick={() => onToggle?.(u.id)}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle?.(u.id); } }}
+          onKeyDown={(e) => { if (kunciTekan(e.key)) { e.preventDefault(); onToggle?.(u.id); } }}
         >
           <circle r={s.tutup ? 13 : 10} fill={p.kartu} stroke={s.tutup ? g.warna : p.garis} strokeWidth={1.25} />
           {s.tutup ? (

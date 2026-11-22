@@ -7,6 +7,7 @@ import { Button } from '../components/actions';
 import type { NavGroup, NavItem, SidebarProps } from '../components/layout';
 import { Dialog, Tooltip } from '../components/overlays';
 import { cn } from '../lib/cn';
+import { Tekan } from '../components/tekan';
 
 /**
  * Pintasan menu per aplikasi + pengguna (disimpan di browser): menu yang disematkan (urutan pilihan pengguna, maks. 8)
@@ -226,11 +227,10 @@ export function BintangPintasan({ pin, item, className, label }: { pin: Pintasan
   const penuh = !di && pin.penuh;
   return (
     <Tooltip content={di ? 'Lepas dari Pintasan' : penuh ? `Pintasan penuh (maks. ${MAKS_SEMATAN})` : 'Sematkan ke Pintasan'}>
-      <button
-        type="button"
+      <Tekan
         className={cn('u-pin-bintang', className)}
         data-disematkan={di ? '' : undefined}
-        aria-pressed={di}
+        terpilih={di}
         aria-disabled={penuh || undefined}
         aria-label={di ? `Lepas ${nama} dari Pintasan` : `Sematkan ${nama} ke Pintasan`}
         onClick={(e) => {
@@ -240,7 +240,7 @@ export function BintangPintasan({ pin, item, className, label }: { pin: Pintasan
         }}
       >
         <Star aria-hidden />
-      </button>
+      </Tekan>
     </Tooltip>
   );
 }

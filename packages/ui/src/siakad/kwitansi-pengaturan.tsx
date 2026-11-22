@@ -26,6 +26,7 @@ import {
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { usePilihBerkas } from '../components/pilih-berkas-lokal';
 import { IsianWarnaHex } from '../components/isian-warna';
+import { Tekan } from '../components/tekan';
 
 // Pengaturan kwitansi resmi per unit penerbit (GET/POST /v1/kwitansi/penerbit), aturan catatan pembayaran
 // (/v1/kwitansi/catatan), daftar kwitansi terbit (/v1/kwitansi/terbit), dan log (/v1/kwitansi/log).
@@ -412,11 +413,11 @@ function TabPenerbit({ unitId, saya }: { unitId?: number; saya: KwitansiSaya }) 
     <div className="u-kwp-penerbit">
       {daftar.map((p) => (
         <Card key={p.unit_id} className="u-kwp-kartu" style={{ '--kw-aksen': p.warna } as React.CSSProperties}>
-          <button type="button" className="u-kwp-mini" onClick={() => setLihat(p)} aria-label={`Pratinjau kwitansi ${p.label}`}>
+          <Tekan className="u-kwp-mini" onClick={() => setLihat(p)} aria-label={`Pratinjau kwitansi ${p.label}`}>
             <span className="u-kwp-mini-skala">
               <Kwitansi data={contohKwitansi(penerbitKe(p))} varian={p.varian} rincian={false} />
             </span>
-          </button>
+          </Tekan>
           <div className="u-kwp-kartu-isi">
             <span className="u-kwp-kartu-judul">
               <i style={{ background: p.warna }} aria-hidden />
@@ -581,7 +582,7 @@ function FormCatatan({ awal, open, onOpenChange, saya, penerbit }: { awal: Isian
               </Field>
               <div className="u-kwp-variabel" role="group" aria-label="Variabel">
                 {saya.variabel.map((k) => (
-                  <button key={k} type="button" onClick={() => sisip(k)}>{`{${k}}`}</button>
+                  <Tekan key={k} onClick={() => sisip(k)}>{`{${k}}`}</Tekan>
                 ))}
               </div>
               <div className="u-kwp-hasil">

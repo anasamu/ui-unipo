@@ -1,6 +1,7 @@
 'use client';
 import { AlertTriangle, GraduationCap } from 'lucide-react';
 import { cn } from '../lib/cn';
+import { Tekan } from '../components/tekan';
 
 export type JenisPeriodeSemester = 'ganjil' | 'genap' | 'pendek' | 'khusus';
 
@@ -83,20 +84,20 @@ export function PilihSemester({ periode, jenisPeriode, jenjang, maks, mode = 'ba
     <div className={cn('u-pilih-semester', className)}>
       <div className="u-pilih-semester-daftar" role="group" aria-label={rest['aria-label'] ?? 'Semester'}>
         {pakaiMaba ? (
-          <button type="button" className="u-pilih-semester-chip" data-maba="" aria-pressed={!!maba} disabled={disabled} onClick={() => onMabaChange!(!maba)}>
+          <Tekan className="u-pilih-semester-chip" data-maba="" terpilih={!!maba} disabled={disabled} onClick={() => onMabaChange!(!maba)}>
             <GraduationCap aria-hidden /> Maba (semester 1){periode && angkatanSemester(1, periode) ? ` · ${angkatanSemester(1, periode)}` : ''}
-          </button>
+          </Tekan>
         ) : null}
         {pilihan.map((n) => (
-          <button key={n} type="button" className="u-pilih-semester-chip" aria-pressed={value.includes(n)} disabled={disabled} onClick={() => pilih(n)} title={label(n)}>
+          <Tekan key={n} className="u-pilih-semester-chip" terpilih={value.includes(n)} disabled={disabled} onClick={() => pilih(n)} title={label(n)}>
             <strong>{n}</strong>
             {angkatanSemester(n, periode) ? <small>{angkatanSemester(n, periode)}</small> : null}
-          </button>
+          </Tekan>
         ))}
         {tidakCocok.map((n) => (
-          <button key={`x${n}`} type="button" className="u-pilih-semester-chip" data-salah="" aria-pressed disabled={disabled} onClick={() => pilih(n)} title={`Semester ${n} tidak ada di periode ${jenis ?? 'ini'}. Klik untuk menghapus.`}>
+          <Tekan key={`x${n}`} className="u-pilih-semester-chip" data-salah="" aria-pressed disabled={disabled} onClick={() => pilih(n)} title={`Semester ${n} tidak ada di periode ${jenis ?? 'ini'}. Klik untuk menghapus.`}>
             <AlertTriangle aria-hidden /> <strong>{n}</strong>
-          </button>
+          </Tekan>
         ))}
       </div>
       <p className="u-pilih-semester-ket">

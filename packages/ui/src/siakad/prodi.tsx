@@ -7,6 +7,7 @@ import { cn } from '../lib/cn';
 import { formatDate } from '../lib/format';
 import { useSiakadQuery } from './provider';
 import { GalatApi } from './galat';
+import { Tekan } from '../components/tekan';
 
 // ================================================================ Data referensi prodi dan fakultas
 /** Baris GET /v1/referensi/prodi (kolom m_program_studi + nama_fakultas). */
@@ -333,9 +334,9 @@ export function DaftarProdi({ data, kodeFakultas, varian = 'daftar', cari = true
       );
     if (onPilih)
       return (
-        <button type="button" {...props} onClick={() => onPilih(p)}>
+        <Tekan {...props} onClick={() => onPilih(p)}>
           {isi}
-        </button>
+        </Tekan>
       );
     return <div {...props}>{isi}</div>;
   };
@@ -535,6 +536,6 @@ export function LabelProdi({ kode, nama, prodi, varian = 'baku', akreditasi = tr
     'data-logo': bentukLogo === 'bulat' ? 'bulat' : undefined,
   };
   if (href) return <a {...atribut} href={href}>{isi}</a>;
-  if (onClick) return <button type="button" {...atribut} onClick={onClick}>{isi}</button>;
+  if (onClick) return <Tekan {...atribut} onClick={onClick}>{isi}</Tekan>;
   return <span {...atribut}>{isi}</span>;
 }

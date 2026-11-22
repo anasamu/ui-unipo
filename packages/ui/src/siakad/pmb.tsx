@@ -14,6 +14,7 @@ import { formatDate } from '../lib/format';
 import { CariPerguruanTinggi, CariSekolah } from './cari';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { hurufJudul, labelJenjang } from './pmb-publik';
+import { Tekan } from '../components/tekan';
 
 // ================================================================ Tipe formulir (PATCH /v1/pmb/saya/pendaftaran/{id})
 type Isian = Record<string, string | number | null | undefined>;
@@ -341,7 +342,7 @@ export function PilihanProdi({ prodi, value, onChange, maks = 2 }: { prodi: Prod
           const rasio = p.kuota ? (p.jumlah_peminat ?? 0) / p.kuota : 0;
           return (
             <li key={p.kode_prodi}>
-              <button type="button" className="u-prodi-opt" aria-pressed={i >= 0} onClick={() => toggle(p.kode_prodi)}>
+              <Tekan className="u-prodi-opt" terpilih={i >= 0} onClick={() => toggle(p.kode_prodi)}>
                 <span className="u-prodi-rank" aria-hidden>
                   {i >= 0 ? i + 1 : <GraduationCap />}
                 </span>
@@ -358,7 +359,7 @@ export function PilihanProdi({ prodi, value, onChange, maks = 2 }: { prodi: Prod
                   </span>
                 ) : null}
                 {i >= 0 && <Check className="u-prodi-check" aria-hidden />}
-              </button>
+              </Tekan>
             </li>
           );
         })}
@@ -558,7 +559,6 @@ export function IsianRaporPmb({
   return (
     <div className="u-pmb-rapor">
       <TableContainer>
-        {/* unipo-ui-izinkan tabel-primitif: kisi isian nilai rapor (sel = Input), bukan tabel data */}
         <Table density="compact">
           <thead>
             <tr>
