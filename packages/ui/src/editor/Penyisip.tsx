@@ -4,6 +4,7 @@ import { LayoutTemplate, Search } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { useEditor, type PolaBlok } from './konteks';
 import { baru, DEF, rapikan, salinBaru, URUTAN_GRUP, type Blok, type TipeBlok } from './tipe';
+import { sedangMenyusunIme } from '../lib/ime';
 
 const SEMUA = Object.keys(DEF) as TipeBlok[];
 
@@ -75,7 +76,7 @@ export function Penyisip({ jangkar, pilih, tutup, tanpaKolom }: { jangkar: HTMLE
           placeholder={pola ? 'Cari blok atau pola' : 'Cari blok'}
           aria-label="Cari blok"
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && tab === 'blok' && tipe[0]) {
+            if (e.key === 'Enter' && !sedangMenyusunIme(e) && tab === 'blok' && tipe[0]) {
               e.preventDefault();
               pilih([baru(tipe[0])]);
             }
