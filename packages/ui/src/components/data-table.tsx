@@ -594,10 +594,12 @@ export function DataTable<T>(props: DataTableProps<T>) {
   else if (isEmpty) state = stateRow(<Empty icon={empty?.icon} title={empty?.title ?? 'Belum ada data'} description={empty?.description} actions={empty?.action} />);
 
   const skeletonCount = Math.min(perPage, 6);
-  const menuCell = (row: T) =>
-    rowActions && (
+  const menuCell = (row: T) => {
+    // Baris tanpa aksi (mis. kode yang sudah dipakai) tidak menampilkan tombol menu yang terbuka kosong.
+    const items = rowActions?.(row) ?? [];
+    return items.length > 0 && (
       <Menu
-        items={rowActions(row)}
+        items={items}
         trigger={
           <Button variant="ghost" size="sm" iconOnly aria-label="Aksi baris" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
             <MoreHorizontal />
@@ -605,6 +607,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
         }
       />
     );
+  };
 
   const gridBody = grid && (
     <div className="u-dt-grid" role="list" aria-busy={loading || undefined} style={gridMin ? ({ '--u-dt-grid-min': gridMin } as React.CSSProperties) : undefined}>
