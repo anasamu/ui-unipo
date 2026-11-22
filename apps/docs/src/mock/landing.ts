@@ -4,7 +4,7 @@ import { tambahRute } from './siakad';
  * Halaman landing tiruan (/v1/tema/{aplikasi}/halaman/{halaman}) untuk PenyuntingLanding dan LandingAplikasi:
  * draf, terbit, revisi (409), riwayat, pulihkan ke draf. Isi tidak dibersihkan seketat server SIAKAD.
  */
-type Dok = { versi: 1; blok: unknown[]; halaman?: Record<string, unknown> };
+type Dok = { versi: 1; blok?: unknown[]; halaman?: Record<string, unknown> };
 interface Baris {
   draf: Dok | null;
   revisi: number;
@@ -43,6 +43,16 @@ const konflik = (r: Baris) => ({ __status: 409, error: { code: 'draf_berubah', m
 
 tambahRute(/^\/v1\/tema\/[a-z0-9_-]+\/halaman\/[a-z0-9-]+(\/.*)?$/, async (u, init) => {
   const [, , , aplikasi = '', , halaman = 'beranda', ...sisa] = u.pathname.split('/');
+  return tangani(u, init, aplikasi, halaman, sisa);
+});
+
+// Kerangka situs (/v1/tema/{aplikasi}/situs): disimpan seperti halaman berkode `_situs`, sama dengan server SIAKAD.
+tambahRute(/^\/v1\/tema\/[a-z0-9_-]+\/situs(\/.*)?$/, async (u, init) => {
+  const [, , , aplikasi = '', , ...sisa] = u.pathname.split('/');
+  return tangani(u, init, aplikasi, '_situs', sisa);
+});
+
+async function tangani(u: URL, init: RequestInit | undefined, aplikasi: string, halaman: string, sisa: string[]) {
   const lingkup = u.searchParams.get('lingkup') ?? '';
   const kunci = `${aplikasi}/${lingkup}/${halaman}`;
   const metode = (init?.method ?? 'GET').toUpperCase();
@@ -76,9 +86,9 @@ tambahRute(/^\/v1\/tema\/[a-z0-9_-]+\/halaman\/[a-z0-9-]+(\/.*)?$/, async (u, in
       return keluaran(aplikasi, lingkup, halaman, true);
     }
     if (v) return { data: { id: v.id, versi: v.versi, aksi: v.aksi, dokumen: v.isi, catatan: v.catatan, oleh: v.oleh, pada: v.pada, berkas: {} } };
-    return { data: { riwayat: RIWAYAT.filter((x) => x.kunci === kunci).map(({ isi, kunci: _k, ...x }) => ({ ...x, jumlah_blok: isi.blok.length })) } };
+    return { data: { riwayat: RIWAYAT.filter((x) => x.kunci === kunci).map(({ isi, kunci: _k, ...x }) => ({ ...x, jumlah_blok: (isi.blok ?? (isi as { menu?: unknown[] }).menu ?? []).length })) } };
   }
   return { __status: 404, error: { code: 'not_found', message: 'Rute tidak dikenal.' } };
-});
+}
 
 tambahRute(/\/v1\/portal\/situs\/[^/]+\/statistik$/, () => ({ data: { prodi: 14, mahasiswa_aktif: 3127, dosen_aktif: 168, lulusan: 5412, per_prodi: [] } }));

@@ -54,19 +54,23 @@ import {
 } from '../components/landing-skema';
 import { mulaiRiwayat, samaDokumen, setelKolom, terapkan, ulangi, urungkan, type AksiDokumen } from '../components/landing-sunting';
 import { cn, dataFlag } from '../lib/cn';
+import { WadahPortal } from '../lib/wadah-portal';
 import { PilihBerkas } from './pilih-berkas';
+import { berkasRujukan } from '../components/situs-skema';
 import { PENYEDIA_SIAKAD, pathHalaman, type DataHalamanLanding } from './landing-aplikasi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { Tekan } from '../components/tekan';
 
 // ---------------------------------------------------------------- pratinjau dalam bingkai
 
-const LAYAR = {
+export const LAYAR_PRATINJAU = {
   desktop: { lebar: 1440, label: 'Desktop', ikon: <Monitor /> },
   tablet: { lebar: 820, label: 'Tablet', ikon: <Tablet /> },
   ponsel: { lebar: 390, label: 'Ponsel', ikon: <Smartphone /> },
 } as const;
-type Layar = keyof typeof LAYAR;
+const LAYAR = LAYAR_PRATINJAU;
+export type LayarPratinjau = keyof typeof LAYAR_PRATINJAU;
+type Layar = LayarPratinjau;
 
 /**
  * Bingkai pratinjau: iframe selebar perangkat sebenarnya (media query dan container query aplikasi berlaku seperti di
@@ -145,7 +149,7 @@ export function BingkaiPratinjau({ lebar, gelap, cssTema, judul = 'Pratinjau hal
         className="upl-iframe"
         style={{ width: lebar, height: skala ? ukuran.h / skala : 600, transform: `translateX(-50%) scale(${skala || 1})`, opacity: skala ? 1 : 0 }}
       />
-      {body && createPortal(children, body)}
+      {body && createPortal(<WadahPortal wadah={body}>{children}</WadahPortal>, body)}
     </div>
   );
 }
@@ -198,13 +202,28 @@ function IsianGambar({ nilai, ubah, berkas, catat, aplikasi }: { nilai: string; 
   );
 }
 
-function IsianUrl({ nilai, ubah, aksi, contoh }: { nilai: string; ubah: (v: string) => void; aksi?: Record<string, AksiLanding>; contoh?: string }) {
-  const [teks, setTeks] = React.useState(nilai);
-  React.useEffect(() => setTeks(nilai), [nilai]);
+function IsianUrl({ nilai, ubah, aksi, contoh, berkas: bolehBerkas, aplikasi }: { nilai: string; ubah: (v: string) => void; aksi?: Record<string, AksiLanding>; contoh?: string; berkas?: boolean; aplikasi?: string }) {
+  const idBerkas = bolehBerkas ? (berkasRujukan(nilai)?.slice(7) ?? null) : null;
+  const [teks, setTeks] = React.useState(idBerkas ? '' : nilai);
+  React.useEffect(() => setTeks(berkasRujukan(nilai) ? '' : nilai), [nilai]);
   const salah = !!teks && !urlAman(teks);
   const opsiAksi = Object.entries(aksi ?? {});
   return (
     <div className="upl-url">
+      {bolehBerkas && (idBerkas || !teks) && (
+        <PilihBerkas
+          value={idBerkas}
+          modul="tema"
+          visibilitas="publik"
+          enkripsi={false}
+          keterangan={`Unduhan situs ${aplikasi ?? ''}`.trim()}
+          onValueChange={(uuid) => {
+            setTeks('');
+            ubah(uuid ? `berkas:${uuid.toLowerCase()}` : '');
+          }}
+        />
+      )}
+      {!idBerkas && (
       <Input
         size="sm"
         value={teks}
@@ -216,6 +235,7 @@ function IsianUrl({ nilai, ubah, aksi, contoh }: { nilai: string; ubah: (v: stri
           else if (urlAman(e.target.value)) ubah(e.target.value.trim());
         }}
       />
+      )}
       {salah && <p className="upl-galat">Pakai /alamat, #bagian, https://, mailto:, atau tel:.</p>}
       {opsiAksi.length > 0 && (
         <div className="upl-aksi-cepat" aria-label="Aksi aplikasi">
@@ -230,7 +250,7 @@ function IsianUrl({ nilai, ubah, aksi, contoh }: { nilai: string; ubah: (v: stri
   );
 }
 
-interface KonteksIsian {
+export interface KonteksIsian {
   berkas: Record<string, string>;
   catat: (id: string, url: string) => void;
   aplikasi: string;
@@ -238,7 +258,8 @@ interface KonteksIsian {
   slot?: Record<string, SlotLanding>;
 }
 
-function Kolom({ kolom, isi, ubah, k }: { kolom: KolomBlok; isi: IsiBlok; ubah: (isi: IsiBlok) => void; k: KonteksIsian }) {
+/** Satu isian panel properti menurut definisi kolom (dipakai penyunting halaman depan dan kerangka situs). */
+export function KolomIsian({ kolom, isi, ubah, k }: { kolom: KolomBlok; isi: IsiBlok; ubah: (isi: IsiBlok) => void; k: KonteksIsian }) {
   if (kolom.bila && !kolom.bila(isi)) return null;
   const v = isi[kolom.k];
   const set = (x: unknown) => ubah(setelKolom(isi, kolom.k, x));
@@ -259,7 +280,7 @@ function Kolom({ kolom, isi, ubah, k }: { kolom: KolomBlok; isi: IsiBlok; ubah: 
     case 'url':
       return (
         <Field label={kolom.label} description={kolom.bantuan}>
-          <IsianUrl nilai={str} ubah={set} aksi={k.aksi} contoh={kolom.contoh} />
+          <IsianUrl nilai={str} ubah={set} aksi={k.aksi} contoh={kolom.contoh} berkas={kolom.berkas} aplikasi={k.aplikasi} />
         </Field>
       );
     case 'gambar':
@@ -367,7 +388,7 @@ function DaftarButir({ kolom, nilai, ubah, k }: { kolom: Extract<KolomBlok, { je
             {buka === i && (
               <div className="upl-daftar-isi">
                 {kolom.kolom.map((kk) => (
-                  <Kolom key={kk.k} kolom={kk} isi={b} ubah={(x) => ubah(nilai.map((y, j) => (j === i ? x : y)))} k={k} />
+                  <KolomIsian key={kk.k} kolom={kk} isi={b} ubah={(x) => ubah(nilai.map((y, j) => (j === i ? x : y)))} k={k} />
                 ))}
               </div>
             )}
@@ -586,8 +607,12 @@ interface VersiHalaman {
   pada: string | null;
 }
 
-function PanelRiwayat({ open, tutup, aplikasi, lingkup, halaman, pulihkan, lihat }: { open: boolean; tutup: () => void; aplikasi: string; lingkup?: string; halaman: string; pulihkan: (id: number, versi: number) => Promise<void>; lihat: (id: number) => void }) {
-  const q = useSiakadQuery<{ riwayat: VersiHalaman[] }>(['tema-halaman', aplikasi, lingkup ?? '', halaman, 'riwayat'], (s, signal) => s.request({ method: 'GET', path: pathHalaman(aplikasi, halaman, '/riwayat'), query: lingkup ? { lingkup } : undefined }, { signal }), { enabled: open, staleTime: 0 });
+/**
+ * Panel riwayat terbitan (halaman depan dan kerangka situs). `path` = alamat riwayat, `satuan` = arti angka
+ * `jumlah_blok` (blok halaman atau butir menu).
+ */
+export function PanelRiwayat({ open, tutup, path, kunci, lingkup, satuan = 'blok', pulihkan, lihat }: { open: boolean; tutup: () => void; path: string; kunci: unknown[]; lingkup?: string; satuan?: string; pulihkan: (id: number, versi: number) => Promise<void>; lihat: (id: number) => void }) {
+  const q = useSiakadQuery<{ riwayat: VersiHalaman[] }>([...kunci, 'riwayat'], (s, signal) => s.request({ method: 'GET', path, query: lingkup ? { lingkup } : undefined }, { signal }), { enabled: open, staleTime: 0 });
   const [sasaran, setSasaran] = React.useState<VersiHalaman | null>(null);
   const daftar = q.data?.riwayat ?? [];
   return (
@@ -612,7 +637,7 @@ function PanelRiwayat({ open, tutup, aplikasi, lingkup, halaman, pulihkan, lihat
                     Versi {r.versi} {i === 0 && <Badge variant="success">Tampil sekarang</Badge>}
                   </strong>
                   <small>
-                    {r.jumlah_blok} blok · {r.oleh ?? '-'} · {r.pada ?? ''}
+                    {r.jumlah_blok} {satuan} · {r.oleh ?? '-'} · {r.pada ?? ''}
                   </small>
                   {r.catatan && <p>{r.catatan}</p>}
                 </div>
@@ -1090,7 +1115,7 @@ export function PenyuntingLanding({ aplikasi, lingkup, halaman = 'beranda', nama
               <Tabs<'isi' | 'gaya'> variant="underline" value={tabProp} onValueChange={setTabProp} items={[{ value: 'isi', label: 'Isi', icon: <CircleDot /> }, { value: 'gaya', label: 'Gaya', icon: <SlidersHorizontal /> }]} />
               <fieldset className="upl-properti-isi" disabled={!boleh}>
                 {tabProp === 'isi' ? (
-                  SKEMA_BLOK[blokPilih.tipe].kolom.map((kolom) => <Kolom key={`${blokPilih.id}-${kolom.k}`} kolom={kolom} isi={blokPilih.isi} ubah={(isi) => ubah({ t: 'isi', id: blokPilih.id, isi })} k={k} />)
+                  SKEMA_BLOK[blokPilih.tipe].kolom.map((kolom) => <KolomIsian key={`${blokPilih.id}-${kolom.k}`} kolom={kolom} isi={blokPilih.isi} ubah={(isi) => ubah({ t: 'isi', id: blokPilih.id, isi })} k={k} />)
                 ) : (
                   <PanelGaya blok={blokPilih} ubah={(gaya) => ubah({ t: 'gaya', id: blokPilih.id, gaya })} k={k} />
                 )}
@@ -1126,7 +1151,7 @@ export function PenyuntingLanding({ aplikasi, lingkup, halaman = 'beranda', nama
           toast.add({ title: `Templat ${nm} dipasang`, description: 'Simpan draf atau terbitkan bila sudah sesuai. Ctrl+Z untuk mengurungkan.', type: 'success' });
         }}
       />
-      <PanelRiwayat open={buka === 'riwayat'} tutup={() => setBuka(null)} aplikasi={aplikasi} lingkup={lingkup} halaman={halaman} pulihkan={pulihkan} lihat={(id) => void lihat(id)} />
+      <PanelRiwayat open={buka === 'riwayat'} tutup={() => setBuka(null)} path={pathHalaman(aplikasi, halaman, '/riwayat')} kunci={['tema-halaman', aplikasi, lingkup ?? '', halaman]} lingkup={lingkup} pulihkan={pulihkan} lihat={(id) => void lihat(id)} />
       <Sheet open={buka === 'halaman'} onOpenChange={(o) => !o && setBuka(null)} title="Judul halaman" description="Tampil di tab peramban dan hasil mesin pencari." size="sm">
         <div className="upl-halaman-form">
           <Field label="Judul" description="Maks. 120 karakter.">

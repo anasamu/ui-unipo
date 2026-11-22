@@ -8,6 +8,7 @@ import { Button } from './actions';
 import { Avatar } from './display';
 import { Dialog, Menu } from './overlays';
 import type { SidebarUser } from './layout';
+import { useWadahPortal } from '../lib/wadah-portal';
 
 // ================================================================ Tipe
 export interface NavbarLink {
@@ -94,15 +95,17 @@ export interface NavbarProps {
 }
 
 // ================================================================ Utilitas
-function useScrolled(on: boolean, threshold = 8) {
+/** Halaman sudah digulir. Memakai jendela milik navbar (bisa iframe pratinjau penyunting), bukan selalu window induk. */
+function useScrolled(on: boolean, ref: React.RefObject<HTMLElement | null>, threshold = 8) {
   const [s, setS] = React.useState(false);
   React.useEffect(() => {
     if (!on) return;
-    const f = () => setS(window.scrollY > threshold);
+    const w = ref.current?.ownerDocument.defaultView ?? window;
+    const f = () => setS(w.scrollY > threshold);
     f();
-    window.addEventListener('scroll', f, { passive: true });
-    return () => window.removeEventListener('scroll', f);
-  }, [on, threshold]);
+    w.addEventListener('scroll', f, { passive: true });
+    return () => w.removeEventListener('scroll', f);
+  }, [on, ref, threshold]);
   return s;
 }
 
@@ -354,8 +357,9 @@ export function Navbar({
   renderLink,
   className,
 }: NavbarProps) {
-  const scrolled = useScrolled(sticky);
   const ref = React.useRef<HTMLElement>(null);
+  const scrolled = useScrolled(sticky, ref);
+  const wadah = useWadahPortal();
   const wide = useWide(ref, mobileBreakpoint, menus.map((m) => m.key).join('|'));
   const [open, setOpen] = React.useState(false);
   const childActive = (m: NavbarMenu) => activeKey != null && (m.key === activeKey || columnsOf(m).some((c) => c.items.some((l) => l.key === activeKey)));
@@ -420,7 +424,7 @@ export function Navbar({
                 </NavigationMenu.Item>
               ))}
             </NavigationMenu.List>
-            <NavigationMenu.Portal>
+            <NavigationMenu.Portal container={wadah}>
               <NavigationMenu.Positioner className="u-navbar-positioner" sideOffset={8} collisionPadding={16} collisionAvoidance={{ side: 'none' }}>
                 <NavigationMenu.Popup className="u-navbar-popup">
                   <NavigationMenu.Viewport className="u-navbar-viewport" />

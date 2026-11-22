@@ -92,6 +92,8 @@ export * from './panitia';
 export * from './tema-aplikasi';
 export * from './landing-aplikasi';
 export * from './penyunting-landing';
+export * from './situs-aplikasi';
+export * from './penyunting-situs';
 export * from './qr';
 export * from './dokumen-terbit';
 export * from './presensi';
