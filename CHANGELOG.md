@@ -1,6 +1,10 @@
 # Catatan perubahan
 
-## Belum dirilis
+## 1.64.0 (2026-11-22)
+
+- 
+
+## 1.64.0 (2026-11-22)
 
 - **Kasir unit: pembagian & SK jenis biaya** (`siakad/kasir-unit.tsx`, keputusan Anas 2026-11-22 "Wajib lengkap dulu"; butuh SIAKAD dengan aturan jenis biaya baru di `POST /v1/kasir/kelola/jenis`): wizard "Tambah jenis biaya" mendapat langkah **Pembagian & SK** sebelum Ringkasan (tarif standar + `IsianKomponenBiaya`, harus klop). Setelah disimpan, draf aturan biaya (`POST /v1/biaya/aturan`, cakupan = unit penerbit) dibuat dan panel aturannya langsung terbuka untuk melampirkan SK dan mengajukan ke WR bidang keuangan. Jenis biaya baru tersimpan belum aktif; sakelar Aktif terkunci sampai pembagiannya berlaku. Pengguna tanpa izin `biaya.susun` diarahkan ke BAUK. Daftar jenis biaya mendapat kolom **Pembagian & SK** dan aksi baris "Pembagian & SK"/"Susun pembagian". `JenisBiayaKasir.pembagian` (tipe `PembagianJenisKasir`).
 - `biaya.tsx` mengekspor `IsiKomponenBiaya`, `komponenBiayaAwal`, `galatKomponenBiaya`, `kirimanKomponenBiaya`; `FormAturanBiaya` menerima `bawaan` (kode biaya, nama, tarif awal).
