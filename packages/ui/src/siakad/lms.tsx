@@ -109,6 +109,26 @@ export interface AgendaLmsItem {
   tautan?: string;
 }
 
+const KATA_KECIL = new Set(['dan', 'di', 'ke', 'dari', 'untuk', 'yang', 'pada', 'dengan', 'atau', 'dalam', 'bagi', 'serta', 'terhadap', 'of', 'and', 'the', 'for', 'in', 'to', 'on']);
+/**
+ * Nama kelas yang enak dibaca (LMS-22): tanpa akhiran " - Kelas 05", dan nama MK SIAKAD yang ditulis kapital semua
+ * diubah ke huruf judul (kata sambung kecil; singkatan dalam kurung, angka Romawi, dan kata berangka tetap). Nama yang
+ * sudah bercampur huruf besar-kecil dibiarkan.
+ */
+export function namaKelasRapiLms(judul: string | null | undefined): string {
+  const dasar = String(judul ?? '').replace(/\s+-\s+Kelas\s+[A-Z0-9]+$/i, '').trim();
+  if (!dasar || dasar !== dasar.toUpperCase()) return dasar;
+  return dasar
+    .split(/(\s+)/)
+    .map((w, i) => {
+      if (/^\s+$/.test(w) || /\d/.test(w) || /^\(.*\)$/.test(w) || /^(I|II|III|IV|V|VI|VII|VIII|IX|X)$/.test(w)) return w;
+      const l = w.toLowerCase();
+      if (i > 0 && KATA_KECIL.has(l)) return l;
+      return l.replace(/(^|[-/&(])(\p{L})/gu, (_, a: string, b: string) => a + b.toUpperCase());
+    })
+    .join('');
+}
+
 // ================================================================ Hook data
 const opt = { staleTime: 60_000 };
 export function useLmsSaya() {
@@ -253,7 +273,7 @@ export function RingkasanLms({ className }: { className?: string }) {
 // ================================================================ Kelas
 export interface KartuKelasProps {
   kelas: KelasLms;
-  /** Persen penyelesaian (0–100). Kosongkan untuk menyembunyikan bilah progres. */
+  /** Persen penyelesaian (0–100). undefined = sembunyikan; null (mahasiswa) = kelas belum punya aktivitas wajib. */
   progres?: number | null;
   href?: string;
   onPilih?: (k: KelasLms) => void;
@@ -273,8 +293,13 @@ export function KartuKelas({ kelas: k, progres, href, onPilih, className }: Kart
           {k.kelas && <span>Kelas {k.kelas}</span>}
           {k.peran && k.peran !== 'mahasiswa' && <span className="u-lms-peran">{LABEL_PERAN[k.peran] ?? k.peran}</span>}
         </span>
-        <span className="u-lms-kelas-judul">{k.judul}</span>
+        <span className="u-lms-kelas-judul" title={k.judul}>{namaKelasRapiLms(k.judul)}</span>
         {(k.pengajar || k.tahun_id) && <span className="u-lms-kelas-pengajar">{k.pengajar ?? labelTahun(k.tahun_id!)}</span>}
+        {progres === null && k.peran === 'mahasiswa' && (
+          <span className="u-lms-kelas-progres">
+            <small>Belum ada aktivitas wajib</small>
+          </span>
+        )}
         {progres != null && (
           <span className="u-lms-kelas-progres">
             <Progress value={progres} size="sm" tone={progres >= 100 ? 'success' : 'primary'} />
@@ -292,9 +317,20 @@ export function KartuKelas({ kelas: k, progres, href, onPilih, className }: Kart
     );
   if (onPilih)
     return (
-      <button type="button" className={cn('u-lms-kelas', className)} onClick={() => onPilih(k)}>
+      <div
+        role="button"
+        tabIndex={0}
+        className={cn('u-lms-kelas', className)}
+        onClick={() => onPilih(k)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onPilih(k);
+          }
+        }}
+      >
         {isi}
-      </button>
+      </div>
     );
   return <div className={cn('u-lms-kelas', className)}>{isi}</div>;
 }
@@ -302,7 +338,7 @@ export function KartuKelas({ kelas: k, progres, href, onPilih, className }: Kart
 function KartuKelasDenganProgres(p: KartuKelasProps) {
   const q = useProgresKelas(p.kelas.peran === 'mahasiswa' ? p.kelas.id : undefined);
   const saya = q.data?.mahasiswa?.[0];
-  return <KartuKelas {...p} progres={saya?.persen ?? (p.kelas.peran === 'mahasiswa' && q.data ? 0 : null)} />;
+  return <KartuKelas {...p} progres={p.kelas.peran !== 'mahasiswa' || !q.data ? undefined : (saya?.persen ?? null)} />;
 }
 
 /** Kelas milik pengguna. Mahasiswa melihat progres penyelesaiannya di tiap kartu. */
@@ -465,7 +501,7 @@ export function AgendaLms({ hari = 14, kelasId, onPilih, className }: { hari?: n
                     <span className="u-lms-tugas-main">
                       <span className="u-lms-tugas-judul">{a.judul}</span>
                       <span className="u-lms-tugas-kelas">
-                        {LABEL_AGENDA[a.jenis]} · {a.kelas}
+                        {LABEL_AGENDA[a.jenis]} · {namaKelasRapiLms(a.kelas)}
                       </span>
                     </span>
                   </Tag>

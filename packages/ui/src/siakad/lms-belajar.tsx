@@ -37,6 +37,7 @@ import {
   RefreshCw,
   Reply,
   RotateCcw,
+  Search,
   Send,
   Star,
   Timer,
@@ -49,15 +50,16 @@ import {
 import { cn } from '../lib/cn';
 import { formatBytes, formatDate, formatNumber, formatRelative, formatTime } from '../lib/format';
 import { Badge, Button, Skeleton, type BadgeVariant } from '../components/actions';
-import { Accordion, Alert, Avatar, DescriptionList, Empty, Progress, ProgressRing, Tabs, type TabItem } from '../components/display';
-import { Field, Input, SegmentedControl, Textarea } from '../components/forms';
+import { Accordion, Alert, Avatar, DescriptionList, Empty, Pagination, Progress, ProgressRing, Tabs, type TabItem } from '../components/display';
+import { Field, Input, InputGroup, SegmentedControl, Textarea } from '../components/forms';
 import { ConfirmDialog, Dialog, Sheet, useToast } from '../components/overlays';
 import { Dropzone } from '../components/calendar';
+import { FilterBar, type FilterValues } from '../components/filter';
 import { StatCard, StatGrid } from '../components/charts';
 import { KodeLaporan } from '../components/galat';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakadQuery, type QueryState } from './provider';
 import { NavigasiSoal, SoalCbt, TimerUjian, type JawabanCbt, type SoalCbtData } from './cbt';
-import { HADIR_MIN_BAWAAN, SampulKelas, nadaNilaiLms, sisaTenggat, type KelasLms } from './lms';
+import { HADIR_MIN_BAWAAN, SampulKelas, nadaNilaiLms, namaKelasRapiLms, sisaTenggat, type KelasLms } from './lms';
 import { KalenderAkademik } from './kalender';
 import type { CalendarEvent } from '../components/schedule';
 import { PenandaKurikulum, SiapkanKelasDariRps } from './kurikulum-aturan';
@@ -253,7 +255,11 @@ export interface JadwalKelasLms {
   idj: number;
   hari: string;
   jamke?: number;
+  /** Jam mulai/selesai (HH:MM:SS) dan nama ruang; diisi API bila tersedia atau dari jadwal kuliah mahasiswa. */
+  jam_mulai?: string | null;
+  jam_selesai?: string | null;
   ruang?: string | null;
+  nama_ruang?: string | null;
   kode_mk: string;
   nama_mk: string;
   sks: number;
@@ -361,6 +367,8 @@ export interface RuteLms {
   hasilKuis: (percobaanId: number, kuisId?: number) => string;
   forum: (id: number, kelasId?: number) => string;
   utas: (id: number) => string;
+  /** Daftar ujian CBT mahasiswa (UTS, UAS, kuis CBT kelas); tempat ujian dimulai. Opsional demi kompatibilitas. */
+  ujianSaya?: string;
   /** Cara pindah halaman setelah aksi (mulai kuis, kirim kuis, utas baru, klik notifikasi). Bawaan window.location.assign; isi dengan navigate() router SPA. */
   pindah?: (href: string) => void;
 }
@@ -373,6 +381,7 @@ export const RUTE_LMS: RuteLms = {
   hasilKuis: (p, k) => `/kuis/percobaan/${p}${k ? `?kuis=${k}` : ''}`,
   forum: (id, k) => `/forum/${id}${k ? `?kelas=${k}` : ''}`,
   utas: (id) => `/utas/${id}`,
+  ujianSaya: '/ujian',
 };
 const RuteCtx = React.createContext<RuteLms>(RUTE_LMS);
 /** Ganti alamat halaman LMS yang dipakai tautan di komponen (bawaan RUTE_LMS). */
@@ -547,6 +556,34 @@ const STATUS_HADIR: Record<string, { label: string; variant: BadgeVariant }> = {
   A: { label: 'Alpa', variant: 'danger' },
 };
 
+/** Nama hari jadwal SIAKAD: kode 1–7 (Senin–Minggu) atau nama hari apa adanya (LMS-24). */
+const HARI_SIAKAD: Record<string, string> = { '1': 'Senin', '2': 'Selasa', '3': 'Rabu', '4': 'Kamis', '5': 'Jumat', '6': 'Sabtu', '7': 'Minggu' };
+export function namaHariLms(h?: string | number | null): string {
+  if (h == null || h === '') return '';
+  return HARI_SIAKAD[String(h).trim()] ?? String(h);
+}
+/** Label periode akademik dari kode (20261 → "Ganjil 2026/2027"); kode lain apa adanya. */
+export function labelPeriodeLms(t?: string | null): string {
+  if (!t) return '';
+  if (!/^\d{5}$/.test(t)) return t;
+  const th = Number(t.slice(0, 4));
+  return `${({ '1': 'Ganjil', '2': 'Genap', '3': 'Pendek' } as Record<string, string>)[t[4]!] ?? 'Semester'} ${th}/${th + 1}`;
+}
+/**
+ * Jadwal kelas yang terbaca awam: "Jumat, 09.45–11.25" (jam dari jadwal kuliah SIAKAD bila ada, selain itu "jam ke-3")
+ * dan nama ruang ("Lab Hukum") bila tersedia, bukan kode hari/ruang mentah (LMS-24).
+ */
+export function teksJadwalLms(j: Pick<JadwalKelasLms, 'hari' | 'jamke' | 'jam_mulai' | 'jam_selesai'> | null | undefined): string {
+  if (!j || !j.hari) return '';
+  const jam = j.jam_mulai ? `${j.jam_mulai.slice(0, 5).replace(':', '.')}${j.jam_selesai ? `–${j.jam_selesai.slice(0, 5).replace(':', '.')}` : ''}` : j.jamke ? `jam ke-${j.jamke}` : '';
+  return [namaHariLms(j.hari), jam].filter(Boolean).join(', ');
+}
+export function teksRuangLms(j: Pick<JadwalKelasLms, 'ruang' | 'nama_ruang'> | null | undefined): string {
+  if (!j) return '';
+  const nama = j.nama_ruang?.trim();
+  return nama || (j.ruang ? `Ruang ${j.ruang}` : '');
+}
+
 // ================================================================ Hook data
 const opt = { staleTime: 30_000 };
 const enabledId = (id: unknown) => id != null && id !== '' && id !== 0;
@@ -589,11 +626,13 @@ export function usePercobaanKuis(id: number | undefined) {
 export function useForumKelas(kelasId: number | undefined) {
   return useSiakadQuery<ForumLms[]>(['lms-forum-kelas', String(kelasId)], (s, signal) => s.lms.getKelasByIdForum(kelasId!, {}, { signal }) as never, { ...opt, enabled: enabledId(kelasId) });
 }
-export function useUtasForum(forumId: number | undefined) {
-  return useSiakadQuery<PostForumLms[]>(['lms-forum-post', String(forumId)], (s, signal) => s.lms.getForumByIdPost(forumId!, { per_page: 50 } as never, { signal }) as never, {
-    ...opt,
-    enabled: enabledId(forumId),
-  });
+/** Utas satu forum per halaman (disematkan lebih dulu, lalu yang terakhir aktif). */
+export function useUtasForum(forumId: number | undefined, page = 1, perPage = 20) {
+  return useSiakadQuery<PostForumLms[]>(
+    ['lms-forum-post', String(forumId), page, perPage],
+    (s, signal) => s.lms.getForumByIdPost(forumId!, { page, per_page: perPage } as never, { signal }) as never,
+    { ...opt, enabled: enabledId(forumId) },
+  );
 }
 export function useUtasLms(postId: number | undefined) {
   return useSiakadQuery<UtasLms>(['lms-utas', String(postId)], (s, signal) => s.lms.getForumPostById(postId!, {}, { signal }) as never, { ...opt, enabled: enabledId(postId) });
@@ -722,9 +761,20 @@ export function DaftarLampiranLms({ files, className, onHapus }: { files?: FileL
 }
 
 // ================================================================ Kepala kelas
+/** Jadwal kelas dilengkapi jam dan nama ruang dari jadwal kuliah mahasiswa (sama idj) bila API kelas belum mengirimnya. */
+function useJadwalKelasLengkap(k: KelasLmsDetail | undefined, nim?: string): JadwalKelasLms | null {
+  const mhs = useJadwalKuliahMhs(nim && k?.idj ? nim : undefined);
+  const j = k?.jadwal ?? null;
+  if (!j) return null;
+  const m = mhs.data?.jadwal?.find((x) => x.idj === j.idj);
+  if (!m) return j;
+  return { ...j, jam_mulai: j.jam_mulai ?? m.jam_mulai, jam_selesai: j.jam_selesai ?? m.jam_selesai, nama_ruang: j.nama_ruang ?? m.nama_ruang ?? null };
+}
+
 /** Kepala halaman kelas: sampul, kode MK, judul, pengampu, jadwal, dan cincin progres mahasiswa. */
-export function KepalaKelasLms({ kelasId, aksi, className }: { kelasId: number; aksi?: React.ReactNode; className?: string }) {
+export function KepalaKelasLms({ kelasId, nim, aksi, className }: { kelasId: number; /** NIM mahasiswa: jam & nama ruang dilengkapi dari jadwal kuliah SIAKAD. */ nim?: string; aksi?: React.ReactNode; className?: string }) {
   const q = useKelasLmsDetail(kelasId);
+  const j = useJadwalKelasLengkap(q.data, nim);
   const p = useSiakadQuery<{ mahasiswa: Array<{ persen: number | null; selesai: number; total: number }> }>(
     ['lms-progres', String(kelasId)],
     (s, signal) => s.lms.getKelasByIdProgres(kelasId, {}, { signal }) as never,
@@ -732,7 +782,6 @@ export function KepalaKelasLms({ kelasId, aksi, className }: { kelasId: number; 
   );
   if (q.error) return <Galat q={q} judul="Kelas tidak tersedia" />;
   const k = q.data;
-  const j = k?.jadwal;
   const saya = p.data?.mahasiswa?.length === 1 ? p.data.mahasiswa[0] : undefined;
   return (
     <header className={cn('u-lmsb-kepala', className)}>
@@ -757,7 +806,7 @@ export function KepalaKelasLms({ kelasId, aksi, className }: { kelasId: number; 
               )}
               {k.kelas && <span>Kelas {k.kelas}</span>}
             </p>
-            <h1>{j?.nama_mk ?? k.judul}</h1>
+            <h1>{namaKelasRapiLms(j?.nama_mk ?? k.judul)}</h1>
             <p className="u-lmsb-kepala-info">
               {(j?.nama_dosen || k.pengajar) && (
                 <span>
@@ -765,17 +814,16 @@ export function KepalaKelasLms({ kelasId, aksi, className }: { kelasId: number; 
                   {j?.nama_dosen ?? k.pengajar}
                 </span>
               )}
-              {j?.hari && (
+              {teksJadwalLms(j) && (
                 <span>
                   <CalendarCheck aria-hidden />
-                  {j.hari}
-                  {j.jamke ? `, jam ke-${j.jamke}` : ''}
+                  {teksJadwalLms(j)}
                 </span>
               )}
-              {j?.ruang && (
+              {teksRuangLms(j) && (
                 <span>
                   <MapPin aria-hidden />
-                  Ruang {j.ruang}
+                  {teksRuangLms(j)}
                 </span>
               )}
             </p>
@@ -1063,18 +1111,18 @@ export function KartuKelasDaring({ materi, className }: { materi: Pick<MateriLms
         <div className="u-lmsb-daring-bawah">
           <div className="u-lmsb-salin">
             {r.id_rapat && (
-              <button type="button" onClick={() => salin(r.id_rapat!)}>
+              <Button variant="outline" size="sm" onClick={() => salin(r.id_rapat!)}>
                 <small>ID rapat</small>
                 <b>{r.id_rapat}</b>
                 <Copy aria-hidden />
-              </button>
+              </Button>
             )}
             {r.kata_sandi && (
-              <button type="button" onClick={() => salin(r.kata_sandi!)}>
+              <Button variant="outline" size="sm" onClick={() => salin(r.kata_sandi!)}>
                 <small>Kata sandi</small>
                 <b>{r.kata_sandi}</b>
                 <Copy aria-hidden />
-              </button>
+              </Button>
             )}
           </div>
           <IsiHtmlLms html={r.agenda} />
@@ -1466,7 +1514,7 @@ export function HalamanTugasLms({ tugasId, className }: { tugasId: number; class
     <article className={cn('u-lmsb-halaman', className)}>
       <header className="u-lmsb-judul">
         <a className="u-lmsb-kembali" href={rute.kelas(t.kelas_id, 'tugas')}>
-          <ArrowLeft aria-hidden /> {kelas.data?.judul ?? 'Kembali ke kelas'}
+          <ArrowLeft aria-hidden /> {kelas.data?.judul ? namaKelasRapiLms(kelas.data.judul) : 'Kembali ke kelas'}
         </a>
         <div className="u-lmsb-judul-baris">
           <span className="u-lmsb-item-ikon" data-jenis="tugas" data-besar>
@@ -1612,6 +1660,68 @@ export function DaftarKuisKelasLms({ kelasId, className }: { kelasId: number; cl
   );
 }
 
+export interface UjianKelasLms {
+  id: number;
+  nama: string;
+  status: string;
+  durasi_menit: number;
+  mulai: string | null;
+  selesai: string | null;
+  jumlah_soal: number;
+  peserta_id?: number | null;
+  status_saya?: string | null;
+  nilai?: number | null;
+}
+export function useUjianKelasLms(kelasId: number | undefined) {
+  return useSiakadQuery<UjianKelasLms[]>(
+    ['lms-ujian-kelas', String(kelasId)],
+    (s, signal) => s.request<UjianKelasLms[]>({ method: 'GET', path: `/v1/lms/kelas/${kelasId}/ujian` }, { signal }) as never,
+    { ...opt, enabled: enabledId(kelasId) },
+  );
+}
+const STATUS_UJIAN_SAYA: Record<string, { label: string; variant: BadgeVariant }> = {
+  terdaftar: { label: 'Belum dikerjakan', variant: 'neutral' },
+  mengerjakan: { label: 'Sedang dikerjakan', variant: 'warning' },
+  selesai: { label: 'Selesai', variant: 'success' },
+  diskualifikasi: { label: 'Dibatalkan pengawas', variant: 'danger' },
+};
+/**
+ * Kuis berbasis komputer (mesin ujian CBT, satu mesin untuk kuliah dan e-learning) milik kelas: jadwal, status saya,
+ * dan nilai bila dosen menampilkan hasil. Dikerjakan dari halaman Ujian saya (layar penuh, simpan otomatis).
+ */
+export function DaftarUjianKelasLms({ kelasId, className }: { kelasId: number; className?: string }) {
+  const q = useUjianKelasLms(kelasId);
+  const rute = useRuteLms();
+  if (q.error) return <Galat q={q} />;
+  if (muatDari(q)) return <Skeleton className={className} style={{ height: 120 }} />;
+  const data = q.data ?? [];
+  if (!data.length) return null;
+  const kini = Date.now();
+  return (
+    <div className={cn('u-lmsb-grid-aktivitas', className)}>
+      {data.map((u) => {
+        const buka = (!u.mulai || (tglLms(u.mulai)?.getTime() ?? 0) <= kini) && (!u.selesai || (tglLms(u.selesai)?.getTime() ?? 0) >= kini);
+        const st = u.status_saya ? STATUS_UJIAN_SAYA[u.status_saya] : null;
+        return (
+          <a key={u.id} className="u-lmsb-kartu-aktivitas" href={rute.ujianSaya ?? '/ujian'}>
+            <span className="u-lmsb-item-ikon" data-jenis="kuis">
+              <FileQuestion />
+            </span>
+            <span className="u-lmsb-item-teks">
+              <b>{u.nama}</b>
+              <small>
+                {[`${u.jumlah_soal} soal`, `${u.durasi_menit} menit`, u.mulai ? `${waktuLms(u.mulai)}${u.selesai ? ` – ${formatTime(tglLms(u.selesai)!)}` : ''}` : null].filter(Boolean).join(' · ')}
+              </small>
+              {u.nilai != null && <small>Nilai {formatNumber(u.nilai)}</small>}
+            </span>
+            {st ? <Badge variant={st.variant}>{st.label}</Badge> : <Badge variant={buka ? 'success' : 'neutral'}>{buka ? 'Dibuka' : 'Terjadwal'}</Badge>}
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
 const METODE_NILAI: Record<string, string> = { tertinggi: 'Nilai tertinggi', terakhir: 'Percobaan terakhir', pertama: 'Percobaan pertama', rata_rata: 'Rata-rata' };
 
 /** Halaman kuis sebelum mengerjakan: aturan, percobaan saya, tombol mulai (dengan kata sandi bila perlu). */
@@ -1646,7 +1756,7 @@ export function HalamanKuisLms({ kuisId, onMulai, className }: { kuisId: number;
     <article className={cn('u-lmsb-halaman', className)}>
       <header className="u-lmsb-judul">
         <a className="u-lmsb-kembali" href={rute.kelas(k.kelas_id, 'kuis')}>
-          <ArrowLeft aria-hidden /> {kelas.data?.judul ?? 'Kembali ke kelas'}
+          <ArrowLeft aria-hidden /> {kelas.data?.judul ? namaKelasRapiLms(kelas.data.judul) : 'Kembali ke kelas'}
         </a>
         <div className="u-lmsb-judul-baris">
           <span className="u-lmsb-item-ikon" data-jenis="kuis" data-besar>
@@ -2258,10 +2368,20 @@ export function DaftarForumKelasLms({ kelasId, className }: { kelasId: number; c
 export function UtasForumLms({ forumId, kelasId, onUtasDibuat, className }: { forumId: number; kelasId?: number; onUtasDibuat?: (p: PostForumLms) => void; className?: string }) {
   const daftar = useForumKelas(kelasId);
   const kelas = useKelasLmsDetail(kelasId);
-  const q = useUtasForum(forumId);
+  const [hal, setHal] = React.useState(1);
+  const q = useUtasForum(forumId, hal);
   const rute = useRuteLms();
   const [baru, setBaru] = React.useState(false);
+  const [cari, setCari] = React.useState('');
+  const [urut, setUrut] = React.useState<'aktif' | 'terbaru' | 'belum'>('aktif');
   const f = daftar.data?.find((x) => x.id === forumId);
+  const kata = cari.trim().toLowerCase();
+  // Cari dan urut berlaku pada halaman yang sedang dimuat; urutan bawaan server: disematkan, lalu terakhir aktif.
+  const utas = (q.data ?? [])
+    .filter((u) => !kata || `${u.judul ?? ''} ${teksPolosLms(u.isi)} ${u.penulis?.nama ?? ''}`.toLowerCase().includes(kata))
+    .filter((u) => urut !== 'belum' || !u.jumlah_balasan)
+    .sort((a, b) => (urut === 'terbaru' ? (b.created_at ?? '').localeCompare(a.created_at ?? '') : 0));
+  const totalHal = q.meta?.total_pages ?? 1;
   const pengumuman = f?.jenis === 'pengumuman';
   const bisaTulis = !!f && !f.terkunci && !pengumuman;
   return (
@@ -2269,7 +2389,7 @@ export function UtasForumLms({ forumId, kelasId, onUtasDibuat, className }: { fo
       <header className="u-lmsb-judul">
         {kelasId ? (
           <a className="u-lmsb-kembali" href={rute.kelas(kelasId, 'forum')}>
-            <ArrowLeft aria-hidden /> {kelas.data?.judul ?? 'Kembali ke kelas'}
+            <ArrowLeft aria-hidden /> {kelas.data?.judul ? namaKelasRapiLms(kelas.data.judul) : 'Kembali ke kelas'}
           </a>
         ) : null}
         <div className="u-lmsb-judul-baris">
@@ -2291,10 +2411,29 @@ export function UtasForumLms({ forumId, kelasId, onUtasDibuat, className }: { fo
           ) : null}
         </div>
       </header>
+      {(q.data?.length ?? 0) > 0 && (
+        <div className="u-lmsb-utas-alat">
+          <InputGroup start={<Search />} size="sm" className="u-lmsb-cari">
+            <Input value={cari} onChange={(e) => setCari(e.target.value)} placeholder="Cari utas…" aria-label="Cari utas" />
+          </InputGroup>
+          <SegmentedControl
+            value={urut}
+            onValueChange={setUrut}
+            aria-label="Urutkan utas"
+            options={[
+              { value: 'aktif', label: 'Terakhir aktif' },
+              { value: 'terbaru', label: 'Terbaru' },
+              { value: 'belum', label: 'Belum dibalas' },
+            ]}
+          />
+        </div>
+      )}
       {q.error ? (
         <Galat q={q} />
       ) : muatDari(q) ? (
         <Skeleton style={{ height: 200 }} />
+      ) : q.data?.length && !utas.length ? (
+        <Empty icon={<MessageSquare />} title="Tidak ada utas yang cocok" description="Ubah kata kunci atau urutan." bordered />
       ) : !q.data?.length ? (
         <Empty
           icon={<MessageSquare />}
@@ -2311,7 +2450,7 @@ export function UtasForumLms({ forumId, kelasId, onUtasDibuat, className }: { fo
         />
       ) : (
         <ul className="u-lmsb-utas">
-          {q.data.map((u) => (
+          {utas.map((u) => (
             <li key={u.id}>
               <a href={rute.utas(u.id)}>
                 <Avatar name={u.penulis?.nama ?? '?'} src={u.penulis?.foto} size="md" />
@@ -2333,6 +2472,7 @@ export function UtasForumLms({ forumId, kelasId, onUtasDibuat, className }: { fo
           ))}
         </ul>
       )}
+      {totalHal > 1 && <Pagination page={hal} totalPages={totalHal} total={q.meta?.total ?? undefined} perPage={20} onPageChange={setHal} />}
       <UtasBaruLms forumId={forumId} open={baru} onOpenChange={setBaru} onDibuat={(p) => (onUtasDibuat ? onUtasDibuat(p) : pindahKe(rute, rute.utas(p.id)))} />
     </article>
   );
@@ -2726,7 +2866,7 @@ export function RekapNilaiKelasLms({ kelas, className }: { kelas: KelasLms[] | u
           <li key={k.id}>
             <a href={rute.kelas(k.id, 'nilai')}>
               <span className="u-lmsb-item-teks">
-                <b>{k.judul}</b>
+                <b>{namaKelasRapiLms(k.judul)}</b>
                 <small>
                   {k.kode_mk}
                   {n ? ` · ${dinilai}/${n.item.length} dinilai` : ''}
@@ -2797,16 +2937,13 @@ export function PesertaKelasLms({ kelasId, className }: { kelasId: number; class
 }
 
 /** Info kelas dari SIAKAD: ringkasan, mata kuliah, SKS, periode, jadwal, ruang. */
-export function InfoKelasLms({ kelasId, className }: { kelasId: number; className?: string }) {
+export function InfoKelasLms({ kelasId, nim, className }: { kelasId: number; nim?: string; className?: string }) {
   const q = useKelasLmsDetail(kelasId);
+  const j = useJadwalKelasLengkap(q.data, nim);
   if (q.error) return <Galat q={q} />;
   const k = q.data;
   if (!k) return <Skeleton className={className} style={{ height: 200 }} />;
-  const j = k.jadwal;
-  const periode =
-    k.tahun_id && k.tahun_id.length === 5
-      ? `${({ '1': 'Ganjil', '2': 'Genap', '3': 'Pendek' } as Record<string, string>)[k.tahun_id[4]!] ?? 'Semester'} ${k.tahun_id.slice(0, 4)}/${Number(k.tahun_id.slice(0, 4)) + 1}`
-      : k.tahun_id;
+  const periode = labelPeriodeLms(k.tahun_id);
   return (
     <section className={cn('u-lmsb-kartu u-lmsb-tumpuk', className)}>
       <h3 className="u-lmsb-subjudul">Tentang kelas</h3>
@@ -2815,10 +2952,10 @@ export function InfoKelasLms({ kelasId, className }: { kelasId: number; classNam
         items={[
           { label: 'Mata kuliah', value: `${j?.nama_mk ?? k.judul}${k.kode_mk ? ` (${k.kode_mk})` : ''}` },
           { label: 'SKS', value: j?.sks ?? '–' },
-          { label: 'Periode', value: periode ?? '–' },
+          { label: 'Periode', value: periode || '–' },
           { label: 'Kelas', value: k.kelas ?? '–' },
-          { label: 'Jadwal', value: j ? `${j.hari}${j.jamke ? `, jam ke-${j.jamke}` : ''}` : '–' },
-          { label: 'Ruang', value: j?.ruang ?? '–' },
+          { label: 'Jadwal', value: teksJadwalLms(j) || '–' },
+          { label: 'Ruang', value: teksRuangLms(j) || '–' },
           { label: 'Pengampu', value: j?.nama_dosen ?? k.pengajar ?? '–' },
           { label: 'Format', value: k.format === 'mingguan' ? 'Per pertemuan' : k.format === 'topik' ? 'Per topik' : '–' },
           { label: 'Masa kelas', value: k.mulai || k.selesai ? `${k.mulai ? formatDate(k.mulai) : '–'} s.d. ${k.selesai ? formatDate(k.selesai) : '–'}` : '–' },
@@ -2833,8 +2970,12 @@ export function InfoKelasLms({ kelasId, className }: { kelasId: number; classNam
 export type TabKelasLms = 'materi' | 'tugas' | 'kuis' | 'forum' | 'presensi' | 'nilai' | 'peserta' | 'info' | 'kurikulum';
 export const TAB_KELAS_LMS: TabKelasLms[] = ['materi', 'tugas', 'kuis', 'forum', 'presensi', 'nilai', 'peserta', 'info', 'kurikulum'];
 
-/** Halaman kelas lengkap: kepala kelas + tab Materi, Tugas, Kuis, Forum, Presensi, Nilai, Peserta, Info. */
-export function HalamanKelasLms({ kelasId, tab = 'materi', onTabChange, className }: { kelasId: number; tab?: TabKelasLms; onTabChange?: (t: TabKelasLms) => void; className?: string }) {
+/**
+ * Ruang kelas: kepala kelas + daftar bagian vertikal (aturan G4: sub-navigasi tingkat kedua vertikal) yang dikelompokkan
+ * Belajar (materi per pertemuan, tugas, kuis & ujian, forum), Kehadiran & nilai, dan Kelas. Di layar sempit daftar
+ * bagian menjadi pilihan tarik-turun supaya isi tetap selebar layar. `nim` melengkapi jam & ruang dari jadwal kuliah.
+ */
+export function HalamanKelasLms({ kelasId, nim, tab = 'materi', onTabChange, className }: { kelasId: number; nim?: string; tab?: TabKelasLms; onTabChange?: (t: TabKelasLms) => void; className?: string }) {
   const k = useKelasLmsDetail(kelasId);
   const [aktif, setAktif] = React.useState<TabKelasLms>(tab);
   React.useEffect(() => setAktif(tab), [tab]);
@@ -2843,24 +2984,39 @@ export function HalamanKelasLms({ kelasId, tab = 'materi', onTabChange, classNam
     onTabChange?.(t);
   };
   const jml = k.data?.jumlah;
+  const B = 'Belajar';
+  const N = 'Kehadiran & nilai';
+  const K = 'Kelas';
   const items: TabItem<TabKelasLms>[] = [
-    { value: 'materi', label: 'Materi', icon: <BookOpen />, content: <KontenKelasLms kelasId={kelasId} /> },
-    { value: 'tugas', label: 'Tugas', icon: <ClipboardList />, count: jml?.tugas, content: <DaftarTugasKelasLms kelasId={kelasId} /> },
-    { value: 'kuis', label: 'Kuis', icon: <FileQuestion />, count: jml?.kuis, content: <DaftarKuisKelasLms kelasId={kelasId} /> },
-    { value: 'forum', label: 'Forum', icon: <MessageSquare />, content: <DaftarForumKelasLms kelasId={kelasId} /> },
-    { value: 'presensi', label: 'Presensi', icon: <CalendarCheck />, content: <PresensiKelasLms kelasId={kelasId} /> },
-    { value: 'nilai', label: 'Nilai', icon: <GraduationCap />, content: <NilaiKelasSayaLms kelasId={kelasId} /> },
-    { value: 'peserta', label: 'Peserta', icon: <Users />, content: <PesertaKelasLms kelasId={kelasId} /> },
-    { value: 'info', label: 'Info', icon: <Info />, content: <InfoKelasLms kelasId={kelasId} /> },
+    { value: 'materi', group: B, label: 'Materi', icon: <BookOpen />, count: jml?.materi, content: <KontenKelasLms kelasId={kelasId} /> },
+    { value: 'tugas', group: B, label: 'Tugas', icon: <ClipboardList />, count: jml?.tugas, content: <DaftarTugasKelasLms kelasId={kelasId} /> },
+    {
+      value: 'kuis',
+      group: B,
+      label: 'Kuis & ujian',
+      icon: <FileQuestion />,
+      count: jml?.kuis,
+      content: (
+        <div className="u-lmsb-tumpuk">
+          <DaftarUjianKelasLms kelasId={kelasId} />
+          <DaftarKuisKelasLms kelasId={kelasId} />
+        </div>
+      ),
+    },
+    { value: 'forum', group: B, label: 'Forum', icon: <MessageSquare />, count: jml?.forum, content: <DaftarForumKelasLms kelasId={kelasId} /> },
+    { value: 'presensi', group: N, label: 'Presensi', icon: <CalendarCheck />, content: <PresensiKelasLms kelasId={kelasId} /> },
+    { value: 'nilai', group: N, label: 'Nilai', icon: <GraduationCap />, content: <NilaiKelasSayaLms kelasId={kelasId} /> },
+    { value: 'peserta', group: K, label: 'Peserta', icon: <Users />, content: <PesertaKelasLms kelasId={kelasId} /> },
+    { value: 'info', group: K, label: 'Info kelas', icon: <Info />, content: <InfoKelasLms kelasId={kelasId} nim={nim} /> },
     // Kurikulum (pengajar/pengelola): siapkan kelas dari RPS, penanda CPMK/tingkat kognitif tugas & kuis (aturan kurikulum).
     ...(k.data && ['pengajar', 'asisten', 'admin', 'pengelola'].includes(String(k.data.peran ?? '')) && k.data.kode_prodi && k.data.kode_mk
-      ? [{ value: 'kurikulum' as const, label: 'Kurikulum', icon: <GraduationCap />, content: <KurikulumKelasLms kelasId={kelasId} prodi={String(k.data.kode_prodi)} kodeMk={String(k.data.kode_mk)} /> }]
+      ? [{ value: 'kurikulum' as const, group: K, label: 'Kurikulum', icon: <GraduationCap />, content: <KurikulumKelasLms kelasId={kelasId} prodi={String(k.data.kode_prodi)} kodeMk={String(k.data.kode_mk)} /> }]
       : []),
   ];
   return (
     <div className={cn('u-lmsb-kelas', className)}>
-      <KepalaKelasLms kelasId={kelasId} />
-      {k.error ? null : <Tabs items={items} value={aktif} onValueChange={ganti} className="u-lmsb-tab" />}
+      <KepalaKelasLms kelasId={kelasId} nim={nim} />
+      {k.error ? null : <Tabs items={items} value={aktif} onValueChange={ganti} orientation="vertical" aria-label="Bagian kelas" className="u-lmsb-tab" />}
     </div>
   );
 }
@@ -2897,7 +3053,7 @@ export function TenggatLms({ batas = 7, className }: { batas?: number; className
               <span className="u-lmsb-item-teks">
                 <b>{x.judul}</b>
                 <small>
-                  {x.kelas.replace(/ - Kelas [A-Z0-9]+$/, '')} · {x.jenis === 'kuis' ? 'ditutup' : 'tenggat'} {waktuLms(x.waktu)}
+                  {namaKelasRapiLms(x.kelas)} · {x.jenis === 'kuis' ? 'ditutup' : 'tenggat'} {waktuLms(x.waktu)}
                 </small>
               </span>
               {x.status && STATUS_JAWABAN[x.status] ? (
@@ -2945,7 +3101,7 @@ export function KelasDaringMendatang({ batas = 3, className }: { batas?: number;
               <small>{waktuLms(a.waktu)}</small>
             </span>
             <b>{a.judul}</b>
-            <small>{a.kelas}</small>
+            <small>{namaKelasRapiLms(a.kelas)}</small>
             <span className="u-lmsb-daring-cta">
               {w === 'berlangsung' ? 'Gabung sekarang' : 'Lihat detail'} <ArrowRight aria-hidden />
             </span>
@@ -2992,33 +3148,140 @@ export function JadwalHariIniLms({ nim, kelas, className }: { nim: string; kelas
   );
 }
 
-/** Semua tugas dan kuis lintas kelas: perlu dikerjakan, selesai/ditutup, kuis. */
+/**
+ * Kemajuan belajar per kelas (materi wajib selesai, tugas dikumpulkan, kuis dikerjakan dibanding seluruh aktivitas),
+ * kelas yang paling tertinggal lebih dulu. Ringkasan di atas: rata-rata dan jumlah kelas tuntas.
+ */
+export function KemajuanBelajarLms({ kelas, nim, batas = 5, className }: { kelas: KelasLms[] | undefined; nim?: string; batas?: number; className?: string }) {
+  const ids = kelas?.filter((k) => k.peran === 'mahasiswa' || !k.peran).map((k) => k.id);
+  const q = useSemuaKelasLms<ProgresKelasDataLms>(ids, 'progres');
+  const rute = useRuteLms();
+  if (!kelas || muatDari(q)) return <Skeleton className={className} style={{ height: 180 }} />;
+  const nama = new Map(kelas.map((k) => [k.id, namaKelasRapiLms(k.judul)]));
+  const baris = (q.data ?? [])
+    .map((r) => {
+      const m = r.data?.mahasiswa?.find((x) => !nim || x.nim === nim) ?? (r.data?.mahasiswa?.length === 1 ? r.data.mahasiswa[0] : undefined);
+      return m && m.total > 0 ? { id: r.kelas_id, nama: nama.get(r.kelas_id) ?? 'Kelas', persen: m.persen ?? 0, selesai: m.selesai, total: m.total } : null;
+    })
+    .filter((x): x is NonNullable<typeof x> => x != null)
+    .sort((a, b) => a.persen - b.persen);
+  if (!baris.length)
+    return <Empty icon={<ListChecks />} title="Belum ada aktivitas" description="Kemajuan dihitung setelah dosen menambahkan materi wajib, tugas, atau kuis." className={className} />;
+  const rata = Math.round(baris.reduce((a, b) => a + b.persen, 0) / baris.length);
+  const tuntas = baris.filter((b) => b.persen >= 100).length;
+  return (
+    <div className={cn('u-lmsb-kemajuan', className)}>
+      <p className="u-lmsb-kemajuan-ringkas">
+        <b>{rata}%</b>
+        <small>
+          rata-rata dari {baris.length} kelas · {tuntas} tuntas
+        </small>
+      </p>
+      <ul>
+        {baris.slice(0, batas).map((b) => (
+          <li key={b.id}>
+            <a href={rute.kelas(b.id)}>
+              <Progress
+                value={b.persen}
+                size="sm"
+                label={b.nama}
+                format={(v) => `${Math.round(v)}% · ${b.selesai}/${b.total}`}
+                showValue
+                tone={b.persen >= 100 ? 'success' : b.persen < 50 ? 'warning' : undefined}
+              />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+interface ProgresKelasDataLms {
+  mahasiswa?: Array<{ nim: string; persen: number | null; selesai: number; total: number }>;
+}
+
+type BarisTugasSaya = TugasLms & { kelas?: string };
+/** Kelompok tenggat tugas yang belum dikumpulkan: terlambat (masih diterima), minggu ini, nanti, tanpa tenggat. */
+function kelompokTenggat(t: Pick<TugasLms, 'tenggat'>, kini: number): 'terlambat' | 'minggu' | 'nanti' | 'tanpa' {
+  const w = tglLms(t.tenggat)?.getTime();
+  if (w == null) return 'tanpa';
+  if (w < kini) return 'terlambat';
+  return w - kini <= 7 * 86_400_000 ? 'minggu' : 'nanti';
+}
+const JUDUL_KELOMPOK: Record<ReturnType<typeof kelompokTenggat>, { judul: string; ket: string }> = {
+  terlambat: { judul: 'Lewat tenggat', ket: 'Masih bisa dikumpulkan, ditandai terlambat' },
+  minggu: { judul: '7 hari ke depan', ket: 'Tenggat terdekat lebih dulu' },
+  nanti: { judul: 'Nanti', ket: 'Tenggat lebih dari seminggu lagi' },
+  tanpa: { judul: 'Tanpa tenggat', ket: 'Kumpulkan kapan saja selama kelas berjalan' },
+};
+
+/**
+ * Tugas & kuis lintas kelas: cari judul, saring per kelas, tab Perlu dikerjakan (dikelompokkan menurut tenggat), Kuis,
+ * dan Selesai/ditutup. Kelas yang gagal dimuat diberitahukan, bukan ditelan diam-diam (LMS-16/17).
+ */
 export function TugasKuisSayaLms({ kelas, className }: { kelas: KelasLms[] | undefined; className?: string }) {
   const ids = kelas?.map((k) => k.id);
   const tq = useSemuaKelasLms<TugasLms[]>(ids, 'tugas');
   const kq = useSemuaKelasLms<KuisLms[]>(ids, 'kuis');
   const rute = useRuteLms();
-  const [saring, setSaring] = React.useState<'menunggu' | 'selesai' | 'kuis'>('menunggu');
-  const nama = new Map((kelas ?? []).map((k) => [k.id, k.judul.replace(/ - Kelas [A-Z0-9]+$/, '')]));
-  const semua = (tq.data ?? []).flatMap((x) => (x.data ?? []).map((t) => ({ ...t, kelas: nama.get(x.kelas_id) })));
+  const [saring, setSaring] = React.useState<'menunggu' | 'kuis' | 'selesai'>('menunggu');
+  const [f, setF] = React.useState<FilterValues>({});
+  const nama = new Map((kelas ?? []).map((k) => [k.id, namaKelasRapiLms(k.judul)]));
+  const kata = String(f.q ?? '').trim().toLowerCase();
+  const kelasPilih = f.kelas ? Number(f.kelas) : null;
+  const cocok = (kelasId: number, judul: string) => (!kelasPilih || kelasPilih === kelasId) && (!kata || `${judul} ${nama.get(kelasId) ?? ''}`.toLowerCase().includes(kata));
+  const semua: BarisTugasSaya[] = (tq.data ?? []).flatMap((x) => (x.data ?? []).filter((t) => cocok(x.kelas_id, t.judul)).map((t) => ({ ...t, kelas: nama.get(x.kelas_id) })));
   const menunggu = semua.filter((t) => !tugasSelesai(t) && !tugasDitutup(t)).sort((a, b) => (a.tenggat ?? '9').localeCompare(b.tenggat ?? '9'));
   const selesai = semua.filter((t) => tugasSelesai(t) || tugasDitutup(t)).sort((a, b) => (b.tenggat ?? '').localeCompare(a.tenggat ?? ''));
   const kuis = (kq.data ?? [])
-    .flatMap((x) => (x.data ?? []).map((k) => ({ ...k, kelas: nama.get(x.kelas_id) })))
+    .flatMap((x) => (x.data ?? []).filter((k) => cocok(x.kelas_id, k.judul)).map((k) => ({ ...k, kelas: nama.get(x.kelas_id) })))
     .sort((a, b) => Number(keadaanKuis(b).buka) - Number(keadaanKuis(a).buka) || (a.selesai ?? '9').localeCompare(b.selesai ?? '9'));
+  const gagal = [...(tq.data ?? []), ...(kq.data ?? [])].filter((x) => x.data == null).map((x) => nama.get(x.kelas_id) ?? `kelas ${x.kelas_id}`);
   const muat = !kelas || muatDari(tq) || muatDari(kq);
+  const kini = Date.now();
+  const kelompok = (['terlambat', 'minggu', 'nanti', 'tanpa'] as const).map((g) => ({ g, data: menunggu.filter((t) => kelompokTenggat(t, kini) === g) })).filter((x) => x.data.length);
+  const adaSaring = !!kata || !!kelasPilih;
+  const kosong = (judul: string, ket?: string) => (
+    <Empty
+      icon={saring === 'kuis' ? <FileQuestion /> : <ClipboardList />}
+      title={adaSaring ? 'Tidak ada yang cocok' : judul}
+      description={adaSaring ? 'Ubah kata kunci atau saringan kelas.' : ket}
+      actions={
+        adaSaring ? (
+          <Button variant="outline" onClick={() => setF({})}>
+            Hapus saringan
+          </Button>
+        ) : undefined
+      }
+      bordered
+    />
+  );
   return (
     <div className={cn('u-lmsb-tumpuk', className)}>
+      <FilterBar
+        value={f}
+        onValueChange={setF}
+        search={{ placeholder: 'Cari judul tugas atau kuis…' }}
+        fields={[{ key: 'kelas', label: 'Kelas', type: 'select', searchable: true, options: (kelas ?? []).map((k) => ({ value: String(k.id), label: nama.get(k.id) ?? k.judul })) }]}
+        resultCount={saring === 'kuis' ? kuis.length : saring === 'menunggu' ? menunggu.length : selesai.length}
+        resultLabel={saring === 'kuis' ? 'kuis' : 'tugas'}
+      />
       <SegmentedControl
         value={saring}
         onValueChange={setSaring}
         aria-label="Saring tugas"
         options={[
           { value: 'menunggu', label: `Perlu dikerjakan (${menunggu.length})` },
-          { value: 'selesai', label: `Selesai/ditutup (${selesai.length})` },
           { value: 'kuis', label: `Kuis (${kuis.filter((k) => keadaanKuis(k).buka).length} dibuka)` },
+          { value: 'selesai', label: `Selesai/ditutup (${selesai.length})` },
         ]}
       />
+      {gagal.length > 0 && !muat && (
+        <Alert variant="warning" title="Sebagian kelas gagal dimuat">
+          {gagal.slice(0, 3).join(', ')}
+          {gagal.length > 3 ? ` dan ${gagal.length - 3} lainnya` : ''}. Muat ulang halaman untuk mencoba lagi.
+        </Alert>
+      )}
       {tq.error ? (
         <Galat q={tq} />
       ) : muat ? (
@@ -3031,21 +3294,36 @@ export function TugasKuisSayaLms({ kelas, className }: { kelas: KelasLms[] | und
             ))}
           </div>
         ) : (
-          <Empty icon={<FileQuestion />} title="Belum ada kuis" bordered />
+          kosong('Belum ada kuis', 'Kuis dari dosen akan muncul di sini. Ujian CBT (UTS, UAS, kuis CBT) ada di Ujian saya.')
         )
-      ) : (saring === 'menunggu' ? menunggu : selesai).length ? (
+      ) : saring === 'menunggu' ? (
+        kelompok.length ? (
+          kelompok.map(({ g, data }) => (
+            <section key={g} className="u-lmsb-kelompok" data-kelompok={g}>
+              <header className="u-lmsb-kelompok-kepala">
+                <h3 className="u-lmsb-subjudul">
+                  {JUDUL_KELOMPOK[g].judul} <Badge variant={g === 'terlambat' ? 'danger' : 'neutral'}>{data.length}</Badge>
+                </h3>
+                <small>{JUDUL_KELOMPOK[g].ket}</small>
+              </header>
+              <div className="u-lmsb-grid-aktivitas">
+                {data.map((t) => (
+                  <KartuTugasLms key={t.id} tugas={t} kelas={t.kelas} href={rute.tugas(t.id)} />
+                ))}
+              </div>
+            </section>
+          ))
+        ) : (
+          kosong('Tidak ada tugas yang menunggu', 'Semua tugas sudah dikumpulkan.')
+        )
+      ) : selesai.length ? (
         <div className="u-lmsb-grid-aktivitas">
-          {(saring === 'menunggu' ? menunggu : selesai).map((t) => (
+          {selesai.map((t) => (
             <KartuTugasLms key={t.id} tugas={t} kelas={t.kelas} href={rute.tugas(t.id)} />
           ))}
         </div>
       ) : (
-        <Empty
-          icon={<ClipboardList />}
-          title={saring === 'menunggu' ? 'Tidak ada tugas yang menunggu' : 'Belum ada tugas yang selesai'}
-          description={saring === 'menunggu' ? 'Semua tugas sudah dikumpulkan.' : undefined}
-          bordered
-        />
+        kosong('Belum ada tugas yang selesai')
       )}
     </div>
   );
@@ -3105,7 +3383,14 @@ export function DaftarNotifikasiLms({
       <ul>
         {data.map((x) => (
           <li key={x.id}>
-            <button type="button" onClick={() => buka(x)} data-baru={!x.dibaca_at || undefined}>
+            <a
+              href={ruteDariTautanLms(x.tautan, x.kelas_id, rute) ?? '#'}
+              onClick={(e) => {
+                e.preventDefault();
+                buka(x);
+              }}
+              data-baru={!x.dibaca_at || undefined}
+            >
               <span className="u-lmsb-item-ikon" data-jenis={jenisNotif(x.jenis)}>
                 {IKON_NOTIF[jenisNotif(x.jenis)]}
               </span>
@@ -3114,7 +3399,7 @@ export function DaftarNotifikasiLms({
                 {x.isi && <small className="u-lmsb-dua-baris">{teksPolosLms(x.isi)}</small>}
                 {x.created_at && <small>{relatif(x.created_at)}</small>}
               </span>
-            </button>
+            </a>
           </li>
         ))}
       </ul>
