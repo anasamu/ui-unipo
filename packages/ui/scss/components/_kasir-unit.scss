@@ -43,6 +43,26 @@
   margin: 0;
   color: var(--u-muted-foreground);
   font-size: var(--u-text-sm);
+  &:has(> svg) {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  > svg {
+    flex: none;
+    inline-size: 1rem;
+    block-size: 1rem;
+    margin-block-start: 0.125rem;
+  }
+}
+.u-ksu-pembagian {
+  display: grid;
+  justify-items: start;
+  gap: 0.25rem;
+  small {
+    color: var(--u-muted-foreground);
+    font-size: var(--u-text-xs);
+  }
 }
 .u-ksu-teks {
   display: -webkit-box;
@@ -106,6 +126,12 @@
 .u-ksu-sakelar-daftar {
   display: grid;
   gap: 0.75rem;
+}
+.u-ksu-sakelar[data-disabled] {
+  cursor: not-allowed;
+  > span b {
+    color: var(--u-muted-foreground);
+  }
 }
 .u-ksu-sakelar {
   display: flex;

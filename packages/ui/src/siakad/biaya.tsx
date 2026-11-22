@@ -565,6 +565,40 @@ function dariAturan(a?: AturanBiaya | null): IsiAturan {
 }
 const keKomponen = (k: IsiKomponen) => ({ nama: k.nama, penerima: k.penerima, cara: k.cara, nilai: k.cara === 'sisa' ? 0 : Number(k.nilai) || 0 });
 
+/** Isian satu komponen pembagian (nilai sebagai teks) untuk {@link IsianKomponenBiaya}. */
+export type IsiKomponenBiaya = IsiKomponen;
+/** Komponen awal aturan baru: yayasan (persen) dan sisanya ke prodi mahasiswa. */
+export const komponenBiayaAwal = (): IsiKomponenBiaya[] => [komponenKosong('yayasan', 'persen'), komponenKosong('prodi_mahasiswa', 'sisa')];
+
+/** Periksa isian komponen; kunci galat `komponen.{i}.{isian}` sesuai prop `galat` IsianKomponenBiaya. */
+export function galatKomponenBiaya(komponen: IsiKomponenBiaya[]): Record<string, string> {
+  const g: Record<string, string> = {};
+  komponen.forEach((k, i) => {
+    if (!k.nama.trim()) g[`komponen.${i}.nama`] = 'Nama wajib.';
+    if (k.cara !== 'sisa' && !(Number(k.nilai) > 0)) g[`komponen.${i}.nilai`] = 'Isi nilai lebih dari 0.';
+    if (k.penerima === 'unit' && !k.unit_id) g[`komponen.${i}.unit_id`] = 'Pilih unit.';
+    if (k.penerima === 'jabatan' && !k.jabatan_id) g[`komponen.${i}.jabatan_id`] = 'Pilih jabatan.';
+    if (k.penerima === 'pegawai' && !k.pegawai_id) g[`komponen.${i}.pegawai_id`] = 'Pilih pegawai.';
+  });
+  return g;
+}
+
+/** Bentuk kiriman komponen untuk POST /v1/biaya/aturan. */
+export function kirimanKomponenBiaya(komponen: IsiKomponenBiaya[]) {
+  const n = (v: string) => (v === '' ? null : Number(v));
+  return komponen.map((k) => ({
+    nama: k.nama.trim(),
+    penerima: k.penerima,
+    cara: k.cara,
+    nilai: k.cara === 'sisa' ? 0 : Number(k.nilai),
+    unit_id: k.penerima === 'unit' ? n(k.unit_id) : null,
+    jabatan_id: k.penerima === 'jabatan' ? n(k.jabatan_id) : null,
+    pegawai_id: k.penerima === 'pegawai' ? n(k.pegawai_id) : null,
+    akun_id: n(k.akun_id),
+    keterangan: k.keterangan.trim() || null,
+  }));
+}
+
 /** Cari pegawai untuk komponen honor pegawai tertentu (GET /v1/biaya/pegawai, lingkup hak biaya). */
 function PilihPegawaiBiaya({ value, nama, onValueChange }: { value: string; nama: string; onValueChange: (id: string, nama: string) => void }) {
   const siakad = useSiakad();
@@ -744,18 +778,24 @@ export interface FormAturanBiayaProps {
   onTersimpan?: (a: DetailAturanBiaya) => void;
   /** Unit cakupan bawaan saat menyusun baru (mis. fakultas pemakai aplikasi). */
   unitBawaan?: number | null;
+  /** Isian awal saat menyusun baru, mis. dari daftar jenis biaya kasir unit. */
+  bawaan?: { kode_biaya?: string; nama?: string; tarif?: number | null };
 }
 
 /** Susun/ubah aturan biaya (POST /v1/biaya/aturan, /v1/biaya/aturan/{id}) dengan komponen dan pratinjau klop. */
-export function FormAturanBiaya({ aturan, trigger, open, onOpenChange, onTersimpan, unitBawaan }: FormAturanBiayaProps) {
+export function FormAturanBiaya({ aturan, trigger, open, onOpenChange, onTersimpan, unitBawaan, bawaan }: FormAturanBiayaProps) {
   const siakad = useSiakad();
   const toast = useToast();
   const ref = useReferensiBiaya();
+  const { kode_biaya: kodeBawaan, nama: namaBawaan, tarif: tarifBawaan } = bawaan ?? {};
   const awal = React.useMemo(() => {
     const a = dariAturan(aturan);
     if (!aturan && unitBawaan) a.cakupan_unit_id = a.penyelenggara_unit_id = String(unitBawaan);
+    if (!aturan && kodeBawaan) a.kode_biaya = kodeBawaan;
+    if (!aturan && namaBawaan) a.nama = namaBawaan;
+    if (!aturan && tarifBawaan) a.tarif = String(Math.round(tarifBawaan));
     return a;
-  }, [aturan, unitBawaan]);
+  }, [aturan, unitBawaan, kodeBawaan, namaBawaan, tarifBawaan]);
   const [isi, setIsi] = React.useState<IsiAturan>(awal);
   const [galat, setGalat] = React.useState<Record<string, string>>({});
   const [inner, setInner] = React.useState(false);
@@ -790,13 +830,7 @@ export function FormAturanBiaya({ aturan, trigger, open, onOpenChange, onTersimp
         if (!isi.nama.trim()) g.nama = 'Nama aturan wajib diisi.';
         if (!isi.kode_biaya) g.kode_biaya = 'Pilih jenis biaya.';
         if (!isi.berlaku_mulai) g.berlaku_mulai = 'Tanggal mulai berlaku wajib diisi.';
-        isi.komponen.forEach((k, i) => {
-          if (!k.nama.trim()) g[`komponen.${i}.nama`] = 'Nama wajib.';
-          if (k.cara !== 'sisa' && !(Number(k.nilai) > 0)) g[`komponen.${i}.nilai`] = 'Isi nilai lebih dari 0.';
-          if (k.penerima === 'unit' && !k.unit_id) g[`komponen.${i}.unit_id`] = 'Pilih unit.';
-          if (k.penerima === 'jabatan' && !k.jabatan_id) g[`komponen.${i}.jabatan_id`] = 'Pilih jabatan.';
-          if (k.penerima === 'pegawai' && !k.pegawai_id) g[`komponen.${i}.pegawai_id`] = 'Pilih pegawai.';
-        });
+        Object.assign(g, galatKomponenBiaya(isi.komponen));
         setGalat(g);
         if (Object.keys(g).length) return 'Periksa isian yang ditandai.';
         const n = (v: string) => (v === '' ? null : Number(v));
@@ -813,17 +847,7 @@ export function FormAturanBiaya({ aturan, trigger, open, onOpenChange, onTersimp
           tarif: tarif,
           berlaku_mulai: isi.berlaku_mulai,
           berlaku_selesai: isi.berlaku_selesai || null,
-          komponen: isi.komponen.map((k) => ({
-            nama: k.nama.trim(),
-            penerima: k.penerima,
-            cara: k.cara,
-            nilai: k.cara === 'sisa' ? 0 : Number(k.nilai),
-            unit_id: k.penerima === 'unit' ? n(k.unit_id) : null,
-            jabatan_id: k.penerima === 'jabatan' ? n(k.jabatan_id) : null,
-            pegawai_id: k.penerima === 'pegawai' ? n(k.pegawai_id) : null,
-            akun_id: n(k.akun_id),
-            keterangan: k.keterangan.trim() || null,
-          })),
+          komponen: kirimanKomponenBiaya(isi.komponen),
         };
         let r;
         try {

@@ -46,6 +46,21 @@ import { PerangkatKasir } from './perangkat-kasir';
 import { DaftarAturan, FormAturan as FormAturanUmum, type Aturan } from './aturan';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { IsianJam } from '../components/isian-angka';
+import {
+  FormAturanBiaya,
+  IsianKomponenBiaya,
+  PanelAturanBiaya,
+  StatusAturanBiayaBadge,
+  galatKomponenBiaya,
+  kirimanKomponenBiaya,
+  komponenBiayaAwal,
+  periksaKomponenBiaya,
+  useHakBiaya,
+  useReferensiBiaya,
+  type DetailAturanBiaya,
+  type IsiKomponenBiaya,
+  type StatusAturanBiaya,
+} from './biaya';
 
 // Pengaturan kasir per unit penerbit (SIAKAD /v1/kasir/kelola, docs/KASIR.md "Pengaturan di aplikasi unit"): jenis
 // biaya, loket, aturan penerimaan per status akademik, jadwal aktif pembayaran, dan templat laporan kasir. Dipasang di
@@ -133,6 +148,19 @@ export interface JenisBiayaKasir {
   aktif: boolean;
   keterangan: string | null;
   diatur?: boolean;
+  /** Aturan pembagian (modul Biaya) yang berlaku, atau yang terbaru masih disusun; null = belum ada. */
+  pembagian?: PembagianJenisKasir | null;
+}
+
+/** Ringkasan aturan pembagian satu jenis biaya. Jenis biaya baru baru bisa aktif setelah statusnya `berlaku`. */
+export interface PembagianJenisKasir {
+  id: string;
+  nama: string;
+  status: StatusAturanBiaya;
+  komponen: number;
+  sk: boolean;
+  berlaku_mulai: string | null;
+  berlaku_selesai: string | null;
 }
 
 export interface LoketKasir {
@@ -421,20 +449,127 @@ interface IsianJenis {
   urutan: string;
   aktif: boolean;
   keterangan: string;
+  /** Status aktif sebelum diubah; menyalakan jenis nonaktif butuh pembagian yang berlaku. */
+  aktifAwal: boolean;
+  pembagian: PembagianJenisKasir | null;
+  /** Jenis baru: susun pembagian sekarang (draf aturan biaya) atau nanti dari daftar. */
+  susun: boolean;
+  tarif: string;
+  komponen: IsiKomponenBiaya[];
 }
 
 const angka = (s: string) => s.replace(/[^\d]/g, '');
 
-function FormJenis({ awal, onOpenChange, saya, unitId, daftar }: { awal: IsianJenis | null; onOpenChange: (o: boolean) => void; saya: KasirKelolaSaya; unitId?: number; daftar: JenisBiayaKasir[] }) {
+/** Pengguna boleh menyusun aturan pembagian untuk unit penerbit ini (server tetap memeriksa lingkup unit). */
+function bolehSusunPembagian(hak: ReturnType<typeof useHakBiaya>['data'], unit: number | null): boolean {
+  if (!hak?.boleh.susun) return false;
+  return unit != null || hak.izin['biaya.susun'] === 'semua';
+}
+
+/** Lencana keadaan pembagian & SK sebuah jenis biaya. */
+function LencanaPembagian({ p }: { p: PembagianJenisKasir | null | undefined }) {
+  if (!p) return <Badge variant="warning">Belum ada pembagian</Badge>;
+  return (
+    <span className="u-ksu-pembagian">
+      <StatusAturanBiayaBadge status={p.status} />
+      <small>
+        {p.komponen} komponen · {p.sk ? 'SK terlampir' : 'Belum ada SK'}
+      </small>
+    </span>
+  );
+}
+
+function FormJenis({
+  awal,
+  onOpenChange,
+  saya,
+  unitId,
+  daftar,
+  onAturan,
+}: {
+  awal: IsianJenis | null;
+  onOpenChange: (o: boolean) => void;
+  saya: KasirKelolaSaya;
+  unitId?: number;
+  daftar: JenisBiayaKasir[];
+  /** Draf aturan pembagian tersimpan: buka panelnya untuk melampirkan SK dan mengajukan. */
+  onAturan?: (id: string) => void;
+}) {
   const siakad = useSiakad();
   const toast = useToast();
+  const hak = useHakBiaya();
+  const ref = useReferensiBiaya();
   const [v, setV] = React.useState<IsianJenis | null>(awal);
+  const [galatKomponen, setGalatKomponen] = React.useState<Record<string, string>>({});
   React.useEffect(() => {
-    if (awal) setV(awal);
+    if (awal) {
+      setV(awal);
+      setGalatKomponen({});
+    }
   }, [awal]);
   if (!v) return null;
   const set = (x: Partial<IsianJenis>) => setV((o) => (o ? { ...o, ...x } : o));
   const ada = v.baru && daftar.some((j) => j.kode_biaya.toLowerCase() === v.kode_biaya.trim().toLowerCase());
+  const bolehSusun = bolehSusunPembagian(hak.data, unitDariKunci(v.unit));
+  const susunSekarang = v.baru && v.susun && bolehSusun;
+  const tarif = v.tarif ? Number(v.tarif) : null;
+  const pembagianBerlaku = v.pembagian?.status === 'berlaku';
+  const kunciAktif = !v.baru && !v.aktifAwal && !pembagianBerlaku;
+  const langkahPembagian = {
+    id: 'pembagian',
+    title: 'Pembagian & SK',
+    icon: <Gavel />,
+    validate: () => {
+      if (!susunSekarang) return null;
+      const g = galatKomponenBiaya(v.komponen);
+      setGalatKomponen(g);
+      if (Object.keys(g).length) return 'Periksa komponen yang ditandai.';
+      const cek = periksaKomponenBiaya(
+        v.komponen.map((k) => ({ nama: k.nama, penerima: k.penerima, cara: k.cara, nilai: k.cara === 'sisa' ? 0 : Number(k.nilai) || 0 })),
+        tarif,
+      );
+      return cek.klop ? null : cek.pesan.join(' ') || 'Pembagian belum klop.';
+    },
+    content: (
+      <div className="u-ksu-isian">
+        <Alert variant="info" title="Aktif setelah pembagian dan SK disetujui">
+          Jenis biaya baru disimpan belum aktif. Kasir baru bisa menerimanya setelah pembagiannya klop, SK penetapan terlampir, dan disetujui WR bidang keuangan.
+        </Alert>
+        {hak.loading ? (
+          <Spinner />
+        ) : !bolehSusun ? (
+          <Alert variant="warning" title="Pembagian disusun oleh BAUK">
+            Anda belum berhak menyusun pembagian untuk unit ini. Simpan jenis biaya ini, lalu minta BAUK menyusun pembagian dan melampirkan SK-nya di menu Aturan biaya.
+          </Alert>
+        ) : (
+          <>
+            <Sakelar nilai={v.susun} ubah={(c) => set({ susun: c })} label="Susun pembagian sekarang" ket="Bila dimatikan, pembagian bisa disusun nanti dari daftar jenis biaya." />
+            {v.susun && (
+              <>
+                <Field label="Tarif standar" optional description="Dasar komponen nominal. Kosongkan bila tarif berbeda per mahasiswa, lalu pakai persen.">
+                  <Input inputMode="numeric" value={v.tarif ? formatNumber(Number(v.tarif)) : ''} onChange={(e) => set({ tarif: angka(e.target.value) })} placeholder="mis. 300.000" />
+                </Field>
+                {ref.error && <GalatApi error={ref.error} onRetry={ref.refetch} />}
+                <IsianKomponenBiaya
+                  value={v.komponen}
+                  onValueChange={(k) => {
+                    set({ komponen: k });
+                    setGalatKomponen({});
+                  }}
+                  tarif={tarif}
+                  referensi={ref.data}
+                  galat={galatKomponen}
+                />
+                <p className="u-ksu-catatan">
+                  <FileText aria-hidden /> SK penetapan dilampirkan setelah disimpan; panel aturan pembagian langsung terbuka untuk mengunggahnya dan mengajukan ke WR bidang keuangan.
+                </p>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    ),
+  };
   return (
     <PanelLangkah
       open={Boolean(awal)}
@@ -507,7 +642,15 @@ function FormJenis({ awal, onOpenChange, saya, unitId, daftar }: { awal: IsianJe
                 <Sakelar nilai={v.batasi_prodi} ubah={(c) => set({ batasi_prodi: c })} label="Batasi prodi unit" ket="Hanya mahasiswa prodi di bawah unit penerbit yang bisa membayar." />
                 <Sakelar nilai={v.potongan_kasir} ubah={(c) => set({ potongan_kasir: c })} label="Kasir boleh memberi potongan" ket="Potongan mengurangi nominal tagihan dan tercatat di kwitansi." />
                 <Sakelar nilai={v.bayar_dimuka} ubah={(c) => set({ bayar_dimuka: c })} label="Boleh dibayar di muka" ket="Mahasiswa boleh membayar sebelum periode dibuka; uang disimpan sebagai deposit dan otomatis melunasi tagihan saat terbit. Tanpa saklar ini pembayaran di luar jadwal ditolak." />
-                <Sakelar nilai={v.aktif} ubah={(c) => set({ aktif: c })} label="Aktif" ket="Jenis biaya nonaktif tidak tampil di kasir." />
+                {!v.baru && (
+                  <Sakelar
+                    nilai={v.aktif}
+                    ubah={(c) => set({ aktif: c })}
+                    label="Aktif"
+                    ket={kunciAktif ? 'Bisa diaktifkan setelah pembagian dan SK-nya disetujui WR bidang keuangan.' : 'Jenis biaya nonaktif tidak tampil di kasir.'}
+                    disabled={kunciAktif}
+                  />
+                )}
               </div>
               {v.bayar_dimuka && (
                 <Field label="Paling cepat (hari sebelum dibuka)" optional description="Kosong = kapan saja sebelum jendela penerimaan dibuka. Mis. 30 = mulai 30 hari sebelum masa pembayaran.">
@@ -517,6 +660,7 @@ function FormJenis({ awal, onOpenChange, saya, unitId, daftar }: { awal: IsianJe
             </div>
           ),
         },
+        ...(v.baru ? [langkahPembagian] : []),
         {
           id: 'ringkasan',
           title: 'Ringkasan',
@@ -535,9 +679,23 @@ function FormJenis({ awal, onOpenChange, saya, unitId, daftar }: { awal: IsianJe
                     { label: 'Batasi prodi', value: v.batasi_prodi ? 'Ya' : 'Tidak' },
                     { label: 'Potongan kasir', value: v.potongan_kasir ? 'Boleh' : 'Tidak' },
                     { label: 'Bayar di muka', value: v.bayar_dimuka ? (v.dimuka_hari ? `Boleh, paling cepat ${v.dimuka_hari} hari sebelum dibuka` : 'Boleh, kapan saja sebelum dibuka') : 'Tidak' },
-                    { label: 'Status', value: v.aktif ? 'Aktif' : 'Nonaktif' },
+                    { label: 'Status', value: v.baru ? 'Belum aktif sampai pembagian dan SK disetujui' : v.aktif ? 'Aktif' : 'Nonaktif' },
                   ],
                 },
+                ...(v.baru
+                  ? [
+                      {
+                        title: 'Pembagian & SK',
+                        items: susunSekarang
+                          ? [
+                              { label: 'Tarif standar', value: tarif ? formatRupiah(tarif) : 'Berbeda per mahasiswa' },
+                              { label: 'Komponen', value: v.komponen.map((k) => k.nama.trim()).filter(Boolean).join(', ') },
+                              { label: 'SK', value: 'Dilampirkan setelah disimpan' },
+                            ]
+                          : [{ label: 'Pembagian', value: bolehSusun ? 'Disusun nanti dari daftar jenis biaya' : 'Disusun oleh BAUK' }],
+                      },
+                    ]
+                  : []),
               ]}
             />
           ),
@@ -561,25 +719,51 @@ function FormJenis({ awal, onOpenChange, saya, unitId, daftar }: { awal: IsianJe
               bayar_dimuka: v.bayar_dimuka,
               dimuka_hari: v.bayar_dimuka && v.dimuka_hari ? Number(v.dimuka_hari) : null,
               urutan: Number(v.urutan || 100),
-              aktif: v.aktif,
+              ...(v.baru ? {} : { aktif: v.aktif }),
               keterangan: v.keterangan,
             },
           });
-          toast.add({ title: 'Jenis biaya disimpan', type: 'success' });
           invalidateSiakad(API);
-          return null;
         } catch (e) {
           return pesanGalat(e);
         }
+        if (!susunSekarang) {
+          toast.add({ title: 'Jenis biaya disimpan', description: v.baru ? 'Belum aktif sampai pembagian dan SK-nya disetujui.' : undefined, type: 'success' });
+          return null;
+        }
+        try {
+          const unit = unitDariKunci(v.unit);
+          const r = await siakad.request<DetailAturanBiaya>({
+            method: 'POST',
+            path: '/v1/biaya/aturan',
+            body: {
+              nama: `Pembagian ${v.nama.trim()}`,
+              sumber: 'mahasiswa',
+              kode_biaya: v.kode_biaya.trim(),
+              cakupan_unit_id: unit,
+              penyelenggara_unit_id: unit,
+              tarif,
+              berlaku_mulai: new Date().toISOString().slice(0, 10),
+              komponen: kirimanKomponenBiaya(v.komponen),
+            },
+          });
+          invalidateSiakad('biaya');
+          invalidateSiakad(API);
+          toast.add({ title: 'Jenis biaya dan draf pembagian disimpan', description: 'Lampirkan SK, lalu ajukan ke WR bidang keuangan.', type: 'success' });
+          if (r.data?.id) onAturan?.(r.data.id);
+        } catch (e) {
+          toast.add({ title: 'Jenis biaya disimpan, pembagian belum', description: `${pesanGalat(e)} Susun pembagiannya dari daftar jenis biaya.`, type: 'warning' });
+        }
+        return null;
       }}
     />
   );
 }
 
-function Sakelar({ nilai, ubah, label, ket }: { nilai: boolean; ubah: (c: boolean) => void; label: string; ket?: string }) {
+function Sakelar({ nilai, ubah, label, ket, disabled }: { nilai: boolean; ubah: (c: boolean) => void; label: string; ket?: string; disabled?: boolean }) {
   return (
-    <label className="u-ksu-sakelar">
-      <Switch checked={nilai} onCheckedChange={(c: boolean) => ubah(c)} />
+    <label className="u-ksu-sakelar" data-disabled={disabled || undefined}>
+      <Switch checked={nilai} onCheckedChange={(c: boolean) => ubah(c)} disabled={disabled} />
       <span>
         <b>{label}</b>
         {ket ? <small>{ket}</small> : null}
@@ -606,17 +790,25 @@ function isianJenisDari(j: JenisBiayaKasir, saya: KasirKelolaSaya): IsianJenis {
   urutan: String(j.urutan),
   aktif: j.aktif,
   keterangan: j.keterangan ?? '',
+  aktifAwal: j.aktif,
+  pembagian: j.pembagian ?? null,
+  susun: false,
+  tarif: '',
+  komponen: [],
 });
 }
 
 /** Isian form jenis biaya baru. */
 function isianJenisBaru(saya: KasirKelolaSaya, unitId?: number): IsianJenis {
-  return { baru: true, kode_biaya: '', nama: '', unit: unitAwal(saya, unitId), kategori: null, perlakuan: 'sewaktu', nominal_bawaan: '', tagih_otomatis: false, batasi_prodi: false, potongan_kasir: false, bayar_dimuka: false, dimuka_hari: '', urutan: '100', aktif: true, keterangan: '' };
+  return { baru: true, kode_biaya: '', nama: '', unit: unitAwal(saya, unitId), kategori: null, perlakuan: 'sewaktu', nominal_bawaan: '', tagih_otomatis: false, batasi_prodi: false, potongan_kasir: false, bayar_dimuka: false, dimuka_hari: '', urutan: '100', aktif: false, keterangan: '', aktifAwal: false, pembagian: null, susun: true, tarif: '', komponen: komponenBiayaAwal() };
 }
 
 function TabJenis({ saya, unitId }: { saya: KasirKelolaSaya; unitId?: number }) {
   const q = useSiakadQuery<JenisBiayaKasir[]>([`${API}/jenis`], (s, signal) => s.request({ method: 'GET', path: `${API}/jenis` }, { signal }));
   const [form, setForm] = React.useState<IsianJenis | null>(null);
+  const [aturan, setAturan] = React.useState<string | null>(null);
+  const [susun, setSusun] = React.useState<JenisBiayaKasir | null>(null);
+  const hak = useHakBiaya();
   const [cari, setCari] = React.useState('');
   const semua = dalamUnit(q.data, saya, unitId, false);
   const c = cari.trim().toLowerCase();
@@ -628,9 +820,21 @@ function TabJenis({ saya, unitId }: { saya: KasirKelolaSaya; unitId?: number }) 
     { key: 'kategori', header: 'Kategori', value: (j) => (j.kategori ? (saya.kategori[j.kategori] ?? j.kategori) : ''), cell: (j) => (j.kategori ? saya.kategori[j.kategori] ?? j.kategori : <span className="u-ksu-redup">Belum diatur</span>) },
     { key: 'perlakuan', header: 'Perlakuan', value: (j) => PERLAKUAN[j.perlakuan]?.label ?? j.perlakuan },
     { key: 'tagih', header: 'Tagih otomatis', value: (j) => (j.tagih_otomatis ? 'Ya' : 'Tidak'), cell: (j) => (j.tagih_otomatis ? <Badge variant="info">Ya{j.nominal_bawaan ? ` · ${formatRupiah(j.nominal_bawaan)}` : ''}</Badge> : <span className="u-ksu-redup">Tidak</span>) },
-    { key: 'aktif', header: 'Status', value: (j) => (j.aktif ? 'Aktif' : 'Nonaktif'), cell: (j) => <LencanaAktif aktif={j.aktif} />, mobile: 'badge', shrink: true },
+    {
+      key: 'pembagian',
+      header: 'Pembagian & SK',
+      value: (j) => (j.pembagian ? `${j.pembagian.status} · ${j.pembagian.komponen} komponen · ${j.pembagian.sk ? 'SK terlampir' : 'belum ada SK'}` : 'Belum ada'),
+      cell: (j) => <LencanaPembagian p={j.pembagian} />,
+    },
+    { key: 'aktif', header: 'Status', value: (j) => (j.aktif ? 'Aktif' : 'Nonaktif'), cell: (j) => <LencanaAktif aktif={j.aktif} teksNonaktif={!j.aktif && j.pembagian?.status !== 'berlaku' ? 'Menunggu pembagian' : 'Nonaktif'} />, mobile: 'badge', shrink: true },
   ];
   const ubah = (j: JenisBiayaKasir): IsianJenis => isianJenisDari(j, saya);
+  const aksiPembagian = (j: JenisBiayaKasir) =>
+    j.pembagian
+      ? [{ label: 'Pembagian & SK', icon: <Gavel />, onSelect: () => setAturan(j.pembagian!.id) }]
+      : bolehSusunPembagian(hak.data, j.unit_id === saya.bauk_id ? null : j.unit_id)
+        ? [{ label: 'Susun pembagian', icon: <Gavel />, onSelect: () => setSusun(j) }]
+        : [];
   return (
     <div className="u-ksu-tumpuk">
       <DataTable<JenisBiayaKasir>
@@ -654,12 +858,33 @@ function TabJenis({ saya, unitId }: { saya: KasirKelolaSaya; unitId?: number }) 
           </Button>
         }
         onRowClick={(j) => setForm(ubah(j))}
-        rowActions={(j) => [{ label: 'Ubah', icon: <Pencil />, onSelect: () => setForm(ubah(j)) }]}
+        rowActions={(j) => [{ label: 'Ubah', icon: <Pencil />, onSelect: () => setForm(ubah(j)) }, ...aksiPembagian(j)]}
         empty={{ title: 'Belum ada jenis biaya unit', description: 'Tambahkan jenis biaya yang diterima loket kasir unit Anda, mis. praktikum, legalisir, atau wisuda.', icon: <Receipt /> }}
         mobile="cards"
         exportCsv="jenis-biaya-kasir"
       />
-      <FormJenis awal={form} onOpenChange={(o) => !o && setForm(null)} saya={saya} unitId={unitId} daftar={q.data ?? []} />
+      <FormJenis awal={form} onOpenChange={(o) => !o && setForm(null)} saya={saya} unitId={unitId} daftar={q.data ?? []} onAturan={setAturan} />
+      <FormAturanBiaya
+        open={Boolean(susun)}
+        onOpenChange={(o) => !o && setSusun(null)}
+        unitBawaan={susun && susun.unit_id !== saya.bauk_id ? susun.unit_id : null}
+        bawaan={susun ? { kode_biaya: susun.kode_biaya, nama: `Pembagian ${susun.nama}`, tarif: susun.nominal_bawaan } : undefined}
+        onTersimpan={(a) => {
+          setSusun(null);
+          invalidateSiakad(API);
+          setAturan(a.id);
+        }}
+      />
+      <PanelAturanBiaya
+        id={aturan}
+        onOpenChange={(o) => {
+          if (!o) {
+            setAturan(null);
+            invalidateSiakad(API);
+          }
+        }}
+        onPilih={setAturan}
+      />
     </div>
   );
 }
@@ -1981,7 +2206,13 @@ export interface FormJenisBiayaKasirProps {
 /** Form bertahap tambah/ubah jenis biaya (identitas, unit penerbit, kategori, penagihan) di panel samping. */
 export function FormJenisBiayaKasir({ open, onOpenChange, saya, jenis, daftar, unitId }: FormJenisBiayaKasirProps) {
   const awal = React.useMemo(() => (!open ? null : jenis ? isianJenisDari(jenis, saya) : isianJenisBaru(saya, unitId)), [open, jenis, saya, unitId]);
-  return <FormJenis awal={awal} onOpenChange={onOpenChange} saya={saya} unitId={unitId} daftar={daftar} />;
+  const [aturan, setAturan] = React.useState<string | null>(null);
+  return (
+    <>
+      <FormJenis awal={awal} onOpenChange={onOpenChange} saya={saya} unitId={unitId} daftar={daftar} onAturan={setAturan} />
+      <PanelAturanBiaya id={aturan} onOpenChange={(o) => !o && setAturan(null)} onPilih={setAturan} />
+    </>
+  );
 }
 
 /** Jadwal aktif penerimaan kasir untuk satu jenis biaya (jadwal khusus jenis itu, kategori, dan semua jenis). */

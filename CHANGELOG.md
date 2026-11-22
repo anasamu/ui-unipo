@@ -1,5 +1,10 @@
 # Catatan perubahan
 
+## Belum dirilis
+
+- **Kasir unit: pembagian & SK jenis biaya** (`siakad/kasir-unit.tsx`, keputusan Anas 2026-11-22 "Wajib lengkap dulu"; butuh SIAKAD dengan aturan jenis biaya baru di `POST /v1/kasir/kelola/jenis`): wizard "Tambah jenis biaya" mendapat langkah **Pembagian & SK** sebelum Ringkasan (tarif standar + `IsianKomponenBiaya`, harus klop). Setelah disimpan, draf aturan biaya (`POST /v1/biaya/aturan`, cakupan = unit penerbit) dibuat dan panel aturannya langsung terbuka untuk melampirkan SK dan mengajukan ke WR bidang keuangan. Jenis biaya baru tersimpan belum aktif; sakelar Aktif terkunci sampai pembagiannya berlaku. Pengguna tanpa izin `biaya.susun` diarahkan ke BAUK. Daftar jenis biaya mendapat kolom **Pembagian & SK** dan aksi baris "Pembagian & SK"/"Susun pembagian". `JenisBiayaKasir.pembagian` (tipe `PembagianJenisKasir`).
+- `biaya.tsx` mengekspor `IsiKomponenBiaya`, `komponenBiayaAwal`, `galatKomponenBiaya`, `kirimanKomponenBiaya`; `FormAturanBiaya` menerima `bawaan` (kode biaya, nama, tarif awal).
+
 ## 1.63.0 (2026-11-22)
 
 - **Penghubung data untuk pengembang** (`siakad/provider.tsx`): `UnipoProvider` menerima `baseUrl` (proxy di backend Anda, mis. `"/api/siakad"`), `fetcher`, dan `getToken` sehingga aplikasi tidak perlu membuat instans SDK sendiri; `buatSiakadPenghubung()` untuk pemakaian di luar React. Tanpa `getToken`, browser tidak mengirim header Authorization (proxy server yang menempelkan token; client_secret tetap di server). Pasangannya `proxySiakad`/`proxySiakadNode`/`ProxySiakad` di unipo-siakad-sdk 2.2.0.
