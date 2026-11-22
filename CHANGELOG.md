@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.54.0 (belum dirilis)
+
+- **Kelola berkas: tab tambahan aplikasi + buka dari luar** (`siakad/berkas-cepat.tsx`, `scss/components/_kerangka-aplikasi.scss`; tanpa perubahan SIAKAD): `TombolBerkas`/`KerangkaAplikasi berkas` prop baru `tab: TabKelolaBerkas[]` (`value`, `label`, `icon`, `count`, `content`) yang tampil sebagai tab setelah tab bawaan **Berkas** (file manager) di dialog Kelola berkas; isinya dirender hanya saat aktif, di wadah yang dapat digulir, dan tab bersarang di dalamnya otomatis vertikal. `bukaKelolaBerkas({ tab, ruang })` membuka dialog dari luar bilah atas (mis. rute lama yang dialihkan); permintaan sebelum bilah atas terpasang ditunda lalu dijalankan sekali (`dengarKelolaBerkas`). Pengguna tanpa akses berkas pribadi: ikon tetap tersembunyi, tetapi tab tambahan tetap bisa dibuka lewat `bukaKelolaBerkas`. `tabKelolaAktif` memilih tab (tab tak dikenal kembali ke file manager). Dipakai Fakultas untuk tab **Arsip** (arsip unit, verifikasi dokumen dosen/mahasiswa, arsip pribadi). Uji `packages/ui/test/kelola-berkas-tab.test.tsx`.
+
 ## 1.53.0 (2026-11-22)
 
 - 
