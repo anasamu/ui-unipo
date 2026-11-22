@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.57.0 (belum dirilis)
+
+- **Widget KHS dan transkrip lama memakai komponen akademik baru** (`siakad/akademik.tsx`): `KhsMahasiswa` dan `TranskripMahasiswa` (juga tab KHS/Transkrip di `DetailMahasiswa`) kini merender `LembarKhs`/`LembarTranskrip` dengan skala nilai server (`useSkalaNilai` per prodi mahasiswa), legenda, sebaran nilai, versi cetak, dan identitas mahasiswa; tanpa judul ganda (judul dari tab). Props tetap sama. `NilaiHuruf` ditandai usang, ganti dengan `LencanaNilai`. `labelTahunAkademik` pindah ke `siakad/label-tahun.ts` (tetap diekspor dari tempat lama) supaya komponen akademik tidak mengimpor widget lama.
+
 ## 1.56.0 (belum dirilis)
 
 - **Pola platform modern (legacy-scan modern-web-guidance)**: tombol Enter pada isian yang menambah/menerapkan/mencari (`Alokasi` teks, isian label/tag `formulir`, cari di Pengolah dokumen, cari blok di Penyisip, ekstensi di `BatasUnggah`) tidak lagi bereaksi saat Enter dipakai papan ketik bahasa (IME) untuk mengonfirmasi huruf; pembantu baru `lib/ime.ts` `sedangMenyusunIme` (`isComposing` + `keyCode` 229 untuk Safari). Salinan dalam memakai `structuredClone` (landing, aturan BKD, DUPAK, karier, SKP) dan batas waktu pemeriksa status layanan memakai `AbortSignal.timeout`. Temuan `copying-array-methods` (51) belum diubah karena `lib` TypeScript masih ES2022. Uji `packages/ui/test/ime.test.ts`.
