@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.53.1 (belum dirilis)
+
+- **Kunci fitur per periode: pemilik tunggal Pustikom** (`siakad/kunci-fitur.tsx`; keputusan Anas 2026-11-22, menggantikan 2026-11-21): teks komponen tidak lagi menyebut BAAK sebagai pengatur. `hanyaLihat` tetap ada untuk aplikasi pemantau lain; tanpa prop itu tombol atur tampil bila server menjawab `meta.boleh_atur` (izin `kalender.kunci.atur`, kini milik Admin Pustikom lewat migration SIAKAD `2027_01_29_780100_rbac_kunci_fitur_pustikom`).
+
 ## 1.53.0 (2026-11-22)
 
 - 
@@ -36,7 +40,6 @@
 
 ## 1.51.0 (belum dirilis)
 
-- **Kunci fitur per periode: pemilik tunggal Pustikom** (`siakad/kunci-fitur.tsx`; keputusan Anas 2026-11-22, menggantikan 2026-11-21): teks komponen tidak lagi menyebut BAAK sebagai pengatur. `hanyaLihat` tetap ada untuk aplikasi pemantau lain; tanpa prop itu tombol atur tampil bila server menjawab `meta.boleh_atur` (izin `kalender.kunci.atur`, kini milik Admin Pustikom lewat migration SIAKAD `2027_01_29_780100_rbac_kunci_fitur_pustikom`).
 - **Versi disamakan** (`npm run versi -- 1.51.0`): `unipo-ui-tokens` dan paket akar ikut 1.51.0 (sebelumnya 1.50.0), dependensi `unipo-ui` → `unipo-ui-tokens` 1.51.0.
 - **Hapus draf oleh pemiliknya (aturan umum G4)** (`siakad/hapus-draf.tsx` baru, `dupak.tsx`, `skp.tsx`, `bkd-alur.tsx`; butuh SIAKAD fix/hapus-draf: `DELETE /v1/sdm/dupak|skp|bkd/laporan/{id}`, `aksi_boleh`/`bisa.hapus`):
   - `aksiHapusDraf({ apa, nama, ikut, onHapus, sembunyi })` → `Aksi` bahaya berkonfirmasi untuk `MenuAksiBaris`/`BilahAksi`; `TombolHapusDraf` (tombol + `useKonfirmasi`); `keteranganHapusDraf` (kalimat akibat awam: apa yang ikut terhapus, lampiran ke Sampah).
