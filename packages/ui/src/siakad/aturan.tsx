@@ -88,7 +88,7 @@ import {
 import { Stack } from '../components/tata-letak';
 import { DasarPedoman } from './pedoman';
 import { useFakultasReferensi } from './prodi';
-import { DasarSkAturanDaftar, LencanaDasarSk, PenjelasanPengaturValidator, PanelAjukanAturan, PanelLampirSkDasar, ValidatorAturan, WizardTemplatAturan, type DasarSkAturan, type UnitRingkas } from './aturan-sk';
+import { CatatanDiaturPustikom, DasarSkAturanDaftar, LencanaDasarSk, PenjelasanPengaturValidator, PanelAjukanAturan, PanelLampirSkDasar, ValidatorAturan, WizardTemplatAturan, type DasarSkAturan, type UnitRingkas } from './aturan-sk';
 import { KetentuanAkibat, PanelAkibatAturan, kalimatAkibat } from './aturan-akibat';
 import { Tekan } from '../components/tekan';
 
@@ -4375,7 +4375,19 @@ interface PengaturKategori {
  * yang pengaturnya sama dengan kategori tidak diulang; titik dengan pengatur sama dikelompokkan ("Berlaku untuk 4 langkah").
  * Izin tampil dengan nama awam; kode teknis hanya di "Detail teknis". `tautanValidator` = tautan ke halaman Validator aturan.
  */
-export function PengaturAturan({ className, tautanValidator }: { className?: string; tautanValidator?: React.ReactNode }) {
+export function PengaturAturan({
+  className,
+  tautanValidator,
+  hanyaBaca = false,
+  kategori,
+}: {
+  className?: string;
+  tautanValidator?: React.ReactNode;
+  /** Aplikasi unit: hanya melihat (tanpa tombol Atur) dengan baris "Diatur di Pustikom". Bawaan false (Pustikom). */
+  hanyaBaca?: boolean;
+  /** Saring ke kategori aturan milik aplikasi. Kosong = semua kategori. */
+  kategori?: KategoriAturan[];
+}) {
   const q = useSiakadQuery<PengaturKategori[]>(['aturan', 'pengatur'], (s, signal) => s.request<PengaturKategori[]>({ method: 'GET', path: '/v1/aturan/pengatur' }, { signal }));
   const peran = useSiakadQuery<Array<{ kode: string; nama: string }>>(
     ['rbac', 'peran'],
@@ -4413,10 +4425,11 @@ export function PengaturAturan({ className, tautanValidator }: { className?: str
     const t = kalimatIzinPengatur(izin, (k) => namaIzin.get(k));
     return <span className="u-aturan-sub">{juga ? `Juga ${t}.` : `${t.charAt(0).toUpperCase()}${t.slice(1)}.`}</span>;
   };
+  const daftar = kategori?.length ? q.data.filter((k) => kategori.includes(k.kategori)) : q.data;
   return (
     <div className={cn('u-aturan-pengatur', className)}>
-      <PenjelasanPengaturValidator halaman="pengatur" tautan={tautanValidator} />
-      {q.data.map((k) => {
+      {hanyaBaca ? <CatatanDiaturPustikom bagian="pengatur" /> : <PenjelasanPengaturValidator halaman="pengatur" tautan={tautanValidator} />}
+      {daftar.map((k) => {
         const labelKat = LABEL_KATEGORI_ATURAN[k.kategori] ?? k.judul;
         const r = ringkasPengatur(k.pengatur, titikKatalog, labelKat);
         const umumAda = r.umum.peran.length + r.umum.izin.length > 0;
@@ -4429,7 +4442,7 @@ export function PengaturAturan({ className, tautanValidator }: { className?: str
                 <span>{k.judul}</span>
               </div>
               {k.boleh_saya || saya.data?.kategori.find((s) => s.kategori === k.kategori)?.boleh_atur ? <Badge variant="success">Anda boleh mengatur</Badge> : null}
-              {saya.data?.admin && (
+              {saya.data?.admin && !hanyaBaca && (
                 <Button variant="ghost" size="sm" onClick={() => setUbah(k)}>
                   <Pencil /> Atur
                 </Button>
@@ -5295,6 +5308,12 @@ export interface KelolaAturanProps {
    * unit itu (GET /v1/aturan/saya `titik_atur`) juga boleh menambah aturan walau bukan pengatur kategori.
    */
   saringUnit?: boolean;
+  /**
+   * Mode tulis tab tata kelola aturan (Pengatur, Pejabat penyetuju, Validator aturan). Bawaan false: aplikasi unit
+   * MELIHAT ketiganya hanya-baca, tersaring ke kategori miliknya (`kategori`, atau kategori `unit`), dengan baris
+   * "Diatur di Pustikom"; server menolak tulis dari klien selain Pustikom (keputusan Anas 2026-11-22). true hanya Pustikom.
+   */
+  tataKelola?: boolean;
   className?: string;
 }
 
@@ -5496,7 +5515,19 @@ export function PengingatSkAturan({ unit, kategori, href, onBuka, className }: {
  * riwayat), alur persetujuan (menunggu persetujuan saya, telaah SPMI), sampah (admin), pengatur, dan titik penerapan.
  * Hak akses mengikuti GET /v1/aturan/saya.
  */
-export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik dinamis', tampilTitik = false, tautanPejabat, tampilan = 'kartu', fakultas, saringUnit = false, className }: KelolaAturanProps) {
+/** Kategori aturan milik tiap unit aplikasi (saringan tab tata kelola hanya-baca). Unit tanpa baris = semua kategori. */
+export const KATEGORI_UNIT_ATURAN: Partial<Record<string, KategoriAturan[]>> = {
+  baak: ['akademik', 'kelulusan', 'kemahasiswaan'],
+  bauk: ['keuangan'],
+  keuangan: ['keuangan'],
+  sdm: ['kepegawaian'],
+  spmi: ['mutu'],
+  lppm: ['penelitian'],
+  lp2m: ['penelitian'],
+  pustikom: ['akun'],
+};
+
+export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik dinamis', tampilTitik = false, tautanPejabat, tampilan = 'kartu', fakultas, saringUnit = false, tataKelola = false, className }: KelolaAturanProps) {
   const kelompok = tampilan === 'kelompok' && !titik;
   const saya = useAturanSaya();
   const unitSaring = saringUnit && unit ? unit : undefined;
@@ -5524,6 +5555,14 @@ export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik d
       Boolean(unitSaring && saya.data.titik_atur?.some((t) => t.unit === unitSaring && (!kategori || t.kategori === kategori)))
     : false;
   const hitung = (s: StatusAturan) => ringkas.data?.filter((a) => a.status === s).length ?? 0;
+  // Tab tata kelola: Pustikom (tataKelola) menulis; aplikasi unit melihat hanya-baca kategori miliknya.
+  const kategoriMilik = kategori ? [kategori] : unit ? KATEGORI_UNIT_ATURAN[unit] : undefined;
+  const penyetujuTab = {
+    value: 'penyetuju' as const,
+    label: 'Pejabat penyetuju',
+    icon: <BadgeCheck />,
+    content: <PejabatPenyetujuAturan tautanPejabat={tautanPejabat} hanyaBaca={!tataKelola} kategori={kategoriMilik} />,
+  };
   const tanpaSk = ringkas.data?.filter((a) => (a.status === 'draf' || a.status === 'dikembalikan') && !a.jumlah_sk && !a.sk?.nomor).length ?? 0;
   const tombolTambah = bolehTambah ? (
     <div className="u-aturan-modul-tombol">
@@ -5537,13 +5576,18 @@ export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik d
   ) : null;
   return (
     <div className={cn('u-aturan-modul', className)}>
-      <div className="u-aturan-modul-kepala">
-        <div>
-          <h2>{judul}</h2>
-          <p>Syarat, batas waktu, dan batas nilai yang diperiksa SIAKAD di setiap langkah. Aturan buatan unit berlaku setelah ber-SK dan disetujui; aturan bawaan kampus sudah aktif dan tinggal dilampiri SK.</p>
+      {/* judul={null}: halaman aplikasi sudah punya kepala halaman sendiri, jadi judul & keterangan tidak diulang; tombol tetap rata kanan. */}
+      {judul === null ? (
+        tombolTambah && <div className="u-aturan-modul-kepala" data-tanpa-judul="">{tombolTambah}</div>
+      ) : (
+        <div className="u-aturan-modul-kepala">
+          <div>
+            <h2>{judul}</h2>
+            <p>Syarat, batas waktu, dan batas nilai yang diperiksa SIAKAD di setiap langkah. Aturan buatan unit berlaku setelah ber-SK dan disetujui; aturan bawaan kampus sudah aktif dan tinggal dilampiri SK.</p>
+          </div>
+          {tombolTambah}
         </div>
-        {tombolTambah}
-      </div>
+      )}
       {kelompok ? null : <div className="u-aturan-statistik">
         {[
           { label: 'Aktif', nilai: hitung('aktif'), ikon: <Power />, nada: 'success' },
@@ -5626,9 +5670,9 @@ export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik d
             ? [{ value: 'sampah' as const, label: 'Sampah', icon: <Trash2 />, content: <DaftarAturan filter={{ kategori, titik, terhapus: true }} onBuka={(a) => setBuka(a.id)} /> }]
             : []),
           ...(bolehTambah ? [{ value: 'dasar' as const, label: 'SK dasar', icon: <FileBadge />, content: <DasarSkAturanDaftar kategori={kategori} /> }] : []),
-          { value: 'pengatur', label: 'Pengatur', icon: <ShieldCheck />, content: <PengaturAturan /> },
-          ...(saya.data?.admin ? [{ value: 'penyetuju' as const, label: 'Pejabat penyetuju', icon: <BadgeCheck />, content: <PejabatPenyetujuAturan tautanPejabat={tautanPejabat} /> }] : []),
-          ...(saya.data?.boleh_validator_lihat ? [{ value: 'validator' as const, label: 'Validator aturan', icon: <GitBranch />, content: <ValidatorAturan /> }] : []),
+          { value: 'pengatur' as const, label: 'Pengatur', icon: <ShieldCheck />, content: <PengaturAturan hanyaBaca={!tataKelola} kategori={kategoriMilik} /> },
+          ...(tataKelola ? (saya.data?.admin ? [penyetujuTab] : []) : [penyetujuTab]),
+          ...(saya.data?.boleh_validator_lihat ? [{ value: 'validator' as const, label: 'Validator aturan', icon: <GitBranch />, content: <ValidatorAturan hanyaBaca={!tataKelola} kategori={kategoriMilik} /> }] : []),
           ...(tampilTitik && saya.data?.admin ? [{ value: 'titik' as const, label: 'Titik penerapan', icon: <Waypoints />, content: <KelolaTitikAturan /> }] : []),
         ]}
       />

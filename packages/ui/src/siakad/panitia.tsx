@@ -1285,11 +1285,14 @@ export function KepanitiaanUnit({ unitId, jenisUnit, judul = 'Kepanitiaan', desk
     return <Empty icon={<UsersRound />} title="Belum punya akses kepanitiaan" description="Kepanitiaan unit dikelola pimpinan unit atau pengelola panitia yang ditunjuk Pustikom." />;
   return (
     <div className={cn('u-panitia-kelola', className)}>
-      <div className="u-panitia-kepala">
-        <div>
-          <h2>{judul}</h2>
-          <p>{deskripsi ?? 'Panitia yang dibentuk berdasarkan SK beserta anggotanya. Hak akses tiap jabatan diajukan ke Pustikom dan berakhir bersama SK.'}</p>
-        </div>
+      {/* judul={null}: kepala halaman/tab aplikasi sudah memuat judul & keterangan; hanya tombol yang tampil (rata kanan). */}
+      {(judul !== null || boleh?.kelola) && <div className="u-panitia-kepala" data-tanpa-judul={judul === null ? '' : undefined}>
+        {judul !== null && (
+          <div>
+            <h2>{judul}</h2>
+            <p>{deskripsi ?? 'Panitia yang dibentuk berdasarkan SK beserta anggotanya. Hak akses tiap jabatan diajukan ke Pustikom dan berakhir bersama SK.'}</p>
+          </div>
+        )}
         {boleh?.kelola && (
           <FormPanitia
             unitId={unitId}
@@ -1302,7 +1305,7 @@ export function KepanitiaanUnit({ unitId, jenisUnit, judul = 'Kepanitiaan', desk
             }
           />
         )}
-      </div>
+      </div>}
       <DataTable
         columns={kolom}
         rows={daftar.data}
@@ -1504,12 +1507,14 @@ export function PersetujuanAksesPanitia({ judul = 'Hak akses panitia', deskripsi
   if (hak.data && !boleh) return <Empty icon={<ShieldCheck />} title="Khusus Pustikom" description="Persetujuan hak akses panitia memerlukan izin panitia.setujui." />;
   return (
     <div className={cn('u-panitia-kelola', className)}>
-      <div className="u-panitia-kepala">
-        <div>
-          <h2>{judul}</h2>
-          <p>{deskripsi ?? 'Peran yang diajukan unit untuk anggota panitia ber-SK. Setujui setelah memeriksa SK dan anggotanya; peran berakhir otomatis bersama masa SK.'}</p>
+      {judul !== null && (
+        <div className="u-panitia-kepala">
+          <div>
+            <h2>{judul}</h2>
+            <p>{deskripsi ?? 'Peran yang diajukan unit untuk anggota panitia ber-SK. Setujui setelah memeriksa SK dan anggotanya; peran berakhir otomatis bersama masa SK.'}</p>
+          </div>
         </div>
-      </div>
+      )}
       <StatistikRingkas items={items} loading={ring.loading} />
       <DataTable
         columns={kolom}
@@ -1816,11 +1821,13 @@ export function PengaturanJenisPanitia({ judul = 'Jenis panitia', className }: {
   if (q.error) return <GalatApi error={q.error} onRetry={q.refetch} />;
   return (
     <div className={cn('u-panitia-kelola', className)}>
-      <div className="u-panitia-kepala">
-        <div>
-          <h2>{judul}</h2>
-          <p>Jenis panitia yang bisa dibentuk unit, jabatan di dalamnya, dan peran yang diajukan untuk tiap jabatan. Aplikasi dihitung dari izin akses peran.</p>
-        </div>
+      {(judul !== null || boleh) && <div className="u-panitia-kepala" data-tanpa-judul={judul === null ? '' : undefined}>
+        {judul !== null && (
+          <div>
+            <h2>{judul}</h2>
+            <p>Jenis panitia yang bisa dibentuk unit, jabatan di dalamnya, dan peran yang diajukan untuk tiap jabatan. Aplikasi dihitung dari izin akses peran.</p>
+          </div>
+        )}
         {boleh && (
           <FormJenisPanitia
             trigger={
@@ -1830,7 +1837,7 @@ export function PengaturanJenisPanitia({ judul = 'Jenis panitia', className }: {
             }
           />
         )}
-      </div>
+      </div>}
       {!q.data ? (
         <Skeleton style={{ height: 240 }} />
       ) : (

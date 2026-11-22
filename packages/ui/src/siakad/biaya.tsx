@@ -1435,7 +1435,9 @@ export interface KelolaAturanBiayaProps {
   /** Batasi ke aturan yang menyangkut unit ini (cakupan, induk/turunan, atau penerima bagian). */
   unitId?: number | null;
   /** Judul halaman. */
+  /** Judul bagian. `null` = tidak dirender (kepala halaman/tab aplikasi sudah memuatnya); tombol aksi tetap tampil. */
   judul?: React.ReactNode;
+  /** Keterangan bagian. `null` = tidak dirender. */
   deskripsi?: React.ReactNode;
   /** Batasi ke sumber tagihan, mis. "pmb" untuk aplikasi PMB. */
   sumber?: SumberBiaya;
@@ -1480,11 +1482,14 @@ export function KelolaAturanBiaya({ unitId, sumber, judul = 'Aturan biaya', desk
   ];
   return (
     <div className={cn('u-biaya-kelola', className)}>
-      <div className="u-biaya-kelola-kepala">
-        <div>
-          <h2>{judul}</h2>
-          <p>{deskripsi ?? 'Aturan biaya yang ditagih ke mahasiswa dan pendaftar, beserta pembagiannya ke yayasan, rektorat, fakultas, prodi, dan unit lain. Setiap aturan berdasar SK.'}</p>
-        </div>
+      {/* judul={null}: kepala halaman/tab aplikasi sudah memuat judul & keterangan; hanya tombol yang tampil (rata kanan). */}
+      {(judul !== null || b?.susun) && <div className="u-biaya-kelola-kepala" data-tanpa-judul={judul === null ? '' : undefined}>
+        {judul !== null && (
+          <div>
+            <h2>{judul}</h2>
+            {deskripsi !== null && <p>{deskripsi ?? 'Aturan biaya yang ditagih ke mahasiswa dan pendaftar, beserta pembagiannya ke yayasan, rektorat, fakultas, prodi, dan unit lain. Setiap aturan berdasar SK.'}</p>}
+          </div>
+        )}
         {b?.susun && (
           <FormAturanBiaya
             unitBawaan={unitId}
@@ -1496,7 +1501,7 @@ export function KelolaAturanBiaya({ unitId, sumber, judul = 'Aturan biaya', desk
             }
           />
         )}
-      </div>
+      </div>}
       {b?.setujui && (menunggu.meta?.total ?? 0) > 0 && tab !== 'diajukan' && (
         <Alert
           variant="warning"

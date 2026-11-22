@@ -1,5 +1,16 @@
 # Catatan perubahan
 
+## 1.53.0 (2026-11-22)
+
+- 
+
+## 1.53.0 (belum dirilis)
+
+- **Tata kelola aturan hanya di Pustikom + judul bagian tidak ganda** (`siakad/aturan.tsx`, `aturan-sk.tsx`, `aturan-keputusan.tsx`, `biaya.tsx`, `aturan-fakultas.tsx`; butuh SIAKAD branch fix/aturan-tatakelola untuk penolakan server `403 diatur_di_pustikom` dan tautan `pengatur`/`penyetuju` di `GET /v1/aturan/kebijakan/jenis`; keputusan Anas 2026-11-22):
+  - `PengaturAturan`, `PejabatPenyetujuAturan`, `ValidatorAturan`: prop baru `hanyaBaca` (tanpa tombol Atur/Ubah/Tambah/Hapus, dengan satu baris `CatatanDiaturPustikom` "Diatur di Pustikom » … · Buka di Pustikom") dan `kategori` (saring ke kategori aturan milik aplikasi; rantai validator "semua jenis aturan" tetap tampil).
+  - `KelolaAturan`: tab Pengatur, Pejabat penyetuju, dan Validator aturan kini tampil di aplikasi unit **hanya-baca**, tersaring ke `kategori` (atau kategori `unit` lewat `KATEGORI_UNIT_ATURAN`). Mode tulis hanya `tataKelola` (Pustikom).
+  - **Aturan judul bagian**: halaman aplikasi sudah punya kepala halaman (judul + keterangan); komponen yang menjadi isi halaman/tab/sub tab tidak boleh mengulangnya. `KelolaAturan judul={null}`, `KelolaAturanBiaya judul={null}` (atau `deskripsi={null}`), `KelolaAturanFakultas judul={null}` tidak merender judul/keterangan bagian; tombol aksinya tetap tampil rata kanan. Pakai `judul={null}` bila judul/keterangan bagian sama atau hampir sama dengan kepala halaman, label tab, atau sub tab di atasnya.
+
 ## 1.52.0 (belum dirilis)
 
 - **Peringatan beranda berlingkup** (`siakad/peringatan-beranda.tsx` baru, `scss/components/_peringatan-beranda.scss`): `PeringatanBeranda` menggabungkan peringatan sejenis dalam satu kartu ringkas ("Akreditasi habis · 2 prodi"), urut paling mendesak (tingkat, lalu tenggat terdekat), maks 3 jenis + "Lihat semua" (panel samping atau `hrefSemua`). Di layar sempit kartu menjadi slide scroll-snap: tiap kartu `role=group` berlabel posisi ("1 dari 3"), tombol sebelum/berikut menggeser ke kartu tetangga dari posisi gulir sebenarnya, wilayah status mengumumkan kartu setelah geser berhenti (`scrollend`, cadangan `scroll` tertunda), fokus pindah ke tombol lawan saat tombol menjadi nonaktif, `overscroll-behavior-x: contain`, gerak halus hanya tanpa `prefers-reduced-motion`. Lingkup data wajib disaring server. Uji `packages/ui/test/peringatan-beranda.test.tsx`.
