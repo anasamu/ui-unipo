@@ -80,6 +80,20 @@ $dt-wadah: '.u-card, .u-sheet, .u-dialog, .u-panel, .u-panel-form, [class~="bord
   box-shadow: var(--u-elevation-card);
   @include dt-isi-berbingkai;
 }
+// Di dalam kartu atau pembungkus berbingkai (mis. CardContent, atau div ber-kelas `border` di aplikasi): wadahnya sudah
+// menjadi bingkai, jadi tabel tidak menggambar bingkai kedua. Ini menghapus bingkai ganda di halaman lama tanpa
+// perlu mengubah halamannya.
+:is(.u-card, [class~="border"]) .u-data-table:not([data-cards]) > .u-table-wrap {
+  border: 0;
+  border-radius: 0;
+}
+// Anak langsung pembungkus ber-kelas `border` (pola lama aplikasi): pembungkus itulah bingkainya; bilah alat dan
+// kaki halaman tetap diberi jarak dalam supaya tidak menempel tepi.
+[class~="border"] > .u-data-table:not([data-cards]) {
+  --u-dt-inset-x: var(--u-space-4);
+  --u-dt-inset-y: var(--u-space-3);
+  @include dt-isi-berbingkai;
+}
 // Langsung di dalam <Card> (tanpa CardContent): kartu itulah bingkainya; jarak dalam sejajar dengan kepala kartu.
 .u-card > .u-data-table[data-framed] {
   --u-dt-inset-x: var(--u-space-5);

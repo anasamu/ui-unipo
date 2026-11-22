@@ -45,6 +45,9 @@ describe('DataTable: bingkai dan bilah alat sebaris (jarak tabel)', () => {
     expect(scss).toMatch(/@mixin dt-isi-berbingkai\s*\{[^]*?> \.u-dt-toolbar\s*\{\s*padding: var\(--u-dt-inset-y\) var\(--u-dt-inset-x\)/);
     // Bingkai luar hanya untuk tabel yang berdiri sendiri: di dalam Card/Sheet/Dialog/panel/pembungkus `border` tidak dobel.
     expect(scss).toMatch(/\.u-data-table\[data-framed\]:not\(\[data-cards\]\):not\(:is\(#\{\$dt-wadah\}\) \*\)/);
+    // Pembungkus lama (Card/kelas `border`) menjadi bingkai: tabel di dalamnya tanpa bingkai kedua.
+    expect(scss).toMatch(/:is\(\.u-card, \[class~="border"\]\) \.u-data-table:not\(\[data-cards\]\) > \.u-table-wrap \{\s*border: 0;/);
+    expect(scss).toMatch(/\[class~="border"\] > \.u-data-table:not\(\[data-cards\]\) \{[^}]*@include dt-isi-berbingkai/);
     expect(scss).toMatch(/\$dt-wadah: '\.u-card, \.u-sheet, \.u-dialog, \.u-panel/);
     expect(scss).toMatch(/> \.u-dt-footer\s*\{\s*padding: var\(--u-dt-inset-y\) var\(--u-dt-inset-x\)/);
     expect(scss).toMatch(/--u-dt-inset-x: var\(--u-space-4\)/);
