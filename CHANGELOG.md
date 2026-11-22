@@ -1,6 +1,10 @@
 # Catatan perubahan
 
-## 1.52.1 (belum dirilis)
+## 1.53.0 (2026-11-22)
+
+- 
+
+## 1.53.0 (belum dirilis)
 
 - **Tata kelola aturan hanya di Pustikom + judul bagian tidak ganda** (`siakad/aturan.tsx`, `aturan-sk.tsx`, `aturan-keputusan.tsx`, `biaya.tsx`, `aturan-fakultas.tsx`; butuh SIAKAD branch fix/aturan-tatakelola untuk penolakan server `403 diatur_di_pustikom` dan tautan `pengatur`/`penyetuju` di `GET /v1/aturan/kebijakan/jenis`; keputusan Anas 2026-11-22):
   - `PengaturAturan`, `PejabatPenyetujuAturan`, `ValidatorAturan`: prop baru `hanyaBaca` (tanpa tombol Atur/Ubah/Tambah/Hapus, dengan satu baris `CatatanDiaturPustikom` "Diatur di Pustikom » … · Buka di Pustikom") dan `kategori` (saring ke kategori aturan milik aplikasi; rantai validator "semua jenis aturan" tetap tampil).
