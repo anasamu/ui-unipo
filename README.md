@@ -63,7 +63,7 @@ Widget kecil per fitur yang mengambil data sendiri lewat `unipo-siakad-sdk` (bun
 
 ## Fitur API (`unipo-ui/katalog`)
 
-Komponen untuk setiap fitur API SIAKAD (40 modul, 703 sumber data), dibuat dari OpenAPI dengan aturan validasi, alur status, dan scope yang sama dengan backend.
+Komponen untuk setiap fitur API SIAKAD (65 modul, 1.190 sumber data), dibuat dari OpenAPI dengan aturan validasi, alur status, dan scope yang sama dengan backend.
 
 ```tsx
 import { KelolaSumber, HalamanModul, WizardSumber, KatalogProvider } from 'unipo-ui/katalog';
