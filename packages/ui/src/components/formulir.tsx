@@ -11,6 +11,7 @@ import { Input, type ControlSize } from './forms';
 import { KodeLaporan } from './galat';
 import { ConfirmDialog, Dialog, Sheet } from './overlays';
 import { Combobox, OptionContent, Select, labelBuatPilihan, useBuatPilihan, type BuatPilihan, type SelectOption } from './select';
+import { sedangMenyusunIme } from '../lib/ime';
 
 /**
  * Bahan formulir tambah/ubah per fitur: pilihan yang memilih bentuknya sendiri (tombol, daftar, atau cari),
@@ -551,6 +552,7 @@ export function IsianDaftar({
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
+            if (sedangMenyusunIme(e)) return;
             tambah(draf);
           } else if (e.key === 'Backspace' && !draf && value.length) onValueChange(value.slice(0, -1));
         }}

@@ -684,7 +684,7 @@ export function blokBaru(tipe: TipeBlok, isi?: IsiBlok): BlokLanding {
 
 /** Salinan blok dengan id baru (untuk duplikat dan sisip templat). */
 export function salinBlok(b: BlokLanding): BlokLanding {
-  return { ...JSON.parse(JSON.stringify(b)), id: idBlok() } as BlokLanding;
+  return { ...structuredClone(b), id: idBlok() } as BlokLanding;
 }
 
 const objek = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {});

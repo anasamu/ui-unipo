@@ -501,7 +501,7 @@ function IsianJenjang({ j, onChange, jenisLuaran }: { j: JenjangKarier; onChange
 function PanelUbahAturanKarier({ aturan: a, onOpenChange }: { aturan: AturanKarierDetail; onOpenChange: (o: boolean) => void }) {
   const aksi = useAksiKarier();
   const [step, setStep] = React.useState(0);
-  const [isi, setIsi] = React.useState<IsiAturanKarier>(() => JSON.parse(JSON.stringify(a.isi)) as IsiAturanKarier);
+  const [isi, setIsi] = React.useState<IsiAturanKarier>(() => structuredClone(a.isi) as IsiAturanKarier);
   const [id, setId] = React.useState({ nama: a.nama, dasar_hukum: a.dasar_hukum ?? '', berlaku_tanggal: a.berlaku_tanggal ?? '', catatan_perubahan: a.catatan_perubahan ?? '', sk_id: a.sk?.id ?? (null as string | null) });
   const ubahJenjang = (i: number, x: Partial<JenjangKarier>) => setIsi({ ...isi, jenjang: isi.jenjang.map((j, n) => (n === i ? { ...j, ...x } : j)) });
   return (
