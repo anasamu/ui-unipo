@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.58.0 (belum dirilis)
+
+- **Periode dipilih dari daftar, bukan diketik** (`siakad/aturan-akibat.tsx`, `aturan-sk.tsx`, `biaya.tsx`, `kurikulum-aturan.tsx`): periode simulasi aturan berakibat, isian templat kasus bertipe periode, angkatan di Form aturan biaya, dan periode di aturan kurikulum memakai `PilihTahunAkademik` (nama periode seperti "Ganjil 2026/2027"), bukan kotak isian 5 angka. Pesan validasi menjadi "pilih periode dari daftar".
+
 ## 1.57.0 (belum dirilis)
 
 - **Widget KHS dan transkrip lama memakai komponen akademik baru** (`siakad/akademik.tsx`): `KhsMahasiswa` dan `TranskripMahasiswa` (juga tab KHS/Transkrip di `DetailMahasiswa`) kini merender `LembarKhs`/`LembarTranskrip` dengan skala nilai server (`useSkalaNilai` per prodi mahasiswa), legenda, sebaran nilai, versi cetak, dan identitas mahasiswa; tanpa judul ganda (judul dari tab). Props tetap sama. `NilaiHuruf` ditandai usang, ganti dengan `LencanaNilai`. `labelTahunAkademik` pindah ke `siakad/label-tahun.ts` (tetap diekspor dari tempat lama) supaya komponen akademik tidak mengimpor widget lama.
