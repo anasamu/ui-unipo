@@ -474,6 +474,27 @@
 .u-tabs-pilih {
   width: 100%;
 }
+// Panel samping (Sheet): deret tab yang tidak muat disembunyikan (tetap diukur lebar alaminya) dan diganti Select.
+.u-tabs[data-panel] {
+  position: relative;
+}
+.u-tabs-list[data-tak-muat] {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  width: max-content;
+  max-width: none;
+  overflow: visible;
+  visibility: hidden;
+  pointer-events: none;
+}
+.u-tabs-pilih-panel {
+  width: 100%;
+}
+.u-tabs-pilih-jumlah {
+  color: var(--u-muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
 @container (min-width: 40rem) {
   .u-tabs-wadah > .u-tabs {
     grid-template-columns: minmax(11rem, 15rem) minmax(0, 1fr);
