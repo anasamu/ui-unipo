@@ -21,6 +21,7 @@ import type { Baris, ModulIndeks, Operasi } from './tipe';
 import { Field } from '../components/forms';
 import { GridForm } from '../components/formulir';
 import { DataTable } from '../components/data-table';
+import { Tekan } from '../components/tekan';
 
 // ================================================================ Menu
 export interface MenuKatalogOpsi {
@@ -73,7 +74,7 @@ export function DaftarModul({ grup, onPilih, href, className }: DaftarModulProps
           <div className="u-daftar-modul-kisi">
             {modul.map((m, i) => (
               <Animasi key={m.key} jenis="masuk" tunda={i} pemicu="terlihat">
-                <Card interactive className="u-kartu-modul" render={href ? <a href={href(m.key)} /> : <button type="button" onClick={() => onPilih?.(m)} />}>
+                <Card interactive className="u-kartu-modul" render={href ? <a href={href(m.key)} /> : <Tekan onClick={() => onPilih?.(m)} />}>
                   <IkonKotak nada={ADEGAN[m.key]?.nada ?? ADEGAN[m.group]?.nada} ukuran="lg">
                     <IkonKatalog nama={m.icon} />
                   </IkonKotak>
@@ -161,10 +162,10 @@ export function HalamanModul({ modul: key, sumber: sumberProp, onSumberChange, o
               <ul>
                 {items.map((s) => (
                   <li key={s.id}>
-                    <button type="button" aria-current={s.id === pertama ? 'page' : undefined} onClick={() => pilih(s.id)}>
+                    <Tekan aria-current={s.id === pertama ? 'page' : undefined} onClick={() => pilih(s.id)}>
                       {s.op ? <Workflow aria-hidden /> : null}
                       {s.title}
-                    </button>
+                    </Tekan>
                   </li>
                 ))}
               </ul>

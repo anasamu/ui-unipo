@@ -12,6 +12,7 @@ import { GAYA_JENIS_BAGAN } from '../components/bagan-organisasi';
 import { susunPohon, type NodePohon } from '../components/pohon';
 import { useSiakadQuery } from './provider';
 import { namaRapi } from './prodi';
+import { Tekan } from '../components/tekan';
 
 // ================================================================ Pemilih unit organisasi (induk_unit) berbentuk pohon
 
@@ -692,8 +693,7 @@ export function PilihUnit(props: PilihUnitProps) {
       <BasePopover.Root open={open} onOpenChange={(o) => bukaPopup(o)}>
         <BasePopover.Trigger
           render={
-            <button
-              type="button"
+            <Tekan
               id={id}
               className="u-select-trigger u-pilih-unit-pemicu"
               data-size={size}
@@ -721,9 +721,9 @@ export function PilihUnit(props: PilihUnitProps) {
           </span>
         </BasePopover.Trigger>
         {bisaKosongkan && (
-          <button type="button" className="u-pilih-unit-hapus" aria-label={banyak ? 'Kosongkan semua unit' : 'Kosongkan unit'} onClick={() => kirim([])}>
+          <Tekan className="u-pilih-unit-hapus" aria-label={banyak ? 'Kosongkan semua unit' : 'Kosongkan unit'} onClick={() => kirim([])}>
             <X />
-          </button>
+          </Tekan>
         )}
         <BasePopover.Portal>
           <BasePopover.Positioner className="u-popup-positioner" side="bottom" align="start" sideOffset={6} collisionPadding={12} collisionAvoidance={{ side: 'flip', align: 'shift', fallbackAxisSide: 'none' }} anchor={pemicuRef}>
@@ -757,15 +757,14 @@ export function PilihUnit(props: PilihUnitProps) {
                   {banyak && nilai.length > 0 && ` · ${nilai.length} dipilih`}
                 </span>
                 {!k && adaCabang && (
-                  <button
-                    type="button"
+                  <Tekan
                     className="u-pilih-unit-teks-tombol"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setTerbuka(semuaTerbuka ? new Set() : new Set(nodes.filter((n) => n.childCount).map((n) => n.key)))}
                   >
                     {semuaTerbuka ? <ChevronsDownUp aria-hidden /> : <ChevronsUpDown aria-hidden />}
                     {semuaTerbuka ? 'Tutup semua' : 'Buka semua'}
-                  </button>
+                  </Tekan>
                 )}
               </div>
               <div ref={daftarRef} id={listId} role="tree" aria-label="Unit organisasi" aria-multiselectable={banyak || undefined} className="u-pilih-unit-daftar">
@@ -776,9 +775,9 @@ export function PilihUnit(props: PilihUnitProps) {
                 ) : !sumber && muat.error ? (
                   <div className="u-pilih-unit-status">
                     <span>Daftar unit tidak bisa dimuat.</span>
-                    <button type="button" className="u-pilih-unit-teks-tombol" onClick={() => muat.refetch()}>
+                    <Tekan className="u-pilih-unit-teks-tombol" onClick={() => muat.refetch()}>
                       <RotateCw aria-hidden /> Coba lagi
-                    </button>
+                    </Tekan>
                   </div>
                 ) : !nodes.length ? (
                   <div className="u-pilih-unit-status">{teksKosong ?? 'Belum ada unit organisasi yang bisa dipilih.'}</div>
@@ -883,13 +882,13 @@ export function PilihUnit(props: PilihUnitProps) {
                   {banyak && (
                     <span className="u-pilih-unit-kaki-aksi">
                       {nilai.length > 0 && (
-                        <button type="button" className="u-pilih-unit-teks-tombol" onClick={() => kirim([])}>
+                        <Tekan className="u-pilih-unit-teks-tombol" onClick={() => kirim([])}>
                           Kosongkan
-                        </button>
+                        </Tekan>
                       )}
-                      <button type="button" className="u-pilih-unit-selesai" onClick={() => setOpen(false)}>
+                      <Tekan className="u-pilih-unit-selesai" onClick={() => setOpen(false)}>
                         Selesai
-                      </button>
+                      </Tekan>
                     </span>
                   )}
                 </div>

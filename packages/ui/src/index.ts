@@ -20,6 +20,7 @@ export {
 export * from './lib/tautan';
 export * from './lib/tingkat-tab';
 export * from './components/actions';
+export * from './components/tekan';
 export * from './components/forms';
 export * from './components/select';
 export * from './components/overlays';

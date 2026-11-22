@@ -8,6 +8,7 @@ import { ConfirmDialog, useToast } from '../components/overlays';
 import { KodeQr, PembuatGayaQr, gabungGayaQr, normalGayaQr, type GayaQr, type GayaQrMasukan } from '../components/kode-qr';
 import { GalatApi } from './galat';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { Tekan } from '../components/tekan';
 
 export interface GayaQrEfektif {
   kode: string;
@@ -150,14 +151,14 @@ export function KelolaGayaQr({ bagian, kode, contoh = 'https://siakad.unipo.ac.i
         <ul>
           {daftar.map((g) => (
             <li key={g.id}>
-              <button type="button" aria-pressed={pilih !== 'baru' && pilih?.id === g.id} onClick={() => buka(g)}>
+              <Tekan terpilih={pilih !== 'baru' && pilih?.id === g.id} onClick={() => buka(g)}>
                 <KodeQr nilai="UNIPO" gaya={{ ...g.gaya, logo: null, bingkai: null }} ukuran={40} aria-hidden />
                 <span>
                   <strong>{g.nama}</strong>
                   <small>{g.kode} · {g.bagian_nama ?? 'Kampus'}</small>
                 </span>
                 {!g.aktif && <Badge variant="neutral">nonaktif</Badge>}
-              </button>
+              </Tekan>
             </li>
           ))}
         </ul>

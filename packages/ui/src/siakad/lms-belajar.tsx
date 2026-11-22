@@ -64,6 +64,7 @@ import { KalenderAkademik } from './kalender';
 import type { CalendarEvent } from '../components/schedule';
 import { PenandaKurikulum, SiapkanKelasDariRps } from './kurikulum-aturan';
 import { TombolPilihBerkas } from '../components/pilih-berkas-lokal';
+import { Tekan } from '../components/tekan';
 
 /*
  * Komponen belajar LMS (/v1/lms) untuk mahasiswa e-learning: isi kelas per pertemuan, materi (bacaan, berkas, video,
@@ -3383,7 +3384,7 @@ export function DaftarNotifikasiLms({
       <ul>
         {data.map((x) => (
           <li key={x.id}>
-            <a
+            <Tekan
               href={ruteDariTautanLms(x.tautan, x.kelas_id, rute) ?? '#'}
               onClick={(e) => {
                 e.preventDefault();
@@ -3399,7 +3400,7 @@ export function DaftarNotifikasiLms({
                 {x.isi && <small className="u-lmsb-dua-baris">{teksPolosLms(x.isi)}</small>}
                 {x.created_at && <small>{relatif(x.created_at)}</small>}
               </span>
-            </a>
+            </Tekan>
           </li>
         ))}
       </ul>

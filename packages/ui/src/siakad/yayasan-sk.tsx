@@ -15,6 +15,7 @@ import { PilihSK } from './isian-sk';
 import { lupakanFotoBagan, useFotoApi } from './foto-bagan';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { usePilihBerkas } from '../components/pilih-berkas-lokal';
+import { Tekan } from '../components/tekan';
 
 /*
  * Profil Yayasan / Badan Penyelenggara dan kewenangan penerbitan SK (SIAKAD /v1/sk/yayasan, /v1/sk/kewenangan,
@@ -434,7 +435,7 @@ export function DaftarPengurusYayasan({ pengurus, boleh }: { pengurus: PengurusY
           <ul className="u-yys-kartu">
             {k.isi.map((p) => (
               <li key={p.id} data-nonaktif={p.aktif === false ? '' : undefined}>
-                <button type="button" onClick={() => boleh && setPanel(p)} disabled={!boleh} aria-label={`Ubah ${p.nama_lengkap ?? p.nama}`}>
+                <Tekan onClick={() => boleh && setPanel(p)} disabled={!boleh} aria-label={`Ubah ${p.nama_lengkap ?? p.nama}`}>
                   <FotoPengurus p={p} />
                   <span>
                     <b>{p.nama_lengkap ?? p.nama}</b>
@@ -442,7 +443,7 @@ export function DaftarPengurusYayasan({ pengurus, boleh }: { pengurus: PengurusY
                     <small>{p.mulai ? formatDate(p.mulai) : '…'} – {p.selesai ? formatDate(p.selesai) : 'sekarang'}</small>
                     {p.aktif === false && <Badge variant="neutral">Tidak menjabat</Badge>}
                   </span>
-                </button>
+                </Tekan>
               </li>
             ))}
           </ul>

@@ -22,6 +22,7 @@ import { Select } from './select';
 import { ConfirmDialog, Menu, Popover, Tooltip, type MenuEntry } from './overlays';
 import { Empty, Pagination, SortButton } from './display';
 import { SelPohon, TombolPohon, susunPohon, usePohon, type NodePohon } from './pohon';
+import { propsKlikWadah } from './tekan';
 
 // ================================================================ Tipe
 export interface DataColumn<T> {
@@ -116,6 +117,13 @@ export interface DataTableProps<T> {
    * `false` = tinggi bebas (tabel kecil di panel/cetak).
    */
   stickyHeader?: boolean;
+  /**
+   * Bingkai (bawaan true): bilah alat (saringan + kerapatan, Kolom, CSV), tabel, dan kaki halaman berada dalam satu
+   * bingkai kartu; bilah alat dan kaki halaman diberi jarak dalam token sehingga tidak menempel tepi atau terpotong
+   * sudut. Jangan bungkus DataTable dengan div berbingkai lagi. Di dalam `<Card>` langsung, kartu itulah bingkainya.
+   * `false` = tanpa bingkai luar (hanya tabelnya yang berbingkai), mis. tabel kecil di panel yang sudah berbingkai.
+   */
+  framed?: boolean;
   /** Tampilan saat tidak ada data sama sekali. */
   empty?: { icon?: React.ReactNode; title: React.ReactNode; description?: React.ReactNode; action?: React.ReactNode };
   /** Tampilan saat saringan/pencarian tidak menemukan apa pun. Isi `filtered` agar dipakai. */
@@ -275,6 +283,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     exportAll,
     exportLimit = BATAS_EKSPOR,
     stickyHeader = true,
+    framed = true,
     empty,
     emptyFiltered,
     filtered,
@@ -289,6 +298,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     gridMin,
     tree,
   } = props;
+  const idTabel = React.useId();
 
   // ---- urutan
   const [innerSort, setInnerSort] = React.useState<SortState>(defaultSort);
@@ -610,18 +620,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                 className="u-dt-grid-item"
                 data-selected={dataFlag(selected.includes(k))}
                 data-clickable={dataFlag(Boolean(onRowClick))}
-                tabIndex={onRowClick ? 0 : undefined}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
-                onKeyDown={
-                  onRowClick
-                    ? (e) => {
-                        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
-                          e.preventDefault();
-                          onRowClick(row);
-                        }
-                      }
-                    : undefined
-                }
+                {...propsKlikWadah(onRowClick && (() => onRowClick(row)))}
               >
                 {grid(row, i)}
                 {(selectable || rowActions) && (
@@ -676,7 +675,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                 className="u-dt-card"
                 data-selected={dataFlag(selected.includes(k))}
                 data-clickable={dataFlag(Boolean(onRowClick))}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                {...propsKlikWadah(onRowClick && (() => onRowClick(row)))}
               >
                 <div className="u-dt-card-head">
                   {selectable && (
@@ -714,9 +713,17 @@ export function DataTable<T>(props: DataTableProps<T>) {
           }))}
     </div>
   ) : (
-    <div className="u-table-wrap u-dt-scroll" data-sticky={dataFlag(stickyHeader && !maxHeight)} style={maxHeight ? { maxHeight, overflowY: 'auto' } : undefined}>
+    // Wadah gulir = region bernama yang bisa difokus, supaya tabel lebar bisa digeser dengan papan ketik.
+    <div
+      className="u-table-wrap u-dt-scroll"
+      role="region"
+      tabIndex={0}
+      {...(caption ? { 'aria-labelledby': `${idTabel}-judul` } : { 'aria-label': 'Tabel data' })}
+      data-sticky={dataFlag(stickyHeader && !maxHeight)}
+      style={maxHeight ? { maxHeight, overflowY: 'auto' } : undefined}
+    >
       <table className="u-table" role={tree ? 'treegrid' : undefined} data-tree={dataFlag(Boolean(tree))} data-density={density} data-striped={dataFlag(striped)} aria-busy={loading || undefined}>
-        {caption && <caption className="u-sr-only">{caption}</caption>}
+        {caption && <caption id={`${idTabel}-judul`} className="u-sr-only">{caption}</caption>}
         <thead>
           <tr>
             {selectable && (
@@ -775,7 +782,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                     key={k}
                     data-selected={dataFlag(sel)}
                     data-clickable={dataFlag(Boolean(onRowClick))}
-                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    {...propsKlikWadah(onRowClick && (() => onRowClick(row)))}
                     aria-level={tree ? (nodeOf.get(k)?.depth ?? 0) + 1 : undefined}
                     data-tree-depth={tree ? (nodeOf.get(k)?.depth ?? 0) : undefined}
                   >
@@ -817,7 +824,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
 
   const showFooter = pagination && !firstLoad && !hasError && total > 0;
   return (
-    <div className={cn('u-data-table', className)} data-loading={dataFlag(loading)} data-cards={dataFlag(cards)}>
+    <div className={cn('u-data-table', className)} data-loading={dataFlag(loading)} data-cards={dataFlag(cards)} data-framed={dataFlag(framed)}>
       {(toolbar || columnToggle || exportCsv || actions || densityToggle) && (
         <div className="u-dt-toolbar">
           <div className="u-dt-toolbar-start">{toolbar}</div>

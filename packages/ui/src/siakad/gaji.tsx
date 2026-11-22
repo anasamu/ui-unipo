@@ -12,6 +12,7 @@ import { GalatApi } from './galat';
 import { KodeQrSiakad } from './qr';
 import { useSiakadQuery } from './provider';
 import { SegmentedControl } from '../components/forms';
+import { Tekan } from '../components/tekan';
 
 /*
  * Payroll gaji dosen dan tendik (/v1/gaji). Hak (gaji pokok, tunjangan, honor) ditetapkan SDM berdasarkan SK;
@@ -759,7 +760,7 @@ export function DaftarSlipSaya({ tautanVerifikasi, onPilih, logo, className }: D
             <ul className="u-gaji-saya-daftar">
               {d.slip.map((s) => (
                 <li key={s.id}>
-                  <button type="button" onClick={() => setPilih(s.id)}>
+                  <Tekan onClick={() => setPilih(s.id)}>
                     <span className="u-gaji-saya-bulan">
                       <CalendarClock />
                       <span>
@@ -773,7 +774,7 @@ export function DaftarSlipSaya({ tautanVerifikasi, onPilih, logo, className }: D
                       <strong>{formatRupiah(s.netto)}</strong>
                       <small>PPh 21 {formatRupiah(s.pph21)}</small>
                     </span>
-                  </button>
+                  </Tekan>
                 </li>
               ))}
             </ul>

@@ -15,6 +15,7 @@ import { waktuRelatif } from './notifikasi';
 import { useAkunSaya } from './akun';
 import { usePilihBerkas } from '../components/pilih-berkas-lokal';
 import { SegmentedControl } from '../components/forms';
+import { Tekan } from '../components/tekan';
 
 /**
  * Kelola berkas cepat dari bilah atas: unggah (tombol atau tarik-lepas), berkas terbaru dengan tombol unduh, dan
@@ -201,7 +202,7 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
           </Button>
           {pemilih.elemen}
         </div>
-        <div
+        <Tekan
           className="u-berkas-cepat-jatuh"
           data-seret={seret ? '' : undefined}
           onDragOver={(e) => {
@@ -215,16 +216,13 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
             void unggah(e.dataTransfer.files);
           }}
           onClick={() => pemilih.buka()}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), pemilih.buka())}
         >
           <Upload aria-hidden />
           <span>
             Tarik berkas ke sini atau <b>pilih berkas</b>
             {info && <small title={info.batas_unggah?.maks_sumber ? `Batas dari ${info.batas_unggah.maks_sumber.label}` : undefined}>{teksBatasUnggah(info)}</small>}
           </span>
-        </div>
+        </Tekan>
         {info?.kuota && (
           // Batas yang mengikat (kuota pribadi atau kolam unit), sama dengan yang ditegakkan saat unggah.
           <MeterKuota
@@ -298,7 +296,7 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
                   onUnduh={() => void unduh(x.berkas as Berkas)}
                 />
               ) : (
-                <button key={x.id} type="button" role="listitem" className="u-kabar-item u-berkas-cepat-item" onClick={() => kelola('dibagikan')}>
+                <Tekan key={x.id} role="listitem" className="u-kabar-item u-berkas-cepat-item" onClick={() => kelola('dibagikan')}>
                   <span className="u-berkas-cepat-ikon" aria-hidden>
                     <Folder />
                   </span>
@@ -308,7 +306,7 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
                     </span>
                     <span className="u-kabar-item-isi">{['Folder', x.dibuat_oleh ? `dari ${x.dibuat_oleh}` : '', x.dibuat_at ? waktuRelatif(x.dibuat_at) : ''].filter(Boolean).join(' · ')}</span>
                   </span>
-                </button>
+                </Tekan>
               ),
             )}
           </div>
