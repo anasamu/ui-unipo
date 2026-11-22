@@ -29,12 +29,23 @@ describe('DataTable: bingkai dan bilah alat sebaris (jarak tabel)', () => {
     // Hanya satu bilah alat, tidak ada bilah saringan terpisah di luar.
     expect(h.split('u-dt-toolbar"').length - 1).toBe(1);
   });
+  it('wadah gulir = region bernama yang bisa difokus papan ketik', () => {
+    const tanpa = html(<DataTable<R> columns={cols} rows={rows} rowKey={(r) => r.id} />);
+    expect(tanpa).toMatch(/class="u-table-wrap u-dt-scroll" role="region" tabindex="0" aria-label="Tabel data"/);
+    const dengan = html(<DataTable<R> columns={cols} rows={rows} rowKey={(r) => r.id} caption="Daftar mahasiswa" />);
+    const id = /aria-labelledby="([^"]+)"/.exec(dengan)?.[1];
+    expect(id).toBeTruthy();
+    expect(dengan).toContain(`<caption id="${id}"`);
+  });
   it('framed={false} melepas bingkai luar', () => {
     expect(html(<DataTable<R> columns={cols} rows={rows} rowKey={(r) => r.id} framed={false} />)).not.toContain('data-framed');
   });
   it('SCSS: bilah alat & kaki halaman berjarak dalam token, tabel di dalam bingkai rata tepi, Card menjadi bingkai', () => {
     const scss = readFileSync(new URL('../scss/components/_data-table.scss', import.meta.url), 'utf8');
-    expect(scss).toMatch(/\.u-data-table\[data-framed\]:not\(\[data-cards\]\)\s*\{[^]*?> \.u-dt-toolbar\s*\{\s*padding: var\(--u-dt-inset-y\) var\(--u-dt-inset-x\)/);
+    expect(scss).toMatch(/@mixin dt-isi-berbingkai\s*\{[^]*?> \.u-dt-toolbar\s*\{\s*padding: var\(--u-dt-inset-y\) var\(--u-dt-inset-x\)/);
+    // Bingkai luar hanya untuk tabel yang berdiri sendiri: di dalam Card/Sheet/Dialog/panel/pembungkus `border` tidak dobel.
+    expect(scss).toMatch(/\.u-data-table\[data-framed\]:not\(\[data-cards\]\):not\(:is\(#\{\$dt-wadah\}\) \*\)/);
+    expect(scss).toMatch(/\$dt-wadah: '\.u-card, \.u-sheet, \.u-dialog, \.u-panel/);
     expect(scss).toMatch(/> \.u-dt-footer\s*\{\s*padding: var\(--u-dt-inset-y\) var\(--u-dt-inset-x\)/);
     expect(scss).toMatch(/--u-dt-inset-x: var\(--u-space-4\)/);
     expect(scss).toMatch(/\.u-card > \.u-data-table\[data-framed\]/);

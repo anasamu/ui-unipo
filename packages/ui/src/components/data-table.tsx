@@ -297,6 +297,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     gridMin,
     tree,
   } = props;
+  const idTabel = React.useId();
 
   // ---- urutan
   const [innerSort, setInnerSort] = React.useState<SortState>(defaultSort);
@@ -722,9 +723,17 @@ export function DataTable<T>(props: DataTableProps<T>) {
           }))}
     </div>
   ) : (
-    <div className="u-table-wrap u-dt-scroll" data-sticky={dataFlag(stickyHeader && !maxHeight)} style={maxHeight ? { maxHeight, overflowY: 'auto' } : undefined}>
+    // Wadah gulir = region bernama yang bisa difokus, supaya tabel lebar bisa digeser dengan papan ketik.
+    <div
+      className="u-table-wrap u-dt-scroll"
+      role="region"
+      tabIndex={0}
+      {...(caption ? { 'aria-labelledby': `${idTabel}-judul` } : { 'aria-label': 'Tabel data' })}
+      data-sticky={dataFlag(stickyHeader && !maxHeight)}
+      style={maxHeight ? { maxHeight, overflowY: 'auto' } : undefined}
+    >
       <table className="u-table" role={tree ? 'treegrid' : undefined} data-tree={dataFlag(Boolean(tree))} data-density={density} data-striped={dataFlag(striped)} aria-busy={loading || undefined}>
-        {caption && <caption className="u-sr-only">{caption}</caption>}
+        {caption && <caption id={`${idTabel}-judul`} className="u-sr-only">{caption}</caption>}
         <thead>
           <tr>
             {selectable && (

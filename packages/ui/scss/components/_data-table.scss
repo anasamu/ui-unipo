@@ -38,14 +38,12 @@
 // Tabel di dalamnya rata tepi (tanpa bingkai/sudut sendiri) supaya tidak ada bingkai ganda dan tidak ada tombol
 // yang menempel tepi atau terpotong sudut membulat. Tampilan kartu ponsel/kisi tidak dibingkai (kartunya sendiri
 // sudah berbingkai).
-.u-data-table[data-framed]:not([data-cards]) {
-  --u-dt-inset-x: var(--u-space-4);
-  --u-dt-inset-y: var(--u-space-3);
+// Bingkai luar hanya untuk tabel yang berdiri sendiri. Di dalam wadah yang sudah berbingkai (Card, Sheet, Dialog,
+// panel, atau pembungkus ber-kelas `border`) tabel tetap seperti dulu, jadi aplikasi yang belum dirapikan tidak
+// mendapat bingkai ganda.
+$dt-wadah: '.u-card, .u-sheet, .u-dialog, .u-panel, .u-panel-form, [class~="border"]';
+@mixin dt-isi-berbingkai {
   gap: 0;
-  border: 1px solid var(--u-border);
-  border-radius: calc(var(--u-radius) + 4px);
-  background: var(--u-card);
-  box-shadow: var(--u-elevation-card);
   > .u-dt-toolbar {
     padding: var(--u-dt-inset-y) var(--u-dt-inset-x);
   }
@@ -73,14 +71,22 @@
     border-top: 1px solid var(--u-border);
   }
 }
-// Langsung di dalam <Card>: kartu itulah bingkainya; jarak dalam sejajar dengan kepala kartu.
+.u-data-table[data-framed]:not([data-cards]):not(:is(#{$dt-wadah}) *) {
+  --u-dt-inset-x: var(--u-space-4);
+  --u-dt-inset-y: var(--u-space-3);
+  border: 1px solid var(--u-border);
+  border-radius: calc(var(--u-radius) + 4px);
+  background: var(--u-card);
+  box-shadow: var(--u-elevation-card);
+  @include dt-isi-berbingkai;
+}
+// Langsung di dalam <Card> (tanpa CardContent): kartu itulah bingkainya; jarak dalam sejajar dengan kepala kartu.
 .u-card > .u-data-table[data-framed] {
   --u-dt-inset-x: var(--u-space-5);
+  --u-dt-inset-y: var(--u-space-3);
+  border-radius: inherit;
   &:not([data-cards]) {
-    border: 0;
-    border-radius: inherit;
-    background: transparent;
-    box-shadow: none;
+    @include dt-isi-berbingkai;
   }
   // Kartu ponsel di dalam Card: seluruh isi diberi jarak dalam supaya tidak menempel tepi kartu.
   &[data-cards] {
@@ -385,7 +391,8 @@
   .u-dt-toolbar-start {
     flex-basis: 12rem;
   }
-  .u-data-table[data-framed]:not([data-cards]) {
+  .u-data-table[data-framed]:not([data-cards]),
+  .u-card > .u-data-table[data-framed] {
     --u-dt-inset-x: var(--u-space-3);
   }
   .u-dt-footer {
@@ -447,4 +454,10 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
+}
+
+// Wadah gulir tabel bisa difokus (geser dengan papan ketik); cincin fokus di dalam supaya tidak terpotong bingkai.
+.u-dt-scroll:focus-visible {
+  outline: 2px solid var(--u-ring);
+  outline-offset: -2px;
 }
