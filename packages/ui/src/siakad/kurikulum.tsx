@@ -4,12 +4,15 @@ import { BookOpen, Check, ChevronRight, Maximize2, CircleAlert, ClipboardList, F
 import { cn, dataFlag } from '../lib/cn';
 import { formatDate, formatNumber, formatPersen } from '../lib/format';
 import { Badge, Button, Skeleton, type BadgeVariant } from '../components/actions';
-import { Alert, Empty, Progress, ProgressRing, Table, TableContainer } from '../components/display';
+import { Alert, Empty, Progress, ProgressRing } from '../components/display';
 import { ActivityFeed, Panel, SegmentBar, StatCard, StatGrid } from '../components/charts';
 import { Sheet } from '../components/overlays';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakadQuery, type QueryState } from './provider';
 import { LabelProdi } from './prodi';
 import { KodeLaporan } from '../components/galat';
+import { IsianCari } from '../components/isian-cari';
+import { DataTable } from '../components/data-table';
+import { Tekan } from '../components/tekan';
 
 /*
  * Widget Kurikulum OBE (/v1/kurikulum-obe, Permendiktisaintek 39/2025): daftar kurikulum, ringkasan & alur status,
@@ -489,10 +492,10 @@ export function ValidasiKurikulum({ kurikulumId, className }: { kurikulumId: num
           <p className="u-kur-validasi-sub">{r.regulasi ?? 'Permendiktisaintek 39/2025'}</p>
           <div className="u-kur-filter" role="group" aria-label="Saring temuan">
             {(['semua', 'galat', 'peringatan', 'info'] as const).map((t) => (
-              <button key={t} type="button" data-active={dataFlag(tingkat === t)} data-tingkat={t} onClick={() => setTingkat(t)}>
+              <Tekan key={t} terpilih={tingkat === t} data-active={dataFlag(tingkat === t)} data-tingkat={t} onClick={() => setTingkat(t)}>
                 {t === 'semua' ? 'Semua' : t.charAt(0).toUpperCase() + t.slice(1)}
                 <span>{t === 'semua' ? d.temuan.length : n(r[t])}</span>
-              </button>
+              </Tekan>
             ))}
           </div>
         </div>
@@ -668,9 +671,9 @@ export function MatriksKurikulum({ kurikulumId, jenis = 'cpl-mk', editable, clas
                   return (
                     <td key={k.id}>
                       {editable ? (
-                        <button type="button" className="u-matriks-cell" aria-pressed={on} aria-label={`${b.kode} – ${k.kode}`} onClick={() => void ganti(b.id, k.id)}>
+                        <Tekan className="u-matriks-cell" terpilih={on} aria-label={`${b.kode} – ${k.kode}`} onClick={() => void ganti(b.id, k.id)}>
                           {on && <Check aria-hidden />}
-                        </button>
+                        </Tekan>
                       ) : (
                         <span className="u-matriks-cell" data-on={dataFlag(on)} aria-label={on ? `${b.kode} – ${k.kode}` : undefined}>
                           {on && <Check aria-hidden />}
@@ -860,36 +863,42 @@ export function RpsMataKuliah({ rpsId, className }: { rpsId: number | string; cl
           <SegmentBar format={(v) => `${formatNumber(v)}%`} data={r.evaluasi.map((e) => ({ label: e.nama || JENIS_EVALUASI[e.jenis_evaluasi] || '-', value: n(e.bobot) }))} />
         </Panel>
       </div>
-      <TableContainer>
-        <Table density="compact">
-          <thead>
-            <tr>
-              <th style={{ width: 64 }}>Minggu</th>
-              <th style={{ width: 96 }}>Sub-CPMK</th>
-              <th>Materi & indikator</th>
-              <th>Metode</th>
-              <th style={{ width: 72, textAlign: 'right' }}>Bobot</th>
-            </tr>
-          </thead>
-          <tbody>
-            {r.pertemuan.map((p) => (
-              <tr key={p.pertemuan_ke} data-ujian={dataFlag(p.ujian)}>
-                <td>{p.sampai_ke && p.sampai_ke !== p.pertemuan_ke ? `${p.pertemuan_ke}–${p.sampai_ke}` : p.pertemuan_ke}</td>
-                <td>{p.sub_cpmk_id ? <span className="u-kur-code">{subKode.get(p.sub_cpmk_id) ?? p.sub_cpmk_id}</span> : '–'}</td>
-                <td>
-                  {p.ujian ? <b>{p.materi ?? 'Ujian'}</b> : p.materi}
-                  {p.indikator && <small className="u-rps-ind">{p.indikator}</small>}
-                </td>
-                <td>
-                  {p.metode}
-                  {p.modalitas && <small className="u-rps-ind">{p.modalitas}</small>}
-                </td>
-                <td style={{ textAlign: 'right' }}>{p.bobot != null && n(p.bobot) > 0 ? `${formatNumber(n(p.bobot))}%` : ''}</td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </TableContainer>
+      <DataTable<(typeof r.pertemuan)[number]>
+        columns={[
+          { key: 'pertemuan_ke', header: 'Minggu', width: 64, mobile: 'subtitle', value: (p) => p.pertemuan_ke, cell: (p) => (p.sampai_ke && p.sampai_ke !== p.pertemuan_ke ? `${p.pertemuan_ke}–${p.sampai_ke}` : p.pertemuan_ke) },
+          { key: 'sub_cpmk_id', header: 'Sub-CPMK', width: 96, value: (p) => (p.sub_cpmk_id ? (subKode.get(p.sub_cpmk_id) ?? String(p.sub_cpmk_id)) : ''), cell: (p) => (p.sub_cpmk_id ? <span className="u-kur-code">{subKode.get(p.sub_cpmk_id) ?? p.sub_cpmk_id}</span> : '–') },
+          {
+            key: 'materi',
+            header: 'Materi & indikator',
+            mobile: 'title',
+            value: (p) => p.materi ?? '',
+            cell: (p) => (
+              <>
+                {p.ujian ? <b>{p.materi ?? 'Ujian'}</b> : p.materi}
+                {p.indikator && <small className="u-rps-ind">{p.indikator}</small>}
+              </>
+            ),
+          },
+          {
+            key: 'metode',
+            header: 'Metode',
+            value: (p) => p.metode ?? '',
+            cell: (p) => (
+              <>
+                {p.metode}
+                {p.modalitas && <small className="u-rps-ind">{p.modalitas}</small>}
+              </>
+            ),
+          },
+          { key: 'bobot', header: 'Bobot', width: 72, align: 'end', value: (p) => (p.bobot != null ? n(p.bobot) : null), cell: (p) => (p.bobot != null && n(p.bobot) > 0 ? `${formatNumber(n(p.bobot))}%` : '') },
+        ]}
+        rows={r.pertemuan}
+        rowKey={(p) => String(p.pertemuan_ke)}
+        pagination={false}
+        columnToggle={false}
+        densityToggle={false}
+        defaultDensity="compact"
+      />
       {!!r.pustaka_utama?.length && (
         <div className="u-rps-pustaka">
           <h4>Pustaka utama</h4>
@@ -1008,12 +1017,12 @@ export function CapaianCplMahasiswa({ nim, kurikulumId, className }: { nim: stri
               target={n(c.target)}
               status={c.tercapai == null ? 'kosong' : c.tercapai ? 'tercapai' : 'belum'}
               kanan={
-                <button type="button" className="u-cpl-bar-more" aria-expanded={buka === c.cpl_id} onClick={() => setBuka((b) => (b === c.cpl_id ? null : c.cpl_id))}>
+                <Tekan className="u-cpl-bar-more" aria-expanded={buka === c.cpl_id} onClick={() => setBuka((b) => (b === c.cpl_id ? null : c.cpl_id))}>
                   <b>{c.nilai == null ? '–' : formatNumber(n(c.nilai), { maximumFractionDigits: 1 })}</b>
                   <small>
                     {c.mk_sudah_dinilai}/{c.mk_total} MK
                   </small>
-                </button>
+                </Tekan>
               }
             />
             {buka === c.cpl_id && (
@@ -1059,15 +1068,18 @@ export function StatusMigrasiKurikulum({ onPilihProdi, className }: { onPilihPro
             <li key={p.kode_prodi}>
               <Tag className="u-migrasi-row" {...(onPilihProdi ? { type: 'button' as const, onClick: () => onPilihProdi(p) } : {})}>
                 <span className="u-migrasi-prodi">
-                  <LabelProdi kode={p.kode_prodi} nama={p.nama_prodi} prodi={{ kode_jenjang: p.jenjang }} sub={false} />
-                  <small>
-                    {[
+                  <LabelProdi
+                    kode={p.kode_prodi}
+                    nama={p.nama_prodi}
+                    prodi={{ kode_jenjang: p.jenjang }}
+                    sub={false}
+                    keterangan={[
                       p.lama?.jumlah_semester ? `${p.lama.jumlah_semester} semester data lama` : null,
                       p.terbit_terakhir ? `terbit ${p.terbit_terakhir.tahun_id}` : p.impor_terakhir ? `impor ${p.impor_terakhir.tahun_id}` : null,
                     ]
                       .filter(Boolean)
                       .join(' · ')}
-                  </small>
+                  />
                 </span>
                 <span className="u-migrasi-steps" aria-label={`Tahap: ${LABEL_TAHAP[idx]}`}>
                   {LABEL_TAHAP.map((l, i) => (
@@ -1100,42 +1112,52 @@ export function EkuivalensiKurikulum({ kurikulumId, className }: { kurikulumId: 
   if (muatDari(q)) return <Skeleton className={className} style={{ height: 200 }} />;
   if (!q.data?.length) return <Empty icon={<ClipboardList />} title="Belum ada ekuivalensi" description="Buat otomatis dari kecocokan kode dan nama MK, lalu periksa satu per satu." bordered />;
   return (
-    <TableContainer className={className}>
-      <Table density="compact">
-        <thead>
-          <tr>
-            <th>MK lama</th>
-            <th style={{ width: 56, textAlign: 'right' }}>SKS</th>
-            <th style={{ width: 112 }}>Hubungan</th>
-            <th>MK baru</th>
-            <th style={{ width: 56, textAlign: 'right' }}>SKS</th>
-          </tr>
-        </thead>
-        <tbody>
-          {q.data.map((e) => (
-            <tr key={e.id}>
-              <td>
-                <span className="u-kur-code">{e.kode_mk_lama}</span> {e.nama_mk_lama}
-              </td>
-              <td style={{ textAlign: 'right' }}>{e.sks_lama != null ? formatNumber(n(e.sks_lama)) : '–'}</td>
-              <td>
-                <Badge variant={JENIS_EKUIVALENSI[e.jenis]?.variant ?? 'neutral'}>{JENIS_EKUIVALENSI[e.jenis]?.label ?? e.jenis}</Badge>
-              </td>
-              <td>
-                {e.kode_mk ? (
-                  <>
-                    <span className="u-kur-code">{e.kode_mk}</span> {e.nama_mk}
-                  </>
-                ) : (
-                  <span className="u-muted">Tidak ada padanan</span>
-                )}
-              </td>
-              <td style={{ textAlign: 'right' }}>{e.sks_mk != null ? formatNumber(n(e.sks_mk)) : '–'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-    </TableContainer>
+    <DataTable<NonNullable<typeof q.data>[number]>
+      className={className}
+      columns={[
+        {
+          key: 'nama_mk_lama',
+          header: 'MK lama',
+          sortable: true,
+          mobile: 'title',
+          value: (e) => `${e.kode_mk_lama} ${e.nama_mk_lama}`,
+          cell: (e) => (
+            <>
+              <span className="u-kur-code">{e.kode_mk_lama}</span> {e.nama_mk_lama}
+            </>
+          ),
+        },
+        { key: 'sks_lama', header: 'SKS', width: 56, align: 'end', value: (e) => (e.sks_lama != null ? n(e.sks_lama) : null), cell: (e) => (e.sks_lama != null ? formatNumber(n(e.sks_lama)) : '–') },
+        {
+          key: 'jenis',
+          header: 'Hubungan',
+          width: 112,
+          mobile: 'badge',
+          sortable: true,
+          value: (e) => JENIS_EKUIVALENSI[e.jenis]?.label ?? e.jenis,
+          cell: (e) => <Badge variant={JENIS_EKUIVALENSI[e.jenis]?.variant ?? 'neutral'}>{JENIS_EKUIVALENSI[e.jenis]?.label ?? e.jenis}</Badge>,
+        },
+        {
+          key: 'nama_mk',
+          header: 'MK baru',
+          sortable: true,
+          value: (e) => (e.kode_mk ? `${e.kode_mk} ${e.nama_mk}` : ''),
+          cell: (e) =>
+            e.kode_mk ? (
+              <>
+                <span className="u-kur-code">{e.kode_mk}</span> {e.nama_mk}
+              </>
+            ) : (
+              <span className="u-muted">Tidak ada padanan</span>
+            ),
+        },
+        { key: 'sks_mk', header: 'SKS', width: 56, align: 'end', value: (e) => (e.sks_mk != null ? n(e.sks_mk) : null), cell: (e) => (e.sks_mk != null ? formatNumber(n(e.sks_mk)) : '–') },
+      ]}
+      rows={q.data}
+      rowKey={(e) => String(e.id)}
+      defaultDensity="compact"
+      exportCsv={`ekuivalensi-${kurikulumId}`}
+    />
   );
 }
 
@@ -1283,7 +1305,7 @@ export function TabelStrukturKurikulum({ kurikulumId, detail = 'baris', onPilihM
   return (
     <div className={cn('u-tsk', className)}>
       <div className="u-tsk-toolbar">
-        {cari && <input className="u-input" data-size="sm" type="search" placeholder="Cari kode atau nama MK" value={kata} onChange={(e) => setKata(e.target.value)} aria-label="Cari mata kuliah" />}
+        {cari && <IsianCari className="u-tsk-cari" size="sm" placeholder="Cari kode atau nama MK" value={kata} onValueChange={setKata} aria-label="Cari mata kuliah" />}
         <span className="u-tsk-total">
           {mk.length} MK · <b>{formatNumber(totalWajib)}</b> SKS wajib{totalPilihan ? ` · ${formatNumber(totalPilihan)} SKS pilihan` : ''}
         </span>
@@ -1318,7 +1340,7 @@ export function TabelStrukturKurikulum({ kurikulumId, detail = 'baris', onPilihM
               <tbody key={s} className="u-tsk-group" data-terlipat={dataFlag(terlipat)}>
                 <tr className="u-tsk-head" data-lebih={dataFlag(!!maks && sks > maks)}>
                   <td colSpan={kolom}>
-                    <button type="button" aria-expanded={!terlipat} onClick={() => setTutup((t) => toggle(t, s))}>
+                    <Tekan aria-expanded={!terlipat} onClick={() => setTutup((t) => toggle(t, s))}>
                       <ChevronRight className="u-tsk-chevron" aria-hidden />
                       <b>{s ? `Semester ${s}` : 'Pilihan bebas'}</b>
                       <span className="u-tsk-head-meta">
@@ -1326,7 +1348,7 @@ export function TabelStrukturKurikulum({ kurikulumId, detail = 'baris', onPilihM
                         {maks ? `/${maks}` : ''} SKS{pilihan ? ` + ${formatNumber(pilihan)} pilihan` : ''}
                       </span>
                       {!!maks && <Progress value={Math.min(100, (sks / maks) * 100)} size="sm" tone={sks > maks ? 'danger' : 'primary'} className="u-tsk-progress" />}
-                    </button>
+                    </Tekan>
                   </td>
                 </tr>
                 {!terlipat &&

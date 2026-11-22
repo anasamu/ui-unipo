@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { Pilihan } from '../components/formulir';
+import { Pilihan, type PilihanProps } from '../components/formulir';
 import type { Siakad } from 'unipo-siakad-sdk';
 import { BookOpen, Building2, Globe2, GraduationCap, MapPin, PenLine, School, UserRound, Users } from 'lucide-react';
 import { Combobox, OptionContent, type ComboboxProps, type SelectOption } from '../components/select';
@@ -420,6 +420,8 @@ type PilihProps<V> = {
   disabled?: boolean;
   size?: 'sm' | 'md' | 'lg';
   'aria-label'?: string;
+  /** Pola pilihan kosong: tombol buat bagi yang berhak, unit pengelola bagi yang tidak (lihat BuatPilihan). */
+  buat?: PilihanProps['buat'];
 };
 
 /** Pilih program studi, dikelompokkan per fakultas (SDK: referensi.getProdi). */
@@ -437,11 +439,12 @@ export function PilihProdi({ placeholder = 'Semua program studi', ...props }: Pi
 
 /** Pilih tahun akademik/periode (SDK: referensi.getTahunAkademik). */
 export function PilihTahunAkademik({ placeholder = 'Pilih periode', ...props }: PilihProps<string>) {
-  const { data } = useSiakadQuery(['referensi', 'tahun'], (s, signal) => s.referensi.getTahunAkademik({}, { signal }), { staleTime: 10 * 60_000 });
+  const { data, loading, error, refetch } = useSiakadQuery(['referensi', 'tahun'], (s, signal) => s.referensi.getTahunAkademik({}, { signal }), { staleTime: 10 * 60_000 });
   const options: SelectOption<string>[] = ((data as Array<Record<string, unknown>> | undefined) ?? []).map((t) => ({
     value: String(t.tahun_id),
     label: String(t.nama_tahun ?? t.tahun_id),
     description: t.aktif === true || t.buka === 'Y' ? 'Aktif' : undefined,
   }));
-  return <Pilihan {...props} placeholder={placeholder} options={options} />;
+  const buat = props.buat && { nama: 'periode akademik', pengelola: 'BAAK', ...props.buat, segarkan: () => (refetch(), props.buat?.segarkan?.()) };
+  return <Pilihan {...props} placeholder={options.length || !buat ? placeholder : undefined} options={options} buat={buat} memuat={loading && !data} galat={error && !data ? true : undefined} />;
 }

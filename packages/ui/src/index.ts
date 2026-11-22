@@ -20,6 +20,7 @@ export {
 export * from './lib/tautan';
 export * from './lib/tingkat-tab';
 export * from './components/actions';
+export * from './components/tekan';
 export * from './components/forms';
 export * from './components/select';
 export * from './components/overlays';
@@ -78,3 +79,6 @@ export * from './components/isian-angka';
 export * from './components/multi-pilih';
 export * from './components/aksi';
 export * from './components/pilih-tampilan';
+export * from './components/pilih-berkas-lokal';
+export * from './components/isian-cari';
+export * from './components/isian-warna';

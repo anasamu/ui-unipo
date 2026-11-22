@@ -196,48 +196,20 @@
 }
 .u-kabar-tab {
   display: flex;
-  gap: 0.25rem;
   padding: 0 1rem 0.5rem;
   border-bottom: 1px solid var(--u-border);
-  button {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    height: 1.75rem;
-    padding-inline: 0.625rem;
-    border: 0;
-    border-radius: 999px;
-    background: none;
-    color: var(--u-muted-foreground);
-    font: inherit;
-    font-size: var(--u-text-xs);
-    font-weight: 500;
-    cursor: pointer;
-    transition:
-      background-color var(--u-duration-fast),
-      color var(--u-duration-fast);
-    &:hover {
-      color: var(--u-foreground);
-    }
-    &[aria-selected='true'] {
-      background: var(--u-active);
-      color: var(--u-foreground);
-    }
-    &:focus-visible {
-      @include focus-ring;
-    }
-    span {
-      min-width: 1.125rem;
-      padding: 0 0.3125rem;
-      border-radius: 999px;
-      background: var(--u-primary);
-      color: var(--u-primary-foreground);
-      font-size: 0.625rem;
-      font-variant-numeric: tabular-nums;
-      line-height: 1.125rem;
-      text-align: center;
-    }
-  }
+}
+.u-kabar-tab-jumlah {
+  min-width: 1.125rem;
+  margin-inline-start: 0.375rem;
+  padding: 0 0.3125rem;
+  border-radius: 999px;
+  background: var(--u-primary);
+  color: var(--u-primary-foreground);
+  font-size: 0.625rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.125rem;
+  text-align: center;
 }
 .u-kabar-daftar {
   display: flex;
@@ -1068,6 +1040,9 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  // <button> tidak melebar sendiri seperti <div>.
+  width: calc(100% - 1.5rem);
+  text-align: start;
   margin: 0.75rem 0.75rem 0.25rem;
   padding: 0.75rem;
   border: 1px dashed var(--u-border-strong);
@@ -1248,6 +1223,38 @@
     flex: 1;
     min-width: 0;
     max-width: 100%;
+  }
+  // Tab tambahan aplikasi (TombolBerkas `tab`): deret tab di atas, isi mengisi sisa tinggi dialog.
+  .u-berkas-tab {
+    flex: 1;
+    min-height: 0;
+    gap: var(--u-space-3, 0.75rem);
+    // Tab melebihi lebar dialog: deret tab digulir (bukan menyusut), berhenti di tepi tab (modern-web-guidance `tabs`).
+    > .u-tabs-list {
+      flex: none;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scroll-snap-type: inline proximity;
+      > * {
+        flex: none;
+        scroll-snap-align: start;
+      }
+    }
+    > .u-tabs-panel {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+    }
+  }
+  .u-berkas-tab-isi {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding-block-end: var(--u-space-2, 0.5rem);
   }
 }
 @media (max-width: 639px) {
@@ -1502,31 +1509,7 @@
   }
 }
 .u-pin-tombol {
-  display: inline-grid;
-  place-items: center;
-  width: 1.625rem;
-  height: 1.625rem;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  background: none;
   color: var(--u-muted-foreground);
-  cursor: pointer;
-  svg {
-    width: 0.875rem;
-    height: 0.875rem;
-  }
-  &:hover:not(:disabled) {
-    background: var(--u-active);
-    color: var(--u-foreground);
-  }
-  &:disabled {
-    opacity: 0.35;
-    cursor: default;
-  }
-  &:focus-visible {
-    @include focus-ring;
-  }
 }
 @media (hover: none) {
   .u-pin-aksi,

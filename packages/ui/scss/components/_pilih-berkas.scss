@@ -81,33 +81,7 @@
   gap: 0.75rem;
 }
 .u-pilih-berkas-cari {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  height: 2.5rem;
-  padding-inline: 0.75rem;
-  border: 1px solid var(--u-input, var(--u-border));
-  border-radius: var(--u-radius-md, 8px);
-  background: var(--u-background);
-  &:focus-within {
-    outline: 2px solid var(--u-ring);
-    outline-offset: 1px;
-  }
-  svg {
-    flex: none;
-    width: 1rem;
-    height: 1rem;
-    color: var(--u-muted-foreground);
-  }
-  input {
-    flex: 1;
-    min-width: 0;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-  }
+  width: 100%;
 }
 .u-pilih-berkas-daftar {
   display: grid;

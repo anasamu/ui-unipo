@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { BadgeCheck, CircleAlert, Download, Eye, FileCheck2, FileSearch, FileText, Printer, RotateCcw, Save, ShieldX, Upload, XCircle } from 'lucide-react';
+import { BadgeCheck, CircleAlert, Download, Eye, FileCheck2, FileSearch, FileText, Printer, RotateCcw, Save, ShieldX, XCircle } from 'lucide-react';
 import { Badge, Button, Spinner } from '../components/actions';
 import { Alert, Card, DescriptionList, Empty, Tabs } from '../components/display';
 import { Field, Input, NumberField, SegmentedControl, Switch, Textarea } from '../components/forms';
@@ -8,6 +8,7 @@ import { Select } from '../components/select';
 import { ConfirmDialog, Dialog, useToast } from '../components/overlays';
 import { GalatApi } from './galat';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { Dropzone } from '../components/calendar';
 
 // ---------------------------------------------------------------- tipe
 
@@ -193,11 +194,15 @@ export function VerifikasiDokumen({ kode: kodeAwal, tanpaUnggah, className }: Ve
       ) : (
         <div className="u-verif-form">
           <Field label="File PDF yang Anda terima" description="File tidak disimpan; hanya sidik SHA-256 yang dibandingkan dengan catatan terbit.">
-            <label className="u-verif-unggah">
-              <Upload aria-hidden />
-              <span>{proses ? 'Memeriksa…' : 'Pilih atau seret file PDF (maks. 20 MB)'}</span>
-              <input type="file" accept="application/pdf" disabled={proses} onChange={(e) => { const f = e.target.files?.[0]; if (f) void unggah(f); e.target.value = ''; }} />
-            </label>
+            <Dropzone
+              accept="application/pdf"
+              maxSize={20 * 1024 * 1024}
+              disabled={proses}
+              title={proses ? 'Memeriksa…' : <><span>Pilih file PDF</span> atau seret ke sini</>}
+              hint="PDF, maks. 20 MB"
+              onReject={setGalatPdf}
+              onFiles={(f) => void unggah(f[0]!)}
+            />
           </Field>
         </div>
       )}

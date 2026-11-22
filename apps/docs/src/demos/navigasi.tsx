@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Award, BookOpen, Briefcase, ClipboardCheck, ClipboardList, GraduationCap, Medal, Users, Wallet } from 'lucide-react';
-import { Accordion, Badge, Breadcrumb, Button, Field, Input, PageHeader, Pagination, PanelLangkah, Progress, ProgressRing, Select, Stepper, Tabs, WizardReview } from 'unipo-ui';
+import { Accordion, Badge, Breadcrumb, Button, Field, Input, PageHeader, Pagination, PanelLangkah, Progress, ProgressRing, Select, Sheet, Stepper, Tabs, WizardReview } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 import { jsxProps } from '../Playground';
 
@@ -16,6 +16,8 @@ export const meta: DemoMeta = {
     PanelLangkahDemo: 'PanelLangkah (wizard di panel samping)',
     TabVertikal: 'Tabs vertikal berkelompok (ikon, jumlah; pilihan tarik-turun di wadah sempit)',
     TabBersarang: 'Tab bersarang otomatis vertikal (tab di dalam panel tab; deret gulir di wadah sempit)',
+    TabBersarangDua: 'Tab bersarang 2 tab tetap horizontal',
+    TabDiPanel: 'Tab di panel samping: horizontal (juga orientation="horizontal" eksplisit), jadi pilihan tarik-turun bila tidak muat',
     SaringanSejajar: 'Saringan sejajar: lencana periode di dalam isian (Select lencana)',
     Langkah: 'Stepper',
     LangkahVertikal: 'Stepper vertikal',
@@ -143,6 +145,90 @@ export function TabBersarang() {
         { value: 'riwayat', label: 'Riwayat atas nama', content: isi('Riwayat perubahan KRS oleh BAAK.') },
       ]}
     />
+  );
+}
+
+/** Sub-tab yang hanya berisi 2 tab tetap horizontal walau bersarang (aturan Anas 2026-11-22). */
+export function TabBersarangDua() {
+  const isi = (t: string) => <p className="u-field-description">{t}</p>;
+  return (
+    <Tabs
+      items={[
+        {
+          value: 'antrean',
+          label: 'Antrean BKD',
+          content: (
+            <Tabs
+              aria-label="Status antrean"
+              items={[
+                { value: 'menunggu', label: 'Menunggu verifikasi', count: 5, content: isi('5 laporan BKD menunggu verifikasi.') },
+                { value: 'selesai', label: 'Sudah diverifikasi', count: 18, content: isi('18 laporan sudah diverifikasi.') },
+              ]}
+            />
+          ),
+        },
+        { value: 'rekap', label: 'Rekap', content: isi('Rekap per fakultas.') },
+      ]}
+    />
+  );
+}
+
+/**
+ * Di dalam panel samping (Sheet) tab tetap horizontal. Bila deretnya tidak muat selebar panel (diukur ResizeObserver),
+ * deret diganti pilihan tarik-turun (Select) yang tetap terbaca pembaca layar.
+ */
+export function TabDiPanel() {
+  const isi = (t: string) => <p className="u-field-description">{t}</p>;
+  const riwayat = (
+    <Tabs
+      aria-label="Jenis riwayat"
+      items={[
+        { value: 'jabatan', label: 'Jabatan akademik', count: 2, content: isi('Lektor · TMT 1 Mar 2024') },
+        { value: 'pangkat', label: 'Pangkat/golongan', count: 0, content: isi('Belum ada riwayat pangkat.') },
+        { value: 'pendidikan', label: 'Pendidikan formal', count: 3, content: isi('S1, S2, S3') },
+        { value: 'sertifikasi', label: 'Sertifikasi', count: 1, content: isi('Serdos 2019') },
+        { value: 'keluarga', label: 'Keluarga', count: 4, content: isi('Pasangan dan 3 anak') },
+      ]}
+    />
+  );
+  return (
+    <div style={{ display: 'flex', gap: 'var(--u-space-2)', flexWrap: 'wrap' }}>
+      <Sheet
+        title="Rincian dosen"
+        description="Siti Aminah, S.Kom., M.T."
+        trigger={<Button variant="outline">Buka panel (sub-tab banyak)</Button>}
+      >
+        <Tabs
+          aria-label="Rincian dosen"
+          items={[
+            { value: 'riwayat', label: 'Riwayat', content: riwayat },
+            { value: 'berkas', label: 'Berkas', content: isi('Ijazah, SK, sertifikat.') },
+          ]}
+        />
+      </Sheet>
+      <Sheet title="Rincian pegawai" description='Ditulis orientation="horizontal": di panel tetap jadi tarik-turun bila tidak muat' trigger={<Button variant="outline">Buka panel (horizontal eksplisit)</Button>}>
+        <Tabs
+          orientation="horizontal"
+          aria-label="Data pegawai"
+          items={[
+            { value: 'identitas', label: 'Identitas pribadi', content: isi('NIK, tempat & tanggal lahir.') },
+            { value: 'kepegawaian', label: 'Status kepegawaian', content: isi('Tetap · TMT 2018') },
+            { value: 'penugasan', label: 'Penugasan unit', count: 2, content: isi('Prodi Teknik Informatika; LPPM') },
+            { value: 'kompensasi', label: 'Kompensasi & tunjangan', content: isi('Golongan III/b') },
+            { value: 'dokumen', label: 'Dokumen pendukung', count: 6, content: isi('KTP, NPWP, ijazah, SK.') },
+          ]}
+        />
+      </Sheet>
+      <Sheet title="Rincian mahasiswa" trigger={<Button variant="outline">Buka panel (tab muat)</Button>}>
+        <Tabs
+          aria-label="Rincian mahasiswa"
+          items={[
+            { value: 'krs', label: 'KRS', content: isi('8 mata kuliah.') },
+            { value: 'khs', label: 'KHS', content: isi('IPK 3,52') },
+          ]}
+        />
+      </Sheet>
+    </div>
   );
 }
 

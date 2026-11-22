@@ -18,6 +18,8 @@ import { PilihTahunAkademik } from './cari';
 import { PilihBerkas } from './pilih-berkas';
 import { AlurPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import { LinimasaPengajuan, type LangkahRiwayat } from './pengajuan';
+import { MenuAksiBaris } from '../components/aksi';
+import { aksiHapusDraf, TombolHapusDraf } from './hapus-draf';
 import { DaftarPerubahanAturan, DaftarVersiAturan, LencanaStatusVersi, PanelBandingAturan, type PerubahanAturan, type VersiAturanRow } from './aturan-versi';
 
 /*
@@ -544,7 +546,7 @@ function IsianButirRubrik({ b, onChange, onHapus, jabatan, otomatis }: { b: Buti
 function PanelUbahAturanDupak({ aturan: a, onOpenChange }: { aturan: AturanDupakDetail; onOpenChange: (o: boolean) => void }) {
   const aksi = useAksiDupak();
   const [step, setStep] = React.useState(0);
-  const [isi, setIsi] = React.useState<IsiRubrikDupak>(() => JSON.parse(JSON.stringify(a.isi)) as IsiRubrikDupak);
+  const [isi, setIsi] = React.useState<IsiRubrikDupak>(() => structuredClone(a.isi) as IsiRubrikDupak);
   const [id, setId] = React.useState({ nama: a.nama, dasar_hukum: a.dasar_hukum ?? '', berlaku_tanggal: a.berlaku_tanggal ?? '', catatan_perubahan: a.catatan_perubahan ?? '', sk_id: a.sk?.id ?? (null as string | null) });
   const otomatis = [...a.otomatis.map((o) => ({ value: o.kode, label: o.nama })), ...a.jenis_luaran.map((l) => ({ value: `luaran:${l.kode}`, label: `Luaran LPPM: ${l.nama}` }))];
   const ubahUnsur = (ui: number, fn: (u: IsiRubrikDupak['unsur'][number]) => IsiRubrikDupak['unsur'][number]) => setIsi({ ...isi, unsur: isi.unsur.map((u, n) => (n === ui ? fn(u) : u)) });
@@ -721,6 +723,7 @@ export function RuangDupakDosen({ className }: { className?: string }) {
   const rows = daftar.data ?? [];
   const draf = rows.find((r) => r.status === 'draf' || r.status === 'dikembalikan');
   const terakhir = rows.find((r) => r.status === 'ditetapkan');
+  const aksi = useAksiDupak();
   const kolom: DataColumn<DupakRow>[] = [
     { key: 'periode', header: 'Periode penilaian', mobile: 'title', cell: (r) => `${semesterTeks(r.periode_mulai)} – ${semesterTeks(r.periode_selesai)}` },
     { key: 'jabatan_tujuan', header: 'Jabatan tujuan', cell: (r) => r.jabatan_tujuan ?? '-' },
@@ -728,6 +731,29 @@ export function RuangDupakDosen({ className }: { className?: string }) {
     { key: 'ak_diakui', header: 'AK diakui', align: 'end', cell: (r) => angka(r.ak_diakui.total) },
     { key: 'rubrik', header: 'Rubrik', cell: (r) => (r.aturan_nama ? `${r.aturan_nama} v${r.aturan_versi}${r.aturan_terkunci ? '' : ' (belum dikunci)'}` : '-') },
     { key: 'status', header: 'Status', shrink: true, mobile: 'badge', cell: (r) => <LencanaStatusDupak d={r} /> },
+    {
+      key: 'aksi',
+      header: '',
+      label: 'Aksi',
+      align: 'end',
+      shrink: true,
+      hideable: false,
+      value: () => '',
+      cell: (r) => (
+        <MenuAksiBaris
+          nama={`DUPAK ${semesterTeks(r.periode_mulai)} – ${semesterTeks(r.periode_selesai)}`}
+          aksi={[
+            aksiHapusDraf({
+              apa: 'DUPAK',
+              nama: `${semesterTeks(r.periode_mulai)} – ${semesterTeks(r.periode_selesai)}`,
+              ikut: ['semua kegiatan yang sudah terisi', 'bukti yang diunggah'],
+              sembunyi: r.status !== 'draf' || !(r.aksi_boleh ?? ['hapus']).includes('hapus'),
+              onHapus: () => aksi('DELETE', `/v1/sdm/dupak/${r.id}`, undefined, 'Draf DUPAK dihapus.'),
+            }),
+          ]}
+        />
+      ),
+    },
   ];
   return (
     <Card className={className}>
@@ -1119,6 +1145,16 @@ export function PanelSusunDupak({ id: idAwal, onOpenChange }: { id: number | nul
                   >
                     <RefreshCw /> Isi otomatis lagi
                   </Button>
+                  <TombolHapusDraf
+                    apa="DUPAK"
+                    nama={`${semesterTeks(D.periode_mulai)} – ${semesterTeks(D.periode_selesai)}`}
+                    ikut={[`${D.butir.length} kegiatan yang sudah terisi`, 'bukti yang diunggah']}
+                    sembunyi={D.status !== 'draf' || !D.aksi_boleh.includes('hapus')}
+                    onHapus={async () => {
+                      await aksi('DELETE', `/v1/sdm/dupak/${D.id}`, undefined, 'Draf DUPAK dihapus.');
+                      onOpenChange(false);
+                    }}
+                  />
                 </div>
                 {isian ? <IsianButirDupak key={isian === 'baru' ? 'baru' : isian.id} d={D} b={isian === 'baru' ? null : isian} onSelesai={() => setIsian(null)} /> : null}
                 {bukti ? <UnggahBuktiButir b={bukti} onSelesai={() => setBukti(null)} /> : null}

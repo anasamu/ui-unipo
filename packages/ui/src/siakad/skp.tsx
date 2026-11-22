@@ -17,6 +17,8 @@ import { PilihSK } from './isian-sk';
 import { PilihBerkas } from './pilih-berkas';
 import { AlurPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import { LinimasaPengajuan, type LangkahRiwayat } from './pengajuan';
+import { useKonfirmasi } from '../components/aksi';
+import { aksiHapusDraf, TombolHapusDraf } from './hapus-draf';
 import { DaftarPerubahanAturan, DaftarVersiAturan, LencanaStatusVersi, PanelBandingAturan, type PerubahanAturan, type VersiAturanRow } from './aturan-versi';
 
 /*
@@ -126,9 +128,9 @@ function useAksiSkp() {
   const s = useSiakad();
   const toast = useToast();
   return React.useCallback(
-    async <T,>(method: 'POST' | 'PUT', path: string, body?: unknown, sukses?: string): Promise<T> => {
+    async <T,>(method: 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, sukses?: string): Promise<T> => {
       try {
-        const r = await s.request<T>({ method, path, body: body ?? {} });
+        const r = await s.request<T>({ method, path, body: method === 'DELETE' ? undefined : (body ?? {}) });
         if (sukses) toast.add({ title: sukses, type: 'success' });
         invalidateSiakad('skp');
         invalidateSiakad('aturan-versi');
@@ -367,7 +369,7 @@ function RincianAturanSkp({ id, onPilih }: { id: number; onPilih: (id: number | 
 function PanelUbahAturanSkp({ aturan: a, onOpenChange }: { aturan: AturanSkpDetail; onOpenChange: (o: boolean) => void }) {
   const aksi = useAksiSkp();
   const [step, setStep] = React.useState(0);
-  const [isi, setIsi] = React.useState<IsiAturanSkp>(() => JSON.parse(JSON.stringify(a.isi)) as IsiAturanSkp);
+  const [isi, setIsi] = React.useState<IsiAturanSkp>(() => structuredClone(a.isi) as IsiAturanSkp);
   const [id, setId] = React.useState({ nama: a.nama, dasar_hukum: a.dasar_hukum ?? '', berlaku_tanggal: a.berlaku_tanggal ?? '', catatan_perubahan: a.catatan_perubahan ?? '', sk_id: a.sk?.id ?? (null as string | null) });
   const hk = isi.hasil_kerja;
   return (
@@ -535,7 +537,13 @@ export function RuangSkpPegawai({ className }: { className?: string }) {
   const daftar = useSiakadQuery<SkpRow[]>(['skp', 'saya'], q('/v1/sdm/skp', { sebagai: 'saya' }));
   const periode = useSiakadQuery<PeriodeSkp[]>(['skp', 'periode'], q('/v1/sdm/kinerja/periode', { jenis: 'skp', status: 'buka' }));
   const aksi = useAksiSkp();
+  const { konfirmasi, elemen } = useKonfirmasi();
   const [buka, setBuka] = React.useState<{ id: number; mode: 'rencana' | 'realisasi' | 'lihat' } | null>(null);
+  const hapusDraf = async (r: SkpRow) => {
+    const a = aksiHapusDraf({ apa: 'SKP', nama: r.periode, ikut: ['rencana hasil kerja yang sudah disusun'], onHapus: () => undefined });
+    if (!(await konfirmasi({ nada: 'bahaya', ...a.konfirmasi!, label: a.konfirmasi!.label ?? a.label }))) return;
+    await aksi('DELETE', `/v1/sdm/skp/${r.id}`, undefined, 'Draf SKP dihapus.').catch(() => undefined);
+  };
   const sudah = new Set((daftar.data ?? []).map((r) => r.periode));
   const terbuka = (periode.data ?? []).filter((p) => !sudah.has(p.nama));
   const kolom: DataColumn<SkpRow>[] = [
@@ -580,12 +588,14 @@ export function RuangSkpPegawai({ className }: { className?: string }) {
           ...(r.aksi_boleh.includes('ubah_rencana') ? [{ label: 'Susun rencana', icon: <Pencil />, onSelect: () => setBuka({ id: r.id, mode: 'rencana' }) }] : []),
           ...(r.aksi_boleh.includes('isi_realisasi') ? [{ label: 'Isi realisasi', icon: <Pencil />, onSelect: () => setBuka({ id: r.id, mode: 'realisasi' }) }] : []),
           { label: 'Lihat rincian', icon: <ClipboardList />, onSelect: () => setBuka({ id: r.id, mode: 'lihat' }) },
+          ...(r.aksi_boleh.includes('hapus') ? [{ type: 'separator' as const }, { label: 'Hapus draf', icon: <Trash2 />, destructive: true, onSelect: () => void hapusDraf(r) }] : []),
         ]}
         empty={{ icon: <ClipboardList />, title: 'Belum ada SKP', description: 'SKP bisa disusun setelah Biro SDM membuka periode SKP.' }}
       />
       {buka?.mode === 'rencana' ? <PanelRencanaSkp id={buka.id} onOpenChange={(o) => !o && setBuka(null)} /> : null}
       {buka?.mode === 'realisasi' ? <PanelRealisasiSkp id={buka.id} onOpenChange={(o) => !o && setBuka(null)} /> : null}
       {buka?.mode === 'lihat' ? <PanelSkp id={buka.id} onOpenChange={(o) => !o && setBuka(null)} /> : null}
+      {elemen}
     </div>
   );
 }
@@ -711,6 +721,18 @@ export function PanelRencanaSkp({ id, onOpenChange }: { id: number; onOpenChange
                       <Textarea rows={2} value={catatan} onChange={(e) => setCatatan(e.target.value)} />
                     </Field>
                     <AlurPemeriksa pemeriksa={D.pemeriksa} judul="Diperiksa oleh" />
+                    <div className="u-bkd-aksi">
+                      <TombolHapusDraf
+                        apa="SKP"
+                        nama={D.periode.nama}
+                        ikut={['rencana hasil kerja yang sudah disusun']}
+                        sembunyi={!D.aksi_boleh.includes('hapus')}
+                        onHapus={async () => {
+                          await aksi('DELETE', `/v1/sdm/skp/${id}`, undefined, 'Draf SKP dihapus.');
+                          onOpenChange(false);
+                        }}
+                      />
+                    </div>
                   </div>
                 ),
               },

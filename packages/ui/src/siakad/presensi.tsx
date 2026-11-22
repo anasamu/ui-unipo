@@ -32,7 +32,8 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Badge, Button, Skeleton } from '../components/actions';
-import { Alert, Card, DescriptionList, Empty, Progress, Table, TableContainer, Tabs } from '../components/display';
+import { Alert, Card, DescriptionList, Empty, Progress, Tabs } from '../components/display';
+import { DataTable } from '../components/data-table';
 import { Field, Input, SegmentedControl, Switch, Textarea } from '../components/forms';
 import { IsianTanggal, PanelForm, Pilihan } from '../components/formulir';
 import { ConfirmDialog, Dialog, Menu, useToast } from '../components/overlays';
@@ -44,6 +45,9 @@ import { PilihBerkas } from './pilih-berkas';
 import { KodeQrSiakad } from './qr';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { PilihLokasiPeta, titikDariTeks } from '../components/peta';
+import { IsianJam, IsianAngka } from '../components/isian-angka';
+import { keAngka, teksAngka } from '../lib/angka';
+import { Tekan } from '../components/tekan';
 
 /*
  * Presensi QR (/v1/presensi) untuk mahasiswa (kuliah), dosen (mengajar dan kerja), tendik (kerja), dan kegiatan.
@@ -1076,65 +1080,64 @@ export function DaftarHadirSesi({ sesiId, segarkanDetik = 10, className }: { ses
       {baris.length === 0 ? (
         <Empty icon={<Users aria-hidden />} title="Tidak ada peserta yang cocok" description="Ubah saringan atau kata pencarian." />
       ) : (
-        <TableContainer>
-          <Table density="compact">
-            <thead>
-              <tr>
-                <th>Peserta</th>
-                <th>Status</th>
-                <th>Waktu</th>
-                <th>Cara</th>
-                {bisaUbah && <th aria-label="Ubah status" />}
-              </tr>
-            </thead>
-            <tbody>
-              {baris.map((p) => {
+        <DataTable<(typeof baris)[number]>
+          columns={[
+            {
+              key: 'nama',
+              header: 'Peserta',
+              mobile: 'title',
+              value: (p) => p.nama ?? p.subjek,
+              cell: (p) => (
+                <>
+                  <span className="u-presensi-nama">{p.nama ?? p.subjek}</span>
+                  <span className="u-presensi-sub">
+                    {p.subjek}
+                    {p.peran ? ` · ${p.peran}` : ''}
+                  </span>
+                </>
+              ),
+            },
+            {
+              key: 'status',
+              header: 'Status',
+              value: (p) => (p.status ? LABEL_STATUS_HADIR[p.status] : ''),
+              cell: (p) => {
                 const kunci = `${p.jenis}${p.subjek}`;
                 return (
-                  <tr key={kunci} data-curiga={p.curiga || undefined}>
-                    <td>
-                      <span className="u-presensi-nama">{p.nama ?? p.subjek}</span>
-                      <span className="u-presensi-sub">
-                        {p.subjek}
-                        {p.peran ? ` · ${p.peran}` : ''}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="u-presensi-sel-status">
-                        <BadgeStatusHadir status={p.status} terlambat={p.terlambat} />
-                        {p.izin && !p.status && <Badge variant="info">{p.izin.jenis === 'sakit' ? 'Sakit' : 'Izin'} {p.izin.status}</Badge>}
-                        {p.curiga && (
-                          <Button size="xs" variant="ghost" title={p.alasan_curiga ?? undefined} loading={sibuk === kunci} onClick={() => void bersihkan(p)}>
-                            <ShieldAlert aria-hidden /> Tandai sudah dicek
-                          </Button>
-                        )}
-                      </div>
-                      {p.curiga && p.alasan_curiga && <span className="u-presensi-sub">{p.alasan_curiga}</span>}
-                    </td>
-                    <td>{p.waktu ? jam(p.waktu) + (p.terlambat ? ` (+${p.terlambat_menit}′)` : '') : '-'}</td>
-                    <td>{p.cara ? (LABEL_CARA[p.cara] ?? p.cara) + (p.jarak_m != null ? ` · ${p.jarak_m} m` : '') : '-'}</td>
-                    {bisaUbah && (
-                      <td>
-                        <Menu
-                          trigger={
-                            <Button size="xs" variant="ghost" iconOnly aria-label={`Ubah status ${p.nama ?? p.subjek}`} loading={sibuk === kunci}>
-                              <Pencil aria-hidden />
-                            </Button>
-                          }
-                          items={(['H', 'I', 'S', 'A'] as StatusHadir[]).map((st) => ({
-                            label: `Tandai ${LABEL_STATUS_HADIR[st].toLowerCase()}`,
-                            disabled: p.status === st,
-                            onSelect: () => void ubah({ peserta: [{ jenis: p.jenis, subjek: p.subjek, status: st }] }, kunci, `${p.nama ?? p.subjek}: ${LABEL_STATUS_HADIR[st]}`),
-                          }))}
-                        />
-                      </td>
-                    )}
-                  </tr>
+                  <>
+                    <div className="u-presensi-sel-status">
+                      <BadgeStatusHadir status={p.status} terlambat={p.terlambat} />
+                      {p.izin && !p.status && <Badge variant="info">{p.izin.jenis === 'sakit' ? 'Sakit' : 'Izin'} {p.izin.status}</Badge>}
+                      {p.curiga && (
+                        <Button size="xs" variant="ghost" title={p.alasan_curiga ?? undefined} loading={sibuk === kunci} onClick={() => void bersihkan(p)}>
+                          <ShieldAlert aria-hidden /> Tandai sudah dicek
+                        </Button>
+                      )}
+                    </div>
+                    {p.curiga && p.alasan_curiga && <span className="u-presensi-sub">{p.alasan_curiga}</span>}
+                  </>
                 );
-              })}
-            </tbody>
-          </Table>
-        </TableContainer>
+              },
+            },
+            { key: 'waktu', header: 'Waktu', value: (p) => p.waktu ?? '', cell: (p) => (p.waktu ? jam(p.waktu) + (p.terlambat ? ` (+${p.terlambat_menit}′)` : '') : '-') },
+            { key: 'cara', header: 'Cara', value: (p) => (p.cara ? (LABEL_CARA[p.cara] ?? p.cara) : ''), cell: (p) => (p.cara ? (LABEL_CARA[p.cara] ?? p.cara) + (p.jarak_m != null ? ` · ${p.jarak_m} m` : '') : '-') },
+          ]}
+          rows={baris}
+          rowKey={(p) => `${p.jenis}${p.subjek}`}
+          rowActions={
+            bisaUbah
+              ? (p) =>
+                  (['H', 'I', 'S', 'A'] as StatusHadir[]).map((st) => ({
+                    label: `Tandai ${LABEL_STATUS_HADIR[st].toLowerCase()}`,
+                    disabled: p.status === st,
+                    onSelect: () => void ubah({ peserta: [{ jenis: p.jenis, subjek: p.subjek, status: st }] }, `${p.jenis}${p.subjek}`, `${p.nama ?? p.subjek}: ${LABEL_STATUS_HADIR[st]}`),
+                  }))
+              : undefined
+          }
+          pagination={baris.length > 50}
+          defaultDensity="compact"
+          exportCsv="presensi-peserta"
+        />
       )}
     </div>
   );
@@ -1327,10 +1330,10 @@ export function FormSesiPresensi({ open, onOpenChange, trigger, sesi, jenis: jen
             </Field>
             <div className="u-presensi-form-baris">
               <Field label="Mulai" optional>
-                <Input type="time" value={f.mulai} onChange={(e) => set('mulai', e.target.value)} />
+                <IsianJam value={f.mulai || null} onValueChange={(v) => set('mulai', v ?? '')} />
               </Field>
               <Field label="Selesai" optional description="Pindaian berhenti setelah jam ini.">
-                <Input type="time" value={f.selesai} onChange={(e) => set('selesai', e.target.value)} />
+                <IsianJam value={f.selesai || null} onValueChange={(v) => set('selesai', v ?? '')} />
               </Field>
             </div>
             {!ubah && (
@@ -1417,7 +1420,7 @@ export function FormSesiPresensi({ open, onOpenChange, trigger, sesi, jenis: jen
           {f.lokasi && (
             <div className="u-presensi-form-baris">
               <Field label="Radius (meter)">
-                <Input type="number" min={10} max={5000} value={f.radius_m} onChange={(e) => set('radius_m', e.target.value)} />
+                <IsianAngka value={keAngka(f.radius_m)} min={10} max={5000} onValueChange={(n) => set('radius_m', teksAngka(n))} />
               </Field>
               <Field label="Wajib di lokasi" description="Tolak pindaian tanpa lokasi atau di luar radius.">
                 <Switch checked={f.wajib_lokasi} onCheckedChange={(v) => set('wajib_lokasi', v)} />
@@ -1426,10 +1429,10 @@ export function FormSesiPresensi({ open, onOpenChange, trigger, sesi, jenis: jen
           )}
           <div className="u-presensi-form-baris">
             <Field label="Terlambat setelah (menit)" optional>
-              <Input type="number" min={0} max={240} value={f.terlambat_menit} onChange={(e) => set('terlambat_menit', e.target.value)} />
+              <IsianAngka value={keAngka(f.terlambat_menit)} min={0} max={240} onValueChange={(n) => set('terlambat_menit', teksAngka(n))} />
             </Field>
             <Field label="QR berganti tiap (detik)">
-              <Input type="number" min={10} max={300} value={f.interval_detik} onChange={(e) => set('interval_detik', e.target.value)} />
+              <IsianAngka value={keAngka(f.interval_detik)} min={10} max={300} onValueChange={(n) => set('interval_detik', teksAngka(n))} />
             </Field>
           </div>
           <Field label="Kode cadangan 6 huruf" description="Untuk peserta yang kameranya bermasalah.">
@@ -1642,32 +1645,19 @@ function JejakPindaiSesi({ sesiId }: { sesiId: string }) {
 function TabelJejak({ log }: { log: LogPindaiPresensi[] }) {
   if (log.length === 0) return <Empty icon={<History aria-hidden />} title="Belum ada pindaian" />;
   return (
-    <TableContainer>
-      <Table density="compact">
-        <thead>
-          <tr>
-            <th>Waktu</th>
-            <th>Akun</th>
-            <th>Hasil</th>
-            <th>Keterangan</th>
-            <th>Perangkat</th>
-          </tr>
-        </thead>
-        <tbody>
-          {log.map((l, i) => (
-            <tr key={i}>
-              <td>{l.created_at.slice(11, 19)}</td>
-              <td>{l.subjek ?? '-'}</td>
-              <td>{l.hasil === 'ok' ? <Badge variant="success">Diterima</Badge> : <Badge variant="danger">Ditolak</Badge>}</td>
-              <td>{[l.cara && (LABEL_CARA[l.cara] ?? l.cara), l.alasan].filter(Boolean).join(' · ')}</td>
-              <td>
-                <code className="u-presensi-perangkat">{l.perangkat ? l.perangkat.slice(0, 8) : '-'}</code>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-    </TableContainer>
+    <DataTable<LogPindaiPresensi & { __i: number }>
+      columns={[
+        { key: 'created_at', header: 'Waktu', sortable: true, cell: (l) => l.created_at.slice(11, 19) },
+        { key: 'subjek', header: 'Akun', mobile: 'title', cell: (l) => l.subjek ?? '-' },
+        { key: 'hasil', header: 'Hasil', mobile: 'badge', value: (l) => (l.hasil === 'ok' ? 'Diterima' : 'Ditolak'), cell: (l) => (l.hasil === 'ok' ? <Badge variant="success">Diterima</Badge> : <Badge variant="danger">Ditolak</Badge>) },
+        { key: 'alasan', header: 'Keterangan', value: (l) => [l.cara && (LABEL_CARA[l.cara] ?? l.cara), l.alasan].filter(Boolean).join(' · ') },
+        { key: 'perangkat', header: 'Perangkat', cell: (l) => <code className="u-presensi-perangkat">{l.perangkat ? l.perangkat.slice(0, 8) : '-'}</code> },
+      ]}
+      rows={log.map((l, i) => ({ ...l, __i: i }))}
+      rowKey={(l) => String(l.__i)}
+      defaultDensity="compact"
+      exportCsv="jejak-pindai-presensi"
+    />
   );
 }
 
@@ -1738,7 +1728,7 @@ export function KelolaSesiPresensi({ idj, lmsKelasId, jenis, renderQr, className
         <ul className="u-presensi-daftar-sesi" data-interaktif>
           {daftar.map((s) => (
             <li key={s.id}>
-              <button type="button" className="u-presensi-sesi-tombol" onClick={() => setPilih(s.id)}>
+              <Tekan className="u-presensi-sesi-tombol" onClick={() => setPilih(s.id)}>
                 <div>
                   <p className="u-presensi-sesi-judul">{judulSesiPresensi(s)}</p>
                   <p className="u-presensi-sesi-meta">
@@ -1748,7 +1738,7 @@ export function KelolaSesiPresensi({ idj, lmsKelasId, jenis, renderQr, className
                   </p>
                 </div>
                 <BadgeStatusSesi status={s.status} />
-              </button>
+              </Tekan>
             </li>
           ))}
         </ul>
@@ -2155,7 +2145,7 @@ export function FormTitikPresensi({ open, onOpenChange, titik, onSimpan }: { ope
         </Field>
         <div className="u-presensi-form-baris">
           <Field label="QR berganti tiap (detik)">
-            <Input type="number" min={10} max={300} value={f.interval_detik} onChange={(e) => set('interval_detik', e.target.value)} />
+            <IsianAngka value={keAngka(f.interval_detik)} min={10} max={300} onValueChange={(n) => set('interval_detik', teksAngka(n))} />
           </Field>
         </div>
         <Field label="Wajib di lokasi" description="Tolak pindaian tanpa lokasi atau di luar radius.">

@@ -16,6 +16,9 @@ import { useUnggahBerkas } from './berkas';
 import { useProdiOptions, useTahunOptions } from './filter-presets';
 import { AlurPemeriksa, LabelPemeriksa, PratinjauPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import { invalidateSiakad, pesanGalat, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
+import { IsianTanggal } from '../components/formulir';
+import { IsianBerkas } from '../components/pilih-berkas-lokal';
+import { labelTahunAkademik } from './akademik';
 
 /*
  * Validasi syarat keuangan (SIAKAD /v1/syarat-keuangan, docs/VALIDASI_SYARAT_KEUANGAN.md di siakad_unipo).
@@ -382,7 +385,7 @@ function AntreanSyarat({ katalog, fiturAwal, hanyaSyarat }: { katalog: KatalogSy
                   {b.butir.map((x) => (
                     <li key={`${x.kode_biaya}-${x.tahun_id}`}>
                       {x.nama}
-                      {x.tahun_id && x.tahun_id !== tahun ? ` ${x.tahun_id}` : ''} <span className="u-syk-redup">{x.persen}%/{x.minimal}% · {x.unit_kode}</span>
+                      {x.tahun_id && x.tahun_id !== tahun ? ` ${labelTahunAkademik(x.tahun_id)}` : ''} <span className="u-syk-redup">{x.persen}%/{x.minimal}% · {x.unit_kode}</span>
                     </li>
                   ))}
                 </ul>
@@ -463,7 +466,7 @@ export function RincianSyaratKeuangan({ jenis, subjek, tahunId, onAksi }: Rincia
           { label: jenis === 'mahasiswa' ? 'NIM' : 'No. pendaftar', value: d.identitas.nim },
           ...(d.identitas.nama_prodi ? [{ label: 'Program studi', value: d.identitas.nama_prodi }] : []),
           ...(d.identitas.angkatan ? [{ label: 'Angkatan', value: d.identitas.angkatan }] : []),
-          { label: 'Periode', value: d.tahun_id },
+          { label: 'Periode', value: labelTahunAkademik(d.tahun_id) },
           ...(d.tagihan ? [{ label: 'Tunggakan semua periode', value: rp(d.tagihan.tunggakan) }] : []),
         ]}
       />
@@ -472,26 +475,31 @@ export function RincianSyaratKeuangan({ jenis, subjek, tahunId, onAksi }: Rincia
       {d.tagihan && d.tagihan.periode.length ? (
         <>
           <h4 className="u-syk-sub">Tagihan per periode</h4>
-          <table className="u-syk-tabel">
-            <thead>
-              <tr>
-                <th>Periode</th>
-                <th>Tagihan</th>
-                <th>Dibayar</th>
-                <th>Sisa</th>
-              </tr>
-            </thead>
-            <tbody>
-              {d.tagihan.periode.map((p) => (
-                <tr key={p.tahun_id}>
-                  <td>{p.tahun_id}</td>
-                  <td>{rp(p.tagihan)}</td>
-                  <td>{rp(p.bayar)}</td>
-                  <td data-kurang={p.sisa > 0 ? '' : undefined}>{rp(p.sisa)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable<{ tahun_id: string; tagihan: number; bayar: number; sisa: number }>
+            columns={[
+              { key: 'tahun_id', header: 'Periode', mobile: 'title', sortable: true, cell: (p) => labelTahunAkademik(p.tahun_id) },
+              { key: 'tagihan', header: 'Tagihan', format: 'rupiah', sortable: true },
+              { key: 'bayar', header: 'Dibayar', format: 'rupiah', sortable: true },
+              {
+                key: 'sisa',
+                header: 'Sisa',
+                align: 'end',
+                sortable: true,
+                mobile: 'badge',
+                value: (p) => p.sisa,
+                cell: (p) => (p.sisa > 0 ? <Badge variant="danger">{rp(p.sisa)}</Badge> : <span className="u-syk-redup">{rp(p.sisa)}</span>),
+              },
+            ]}
+            rows={d.tagihan.periode}
+            rowKey={(p) => p.tahun_id}
+            defaultSort={{ key: 'tahun_id', dir: 'desc' }}
+            pagination={d.tagihan.periode.length > 10}
+            columnToggle={false}
+            densityToggle={false}
+            defaultDensity="compact"
+            exportCsv={`tagihan-${d.identitas.nim}`}
+            ringkasan={{ tagihan: rp(d.tagihan.periode.reduce((t, p) => t + p.tagihan, 0)), bayar: rp(d.tagihan.periode.reduce((t, p) => t + p.bayar, 0)), sisa: rp(d.tagihan.tunggakan) }}
+          />
         </>
       ) : null}
       <h4 className="u-syk-sub">Riwayat validasi</h4>
@@ -531,7 +539,7 @@ function KartuSyarat({ syarat, onAksi, saya }: { syarat: SyaratSubjek[]; onAksi?
                 {kurang.map((b) => (
                   <li key={`${b.kode_biaya}-${b.tahun_id}`}>
                     {b.nama}
-                    {b.tahun_id ? ` (${b.tahun_id})` : ''}: dibayar {b.persen}% dari minimal {b.minimal}%{b.sisa ? `, sisa ${rp(b.sisa)}` : ''} <span className="u-syk-redup">· diperiksa {b.unit}</span>
+                    {b.tahun_id ? ` (${labelTahunAkademik(b.tahun_id)})` : ''}: dibayar {b.persen}% dari minimal {b.minimal}%{b.sisa ? `, sisa ${rp(b.sisa)}` : ''} <span className="u-syk-redup">· diperiksa {b.unit}</span>
                   </li>
                 ))}
               </ul>
@@ -582,7 +590,7 @@ function KartuValidasi({ r, saya }: { r: ValidasiSyaratKeuanganRow; saya?: boole
         items={[
           ...(!saya && r.nama ? [{ label: 'Mahasiswa', value: `${r.nama} (${r.subjek})` }] : []),
           { label: 'Unit pemilik biaya', value: r.unit },
-          ...(r.tahun_id ? [{ label: 'Periode', value: r.tahun_id }] : []),
+          ...(r.tahun_id ? [{ label: 'Periode', value: labelTahunAkademik(r.tahun_id) }] : []),
           ...(r.berlaku_sampai ? [{ label: 'Berlaku sampai', value: tgl(r.berlaku_sampai) }] : []),
           ...(r.janji_bayar?.length ? [{ label: 'Janji bayar', value: r.janji_bayar.map((j) => `${tgl(j.tanggal)}: ${rp(j.jumlah)}`).join('; ') }] : []),
           ...(saya ? [] : [{ label: 'Alasan', value: r.alasan }]),
@@ -781,7 +789,7 @@ export function PanelValidasiSyarat({ baris, jenisAwal = 'validasi', pengaturan,
                     <Textarea rows={3} value={alasan} onChange={(e) => setAlasan(e.target.value)} placeholder="Mis. transfer BNI 18-11 sudah masuk rekening, belum tercatat di sistem" />
                   </Field>
                   <Field label="Berkas bukti" description="PDF/JPG/PNG, disimpan privat di berkas SIAKAD." optional={!wajibBukti}>
-                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setBerkas(e.target.files?.[0] ?? null)} aria-label="Berkas bukti" />
+                    <IsianBerkas value={berkas} onValueChange={setBerkas} accept=".pdf,.jpg,.jpeg,.png" aria-label="Berkas bukti" info={false} />
                   </Field>
                   <Field label="Keterangan bukti" description="No. referensi transfer, bank, tanggal bayar." optional>
                     <Input value={buktiKet} onChange={(e) => setBuktiKet(e.target.value)} placeholder="Mis. Ref BNI 20261118-0042" />
@@ -805,7 +813,7 @@ export function PanelValidasiSyarat({ baris, jenisAwal = 'validasi', pengaturan,
               content: (
                 <div className="u-syk-form">
                   <Field label="Berlaku sampai" required>
-                    <Input type="date" value={sampai} min={hariIni()} onChange={(e) => setSampai(e.target.value)} />
+                    <IsianTanggal value={sampai} min={hariIni()} onValueChange={(v) => setSampai(v)} />
                   </Field>
                   <Field label="Alasan" required>
                     <Textarea rows={3} value={alasan} onChange={(e) => setAlasan(e.target.value)} placeholder="Mis. menunggu pencairan beasiswa daerah" />
@@ -814,7 +822,7 @@ export function PanelValidasiSyarat({ baris, jenisAwal = 'validasi', pengaturan,
                     <div className="u-syk-janji">
                       {janji.map((j, i) => (
                         <div key={i} className="u-syk-janji-baris">
-                          <Input type="date" value={j.tanggal} onChange={(e) => setJanji((x) => x.map((y, k) => (k === i ? { ...y, tanggal: e.target.value } : y)))} aria-label="Tanggal janji" />
+                          <IsianTanggal value={j.tanggal} aria-label="Tanggal janji" onValueChange={(v) => setJanji((x) => x.map((y, k) => (k === i ? { ...y, tanggal: v } : y)))} />
                           <Input inputMode="numeric" value={j.jumlah} placeholder="Jumlah" onChange={(e) => setJanji((x) => x.map((y, k) => (k === i ? { ...y, jumlah: e.target.value.replace(/[^\d]/g, '') } : y)))} aria-label="Jumlah janji" />
                           <Button size="xs" variant="ghost" onClick={() => setJanji((x) => x.filter((_, k) => k !== i))} aria-label="Hapus janji">
                             <Trash2 />

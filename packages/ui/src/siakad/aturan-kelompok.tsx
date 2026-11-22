@@ -24,6 +24,7 @@ import {
   type KatalogAturan,
   type KategoriAturan,
 } from './aturan';
+import { Tekan } from '../components/tekan';
 
 /*
  * Daftar aturan berkelompok (registri aturan): satu baris per aturan, dikelompokkan per bidang langkah (Perwalian, KRS,
@@ -282,9 +283,9 @@ export function DaftarAturanKelompok({
           <strong>{d.data ? ringkas.butuh : '–'}</strong>
           <span>butuh SK</span>
           {ringkas.butuh ? (
-            <button type="button" className="u-ak-tautan" onClick={() => setStatus('butuh_sk')}>
+            <Button variant="link" size="sm" className="u-ak-tautan" onClick={() => setStatus('butuh_sk')}>
               Lihat
-            </button>
+            </Button>
           ) : null}
         </div>
         {!fakultas && ringkas.fakultas ? (
@@ -305,9 +306,9 @@ export function DaftarAturanKelompok({
           <Search aria-hidden />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari judul, kode, atau langkah" aria-label="Cari aturan" />
           {q ? (
-            <button type="button" aria-label="Hapus pencarian" onClick={() => setQ('')}>
+            <Tekan aria-label="Hapus pencarian" onClick={() => setQ('')}>
               <X />
-            </button>
+            </Tekan>
           ) : null}
         </div>
         {!fakultas && opsiLingkup.length > 2 ? (
@@ -376,16 +377,16 @@ export function DaftarAturanKelompok({
                   <li key={b.kunci} data-ganda={ganda || undefined} data-buka={terbuka || undefined}>
                     <div className="u-ak-baris">
                       {ganda ? (
-                        <button type="button" className="u-ak-buka" aria-expanded={terbuka} aria-label={`${terbuka ? 'Tutup' : 'Buka'} rincian ${b.nama}`} onClick={() => toggle(b.kunci)}>
+                        <Tekan className="u-ak-buka" aria-expanded={terbuka} aria-label={`${terbuka ? 'Tutup' : 'Buka'} rincian ${b.nama}`} onClick={() => toggle(b.kunci)}>
                           <ChevronRight aria-hidden />
-                        </button>
+                        </Tekan>
                       ) : (
                         <span className="u-ak-buka" aria-hidden />
                       )}
                       <div className="u-ak-utama">
-                        <button type="button" className="u-ak-judul" onClick={() => (ganda ? toggle(b.kunci) : onBuka?.(a))}>
+                        <Tekan className="u-ak-judul" onClick={() => (ganda ? toggle(b.kunci) : onBuka?.(a))}>
                           {b.nama}
-                        </button>
+                        </Tekan>
                         <p>
                           {b.titikJudul}
                           {ringkasan ? <> · {ringkasan}</> : null}
@@ -426,9 +427,9 @@ export function DaftarAturanKelompok({
                               <li key={x.id} className="u-ak-baris" data-anak>
                                 <span className="u-ak-buka" aria-hidden />
                                 <div className="u-ak-utama">
-                                  <button type="button" className="u-ak-judul" onClick={() => onBuka?.(x)}>
+                                  <Tekan className="u-ak-judul" onClick={() => onBuka?.(x)}>
                                     {l.fakultas ? namaFak(l.fakultas) : 'Universitas'}
-                                  </button>
+                                  </Tekan>
                                   <p>{x.kode ? `${x.kode} · ` : ''}{ringkasKetentuan(x, katalog.data as KatalogAturan | undefined) || 'Ketentuan sama dengan induk'}</p>
                                 </div>
                                 <span className="u-ak-lingkup" data-tingkat={l.tingkat}>

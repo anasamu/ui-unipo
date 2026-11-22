@@ -4,7 +4,7 @@ import { ArrowLeft, BookOpenText, Check, CircleAlert, Copy, GitCompare, GripVert
 import { cn } from '../lib/cn';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Empty, Tabs } from '../components/display';
-import { Field, Input, Textarea } from '../components/forms';
+import { Checkbox, Field, Input, Textarea } from '../components/forms';
 import { Combobox, Select } from '../components/select';
 import { ConfirmDialog, Sheet } from '../components/overlays';
 import { IsianTanggal } from '../components/formulir';
@@ -29,6 +29,7 @@ import {
   type ParameterPedoman,
   type VersiPedoman,
 } from './pedoman';
+import { Tekan } from '../components/tekan';
 
 /*
  * Ruang kerja penyusunan pedoman: pohon bab/bagian/pasal/ayat (seret untuk urut, nomor otomatis) di kiri, editor blok
@@ -305,12 +306,12 @@ function PohonButir({ versi: v, pilih, onPilih, bisaSeret }: { versi: VersiPedom
             setAtas(null);
           }}
         >
-          <button type="button" onClick={() => onPilih(b.id)}>
+          <Tekan onClick={() => onPilih(b.id)}>
             {bisaSeret && <GripVertical className="u-pdm-seret" aria-hidden />}
             <span className="u-pdm-pohon-nomor">{b.nomor}</span>
             <span className="u-pdm-pohon-judul">{b.judul || ringkasIsi(b)}</span>
             {v.parameter.some((p) => p.butir_id === b.id) && <Badge variant="primary" size="md">P</Badge>}
-          </button>
+          </Tekan>
         </li>
       ))}
     </ul>
@@ -455,14 +456,14 @@ function PanelKanan({ versi: v, butir, draf, onTambahParam, onUbahParam }: { ver
               )}
               {v.parameter.length === 0 ? <p className="u-pdm-redup">Belum ada parameter. Parameter berkunci katalog dibaca aturan sistem setelah pedoman berlaku.</p> : null}
               {v.parameter.map((p) => (
-                <button key={p.id} type="button" className="u-pdm-param-ringkas" onClick={() => draf && onUbahParam(p)}>
+                <Tekan key={p.id} className="u-pdm-param-ringkas" onClick={() => draf && onUbahParam(p)}>
                   <strong>{p.nama}</strong>
                   <span>
                     {p.pasal} · <code>{p.kunci}</code>
                   </span>
                   <span className="u-pdm-param-teks">{p.teks}</span>
                   {p.terpetakan ? <Badge variant="primary">{p.unit_pemilik ?? 'Dibaca sistem'}</Badge> : <Badge variant="neutral">Informatif</Badge>}
-                </button>
+                </Tekan>
               ))}
               {(v.periksa ?? []).filter((x) => x.tingkat === 'info').length > 0 && (
                 <p className="u-pdm-redup">
@@ -498,7 +499,7 @@ function PanelKomentar({ versi: v, butir }: { versi: VersiPedoman; butir: ButirP
   return (
     <div className="u-pdm-kanan-isi">
       <label className="u-pdm-centang">
-        <input type="checkbox" checked={semua} onChange={(e) => setSemua(e.target.checked)} /> Semua pasal
+        <Checkbox checked={semua} onCheckedChange={(c) => setSemua(c)} /> Semua pasal
       </label>
       {daftar.length === 0 ? <p className="u-pdm-redup">Belum ada komentar {butir && !semua ? `untuk ${butir.label}` : ''}.</p> : null}
       {daftar.map((k) => (
@@ -573,7 +574,7 @@ export function IsianNilaiParameter({ kat, value, onChange }: { kat: Pick<Katalo
             <div className="u-pdm-pilihan">
               {opsi.map((o) => (
                 <label key={o.value} className="u-pdm-centang">
-                  <input type="checkbox" checked={v.includes(o.value)} onChange={(e) => onChange(e.target.checked ? [...v, o.value] : v.filter((x) => x !== o.value))} /> {o.label}
+                  <Checkbox checked={v.includes(o.value)} onCheckedChange={(c) => onChange(c ? [...v, o.value] : v.filter((x) => x !== o.value))} /> {o.label}
                 </label>
               ))}
             </div>

@@ -40,15 +40,17 @@ export interface DialogProps {
   side?: 'right' | 'left' | 'bottom';
   /** Elemen yang difokus saat dialog terbuka (bawaan: elemen pertama yang bisa difokus). false = popup itu sendiri. */
   initialFocus?: boolean | React.RefObject<HTMLElement | null> | (() => HTMLElement | null | boolean | void);
+  /** Elemen yang difokus setelah dialog tertutup (bawaan: elemen pemicu). Dipakai mis. untuk kembali ke pemilih. */
+  finalFocus?: boolean | React.RefObject<HTMLElement | null> | (() => HTMLElement | null | boolean | void);
 }
 
 /** Dialog modal. Dengan `side`, menjadi Sheet (panel samping/bawah) untuk filter, detail, atau formulir panjang. */
-export function Dialog({ open, defaultOpen, onOpenChange, trigger, title, description, footer, size = 'md', side: sideProp, children, className, initialFocus }: DialogProps) {
+export function Dialog({ open, defaultOpen, onOpenChange, trigger, title, description, footer, size = 'md', side: sideProp, children, className, initialFocus, finalFocus }: DialogProps) {
   // Di platform mobile dialog dan panel kanan menjadi lembar bawah (bottom sheet), kecuali ukuran penuh.
   const plat = usePlatform();
   const side = plat.mobile && size !== 'full' && sideProp !== 'left' ? 'bottom' : sideProp;
   const popup = (
-    <BaseDialog.Popup className={cn(side ? 'u-sheet' : 'u-dialog', className)} data-size={size} data-side={side} initialFocus={initialFocus}>
+    <BaseDialog.Popup className={cn(side ? 'u-sheet' : 'u-dialog', className)} data-size={size} data-side={side} initialFocus={initialFocus} finalFocus={finalFocus}>
       {side === 'bottom' && <span className="u-sheet-grabber" aria-hidden />}
       <div className="u-dialog-header">
         <BaseDialog.Title className="u-dialog-title">{title}</BaseDialog.Title>
@@ -56,7 +58,7 @@ export function Dialog({ open, defaultOpen, onOpenChange, trigger, title, descri
       </div>
       {children && (
         <div className="u-dialog-body">
-          <AkarTingkatTab>{children}</AkarTingkatTab>
+          <AkarTingkatTab panel={Boolean(side)}>{children}</AkarTingkatTab>
         </div>
       )}
       {footer && <div className="u-dialog-footer">{footer}</div>}

@@ -4,11 +4,13 @@ import { BookOpenText, Check, CircleAlert, FileDown, Info, Scale, Search, X } fr
 import { cn } from '../lib/cn';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Empty } from '../components/display';
+import { DataTable } from '../components/data-table';
 import { Checkbox, Field, Input, Textarea } from '../components/forms';
 import { Sheet, useToast } from '../components/overlays';
 import { blokKeHtml } from '../editor/render';
 import type { Blok } from '../editor/tipe';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakad, useSiakadQuery } from './provider';
+import { Tekan } from '../components/tekan';
 
 /*
  * Pedoman & peraturan universitas (SIAKAD /v1/pedoman, docs/PEDOMAN.md). Dua lapisan:
@@ -628,9 +630,8 @@ export function BacaPedoman({ publik = false, kode: kodeProp, onKodeChange, clas
               <Search className="u-pdm-ikon-kecil" /> {daftar.data?.hasil.length} pasal memuat “{q}”
             </p>
             {daftar.data?.hasil.map((h) => (
-              <button
+              <Tekan
                 key={h.butir_id}
-                type="button"
                 className="u-pdm-hasil-item"
                 onClick={() => {
                   setKode(h.kode);
@@ -641,7 +642,7 @@ export function BacaPedoman({ publik = false, kode: kodeProp, onKodeChange, clas
                   {h.dokumen} {h.label}
                 </strong>
                 <span>{h.cuplikan}</span>
-              </button>
+              </Tekan>
             ))}
           </div>
         )}
@@ -650,14 +651,14 @@ export function BacaPedoman({ publik = false, kode: kodeProp, onKodeChange, clas
           <div key={jenis} className="u-pdm-baca-kelompok">
             <p className="u-pdm-label">{jenis}</p>
             {dok.map((d) => (
-              <button key={d.id} type="button" className="u-pdm-baca-dok" data-aktif={kode === d.kode || undefined} onClick={() => setKode(d.kode)}>
+              <Tekan key={d.id} className="u-pdm-baca-dok" kini={kode === d.kode} data-aktif={kode === d.kode || undefined} onClick={() => setKode(d.kode)}>
                 <strong>{d.judul}</strong>
                 <span>
                   {LABEL_LINGKUP_PEDOMAN[d.lingkup]}
                   {d.unit_nama ? ` · ${d.unit_nama}` : ''} · v{d.versi}
                   {d.sk_nomor ? ` · SK ${d.sk_nomor}` : ''}
                 </span>
-              </button>
+              </Tekan>
             ))}
           </div>
         ))}
@@ -694,6 +695,8 @@ export function NaskahPedoman({ versi: v, sorot, aksi, pilih, onPilih, kepala = 
     return m;
   }, [v.parameter]);
   const daftarIsi = v.butir.filter((b) => b.tipe === 'bab' || b.tipe === 'lampiran' || (b.tipe === 'pasal' && b.kedalaman === 0));
+  // Butir dapat dipilih (Enter/Spasi, terpilih terbaca) hanya bila ada onPilih; selain itu blok naskah biasa.
+  const Butir = (onPilih ? Tekan : 'div') as React.ElementType;
   return (
     <article className="u-pdm-naskah">
       {kepala && (
@@ -724,12 +727,12 @@ export function NaskahPedoman({ versi: v, sorot, aksi, pilih, onPilih, kepala = 
       )}
       {v.pembukaan ? <p className="u-pdm-pembukaan">{v.pembukaan}</p> : null}
       {v.butir.map((b) => (
-        <div
+        <Butir
           key={b.id}
           id={`pdm-${b.kunci}`}
           className={cn('u-pdm-butir', `u-pdm-${b.tipe}`)}
           data-sorot={sorot === b.kunci || pilih === b.id || undefined}
-          onClick={onPilih ? () => onPilih(b.id) : undefined}
+          {...(onPilih ? { elemen: 'div' as const, terpilih: pilih === b.id, onClick: () => onPilih(b.id) } : {})}
         >
           {b.tipe === 'bab' || b.tipe === 'bagian' || b.tipe === 'pasal' || b.tipe === 'lampiran' ? (
             <h3>
@@ -749,7 +752,7 @@ export function NaskahPedoman({ versi: v, sorot, aksi, pilih, onPilih, kepala = 
           {(param.get(b.id) ?? []).map((p) => (
             <BlokParameter key={p.id} p={p} />
           ))}
-        </div>
+        </Butir>
       ))}
     </article>
   );
@@ -770,24 +773,13 @@ export function BlokParameter({ p, aksi }: { p: ParameterPedoman; aksi?: React.R
         </span>
       </div>
       {p.tipe === 'tabel' && Array.isArray(p.nilai) && kolom.length > 0 ? (
-        <table className="u-pdm-param-tabel">
-          <thead>
-            <tr>
-              {kolom.map((k) => (
-                <th key={k.kode}>{k.label}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {(p.nilai as Array<Record<string, unknown>>).map((r, i) => (
-              <tr key={i}>
-                {kolom.map((k) => (
-                  <td key={k.kode}>{String(r[k.kode] ?? '')}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          className="u-pdm-param-tabel"
+          columns={kolom.map((k) => ({ key: k.kode, header: k.label, value: (r: Record<string, unknown>) => String(r[k.kode] ?? ''), cell: (r: Record<string, unknown>) => String(r[k.kode] ?? '') }))}
+          rows={(p.nilai as Array<Record<string, unknown>>).map((r, i) => ({ ...r, __i: i }))}
+          rowKey={(r) => String(r.__i)}
+          pagination={false} columnToggle={false} densityToggle={false} defaultDensity="compact"
+        />
       ) : (
         <div className="u-pdm-param-nilai">{p.teks}</div>
       )}

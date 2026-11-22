@@ -6,6 +6,7 @@ import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Card, CardContent, CardHeader, DescriptionList, Empty, Tabs } from '../components/display';
 import { StatCard, StatGrid } from '../components/charts';
 import { DataTable } from '../components/data-table';
+import { labelTahunAkademik } from './akademik';
 import { Checkbox, Field, Input, Textarea } from '../components/forms';
 import { Select } from '../components/select';
 import { ConfirmDialog, Sheet, useToast } from '../components/overlays';
@@ -17,6 +18,8 @@ import { PilihSK } from './isian-sk';
 import { PilihBerkas } from './pilih-berkas';
 import { AlurPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import { DaftarPerubahanAturan, DaftarVersiAturan, LencanaStatusVersi, PanelBandingAturan, type PerubahanAturan, type VersiAturanRow } from './aturan-versi';
+import { IsianTanggal } from '../components/formulir';
+import { Tekan } from '../components/tekan';
 
 /*
  * Aturan kurikulum BERVERSI (SIAKAD /v1/kurikulum-aturan, docs/KURIKULUM.md "Aturan kurikulum berversi"). Mekanisme versi
@@ -556,7 +559,7 @@ function RincianAturanKurikulum({ id, onPilih, referensi }: { id: number; onPili
                       <ul className="u-kur-perangkat-ringkas">
                         {a.turunan.map((x) => (
                           <li key={x.id}>
-                            <button type="button" className="u-kur-tautan" onClick={() => onPilih(x.id)}>{x.nama} v{x.versi}</button> <LencanaStatusVersi status={x.status} /> <small>{x.unit}</small>
+                            <Tekan className="u-kur-tautan" onClick={() => onPilih(x.id)}>{x.nama} v{x.versi}</Tekan> <LencanaStatusVersi status={x.status} /> <small>{x.unit}</small>
                           </li>
                         ))}
                       </ul>
@@ -1521,14 +1524,26 @@ export function LaporanKetercapaianCpl({ kurikulumId, angkatanAwal, className }:
         <Card>
           <CardHeader title="Tren ketercapaian antar periode" description="Rekap terjadwal (Penjadwal: Hitung ulang ketercapaian CPL)." />
           <CardContent>
-            <table className="u-kur-tabel">
-              <thead><tr><th>CPL</th>{tren.data.periode.map((p) => <th key={p}>{p}</th>)}</tr></thead>
-              <tbody>
-                {[...new Set(tren.data.data.map((x) => x.kode))].map((k) => (
-                  <tr key={k}><td>{k}</td>{tren.data!.periode.map((p) => { const x = tren.data!.data.find((y) => y.kode === k && y.tahun_id === p); return <td key={p}>{x?.persen_tercapai != null ? `${angka(x.persen_tercapai)}%` : '-'}</td>; })}</tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable<{ kode: string }>
+              columns={[
+                { key: 'kode', header: 'CPL', mobile: 'title' },
+                ...tren.data.periode.map((p) => ({
+                  key: p,
+                  header: labelTahunAkademik(p, true),
+                  label: labelTahunAkademik(p),
+                  align: 'end' as const,
+                  value: (r: { kode: string }) => tren.data!.data.find((y) => y.kode === r.kode && y.tahun_id === p)?.persen_tercapai ?? null,
+                  cell: (r: { kode: string }) => {
+                    const x = tren.data!.data.find((y) => y.kode === r.kode && y.tahun_id === p);
+                    return x?.persen_tercapai != null ? `${angka(x.persen_tercapai)}%` : '-';
+                  },
+                })),
+              ]}
+              rows={[...new Set(tren.data.data.map((x) => x.kode))].map((kode) => ({ kode }))}
+              rowKey={(r) => r.kode}
+              exportCsv="tren-ketercapaian-cpl"
+              pagination={false} columnToggle={false} densityToggle={false} defaultDensity="compact"
+            />
           </CardContent>
         </Card>
       ) : null}
@@ -1614,18 +1629,27 @@ export function StatistikMataKuliah({ prodi, kodeMk, tahun, className }: { prodi
       <Card>
         <CardHeader title="Sebaran nilai antar periode" description="Bandingkan periode untuk melihat tren." />
         <CardContent>
-          <table className="u-kur-tabel u-kur-sebaran">
-            <thead><tr><th>Periode</th>{huruf.map((h) => <th key={h}>{h}</th>)}<th>Lulus</th></tr></thead>
-            <tbody>
-              {x.periode.map((p) => (
-                <tr key={p.tahun_id}>
-                  <td>{p.tahun_id}</td>
-                  {huruf.map((h) => <td key={h}><span className="u-kur-batang" style={{ width: `${(100 * (p.sebaran[h] ?? 0)) / maks}%` }} />{p.sebaran[h] ?? 0}</td>)}
-                  <td>{p.persen_lulus != null ? `${angka(p.persen_lulus)}%` : '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable<(typeof x.periode)[number]>
+            className="u-kur-sebaran"
+            columns={[
+              { key: 'tahun_id', header: 'Periode', mobile: 'title', value: (p) => p.tahun_id, cell: (p) => labelTahunAkademik(p.tahun_id) },
+              ...huruf.map((h) => ({
+                key: `h-${h}`,
+                header: h,
+                value: (p: (typeof x.periode)[number]) => p.sebaran[h] ?? 0,
+                cell: (p: (typeof x.periode)[number]) => (
+                  <>
+                    <span className="u-kur-batang" style={{ width: `${(100 * (p.sebaran[h] ?? 0)) / maks}%` }} />
+                    {p.sebaran[h] ?? 0}
+                  </>
+                ),
+              })),
+              { key: 'persen_lulus', header: 'Lulus', align: 'end', mobile: 'badge', value: (p) => p.persen_lulus ?? null, cell: (p) => (p.persen_lulus != null ? `${angka(p.persen_lulus)}%` : '-') },
+            ]}
+            rows={x.periode}
+            rowKey={(p) => p.tahun_id}
+            pagination={false} columnToggle={false} densityToggle={false} defaultDensity="compact"
+          />
         </CardContent>
       </Card>
       <div className="u-kur-ringkas">
@@ -1847,7 +1871,7 @@ function PanelEvaluasi({ id, onOpenChange }: { id: number; onOpenChange: (o: boo
                   <PilihSK value={sk.sk_id} onValueChange={(v: string | null) => setSk({ ...sk, sk_id: v })} jenis="kurikulum" label="SK dari registri" />
                   <div className="u-bkd-grid-3">
                     <Field label="Nomor SK" optional><Input value={sk.no_sk} onChange={(e) => setSk({ ...sk, no_sk: e.target.value })} /></Field>
-                    <Field label="Tanggal SK" optional><Input type="date" value={sk.tanggal_sk} onChange={(e) => setSk({ ...sk, tanggal_sk: e.target.value })} /></Field>
+                    <Field label="Tanggal SK" optional><IsianTanggal value={sk.tanggal_sk} onValueChange={(v) => setSk({ ...sk, tanggal_sk: v })} /></Field>
                   </div>
                 </div>
               </CardContent>
@@ -1925,10 +1949,17 @@ export function KisiKisiCbt({ ujianId, className }: { ujianId: number; className
   return (
     <div className={cn('u-bkd-form', className)}>
       {x.pesan.length ? <Alert variant="warning" title="Kisi-kisi belum sesuai RPS">{x.pesan.join(' ')}</Alert> : <Alert variant="success">Proporsi soal sesuai rencana asesmen RPS.</Alert>}
-      <table className="u-kur-tabel">
-        <thead><tr><th>CPMK</th><th>Rencana RPS ({x.komponen ?? '-'})</th><th>Poin soal</th><th>Selisih</th></tr></thead>
-        <tbody>{x.cpmk.map((c) => <tr key={c.kode}><td>{c.kode}</td><td>{c.target_persen != null ? `${angka(c.target_persen)}%` : '-'}</td><td>{angka(c.poin_persen)}%</td><td>{c.selisih != null ? angka(c.selisih) : '-'}</td></tr>)}</tbody>
-      </table>
+      <DataTable<(typeof x.cpmk)[number]>
+        columns={[
+          { key: 'kode', header: 'CPMK', mobile: 'title' },
+          { key: 'target_persen', header: `Rencana RPS (${x.komponen ?? '-'})`, label: 'Rencana RPS', align: 'end', value: (c) => c.target_persen, cell: (c) => (c.target_persen != null ? `${angka(c.target_persen)}%` : '-') },
+          { key: 'poin_persen', header: 'Poin soal', align: 'end', value: (c) => c.poin_persen, cell: (c) => `${angka(c.poin_persen)}%` },
+          { key: 'selisih', header: 'Selisih', align: 'end', mobile: 'badge', value: (c) => c.selisih, cell: (c) => (c.selisih != null ? angka(c.selisih) : '-') },
+        ]}
+        rows={x.cpmk}
+        rowKey={(c) => c.kode}
+        pagination={false} columnToggle={false} densityToggle={false} defaultDensity="compact"
+      />
       <p className="u-bkd-keterangan">{x.jumlah_soal} soal · {x.soal_tanpa_tanda} belum bertanda · kognitif: {Object.entries(x.kognitif).map(([k, n]) => `${k} ${n}`).join(', ') || '-'}</p>
     </div>
   );

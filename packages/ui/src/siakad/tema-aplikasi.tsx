@@ -29,6 +29,7 @@ import {
   type ModeTampilan,
   type OpsiTema,
 } from '../tema';
+import { Tekan } from '../components/tekan';
 
 type Tata = Record<string, unknown> & { mode?: ModeTampilan };
 
@@ -267,12 +268,12 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
               <span className="u-label">Preset</span>
               <div className="u-tema-preset">
                 {PRESET_TEMA.map((p) => (
-                  <button key={p.nama} type="button" aria-pressed={presetAktif === p.nama} onClick={() => setDraf((d) => (d ? { ...d, tema: { ...p.opsi } } : d))}>
+                  <Tekan key={p.nama} terpilih={presetAktif === p.nama} onClick={() => setDraf((d) => (d ? { ...d, tema: { ...p.opsi } } : d))}>
                     <span style={{ background: p.opsi.primary ?? TEMA_BAWAAN.primary }} />
                     <span style={{ background: p.opsi.secondary ?? TEMA_BAWAAN.secondary }} />
                     {p.nama}
                     {presetAktif === p.nama && <Check aria-hidden />}
-                  </button>
+                  </Tekan>
                 ))}
               </div>
               <PilihWarna label="Warna utama" nilai={lengkap.primary} daftar={PRIMER} warisan={dariWarisan('primary')} onChange={(v) => ubahTema('primary', v)} />
@@ -462,12 +463,12 @@ function PilihWarna({ label, nilai, daftar, warisan, otomatis, onChange }: { lab
     <Field label={<>{label}{warisan && <Badge variant="neutral" className="u-tema-warisan">diwarisi</Badge>}</>}>
       <div className="u-tema-warna">
         {otomatis && (
-          <button type="button" className="u-tema-warna-otomatis" aria-pressed={!nilai} onClick={() => onChange('')}>
+          <Tekan className="u-tema-warna-otomatis" terpilih={!nilai} onClick={() => onChange('')}>
             Otomatis
-          </button>
+          </Tekan>
         )}
         {daftar.map((c) => (
-          <button key={c} type="button" title={c} aria-label={`${label} ${c}`} aria-pressed={nilai === c} style={{ background: c }} onClick={() => onChange(c)} />
+          <Tekan key={c} title={c} aria-label={`${label} ${c}`} terpilih={nilai === c} style={{ background: c }} onClick={() => onChange(c)} />
         ))}
         <label className="u-tema-warna-bebas" title="Pilih warna bebas">
           <input type="color" value={nilai || '#808080'} onChange={(e) => onChange(e.target.value)} aria-label={`${label} bebas`} />

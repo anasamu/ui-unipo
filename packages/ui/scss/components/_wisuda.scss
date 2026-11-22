@@ -104,33 +104,6 @@
 .u-wisuda-kepala-kartu .u-wisuda-judul-kartu {
   margin-bottom: 0.75rem;
 }
-.u-wisuda-gulir {
-  overflow-x: auto;
-}
-.u-wisuda-tabel {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--u-text-sm);
-  th,
-  td {
-    padding: 0.5rem 0.625rem;
-    border-bottom: 1px solid var(--u-border);
-    text-align: left;
-    white-space: nowrap;
-  }
-  th {
-    color: var(--u-muted-foreground);
-    font-weight: 500;
-  }
-  td:not(:first-child):not(:nth-child(2)),
-  th:not(:first-child):not(:nth-child(2)) {
-    text-align: right;
-  }
-  tfoot th {
-    color: var(--u-foreground);
-    font-weight: 600;
-  }
-}
 .u-wisuda-qr-deret {
   display: flex;
   flex-wrap: wrap;
@@ -296,4 +269,9 @@
     cursor: pointer;
     font-weight: 500;
   }
+}
+
+// judul={null}: hanya tombol aksi, rata kanan.
+.u-wisuda-kepala[data-tanpa-judul] {
+  justify-content: flex-end;
 }

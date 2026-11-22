@@ -56,6 +56,12 @@ if (cmd === 'periksa-elemen') {
   await new Promise((r) => process.stdout.write('', r));
   process.exit(kode);
 }
+// periksa-katalog: sumber <KelolaSumber>/<TabelSumber>/... aplikasi harus ada di katalog (lihat cli/periksa-katalog.mjs).
+if (cmd === 'periksa-katalog') {
+  const kode = await (await import('./periksa-katalog.mjs')).utama({ cwd, flags, rest, c, ok, warn });
+  await new Promise((r) => process.stdout.write('', r));
+  process.exit(kode);
+}
 const deps = { ...(project?.dependencies ?? {}), ...(project?.devDependencies ?? {}) };
 
 function packageManager() {
@@ -431,6 +437,7 @@ ${c.b('Perintah')}
                        --dir src/components/unipo --overwrite
   list [kata]          Daftar komponen per kelompok
   jalur-bff            Jalur API yang dipanggil komponen unipo-ui yang diimpor aplikasi (izin BFF)
+  periksa-katalog      Sumber katalog yang dipasang aplikasi (KelolaSumber, TabelSumber, ...) ada di katalog
                        --tulis bff/lib/izin-komponen.json | --cek bff/lib/izin-komponen.json --src src --rinci
   tema                 Tulis ulang berkas tema   --primary --secondary --radius --netral --font --teks
                        --bayangan --gerak --dari "<tautan tema.css dari api.unipo.ac.id/docs/tema>" --out --stdout

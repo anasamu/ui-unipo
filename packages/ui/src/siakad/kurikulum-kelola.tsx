@@ -89,6 +89,10 @@ import {
   type Rps,
   type StatusKurikulum,
 } from './kurikulum';
+import { IsianAngka } from '../components/isian-angka';
+import { IsianTanggal } from '../components/formulir';
+import { keAngka, teksAngka } from '../lib/angka';
+import { Tekan } from '../components/tekan';
 
 /*
  * Kelola Kurikulum OBE (/v1/kurikulum-obe, Permendiktisaintek 39/2025) untuk prodi, fakultas, dan BAAK:
@@ -463,7 +467,7 @@ export function FormKurikulumObe({ open, onOpenChange, kurikulum, kodeProdi, pil
               <Input value={f.kode} disabled={terkunci} onChange={(e) => set('kode')(e.target.value)} placeholder="K2026" />
             </Field>
             <Field label="Tahun mulai berlaku" error={kolom.tahun_berlaku} description="Menentukan versi aturan kurikulum yang diikuti.">
-              <Input type="number" inputMode="numeric" value={f.tahun_berlaku} onChange={(e) => set('tahun_berlaku')(e.target.value)} />
+              <IsianAngka ribuan={false} value={keAngka(f.tahun_berlaku)} onValueChange={(n) => set('tahun_berlaku')(teksAngka(n))} />
             </Field>
           </div>
           <Field label="Nama kurikulum" required error={kolom.nama}>
@@ -487,22 +491,22 @@ export function FormKurikulumObe({ open, onOpenChange, kurikulum, kodeProdi, pil
         <div className="u-kk-form">
           <div className="u-kk-grid u-kk-grid-3">
             <Field label="SKS untuk lulus" error={kolom.sks_lulus} description={sksMin ? `Minimal ${sksMin} SKS ${sumberBatas}.` : 'Kosongkan = minimal jenjang.'}>
-              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.sks_lulus} onChange={(e) => set('sks_lulus')(e.target.value)} placeholder={sksMin ? String(sksMin) : undefined} />
+              <IsianAngka value={keAngka(f.sks_lulus)} disabled={terkunci} placeholder={sksMin ? String(sksMin) : undefined} onValueChange={(n) => set('sks_lulus')(teksAngka(n))} />
             </Field>
             <Field label="SKS mata kuliah wajib" error={kolom.sks_wajib}>
-              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.sks_wajib} onChange={(e) => set('sks_wajib')(e.target.value)} />
+              <IsianAngka value={keAngka(f.sks_wajib)} disabled={terkunci} onValueChange={(n) => set('sks_wajib')(teksAngka(n))} />
             </Field>
             <Field label="SKS mata kuliah pilihan" error={kolom.sks_pilihan}>
-              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.sks_pilihan} onChange={(e) => set('sks_pilihan')(e.target.value)} />
+              <IsianAngka value={keAngka(f.sks_pilihan)} disabled={terkunci} onValueChange={(n) => set('sks_pilihan')(teksAngka(n))} />
             </Field>
             <Field label="Masa tempuh normal (semester)" error={kolom.masa_tempuh}>
-              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.masa_tempuh} onChange={(e) => set('masa_tempuh')(e.target.value)} placeholder={tempuhNormal ? String(tempuhNormal) : undefined} />
+              <IsianAngka value={keAngka(f.masa_tempuh)} disabled={terkunci} placeholder={tempuhNormal ? String(tempuhNormal) : undefined} onValueChange={(n) => set('masa_tempuh')(teksAngka(n))} />
             </Field>
             <Field label="Masa studi paling lama" error={kolom.masa_studi_maks} description={studiMaks ? `Paling lama ${studiMaks} semester ${sumberBatas}.` : 'Paling lama 2× masa tempuh.'}>
-              <Input type="number" inputMode="numeric" disabled={terkunci} value={f.masa_studi_maks} onChange={(e) => set('masa_studi_maks')(e.target.value)} placeholder={studiMaks ? String(studiMaks) : undefined} />
+              <IsianAngka value={keAngka(f.masa_studi_maks)} disabled={terkunci} placeholder={studiMaks ? String(studiMaks) : undefined} onValueChange={(n) => set('masa_studi_maks')(teksAngka(n))} />
             </Field>
             <Field label="IPK minimal lulus" error={kolom.ipk_min_lulus} description={ipkMin ? `Aturan: ${ipkMin}` : undefined}>
-              <Input type="number" inputMode="decimal" step="0.01" disabled={terkunci} value={f.ipk_min_lulus} onChange={(e) => set('ipk_min_lulus')(e.target.value)} placeholder={ipkMin ? String(ipkMin) : undefined} />
+              <IsianAngka value={keAngka(f.ipk_min_lulus)} desimal={2} langkah={0.01} disabled={terkunci} placeholder={ipkMin ? String(ipkMin) : undefined} onValueChange={(n) => set('ipk_min_lulus')(teksAngka(n))} />
             </Field>
           </div>
           {a.pasal('struktur') ? <p className="u-kw-bantuan">Dasar: {a.pasal('struktur')}</p> : null}
@@ -992,7 +996,7 @@ function DialogSahkan({ open, onOpenChange, k }: { open: boolean; onOpenChange: 
           <PilihNomorSK value={sk.no_sk} onValueChange={(v) => setSk((s) => ({ ...s, no_sk: v }))} />
         </Field>
         <Field label="Tanggal SK" optional>
-          <Input type="date" value={sk.tanggal_sk} onChange={(e) => setSk((s) => ({ ...s, tanggal_sk: e.target.value }))} />
+          <IsianTanggal value={sk.tanggal_sk} onValueChange={(v) => setSk((s) => ({ ...s, tanggal_sk: v }))} />
         </Field>
         {galatValidasi?.length ? (
           <label className="u-kk-centang">
@@ -1088,7 +1092,7 @@ function DialogRevisi({ open, onOpenChange, k, onSelesai }: { open: boolean; onO
             <Input value={f.kode} onChange={(e) => setF({ ...f, kode: e.target.value })} />
           </Field>
           <Field label="Tahun berlaku">
-            <Input type="number" value={f.tahun_berlaku} onChange={(e) => setF({ ...f, tahun_berlaku: e.target.value })} />
+            <IsianAngka ribuan={false} value={keAngka(f.tahun_berlaku)} onValueChange={(n) => setF({ ...f, tahun_berlaku: teksAngka(n) })} />
           </Field>
         </div>
         <Field label="Nama">
@@ -1170,9 +1174,9 @@ function DialogAngkatan({ open, onOpenChange, k }: { open: boolean; onOpenChange
           {[kini - 3, kini - 2, kini - 1, kini, kini + 1].map((t) => {
             const ada = daftar.includes(String(t));
             return (
-              <button key={t} type="button" className="u-kk-chip" data-active={dataFlag(ada)} onClick={() => setTeks((ada ? daftar.filter((x) => x !== String(t)) : [...daftar, String(t)]).sort().join(', '))}>
+              <Tekan key={t} className="u-kk-chip" terpilih={ada} data-active={dataFlag(ada)} onClick={() => setTeks((ada ? daftar.filter((x) => x !== String(t)) : [...daftar, String(t)]).sort().join(', '))}>
                 {t}
-              </button>
+              </Tekan>
             );
           })}
         </div>
@@ -1370,7 +1374,7 @@ function FormButir({ kurikulumId, jenis, awal, onTutup }: { kurikulumId: number 
               <Select value={f.sumber} onValueChange={(v) => setF({ ...f, sumber: v ?? '' })} options={SUMBER_CPL} />
             </Field>
             <Field label="Target capaian" optional description="Skor 0–100" error={kolom.target}>
-              <Input type="number" min={0} max={100} value={f.target} onChange={(e) => setF({ ...f, target: e.target.value })} placeholder="70" />
+              <IsianAngka value={keAngka(f.target)} min={0} max={100} placeholder="70" onValueChange={(n) => setF({ ...f, target: teksAngka(n) })} />
             </Field>
           </div>
         )}
@@ -1473,72 +1477,72 @@ export function KelolaMkKurikulum({ kurikulumId, bolehUbah, onBukaMk, className 
                   </span>
                   {!!maks && <Progress value={Math.min(100, (wajib / maks) * 100)} size="sm" tone={wajib > maks ? 'danger' : 'primary'} />}
                 </header>
-                <TableContainer>
-                  <Table density="compact">
-                    <thead>
-                      <tr>
-                        <th style={{ width: 110 }}>Kode</th>
-                        <th>Mata kuliah</th>
-                        <th style={{ width: 70, textAlign: 'right' }}>SKS</th>
-                        <th style={{ width: 130 }}>Sifat</th>
-                        <th style={{ width: 110 }}>Prasyarat</th>
-                        <th style={{ width: 90 }}>CPL</th>
-                        <th style={{ width: 70 }}>CPMK</th>
-                        <th style={{ width: 100 }}>RPS</th>
-                        <th style={{ width: 44 }} aria-label="Aksi" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {isi.map((m) => {
-                        const cpl = Array.isArray(m.cpl) ? m.cpl : m.cpl ? String(m.cpl).split(',') : [];
-                        const pras = Array.isArray(m.prasyarat) ? (m.prasyarat as Array<{ kode_mk?: string } | string>).map((p) => (typeof p === 'string' ? p : (p.kode_mk ?? ''))) : [];
-                        const aksi: MenuEntry[] = [
-                          { label: 'Buka CPMK & RPS', icon: <ListChecks />, onSelect: () => onBukaMk?.(m) },
-                          ...(bolehUbah
-                            ? ([
-                                { label: 'Ubah mata kuliah', icon: <PenLine />, onSelect: () => setForm(m as MkDetail) },
-                                { label: 'Atur prasyarat', icon: <Network />, onSelect: () => setSyarat(m) },
-                                { type: 'separator' },
-                                { label: 'Hapus', icon: <Trash2 />, destructive: true, onSelect: () => setHapus(m) },
-                              ] as MenuEntry[])
-                            : []),
-                        ];
-                        return (
-                          <tr key={m.id} className="u-kk-baris" data-jenis={m.jenis} onClick={() => onBukaMk?.(m)}>
-                            <td>
-                              <span className="u-kur-code">{m.kode_mk}</span>
-                            </td>
-                            <td>
-                              <span className="u-kk-nama-mk">{m.nama}</span>
-                            </td>
-                            <td style={{ textAlign: 'right' }} className="u-kk-angka">
-                              {formatNumber(n(m.sks))}
-                            </td>
-                            <td>
-                              <span className="u-mk-jenis" data-jenis={m.jenis}>
-                                {JENIS_MK[m.jenis] ?? m.jenis}
-                              </span>
-                            </td>
-                            <td>{pras.length ? <span title={pras.join(', ')}>{pras.join(', ')}</span> : <span className="u-kk-muted">–</span>}</td>
-                            <td>{cpl.length ? <span title={cpl.join(', ')}>{cpl.length} CPL</span> : <span className="u-kk-warn">belum</span>}</td>
-                            <td className="u-kk-angka">{n(m.jumlah_cpmk) || <span className="u-kk-warn">0</span>}</td>
-                            <td>{m.status_rps === 'disahkan' ? <Badge variant="success">Disahkan</Badge> : <Badge variant="warning">{m.status_rps ? label(m.status_rps) : 'Belum'}</Badge>}</td>
-                            <td onClick={(e) => e.stopPropagation()}>
-                              <Menu
-                                trigger={
-                                  <Button size="sm" variant="ghost" iconOnly aria-label={`Aksi ${m.nama}`}>
-                                    ⋯
-                                  </Button>
-                                }
-                                items={aksi}
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </Table>
-                </TableContainer>
+                <DataTable<(typeof isi)[number]>
+                  columns={[
+                    { key: 'kode_mk', header: 'Kode', width: 110, sortable: true, mobile: 'subtitle', cell: (m) => <span className="u-kur-code">{m.kode_mk}</span> },
+                    { key: 'nama', header: 'Mata kuliah', sortable: true, mobile: 'title', cell: (m) => <span className="u-kk-nama-mk">{m.nama}</span> },
+                    { key: 'sks', header: 'SKS', width: 70, align: 'end', sortable: true, value: (m) => n(m.sks), cell: (m) => <span className="u-kk-angka">{formatNumber(n(m.sks))}</span> },
+                    {
+                      key: 'jenis',
+                      header: 'Sifat',
+                      width: 130,
+                      sortable: true,
+                      value: (m) => JENIS_MK[m.jenis] ?? m.jenis,
+                      cell: (m) => (
+                        <span className="u-mk-jenis" data-jenis={m.jenis}>
+                          {JENIS_MK[m.jenis] ?? m.jenis}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: 'prasyarat',
+                      header: 'Prasyarat',
+                      width: 110,
+                      value: (m) => prasyaratMk(m).join(', '),
+                      cell: (m) => {
+                        const pras = prasyaratMk(m);
+                        return pras.length ? <span title={pras.join(', ')}>{pras.join(', ')}</span> : <span className="u-kk-muted">–</span>;
+                      },
+                    },
+                    {
+                      key: 'cpl',
+                      header: 'CPL',
+                      width: 90,
+                      value: (m) => cplMk(m).length,
+                      cell: (m) => {
+                        const cpl = cplMk(m);
+                        return cpl.length ? <span title={cpl.join(', ')}>{cpl.length} CPL</span> : <span className="u-kk-warn">belum</span>;
+                      },
+                    },
+                    { key: 'jumlah_cpmk', header: 'CPMK', width: 70, align: 'end', value: (m) => n(m.jumlah_cpmk), cell: (m) => <span className="u-kk-angka">{n(m.jumlah_cpmk) || <span className="u-kk-warn">0</span>}</span> },
+                    {
+                      key: 'status_rps',
+                      header: 'RPS',
+                      width: 100,
+                      mobile: 'badge',
+                      value: (m) => (m.status_rps ? label(m.status_rps) : 'Belum'),
+                      cell: (m) => (m.status_rps === 'disahkan' ? <Badge variant="success">Disahkan</Badge> : <Badge variant="warning">{m.status_rps ? label(m.status_rps) : 'Belum'}</Badge>),
+                    },
+                  ]}
+                  rows={isi}
+                  rowKey={(m) => String(m.id)}
+                  onRowClick={onBukaMk ? (m) => onBukaMk(m) : undefined}
+                  rowActions={(m) => [
+                    { label: 'Buka CPMK & RPS', icon: <ListChecks />, onSelect: () => onBukaMk?.(m) },
+                    ...(bolehUbah
+                      ? ([
+                          { label: 'Ubah mata kuliah', icon: <PenLine />, onSelect: () => setForm(m as MkDetail) },
+                          { label: 'Atur prasyarat', icon: <Network />, onSelect: () => setSyarat(m) },
+                          { type: 'separator' },
+                          { label: 'Hapus', icon: <Trash2 />, destructive: true, onSelect: () => setHapus(m) },
+                        ] as MenuEntry[])
+                      : []),
+                  ]}
+                  pagination={false}
+                  columnToggle={false}
+                  densityToggle={false}
+                  defaultDensity="compact"
+                />
               </section>
             );
           })}
@@ -1560,6 +1564,9 @@ export function KelolaMkKurikulum({ kurikulumId, bolehUbah, onBukaMk, className 
   );
 }
 
+const cplMk = (m: { cpl?: unknown }): string[] => (Array.isArray(m.cpl) ? (m.cpl as string[]) : m.cpl ? String(m.cpl).split(',') : []);
+const prasyaratMk = (m: { prasyarat?: unknown }): string[] =>
+  Array.isArray(m.prasyarat) ? (m.prasyarat as Array<{ kode_mk?: string } | string>).map((p) => (typeof p === 'string' ? p : (p.kode_mk ?? ''))) : [];
 /** Kategori MK untuk perangkat wajib aturan (AturanKurikulum::JENIS_MK): teori, praktikum, lapangan, mbkm, ta. */
 const kategoriMk = (f: { jenis: string; sks_praktikum: string; sks_praktik_lapangan: string; luar_prodi: boolean }) =>
   f.jenis === 'S' ? 'ta' : f.luar_prodi ? 'mbkm' : n(f.sks_praktik_lapangan) > 0 ? 'lapangan' : n(f.sks_praktikum) > 0 ? 'praktikum' : 'teori';
@@ -1759,16 +1766,16 @@ function FormMk({ kurikulumId, awal, onTutup }: { kurikulumId: number | string; 
             </legend>
             <div className="u-kk-grid u-kk-grid-4">
               <Field label="Tatap muka" error={kolom.sks_tatap_muka}>
-                <Input type="number" step="0.5" min={0} value={f.sks_tatap_muka} onChange={(e) => setF({ ...f, sks_tatap_muka: e.target.value })} />
+                <IsianAngka value={keAngka(f.sks_tatap_muka)} desimal={1} langkah={0.5} min={0} onValueChange={(n) => setF({ ...f, sks_tatap_muka: teksAngka(n) })} />
               </Field>
               <Field label="Praktikum">
-                <Input type="number" step="0.5" min={0} value={f.sks_praktikum} onChange={(e) => setF({ ...f, sks_praktikum: e.target.value })} />
+                <IsianAngka value={keAngka(f.sks_praktikum)} desimal={1} langkah={0.5} min={0} onValueChange={(n) => setF({ ...f, sks_praktikum: teksAngka(n) })} />
               </Field>
               <Field label="Praktik lapangan">
-                <Input type="number" step="0.5" min={0} value={f.sks_praktik_lapangan} onChange={(e) => setF({ ...f, sks_praktik_lapangan: e.target.value })} />
+                <IsianAngka value={keAngka(f.sks_praktik_lapangan)} desimal={1} langkah={0.5} min={0} onValueChange={(n) => setF({ ...f, sks_praktik_lapangan: teksAngka(n) })} />
               </Field>
               <Field label="Simulasi">
-                <Input type="number" step="0.5" min={0} value={f.sks_simulasi} onChange={(e) => setF({ ...f, sks_simulasi: e.target.value })} />
+                <IsianAngka value={keAngka(f.sks_simulasi)} desimal={1} langkah={0.5} min={0} onValueChange={(n) => setF({ ...f, sks_simulasi: teksAngka(n) })} />
               </Field>
             </div>
           </fieldset>
@@ -1784,7 +1791,7 @@ function FormMk({ kurikulumId, awal, onTutup }: { kurikulumId: number | string; 
             )
           ) : null}
           <Field label="Jumlah pertemuan" required={wajib.pertemuan} optional={!wajib.pertemuan} error={kolom.pertemuan} description={bantuWajib('pertemuan', pertemuanMin ? `Paling sedikit ${pertemuanMin} pertemuan.` : undefined)}>
-            <Input type="number" min={1} max={32} value={f.pertemuan} onChange={(e) => setF({ ...f, pertemuan: e.target.value })} />
+            <IsianAngka value={keAngka(f.pertemuan)} min={1} max={32} onValueChange={(n) => setF({ ...f, pertemuan: teksAngka(n) })} />
           </Field>
         </div>
       ),
@@ -2310,7 +2317,7 @@ function FormCpmk({ mkId, kurikulumId, awal, onTutup }: { mkId: number | string;
             <Input value={f.kode} onChange={(e) => setF({ ...f, kode: e.target.value })} />
           </Field>
           <Field label="Target capaian" optional description="Skor 0–100">
-            <Input type="number" min={0} max={100} value={f.target} onChange={(e) => setF({ ...f, target: e.target.value })} />
+            <IsianAngka value={keAngka(f.target)} min={0} max={100} onValueChange={(n) => setF({ ...f, target: teksAngka(n) })} />
           </Field>
         </div>
         <Field label="Rumusan CPMK" required error={kolom.deskripsi}>
@@ -2337,7 +2344,7 @@ function FormCpmk({ mkId, kurikulumId, awal, onTutup }: { mkId: number | string;
                     <span className="u-kur-code">{c.kode}</span>
                     <span className="u-kk-teks">{c.deskripsi}</span>
                   </label>
-                  {on && <Input size="sm" type="number" min={0} step="0.5" value={peta[c.id]} onChange={(e) => setPeta({ ...peta, [c.id]: e.target.value })} aria-label={`Bobot ${c.kode}`} />}
+                  {on && <IsianAngka value={keAngka(peta[c.id])} desimal={1} langkah={0.5} size="sm" min={0} aria-label={`Bobot ${c.kode}`} onValueChange={(n) => setPeta({ ...peta, [c.id]: teksAngka(n) })} />}
                 </li>
               );
             })}
@@ -2436,10 +2443,10 @@ export function KelolaRps({ mkId, bolehSusun, bolehSahkan, className }: KelolaRp
       <div className="u-kk-toolbar">
         <div className="u-kk-versi" role="tablist" aria-label="Versi RPS">
           {versi.map((v) => (
-            <button key={v.id} type="button" role="tab" aria-selected={v.id === pilih} data-active={dataFlag(v.id === pilih)} onClick={() => setPilih(v.id)}>
+            <Tekan key={v.id} role="tab" terpilih={v.id === pilih} data-active={dataFlag(v.id === pilih)} onClick={() => setPilih(v.id)}>
               Versi {v.versi}
               <Badge variant={v.status === 'disahkan' ? 'success' : v.status === 'draf' ? 'warning' : 'outline'}>{label(v.status)}</Badge>
-            </button>
+            </Tekan>
           ))}
         </div>
         {bolehSusun && !versi.some((v) => v.status === 'draf') && (
@@ -2736,10 +2743,10 @@ function EditorPertemuan({ r }: { r: Rps }) {
               {baris.map((b, i) => (
                 <tr key={b._k} data-ujian={dataFlag(!!b.ujian)}>
                   <td>
-                    <Input size="sm" type="number" min={1} value={b.pertemuan_ke ?? ''} onChange={(e) => set(i, { pertemuan_ke: Number(e.target.value) })} aria-label="Pertemuan ke" />
+                    <IsianAngka value={keAngka(b.pertemuan_ke)} size="sm" min={1} aria-label="Pertemuan ke" onValueChange={(n) => set(i, { pertemuan_ke: n ?? 0 })} />
                   </td>
                   <td>
-                    <Input size="sm" type="number" min={1} value={b.sampai_ke ?? ''} onChange={(e) => set(i, { sampai_ke: e.target.value ? Number(e.target.value) : null })} aria-label="Sampai pertemuan" />
+                    <IsianAngka value={keAngka(b.sampai_ke)} size="sm" min={1} aria-label="Sampai pertemuan" onValueChange={(n) => set(i, { sampai_ke: n })} />
                   </td>
                   <td>
                     <Select size="sm" value={b.sub_cpmk_id != null ? String(b.sub_cpmk_id) : ''} onValueChange={(v) => set(i, { sub_cpmk_id: v ? Number(v) : null })} options={[{ value: '', label: '–' }, ...sub]} aria-label="Sub-CPMK" />
@@ -2755,10 +2762,10 @@ function EditorPertemuan({ r }: { r: Rps }) {
                     <Select size="sm" value={b.modalitas ?? 'luring'} onValueChange={(v) => set(i, { modalitas: v })} options={MODALITAS} aria-label="Modalitas" />
                   </td>
                   <td>
-                    <Input size="sm" type="number" min={0} value={b.waktu_menit ?? ''} onChange={(e) => set(i, { waktu_menit: e.target.value ? Number(e.target.value) : null })} aria-label="Menit" />
+                    <IsianAngka value={keAngka(b.waktu_menit)} size="sm" min={0} aria-label="Menit" onValueChange={(n) => set(i, { waktu_menit: n })} />
                   </td>
                   <td>
-                    <Input size="sm" type="number" min={0} max={100} value={b.bobot ?? ''} onChange={(e) => set(i, { bobot: e.target.value === '' ? null : Number(e.target.value) })} aria-label="Bobot" />
+                    <IsianAngka value={keAngka(b.bobot)} size="sm" min={0} max={100} aria-label="Bobot" onValueChange={(n) => set(i, { bobot: n })} />
                   </td>
                   <td data-tengah>
                     <Checkbox checked={!!b.ujian} onCheckedChange={(v) => set(i, { ujian: !!v })} aria-label="Ujian" />
@@ -2896,7 +2903,7 @@ function EditorEvaluasi({ r }: { r: Rps }) {
                       <Input size="sm" value={b.nama} onChange={(e) => set(i, { nama: e.target.value })} placeholder="mis. UTS" aria-label="Nama evaluasi" />
                     </td>
                     <td>
-                      <Input size="sm" type="number" min={0} max={100} value={b.bobot ?? ''} onChange={(e) => set(i, { bobot: Number(e.target.value) })} aria-label="Bobot" />
+                      <IsianAngka value={keAngka(b.bobot)} size="sm" min={0} max={100} aria-label="Bobot" onValueChange={(n) => set(i, { bobot: n ?? 0 })} />
                     </td>
                     <td>
                       <Select size="sm" value={b.komponen_siakad ?? ''} onValueChange={(v) => set(i, { komponen_siakad: v || null })} options={KOMPONEN_SIAKAD} aria-label="Komponen SIAKAD" />
@@ -2904,16 +2911,16 @@ function EditorEvaluasi({ r }: { r: Rps }) {
                     <td>
                       <span className="u-kk-chip-row">
                         {cpmk.map((c) => (
-                          <button
+                          <Tekan
                             key={c.id}
-                            type="button"
                             className="u-kk-chip"
+                            terpilih={dipilih.has(c.id)}
                             data-active={dataFlag(dipilih.has(c.id))}
                             title={c.deskripsi}
                             onClick={() => set(i, { cpmk: dipilih.has(c.id) ? (b.cpmk ?? []).filter((x) => x.cpmk_id !== c.id) : [...(b.cpmk ?? []), { cpmk_id: c.id, bobot: 1 }] })}
                           >
                             {c.kode}
-                          </button>
+                          </Tekan>
                         ))}
                         {!cpmk.length && <span className="u-kk-warn">MK belum punya CPMK</span>}
                       </span>
@@ -3256,7 +3263,7 @@ function FormEkuivalensi({ kurikulumId, awal, onTutup }: { kurikulumId: number |
             <Input value={f.nama_mk_lama} onChange={(e) => setF({ ...f, nama_mk_lama: e.target.value })} />
           </Field>
           <Field label="SKS lama" optional>
-            <Input type="number" value={f.sks_lama} onChange={(e) => setF({ ...f, sks_lama: e.target.value })} />
+            <IsianAngka value={keAngka(f.sks_lama)} onValueChange={(n) => setF({ ...f, sks_lama: teksAngka(n) })} />
           </Field>
         </div>
         <Field label="Hubungan" required>
@@ -3543,7 +3550,7 @@ function FormPeninjauan({ kurikulumId, awal, onTutup }: { kurikulumId: number | 
               <Select value={f.jenis} onValueChange={(v) => setF({ ...f, jenis: v ?? 'lainnya' })} options={JENIS_TINJAU} placeholder="Pilih…" />
             </Field>
             <Field label="Tanggal" error={kolom.tanggal}>
-              <Input type="date" value={f.tanggal} onChange={(e) => setF({ ...f, tanggal: e.target.value })} />
+              <IsianTanggal value={f.tanggal} onValueChange={(v) => setF({ ...f, tanggal: v })} />
             </Field>
             <Field label="Status">
               <Select value={f.status} onValueChange={(v) => setF({ ...f, status: (v ?? 'rencana') as 'rencana' })} options={STATUS_TINJAU} placeholder="Pilih…" />
@@ -3743,30 +3750,22 @@ export function KelolaCapaianCpl({ kurikulumId, bolehRekam, className }: { kurik
       <CapaianCplKurikulum kurikulumId={kurikulumId} angkatan={angkatan ? Number(angkatan) : undefined} />
       {per.size > 0 && (
         <Panel title="Riwayat capaian terekam" description="Rekaman tetap walau nilai berubah; dipakai untuk evaluasi kurikulum dan akreditasi.">
-          <TableContainer>
-            <Table density="compact">
-              <thead>
-                <tr>
-                  <th>Semester</th>
-                  <th>Angkatan</th>
-                  <th>Mahasiswa</th>
-                  <th>CPL tercapai (rata-rata ≥ target)</th>
-                  <th>Direkam</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...per.entries()].map(([kunci, rows]) => (
-                  <tr key={kunci}>
-                    <td>{tahunLabel(rows[0]!.tahun_id)}</td>
-                    <td>{rows[0]!.angkatan ?? 'Semua'}</td>
-                    <td>{formatNumber(rows[0]!.jumlah_mahasiswa)}</td>
-                    <td>{rows.map((r) => `${r.kode} ${r.rata_rata == null ? '–' : formatNumber(r.rata_rata, { maximumFractionDigits: 1 })}`).join(' · ')}</td>
-                    <td>{formatDate(rows[0]!.dihitung_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </TableContainer>
+          <DataTable<{ kunci: string; rows: (typeof per extends Map<string, infer R> ? R : never) }>
+            columns={[
+              { key: 'tahun', header: 'Semester', mobile: 'title', value: (x) => x.rows[0]!.tahun_id, cell: (x) => tahunLabel(x.rows[0]!.tahun_id) },
+              { key: 'angkatan', header: 'Angkatan', value: (x) => x.rows[0]!.angkatan ?? '', cell: (x) => x.rows[0]!.angkatan ?? 'Semua' },
+              { key: 'mahasiswa', header: 'Mahasiswa', align: 'end', value: (x) => x.rows[0]!.jumlah_mahasiswa, cell: (x) => formatNumber(x.rows[0]!.jumlah_mahasiswa) },
+              { key: 'cpl', header: 'CPL tercapai (rata-rata ≥ target)', value: (x) => x.rows.map((r) => `${r.kode} ${r.rata_rata ?? '–'}`).join(' · '), cell: (x) => x.rows.map((r) => `${r.kode} ${r.rata_rata == null ? '–' : formatNumber(r.rata_rata, { maximumFractionDigits: 1 })}`).join(' · ') },
+              { key: 'dihitung_at', header: 'Direkam', value: (x) => x.rows[0]!.dihitung_at, cell: (x) => formatDate(x.rows[0]!.dihitung_at) },
+            ]}
+            rows={[...per.entries()].map(([kunci, rows]) => ({ kunci, rows }))}
+            rowKey={(x) => x.kunci}
+            pagination={false}
+            columnToggle={false}
+            densityToggle={false}
+            defaultDensity="compact"
+            exportCsv={`riwayat-capaian-cpl-${kurikulumId}`}
+          />
         </Panel>
       )}
       <Dialog
@@ -4284,9 +4283,9 @@ export function KelolaPerangkatMk({ mkId, bolehUbah, jenisAwal = 'rps', classNam
               <li key={p.id}>
                 <FileText aria-hidden className="u-kk-perangkat-ikon" />
                 <span className="u-kk-perangkat-teks">
-                  <button type="button" className="u-kk-perangkat-judul" onClick={() => buka(p, false)} disabled={membuka === p.id}>
+                  <Tekan className="u-kk-perangkat-judul" onClick={() => buka(p, false)} disabled={membuka === p.id}>
                     {p.judul}
-                  </button>
+                  </Tekan>
                   <small>{[p.nama, formatBytes(p.ukuran), p.updated_at ? formatDate(p.updated_at) : null].filter(Boolean).join(' · ')}</small>
                   {p.keterangan && <small className="u-kk-perangkat-ket">{p.keterangan}</small>}
                 </span>

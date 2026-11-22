@@ -1,8 +1,8 @@
 'use client';
 import * as React from 'react';
-import { Eye, FileClock, ImageUp, Palette, Pencil, Plus, Printer, Receipt, ScrollText, Settings2, Stamp, Trash2, Undo2 } from 'lucide-react';
+import { ExternalLink, Eye, FileClock, ImageUp, Palette, Pencil, Plus, Printer, Receipt, ScrollText, Settings2, Stamp, Trash2, Undo2 } from 'lucide-react';
 import { Badge, Button, Spinner } from '../components/actions';
-import { Alert, Card, Tabs } from '../components/display';
+import { Alert, Card, CardHeader, Tabs } from '../components/display';
 import { DataTable, type DataColumn } from '../components/data-table';
 import { Field, Input, RadioGroup, Switch, Textarea } from '../components/forms';
 import { IsianTanggal } from '../components/formulir';
@@ -24,6 +24,9 @@ import {
   type VarianKwitansi,
 } from './kwitansi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { usePilihBerkas } from '../components/pilih-berkas-lokal';
+import { IsianWarnaHex } from '../components/isian-warna';
+import { Tekan } from '../components/tekan';
 
 // Pengaturan kwitansi resmi per unit penerbit (GET/POST /v1/kwitansi/penerbit), aturan catatan pembayaran
 // (/v1/kwitansi/catatan), daftar kwitansi terbit (/v1/kwitansi/terbit), dan log (/v1/kwitansi/log).
@@ -36,6 +39,10 @@ export interface KwitansiSaya {
   global: boolean;
   unit_atur: number[];
   unit_lihat: number[];
+  /** Pengelola pengaturan kwitansi ("Pustikom"). */
+  pengatur?: string;
+  /** Halaman Kwitansi di Pustikom (tempat pengaturan). */
+  tautan_pengatur?: string;
   varian: VarianKwitansi[];
   variabel: string[];
   catatan_bawaan: string;
@@ -156,7 +163,20 @@ async function gambarKeDataUri(f: File, maks = 640): Promise<string> {
 
 function UnggahGambar({ label, nilai, onChange, keterangan }: { label: string; nilai: string | null | undefined; onChange: (v: string | null) => void; keterangan: string }) {
   const toast = useToast();
-  const ref = React.useRef<HTMLInputElement>(null);
+  const pemilih = usePilihBerkas({
+    accept: 'image/png,image/jpeg,image/webp',
+    onFiles: async (files) => {
+      const f = files[0];
+      if (!f) return;
+      try {
+        const uri = await gambarKeDataUri(f);
+        if (uri.length > 520_000) throw new Error('Gambar terlalu besar setelah diperkecil (maks. 400 KB). Pakai PNG berlatar transparan yang lebih sederhana.');
+        onChange(uri);
+      } catch (er) {
+        toast.add({ title: `${label} tidak dapat dipakai`, description: (er as Error).message, type: 'error' });
+      }
+    },
+  });
   return (
     <Field label={label} description={keterangan} optional>
       <div className="u-kwp-gambar">
@@ -164,25 +184,8 @@ function UnggahGambar({ label, nilai, onChange, keterangan }: { label: string; n
           {nilai ? <img src={nilai} alt={label} /> : <ImageUp aria-hidden />}
         </span>
         <span className="u-kwp-gambar-aksi">
-          <input
-            ref={ref}
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            hidden
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              e.target.value = '';
-              if (!f) return;
-              try {
-                const uri = await gambarKeDataUri(f);
-                if (uri.length > 520_000) throw new Error('Gambar terlalu besar setelah diperkecil (maks. 400 KB). Pakai PNG berlatar transparan yang lebih sederhana.');
-                onChange(uri);
-              } catch (er) {
-                toast.add({ title: `${label} tidak dapat dipakai`, description: (er as Error).message, type: 'error' });
-              }
-            }}
-          />
-          <Button size="sm" variant="outline" onClick={() => ref.current?.click()}>
+          {pemilih.elemen}
+          <Button size="sm" variant="outline" onClick={pemilih.buka}>
             <ImageUp /> {nilai ? 'Ganti' : 'Unggah'}
           </Button>
           {nilai && (
@@ -287,15 +290,7 @@ function FormPenerbit({ p, open, onOpenChange }: { p: PengaturanPenerbitKwitansi
                 <RadioGroup<VarianKwitansi> variant="card" columns={2} value={v.varian} onValueChange={(x) => set('varian', x)} options={VARIAN_KWITANSI.map((x) => ({ value: x.value, label: x.label, description: `${x.keterangan} (${x.kertas})` }))} />
               </Field>
               <Field label="Warna aksen" error={warnaSalah}>
-                <div className="u-kwp-warna">
-                  <input type="color" aria-label="Pilih warna" value={/^#[0-9a-fA-F]{6}$/.test(v.warna) ? v.warna : '#0b6b3a'} onChange={(e) => set('warna', e.target.value)} />
-                  <Input value={v.warna} maxLength={7} onChange={(e) => set('warna', e.target.value)} className="u-kwp-kode" aria-label="Kode warna" />
-                  <span className="u-kwp-swatch" role="group" aria-label="Warna cepat">
-                    {WARNA_CEPAT.map((w) => (
-                      <button key={w} type="button" style={{ background: w }} aria-label={w} aria-pressed={v.warna === w} onClick={() => set('warna', w)} />
-                    ))}
-                  </span>
-                </div>
+                <IsianWarnaHex value={v.warna} onValueChange={(w) => set('warna', w)} bawaan="#0b6b3a" cepat={WARNA_CEPAT} aria-label="Warna aksen kwitansi" />
               </Field>
               <Field label="Judul kwitansi" description="Bawaan BUKTI KAS MASUK.">
                 <Input value={v.judul} maxLength={60} placeholder="BUKTI KAS MASUK" onChange={(e) => set('judul', e.target.value)} />
@@ -418,11 +413,11 @@ function TabPenerbit({ unitId, saya }: { unitId?: number; saya: KwitansiSaya }) 
     <div className="u-kwp-penerbit">
       {daftar.map((p) => (
         <Card key={p.unit_id} className="u-kwp-kartu" style={{ '--kw-aksen': p.warna } as React.CSSProperties}>
-          <button type="button" className="u-kwp-mini" onClick={() => setLihat(p)} aria-label={`Pratinjau kwitansi ${p.label}`}>
+          <Tekan className="u-kwp-mini" onClick={() => setLihat(p)} aria-label={`Pratinjau kwitansi ${p.label}`}>
             <span className="u-kwp-mini-skala">
               <Kwitansi data={contohKwitansi(penerbitKe(p))} varian={p.varian} rincian={false} />
             </span>
-          </button>
+          </Tekan>
           <div className="u-kwp-kartu-isi">
             <span className="u-kwp-kartu-judul">
               <i style={{ background: p.warna }} aria-hidden />
@@ -587,7 +582,7 @@ function FormCatatan({ awal, open, onOpenChange, saya, penerbit }: { awal: Isian
               </Field>
               <div className="u-kwp-variabel" role="group" aria-label="Variabel">
                 {saya.variabel.map((k) => (
-                  <button key={k} type="button" onClick={() => sisip(k)}>{`{${k}}`}</button>
+                  <Tekan key={k} onClick={() => sisip(k)}>{`{${k}}`}</Tekan>
                 ))}
               </div>
               <div className="u-kwp-hasil">
@@ -784,21 +779,60 @@ function TabLog() {
   return <DataTable<LogKwitansi> columns={kolom} rows={q.data} rowKey={(l) => String(l.id)} loading={q.loading} error={q.error} onRetry={q.refetch} page={page} perPage={25} total={q.meta?.total ?? undefined} onPageChange={setPage} empty={{ title: 'Belum ada perubahan', icon: <FileClock /> }} mobile="cards" />;
 }
 
+// ================================================================ Diatur Pustikom (baca saja)
+function DiaturPengatur({ saya, tautan }: { saya: KwitansiSaya; tautan?: string }) {
+  const href = tautan ?? saya.tautan_pengatur;
+  const pengatur = saya.pengatur ?? 'Pustikom';
+  return (
+    <Alert variant="info" title={`Diatur ${pengatur}`}>
+      <p>
+        Tampilan kwitansi (varian, warna, awalan nomor, tanda tangan, stempel) dan catatan pembayaran untuk semua unit penerbit hanya diatur {pengatur}. Di sini Anda dapat melihat pratinjau dan aturan yang berlaku. Ajukan perubahan ke {pengatur}.
+      </p>
+      {href && (
+        <p className="u-kwp-tautan">
+          <Button size="sm" variant="outline" render={<a href={href} target="_blank" rel="noreferrer" />}>
+            <ExternalLink /> Buka di {pengatur}
+          </Button>
+        </p>
+      )}
+    </Alert>
+  );
+}
+
+function TabTampilanBaca({ unitId, saya, tautan }: { unitId?: number; saya: KwitansiSaya; tautan?: string }) {
+  return (
+    <div className="u-kwp-tumpuk">
+      <DiaturPengatur saya={saya} tautan={tautan} />
+      <section className="u-kwp-bagian" aria-label="Tampilan penerbit">
+        <CardHeader title="Tampilan penerbit" description="Pratinjau kwitansi unit penerbit Anda dengan data rekaan." />
+        <TabPenerbit unitId={unitId} saya={saya} />
+      </section>
+      <section className="u-kwp-bagian" aria-label="Catatan pembayaran">
+        <CardHeader title="Catatan pembayaran" description="Aturan catatan yang dicetak di kwitansi unit Anda." />
+        <TabCatatan unitId={unitId} saya={saya} />
+      </section>
+    </div>
+  );
+}
+
 // ================================================================ Pengaturan kwitansi
 export interface PengaturanKwitansiProps {
   /** Batasi ke satu unit penerbit (mis. aplikasi Fakultas untuk fakultasnya). */
   unitId?: number;
   /** Alamat dasar QR untuk kwitansi terbit. */
   urlVerifikasi?: string;
+  /** Ganti tautan ke halaman pengaturan di Pustikom (bawaan dari server: GET /v1/kwitansi/saya `tautan_pengatur`). */
+  tautanPengatur?: string;
   className?: string;
 }
 
 /**
- * Pengaturan kwitansi resmi unit penerbit: tampilan per unit (varian, warna, awalan nomor, tanda tangan, stempel) lewat
- * panel samping bertahap, aturan catatan pembayaran dinamis, kwitansi terbit (cetak ulang = SALINAN), dan log.
- * Hak dari izin kwitansi.atur / kwitansi.lihat (berlingkup unit).
+ * Kwitansi resmi. Pengaturan (tampilan per unit penerbit lewat panel samping bertahap, aturan catatan pembayaran dinamis)
+ * hanya untuk pengatur Pustikom (izin kwitansi.atur global, `saya.atur`): tab Tampilan penerbit, Catatan pembayaran,
+ * Kwitansi terbit, Log. Aplikasi unit penerbit (kwitansi.lihat): Kwitansi terbit, Tampilan & catatan (baca saja,
+ * "Diatur Pustikom" + tautan), dan Log unitnya. Komponen yang sama dipasang di Pustikom dan di aplikasi unit.
  */
-export function PengaturanKwitansi({ unitId, urlVerifikasi, className }: PengaturanKwitansiProps) {
+export function PengaturanKwitansi({ unitId, urlVerifikasi, tautanPengatur, className }: PengaturanKwitansiProps) {
   const q = useSiakadQuery<KwitansiSaya>(['/v1/kwitansi/saya'], (s, signal) => s.request({ method: 'GET', path: '/v1/kwitansi/saya' }, { signal }));
   if (q.error) return <GalatApi error={q.error} onRetry={q.refetch} className={className} />;
   if (!q.data) return <Spinner />;
@@ -807,18 +841,24 @@ export function PengaturanKwitansi({ unitId, urlVerifikasi, className }: Pengatu
   if (!saya.atur && !saya.lihat)
     return (
       <Alert variant="warning" title="Belum punya akses kwitansi" className={className}>
-        Minta admin memberi izin kwitansi.atur atau kwitansi.lihat untuk unit Anda (Pustikom » Hak akses).
+        Minta Pustikom memberi izin melihat kwitansi (kwitansi.lihat) untuk unit Anda. Pengaturan kwitansi hanya dikelola Pustikom.
       </Alert>
     );
+  const terbit = { value: 'terbit', label: 'Kwitansi terbit', icon: <Receipt />, content: <DaftarKwitansiTerbit unitId={unitId} urlVerifikasi={urlVerifikasi} /> };
+  const log = { value: 'log', label: 'Log', icon: <FileClock />, content: <TabLog /> };
   return (
     <div className={cn('u-kwp', className)}>
       <Tabs
-        items={[
-          { value: 'penerbit', label: 'Tampilan penerbit', icon: <Palette />, content: <TabPenerbit unitId={unitId} saya={saya} /> },
-          { value: 'catatan', label: 'Catatan pembayaran', icon: <ScrollText />, content: <TabCatatan unitId={unitId} saya={saya} /> },
-          ...(saya.lihat ? [{ value: 'terbit', label: 'Kwitansi terbit', icon: <Receipt />, content: <DaftarKwitansiTerbit unitId={unitId} urlVerifikasi={urlVerifikasi} /> }] : []),
-          ...(saya.atur ? [{ value: 'log', label: 'Log', icon: <FileClock />, content: <TabLog /> }] : []),
-        ]}
+        items={
+          saya.atur
+            ? [
+                { value: 'penerbit', label: 'Tampilan penerbit', icon: <Palette />, content: <TabPenerbit unitId={unitId} saya={saya} /> },
+                { value: 'catatan', label: 'Catatan pembayaran', icon: <ScrollText />, content: <TabCatatan unitId={unitId} saya={saya} /> },
+                terbit,
+                log,
+              ]
+            : [terbit, { value: 'tampilan', label: 'Tampilan & catatan', icon: <Palette />, content: <TabTampilanBaca unitId={unitId} saya={saya} tautan={tautanPengatur} /> }, log]
+        }
       />
     </div>
   );

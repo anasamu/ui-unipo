@@ -87,7 +87,23 @@ describe('Tabs: deteksi sarang lewat konteks (SSR)', () => {
 
   it('tingkat ketiga (di dalam tab vertikal) kembali horizontal', () => {
     const h = html(
-      <Tabs items={[{ value: 'a', label: 'A', content: <Tabs items={[{ value: 'x', label: 'X', content: <Tabs items={SUB} /> }]} /> }]} />,
+      <Tabs
+        items={[
+          {
+            value: 'a',
+            label: 'A',
+            content: (
+              <Tabs
+                items={[
+                  { value: 'x', label: 'X', content: <Tabs items={SUB} /> },
+                  { value: 'y', label: 'Y', content: null },
+                  { value: 'z', label: 'Z', content: null },
+                ]}
+              />
+            ),
+          },
+        ]}
+      />,
     );
     const t = daftarTab(h);
     expect(t).toHaveLength(3);
@@ -122,6 +138,89 @@ describe('Tabs: deteksi sarang lewat konteks (SSR)', () => {
       </PenyediaTingkatTab>,
     );
     expect(dicatat).toBe(0);
+  });
+});
+
+describe('Aturan Anas 2026-11-22: 2 tab tetap horizontal; di panel samping horizontal → tarik-turun bila tidak muat', () => {
+  const DUA = SUB.slice(0, 2);
+  it('tataTab: bersarang hanya bila lebih dari 2 tab', () => {
+    const t1 = { tingkat: 1, dalamVertikal: false };
+    expect(tataTab('auto', t1, true, 2)).toBe('horizontal');
+    expect(tataTab('auto', t1, true, 1)).toBe('horizontal');
+    expect(tataTab('auto', t1, true, 3)).toBe('bersarang');
+    // Orientasi eksplisit tetap menang.
+    expect(tataTab('vertical', t1, true, 2)).toBe('vertical');
+  });
+  it('sub-tab berisi 2 tab di dalam panel tab: horizontal, tanpa wadah samping', () => {
+    const h = html(<Tabs items={[{ value: 'a', label: 'A', content: <Tabs aria-label="Antrean" items={DUA} /> }]} />);
+    const [, dalam] = daftarTab(h);
+    expect(dalam).not.toContain('aria-orientation');
+    expect(h).not.toContain('data-bersarang');
+    expect(h).not.toContain('u-tabs-wadah');
+  });
+  it('tataTab: di dalam panel samping selalu "panel" (horizontal), di tingkat mana pun', () => {
+    expect(tataTab('auto', { tingkat: 0, dalamVertikal: false, dalamPanel: true }, true, 5)).toBe('panel');
+    expect(tataTab(undefined, { tingkat: 1, dalamVertikal: false, dalamPanel: true }, true, 8)).toBe('panel');
+    expect(tataTab('vertical', { tingkat: 1, dalamVertikal: false, dalamPanel: true }, true, 8)).toBe('vertical');
+  });
+  it('tataTab: orientation="horizontal" eksplisit di panel samping juga "panel" (keputusan Anas 13:17)', () => {
+    expect(tataTab('horizontal', { tingkat: 0, dalamVertikal: false, dalamPanel: true }, true, 2)).toBe('panel');
+    expect(tataTab('horizontal', { tingkat: 2, dalamVertikal: true, dalamPanel: true }, false, 9)).toBe('panel');
+    // Di luar panel horizontal eksplisit tetap horizontal biasa.
+    expect(tataTab('horizontal', { tingkat: 1, dalamVertikal: false, dalamPanel: false }, true, 9)).toBe('horizontal');
+  });
+  it('Tabs orientation="horizontal" di panel samping: data-panel (diukur lalu jadi Select bila tidak muat)', () => {
+    const h = html(
+      <AkarTingkatTab panel>
+        <Tabs orientation="horizontal" aria-label="Jenis riwayat" items={SUB} />
+      </AkarTingkatTab>,
+    );
+    expect(h).toContain('data-panel=""');
+    expect(daftarTab(h)[0]).not.toContain('aria-orientation');
+    const v = html(
+      <AkarTingkatTab panel>
+        <Tabs orientation="vertical" aria-label="Jenis riwayat" items={SUB} />
+      </AkarTingkatTab>,
+    );
+    expect(v).not.toContain('data-panel');
+    expect(daftarTab(v)[0]).toContain('aria-orientation="vertical"');
+  });
+  it('AkarTingkatTab panel: konteks dalamPanel diteruskan ke tab bersarang', () => {
+    const catat: Array<boolean | undefined> = [];
+    function Catat() {
+      catat.push(useTingkatTab().dalamPanel);
+      return null;
+    }
+    html(
+      <AkarTingkatTab panel>
+        <Catat />
+        <PenyediaTingkatTab>
+          <Catat />
+        </PenyediaTingkatTab>
+      </AkarTingkatTab>,
+    );
+    html(
+      <AkarTingkatTab>
+        <Catat />
+      </AkarTingkatTab>,
+    );
+    expect(catat).toEqual([true, true, false]);
+  });
+  it('tab bersarang di panel samping: horizontal (data-panel), deret tab utuh sebelum diukur, tanpa Select', () => {
+    const h = html(
+      <AkarTingkatTab panel>
+        <Tabs aria-label="Rincian" items={[{ value: 'a', label: 'Data', content: <Tabs aria-label="Riwayat" items={SUB} /> }, { value: 'b', label: 'Berkas', content: null }]} />
+      </AkarTingkatTab>,
+    );
+    const t = daftarTab(h);
+    expect(t).toHaveLength(2);
+    expect(t.every((x) => !x.includes('aria-orientation'))).toBe(true);
+    expect(h).toContain('data-panel=""');
+    expect(h).not.toContain('data-bersarang');
+    expect(h).not.toContain('u-tabs-wadah');
+    // Pilihan tarik-turun hanya muncul setelah ResizeObserver mengukur deret tidak muat (di peramban).
+    expect(h).not.toContain('u-tabs-pilih-panel');
+    expect(h).not.toContain('data-tak-muat');
   });
 });
 

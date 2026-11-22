@@ -11,7 +11,9 @@
 // Pengecualian tertulis (alasan wajib):
 //   - komentar di baris yang sama atau baris sebelumnya:  {/* unipo-ui-izinkan tabel-bawaan: tata letak cetak kwitansi */}
 //   - berkas unipo-ui-periksa.json di akar proyek:
-//       { "abaikan": ["src/halaman/cetak/"], "pengecualian": [{ "berkas": "src/halaman/X.tsx", "aturan": "tabel-bawaan", "alasan": "..." }] }
+//       { "abaikan": ["src/halaman/cetak/"], "pengecualian": [{ "berkas": "src/halaman/X.tsx", "aturan": "tabel-bawaan", "jumlah": 2, "alasan": "...", "disetujui": "..." }] }
+//     `jumlah` (opsional) membatasi berapa lokasi yang dikecualikan; lokasi berikutnya di berkas+aturan yang sama
+//     tetap dilaporkan supaya elemen bawaan baru tidak ikut lolos.
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 
@@ -75,6 +77,7 @@ export function periksaTeks(teks, berkas = '', opsi = {}) {
   const hasil = [];
   const dipakai = [];
   const kecuali = (opsi.pengecualian ?? []).filter((p) => p.berkas === berkas);
+  const terpakai = new Map();
   for (const a of opsi.aturan ?? ATURAN) {
     a.pola.lastIndex = 0;
     for (const m of bersih.matchAll(a.pola)) {
@@ -92,7 +95,13 @@ export function periksaTeks(teks, berkas = '', opsi = {}) {
       }
       const k = kecuali.find((p) => p.aturan === a.id || p.aturan === 'semua');
       if (k?.alasan) {
-        dipakai.push({ aturan: a.id, baris: b + 1, alasan: k.alasan });
+        const n = (terpakai.get(k) ?? 0) + 1;
+        terpakai.set(k, n);
+        if (!(Number(k.jumlah) > 0) || n <= Number(k.jumlah)) {
+          dipakai.push({ aturan: a.id, baris: b + 1, alasan: k.alasan });
+          continue;
+        }
+        hasil.push({ aturan: a.id, baris: b + 1, kolom: m.index - awalBaris[b] + 1, potongan: barisAsli[b].trim().slice(0, 100), pesan: `${a.pesan}; melebihi ${k.jumlah} pengecualian tertulis untuk berkas ini`, ganti: a.ganti });
         continue;
       }
       hasil.push({ aturan: a.id, baris: b + 1, kolom: m.index - awalBaris[b] + 1, potongan: barisAsli[b].trim().slice(0, 100), pesan: a.pesan, ganti: a.ganti });

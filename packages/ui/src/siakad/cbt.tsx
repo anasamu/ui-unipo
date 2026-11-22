@@ -8,6 +8,8 @@ import { Alert, Empty, ProgressRing } from '../components/display';
 import { Input, Textarea } from '../components/forms';
 import { ConfirmDialog } from '../components/overlays';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakadQuery, type QueryState } from './provider';
+import { Select } from '../components/select';
+import { Tekan } from '../components/tekan';
 
 /*
  * Widget CBT (/v1/cbt) untuk peserta ujian: daftar ujian saya dengan masuk token, lembar ujian lengkap
@@ -323,9 +325,8 @@ export function NavigasiSoal({
     <nav className={cn('u-cbt-nav', className)} aria-label="Nomor soal">
       <div className="u-cbt-nav-grid">
         {soal.map((s) => (
-          <button
+          <Tekan
             key={s.nomor}
-            type="button"
             onClick={() => onPilih(s.nomor)}
             data-state={s.ragu ? 'ragu' : terjawab(s.jawaban) ? 'terjawab' : 'kosong'}
             data-aktif={s.nomor === aktif || undefined}
@@ -333,7 +334,7 @@ export function NavigasiSoal({
             aria-label={`Soal ${s.nomor}${s.ragu ? ', ragu-ragu' : terjawab(s.jawaban) ? ', terjawab' : ', belum dijawab'}`}
           >
             {s.nomor}
-          </button>
+          </Tekan>
         ))}
       </div>
       <ul className="u-cbt-nav-legend">
@@ -375,18 +376,17 @@ export function SoalCbt({ soal, onJawab, disabled, className }: { soal: SoalCbtD
             const pilih = banyak ? (Array.isArray(s.jawaban) ? (s.jawaban as string[]) : []) : [];
             const aktif = banyak ? pilih.includes(o.id) : s.jawaban === o.id;
             return (
-              <button
+              <Tekan
                 key={o.id}
-                type="button"
                 role={banyak ? 'checkbox' : 'radio'}
-                aria-checked={aktif}
+                terpilih={aktif}
                 disabled={disabled}
                 data-banyak={banyak || undefined}
                 onClick={() => onJawab(banyak ? (aktif ? pilih.filter((x) => x !== o.id) : [...pilih, o.id]) : aktif ? null : o.id)}
               >
                 <span className="u-cbt-huruf">{HURUF[i]}</span>
                 <span dangerouslySetInnerHTML={{ __html: o.teks }} />
-              </button>
+              </Tekan>
             );
           })}
         </div>
@@ -397,10 +397,10 @@ export function SoalCbt({ soal, onJawab, disabled, className }: { soal: SoalCbtD
             [true, 'Benar'],
             [false, 'Salah'],
           ].map(([v, l]) => (
-            <button key={String(v)} type="button" role="radio" aria-checked={s.jawaban === v} disabled={disabled} onClick={() => onJawab(s.jawaban === v ? null : (v as boolean))}>
+            <Tekan key={String(v)} role="radio" terpilih={s.jawaban === v} disabled={disabled} onClick={() => onJawab(s.jawaban === v ? null : (v as boolean))}>
               <span className="u-cbt-huruf">{v ? 'B' : 'S'}</span>
               <span>{l as string}</span>
-            </button>
+            </Tekan>
           ))}
         </div>
       )}
@@ -439,24 +439,19 @@ function Menjodohkan({ opsi, nilai, onJawab, disabled }: { opsi: { kiri: OpsiSoa
       {opsi.kiri.map((k) => (
         <li key={k.id}>
           <span dangerouslySetInnerHTML={{ __html: k.teks }} />
-          <select
+          <Select<string>
             value={nilai[k.id] ?? ''}
             disabled={disabled}
             aria-label={`Pasangan untuk ${k.teks.replace(/<[^>]+>/g, '')}`}
-            onChange={(e) => {
+            placeholder="Pilih pasangan…"
+            options={[{ value: '', label: 'Belum dipasangkan' }, ...opsi.kanan.map((r) => ({ value: r.id, label: r.teks.replace(/<[^>]+>/g, '') }))]}
+            onValueChange={(v) => {
               const baru = { ...nilai };
-              if (e.target.value) baru[k.id] = e.target.value;
+              if (v) baru[k.id] = v;
               else delete baru[k.id];
               onJawab(Object.keys(baru).length ? baru : null);
             }}
-          >
-            <option value="">Pilih pasangan…</option>
-            {opsi.kanan.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.teks.replace(/<[^>]+>/g, '')}
-              </option>
-            ))}
-          </select>
+          />
         </li>
       ))}
     </ol>
@@ -678,9 +673,9 @@ export function LembarUjian({ pesertaId, awal, onSelesai, basePath, pengawasan =
         <TimerUjian sisaDetik={lembar.sisa_detik} onHabis={kumpulkan} />
       </header>
       {bisaLayarPenuh && !layarPenuh && (
-        <button type="button" className="u-cbt-layarpenuh" onClick={() => void document.documentElement.requestFullscreen?.().catch(() => undefined)}>
+        <Tekan className="u-cbt-layarpenuh" onClick={() => void document.documentElement.requestFullscreen?.().catch(() => undefined)}>
           <Maximize aria-hidden /> Kerjakan dalam layar penuh (disarankan)
-        </button>
+        </Tekan>
       )}
       {simpan === 'luring' && (
         <Alert variant="warning" icon={<CloudOff />} title="Koneksi terputus">
