@@ -241,6 +241,23 @@ async function init() {
     warn(`Impor sekali di berkas awal aplikasi: import 'unipo-ui/css'; import './${themePath}';`);
   }
 
+  // Huruf, warna teks, dan latar dasar hanya berlaku di dalam kelas .u-root (aman untuk aplikasi yang sudah punya gaya).
+  if (entry && fw === 'react' && !flags['no-edit']) {
+    const p = join(cwd, entry);
+    const src = readFileSync(p, 'utf8');
+    if (!src.includes('u-root')) {
+      const i = src.indexOf("import 'unipo-ui/css';\n");
+      const baris = "document.body.classList.add('u-root');\n";
+      // Setelah blok impor (baris impor terakhir), bukan di tengahnya.
+      const akhirImpor = [...src.matchAll(/^import [^\n]*\n/gm)].pop();
+      const pos = akhirImpor ? akhirImpor.index + akhirImpor[0].length : i >= 0 ? i : 0;
+      writeFileSync(p, src.slice(0, pos) + baris + src.slice(pos));
+      ok(`Kelas ${c.b('u-root')} dipasang di <body> (${entry})`);
+    }
+  } else if (isReactish) {
+    warn(`Tambahkan kelas ${c.b('u-root')} pada <body> (Next.js: ${c.c('<body className="u-root">')} di app/layout.tsx) agar huruf dan warna dasar UNIPO UI berlaku.`);
+  }
+
   if (sdk && (fw === 'next' || fw === 'react')) {
     const dir = join(cwd, defaultDir(fw), '..');
     const prov = join(dir, 'unipo-provider.tsx');
@@ -249,21 +266,53 @@ async function init() {
       writeFileSync(
         prov,
         `'use client';
-import { Siakad } from 'unipo-siakad-sdk';
 import { UnipoProvider } from 'unipo-ui/siakad';
-import { useMemo } from 'react';
 
 /**
- * Bungkus aplikasi dengan komponen ini. Browser memanggil BFF/proksi milik aplikasi sendiri,
- * bukan API SIAKAD langsung: client_secret hanya disimpan di server.
+ * Bungkus aplikasi dengan komponen ini. Komponen siakad memanggil proxy di backend Anda (\`/api/siakad\`), dan proxy
+ * meneruskan ke API SIAKAD dengan client_secret yang hanya ada di server.
+ * Panduan proxy per framework: https://api.unipo.ac.id/docs/panduan/integrasi
+ * Token pengguna dari sesi login (opsional): <UnipoProvider baseUrl="/api/siakad" getToken={() => sesi.accessToken}>
  */
-export function Providers({ children, accessToken }: { children: React.ReactNode; accessToken?: string }) {
-  const siakad = useMemo(() => new Siakad({ baseUrl: '/bff/api', accessToken }), [accessToken]);
-  return <UnipoProvider siakad={siakad}>{children}</UnipoProvider>;
+export function Providers({ children }: { children: React.ReactNode }) {
+  return <UnipoProvider baseUrl="/api/siakad">{children}</UnipoProvider>;
 }
 `,
       );
       ok(`Provider SDK ditulis ke ${c.b(relative(cwd, prov))}`);
+    }
+    // Next.js: proxy server di route handler (tanpa BFF). Tanpa SIAKAD_CLIENT_ID proxy menjawab data tiruan.
+    const appDir = fw === 'next' ? (existsSync(join(cwd, 'src/app')) ? 'src/app' : existsSync(join(cwd, 'app')) ? 'app' : null) : null;
+    if (appDir) {
+      const rute = join(cwd, appDir, 'api/siakad/[...jalur]/route.ts');
+      if (!existsSync(rute)) {
+        mkdirSync(dirname(rute), { recursive: true });
+        writeFileSync(
+          rute,
+          `import { Siakad, proxySiakad } from 'unipo-siakad-sdk';
+
+// Isi SIAKAD_CLIENT_ID dan SIAKAD_CLIENT_SECRET di .env.local (dari Konsol » Aplikasi saya di api.unipo.ac.id).
+// Selama kosong, proxy menjawab data tiruan di bawah sehingga tampilan bisa dikembangkan lebih dulu.
+const siakad = process.env.SIAKAD_CLIENT_ID
+  ? new Siakad({ clientId: process.env.SIAKAD_CLIENT_ID, clientSecret: process.env.SIAKAD_CLIENT_SECRET })
+  : undefined;
+
+export const GET = proxySiakad({
+  siakad,
+  awalan: '/api/siakad',
+  // Buka hanya endpoint yang dipakai komponen Anda.
+  izinkan: ['/v1/referensi/'],
+  tiruan: {
+    'GET /v1/referensi/prodi': [{ kode_prodi: '55201', nama_prodi: 'Informatika', kode_jenjang: 'C', kode_fak: 'FIK', nama_fakultas: 'Fakultas Ilmu Komputer', status_prodi: 'A', kode_akreditasi: 'Baik Sekali' }],
+    'GET /v1/referensi/fakultas': [{ kode_fakultas: 'FIK', nama_fakultas: 'Fakultas Ilmu Komputer' }],
+  },
+});
+`,
+        );
+        ok(`Proxy SIAKAD ditulis ke ${c.b(relative(cwd, rute))}`);
+      }
+    } else if (fw === 'react') {
+      warn(`Komponen siakad memanggil ${c.c('/api/siakad')}: pasang proxy di backend (proxySiakad di unipo-siakad-sdk), atau coba dulu dengan data tiruan: ${c.c('<UnipoProvider fetcher={buatFetcherTiruan({...})}>')}.`);
     }
   }
 

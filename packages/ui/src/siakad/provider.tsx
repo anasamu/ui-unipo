@@ -1,6 +1,7 @@
 'use client';
 import * as React from 'react';
-import type { ApiResult, Meta, Siakad } from 'unipo-siakad-sdk';
+import { Siakad } from 'unipo-siakad-sdk';
+import type { ApiResult, Meta } from 'unipo-siakad-sdk';
 import { Toaster, TooltipProvider } from '../components/overlays';
 import { requestIdDari } from '../components/galat';
 import { laporPemeliharaan } from './pemeliharaan';
@@ -10,9 +11,28 @@ import { KalenderAkademikProvider } from './kalender-tanggal';
 
 const SiakadContext = React.createContext<Siakad | null>(null);
 
-export interface UnipoProviderProps {
+/** Fungsi bergaya `fetch` (Web Fetch API). */
+export type PengambilSiakad = (input: string, init?: RequestInit) => Promise<Response>;
+
+export interface PenghubungSiakad {
   /**
-   * Instans SDK. Di browser: `new Siakad({ baseUrl: '/bff/api', accessToken })`.
+   * Alamat yang dipanggil komponen, tanpa `/v1`. Biasanya proxy di backend Anda sendiri (Next.js route handler,
+   * NestJS, Express, Laravel) yang meneruskan ke API SIAKAD dengan token server, mis. `'/api/siakad'`.
+   * Bawaan `''` (asal halaman) bila `fetcher` diisi, selain itu `https://api.unipo.ac.id`.
+   */
+  baseUrl?: string;
+  /** Ganti `fetch`: data tiruan (`buatFetcherTiruan`), klien HTTP sendiri, atau penambah header. */
+  fetcher?: PengambilSiakad;
+  /**
+   * Token akses pengguna untuk setiap permintaan (dari sesi login aplikasi Anda). Kembalikan `null`/kosong bila
+   * proxy server yang menempelkan token; dalam hal itu tidak ada header Authorization dari browser.
+   */
+  getToken?: () => string | null | undefined | Promise<string | null | undefined>;
+}
+
+export interface UnipoProviderProps extends PenghubungSiakad {
+  /**
+   * Instans SDK yang sudah dibuat sendiri. Bila kosong, provider membuat instans dari `baseUrl`/`fetcher`/`getToken`.
    * Jangan menaruh client_secret di kode yang dikirim ke browser.
    */
   siakad?: Siakad | null;
@@ -31,8 +51,42 @@ export interface UnipoProviderProps {
   kalenderAkademik?: boolean;
 }
 
+const TANDA_PROXY = 'unipo-ui-penghubung';
+
+/**
+ * Instans SDK untuk browser dari penghubung data: `baseUrl` (proxy backend Anda), `fetcher`, `getToken`. Tidak pernah
+ * memakai client_secret. Berlaku untuk SDK 1.x dan 2.x: token dipasang lewat `fetch`, bukan opsi SDK.
+ *
+ *   const siakad = buatSiakadPenghubung({ baseUrl: '/api/siakad' });
+ */
+export function buatSiakadPenghubung({ baseUrl, fetcher, getToken }: PenghubungSiakad): Siakad {
+  const dasar: PengambilSiakad = fetcher ?? ((u, i) => globalThis.fetch(u, i));
+  const kirim: PengambilSiakad = async (input, init = {}) => {
+    const h = new Headers(init.headers);
+    // SDK selalu butuh token; tanda tempat diganti token dari getToken, atau dibuang (proxy menempelkan token sendiri).
+    if (h.get('authorization') === `Bearer ${TANDA_PROXY}`) h.delete('authorization');
+    const token = getToken ? await getToken() : null;
+    if (token) h.set('authorization', `Bearer ${token}`);
+    return dasar(input, { ...init, headers: h });
+  };
+  return new Siakad({
+    baseUrl: baseUrl ?? (fetcher ? '' : undefined),
+    accessToken: TANDA_PROXY,
+    fetch: kirim as typeof fetch,
+  });
+}
+
 /** Penyedia konteks UNIPO: instans SDK untuk komponen terhubung, toast, dan tooltip. */
-export function UnipoProvider({ siakad = null, children, withProviders = true, laporGalat = true, kalenderAkademik = true }: UnipoProviderProps) {
+export function UnipoProvider({ siakad: siakadProp = null, baseUrl, fetcher, getToken, children, withProviders = true, laporGalat = true, kalenderAkademik = true }: UnipoProviderProps) {
+  // getToken lewat ref: fungsi baru tiap render tidak membuat instans (dan cache) baru.
+  const tokenRef = React.useRef(getToken);
+  tokenRef.current = getToken;
+  const adaToken = getToken !== undefined;
+  const dibuat = React.useMemo(
+    () => (siakadProp || (baseUrl === undefined && !fetcher) ? null : buatSiakadPenghubung({ baseUrl, fetcher, getToken: adaToken ? () => tokenRef.current?.() : undefined })),
+    [siakadProp, baseUrl, fetcher, adaToken],
+  );
+  const siakad = siakadProp ?? dibuat;
   const inner = (
     <SiakadContext.Provider value={siakad}>
       <KalenderAkademikProvider aktif={kalenderAkademik}>{children}</KalenderAkademikProvider>
@@ -78,7 +132,7 @@ export function useSesiHabis(): unknown {
 /** Instans SDK dari <UnipoProvider>. */
 export function useSiakad(): Siakad {
   const s = React.useContext(SiakadContext);
-  if (!s) throw new Error('Komponen ini butuh SDK: bungkus aplikasi dengan <UnipoProvider siakad={new Siakad(...)}>.');
+  if (!s) throw new Error('Komponen ini butuh sumber data: bungkus aplikasi dengan <UnipoProvider baseUrl="/api/siakad"> (proxy di backend Anda) atau <UnipoProvider fetcher={buatFetcherTiruan(...)}> untuk data tiruan.');
   return s;
 }
 export function useOptionalSiakad(): Siakad | null {
@@ -163,7 +217,7 @@ export function useSiakadQuery<T>(key: ReadonlyArray<unknown>, fn: (siakad: Siak
 
   React.useEffect(() => {
     if (!enabled) return void setState((s) => ({ ...s, loading: false }));
-    if (!siakad) return void setState({ loading: false, error: new Error('SDK belum dipasang di <UnipoProvider>.') });
+    if (!siakad) return void setState({ loading: false, error: new Error('Sumber data belum dipasang: isi <UnipoProvider baseUrl="/api/siakad"> (proxy di backend Anda) atau fetcher data tiruan.') });
     const cache = cacheFor(siakad);
     const hit = cache.get(k);
     if (hit && Date.now() - hit.at < staleTime && nonce === 0) {
