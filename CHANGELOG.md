@@ -1,6 +1,6 @@
 # Catatan perubahan
 
-## 1.61.0 (belum dirilis)
+## Belum dirilis
 
 - **TypeScript ES2023 + metode salin larik (legacy-scan modern-web-guidance, keputusan Anas 2026-11-22)**: `target`/`lib` tsconfig `packages/ui` dan `apps/docs` naik dari ES2020/ES2022 ke ES2023. Sintaks keluaran build tidak lagi mengikuti `target` tsconfig: `tsup.config.ts` kini memakai `target: ['chrome110', 'edge110', 'firefox115', 'safari16']` sesuai peramban yang didukung (Chrome 110+, Safari 16+, Firefox 115+; sebelumnya ES2020). 51 temuan `copying-array-methods` diterapkan: salinan `[...x].sort()`/`.slice().sort()` menjadi `toSorted()`, `[...x].reverse()` menjadi `toReversed()`, dan `[...x].reverse().find()` menjadi `findLast()` (grafik, DataTable, progres, pustaka & cari editor, dasbor, akademik, akreditasi, aplikasi, aturan, berkas, kalender, skala nilai, kurikulum, LMS, notifikasi, obrolan, peringatan, pilih unit, PMB, profil, SKP, ujian TA, widget unit). Tidak ada temuan yang dilewati: semua penerimanya larik biasa (bukan Set/Map/NodeList/string), tanpa lubang larik, dan callback `findLast` hanya memakai argumen butir. Tipe publik `.d.ts` tidak memakai tipe ES2023, sehingga aplikasi dengan `lib` ES2022 tetap lolos typecheck.
 
