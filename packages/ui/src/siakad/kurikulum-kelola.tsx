@@ -1688,8 +1688,7 @@ function FormMk({ kurikulumId, awal, onTutup }: { kurikulumId: number | string; 
   const nilaiMk = isianMk ?? isianQ.data?.nilai?.[''] ?? {};
   const perangkat = (a.isi?.mata_kuliah?.perangkat ?? []).filter((p) => !p.wajib_untuk?.length || p.wajib_untuk.includes(kategoriMk(f)));
   const opsiPras = lain
-    .slice()
-    .sort((x, y) => (x.semester ?? 99) - (y.semester ?? 99))
+    .toSorted((x, y) => (x.semester ?? 99) - (y.semester ?? 99))
     .map((m) => ({ value: String(m.id), label: `${m.kode_mk} · ${m.nama}`, description: m.semester ? `Semester ${m.semester}` : 'Pilihan bebas', group: m.semester && sem && m.semester >= sem ? 'Semester sama/sesudahnya' : 'Semester sebelumnya' }));
   const namaMk = (id: string) => {
     const m = lain.find((x) => String(x.id) === id);

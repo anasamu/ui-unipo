@@ -527,7 +527,7 @@ export function ProgressDaftar({
   terbalik?: boolean;
   className?: string;
 }) {
-  const list = urut ? [...items].sort((a, b) => b.nilai / (b.max ?? 100) - a.nilai / (a.max ?? 100)) : items;
+  const list = urut ? items.toSorted((a, b) => b.nilai / (b.max ?? 100) - a.nilai / (a.max ?? 100)) : items;
   return (
     <ul className={cn('u-pd-daftar', className)}>
       {list.map((b, i) => {

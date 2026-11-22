@@ -200,7 +200,7 @@ function galatTeks(e: unknown): string {
 
 /** Pesan urut naik menurut id server; pesan yang masih dikirim (id 0) di akhir. */
 function urutId(l: PesanObrolan[]): PesanObrolan[] {
-  return [...l].sort((a, b) => (a.id || Number.MAX_SAFE_INTEGER) - (b.id || Number.MAX_SAFE_INTEGER));
+  return l.toSorted((a, b) => (a.id || Number.MAX_SAFE_INTEGER) - (b.id || Number.MAX_SAFE_INTEGER));
 }
 
 /** Id pesan terbesar yang sudah tersimpan di server (untuk tanda dibaca dan memuat pesan baru). */

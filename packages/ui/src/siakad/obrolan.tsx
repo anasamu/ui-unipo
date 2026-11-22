@@ -1646,7 +1646,7 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
                 setBalas(null);
                 setUbah(null);
               } else if (e.key === 'ArrowUp' && !teks) {
-                const akhir = [...pesan].reverse().find((p) => p.pengirim === saya && p.isi?.t === 'teks' && p.status === 'terkirim');
+                const akhir = pesan.findLast((p) => p.pengirim === saya && p.isi?.t === 'teks' && p.status === 'terkirim');
                 if (akhir) (e.preventDefault(), setUbah(akhir), setTeksMentah(akhir.isi?.isi ?? ''));
               }
             }}

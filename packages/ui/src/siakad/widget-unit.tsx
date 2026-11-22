@@ -372,7 +372,7 @@ export const WidgetLppm = buatWidgetUnit('WidgetLppm', useRekapLppm, (d) => {
 /** Serapan anggaran: realisasi terhadap anggaran. GET /v1/keu/serapan. */
 export const WidgetKeuangan = buatWidgetUnit('WidgetKeuangan', useSerapanAnggaran, (d) => {
   const persen = n(d.persen);
-  const unitRendah = [...d.per_unit].sort((a, b) => n(a.persen) - n(b.persen)).slice(0, 4);
+  const unitRendah = d.per_unit.toSorted((a, b) => n(a.persen) - n(b.persen)).slice(0, 4);
   return {
     judul: d.periode?.nama ? `Serapan ${d.periode.nama}` : 'Serapan anggaran',
     ikon: <Wallet />,

@@ -325,7 +325,7 @@ export async function dekripsiBerkas(sandi: Uint8Array<ArrayBuffer> | ArrayBuffe
  * aktif keduanya, jadi berubah bila salah satu menambah atau mencabut perangkat.
  */
 export async function nomorKeamanan(a: { id: string; sidik: string[] }, b: { id: string; sidik: string[] }): Promise<string[]> {
-  const bagian = [a, b].map((x) => `${x.id}:${[...x.sidik].sort().join(',')}`).sort();
+  const bagian = [a, b].map((x) => `${x.id}:${x.sidik.toSorted().join(',')}`).sort();
   let h = enc.encode(`${VERSI}|nomor|${bagian.join('|')}`) as Uint8Array<ArrayBuffer>;
   // Diulang agar menebak pasangan kunci dengan nomor sama jauh lebih mahal.
   for (let i = 0; i < 1024; i++) h = new Uint8Array(await subtle().digest('SHA-512', h)) as Uint8Array<ArrayBuffer>;

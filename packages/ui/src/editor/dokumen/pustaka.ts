@@ -98,7 +98,7 @@ export function entriApa(p: PustakaSkripsi): string {
 
 /** Urutkan pustaka sesuai APA: abjad nama belakang penulis pertama, lalu tahun. */
 export function urutPustaka(daftar: PustakaSkripsi[]): PustakaSkripsi[] {
-  return [...daftar].sort((a, b) => {
+  return daftar.toSorted((a, b) => {
     const x = (a.penulis || a.judul).localeCompare(b.penulis || b.judul, 'id', { sensitivity: 'base' });
     return x || (a.tahun ?? '').localeCompare(b.tahun ?? '');
   });

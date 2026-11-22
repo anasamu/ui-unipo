@@ -186,7 +186,7 @@ export function urutkanBerkas<T extends BerkasUrut>(daftar: readonly T[], u: Uru
 export function urutkanFolder<T extends { nama: string; total_ukuran?: number; terakhir_isi_at?: string | null; dibuat_at?: string | null }>(daftar: readonly T[], u: UrutKolom): T[] {
   const arah = u.arah === 'turun' ? -1 : 1;
   const nama = u.kunci === 'jenis' ? 1 : arah;
-  return [...daftar].sort((a, b) => {
+  return daftar.toSorted((a, b) => {
     if (u.kunci === 'ukuran') return arah * ((a.total_ukuran ?? 0) - (b.total_ukuran ?? 0)) || bandingNama(a.nama, b.nama);
     if (u.kunci === 'tanggal') return arah * (waktuBerkas({ dibuat_at: a.terakhir_isi_at ?? a.dibuat_at }) - waktuBerkas({ dibuat_at: b.terakhir_isi_at ?? b.dibuat_at })) || bandingNama(a.nama, b.nama);
     return nama * bandingNama(a.nama, b.nama);

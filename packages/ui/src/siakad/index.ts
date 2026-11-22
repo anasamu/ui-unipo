@@ -107,6 +107,7 @@ export * from './pemenuhan-aturan';
 export * from './kasir';
 export * from './kasir-peramban';
 export * from './kasir-unit';
+export * from './komponen-biaya';
 export * from './perangkat-kasir';
 export * from './kwitansi';
 export * from './kwitansi-pengaturan';

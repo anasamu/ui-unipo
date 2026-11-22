@@ -100,7 +100,7 @@ export function periksaUnggahan(info: InfoBerkas, file: { name: string; size: nu
   if (b?.larang?.includes(e)) return b.larang_aplikasi?.includes(e) ? `Aplikasi ${b.aplikasi?.nama ?? 'ini'} tidak menerima berkas .${ext}.` : `Jenis berkas .${ext} dilarang oleh aturan penyimpanan.`;
   if (b?.izin?.length) {
     // Sumber paling khusus (aplikasi, unit) disebut lebih dulu.
-    for (const c of [...b.izin].reverse()) if (!c.daftar.includes(e)) return pesanBatas(c.sumber, c.daftar, b.maks_byte, ext, null);
+    for (const c of b.izin.toReversed()) if (!c.daftar.includes(e)) return pesanBatas(c.sumber, c.daftar, b.maks_byte, ext, null);
   } else if (info.ekstensi.length && !info.ekstensi.includes(e) && !(e === 'jpg' && info.ekstensi.includes('jpeg'))) return `Jenis .${ext || '(tanpa ekstensi)'} tidak diizinkan. Jenis yang boleh: ${info.ekstensi.join(', ')}.`;
   if (file.size > info.maks_byte) {
     const izinApp = b?.maks_sumber?.lingkup === 'aplikasi' ? (b.izin?.find((c) => c.sumber.lingkup === 'aplikasi')?.daftar ?? []) : [];

@@ -892,7 +892,7 @@ export function KeuanganMahasiswa({ nim: nimProp, className }: { nim?: string; c
   if (!d.periode.length) return <KosongIlus nama="pembayaran" title="Belum ada tagihan" description="Tagihan UKT akan muncul di sini setelah dibuat biro keuangan." />;
   const r = d.ringkasan;
   const persen = r.tagihan > 0 ? Math.min(100, Math.round(((r.dibayar + r.potongan) / r.tagihan) * 100)) : 100;
-  const periode = [...d.periode].sort((a, b) => b.tahun_id.localeCompare(a.tahun_id));
+  const periode = d.periode.toSorted((a, b) => b.tahun_id.localeCompare(a.tahun_id));
   const aktif = buka ?? periode[0]?.tahun_id;
   return (
     <div className={cn('u-modul-keu', className)}>
