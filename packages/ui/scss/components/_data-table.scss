@@ -7,21 +7,87 @@
   gap: 0.75rem;
   min-width: 0;
 }
+// Bilah alat: saringan/cari di kiri, tombol tabel (kerapatan, Kolom, CSV, aksi) di kanan, SATU baris. Saat sempit
+// tombol turun ke baris berikut dan tetap rata kanan; tidak pernah menumpuk acak.
 .u-dt-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
-  gap: 0.75rem;
+  gap: var(--u-space-2) var(--u-space-3);
 }
 .u-dt-toolbar-start {
-  flex: 1;
+  flex: 1 1 16rem;
   min-width: 0;
+  // FilterBar di slot toolbar: tanpa jarak luar sendiri, baris pertamanya sejajar dengan tombol kanan.
+  > .u-filter-bar {
+    margin: 0 !important;
+  }
 }
 .u-dt-toolbar-end {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.375rem;
   flex: none;
+  max-width: 100%;
+  margin-inline-start: auto;
 }
+
+// ---- bingkai (bawaan, `framed`): bilah alat + tabel + kaki halaman dalam satu kartu ber-jarak dalam token.
+// Tabel di dalamnya rata tepi (tanpa bingkai/sudut sendiri) supaya tidak ada bingkai ganda dan tidak ada tombol
+// yang menempel tepi atau terpotong sudut membulat. Tampilan kartu ponsel/kisi tidak dibingkai (kartunya sendiri
+// sudah berbingkai).
+.u-data-table[data-framed]:not([data-cards]) {
+  --u-dt-inset-x: var(--u-space-4);
+  --u-dt-inset-y: var(--u-space-3);
+  gap: 0;
+  border: 1px solid var(--u-border);
+  border-radius: calc(var(--u-radius) + 4px);
+  background: var(--u-card);
+  box-shadow: var(--u-elevation-card);
+  > .u-dt-toolbar {
+    padding: var(--u-dt-inset-y) var(--u-dt-inset-x);
+  }
+  > .u-dt-export,
+  > .u-dt-bulk {
+    margin: 0 var(--u-dt-inset-x) var(--u-dt-inset-y);
+  }
+  > .u-table-wrap {
+    border: 0;
+    border-top: 1px solid var(--u-border);
+    border-radius: 0;
+    background: transparent;
+    &:first-child {
+      border-top: 0;
+      border-start-start-radius: inherit;
+      border-start-end-radius: inherit;
+    }
+    &:last-child {
+      border-end-start-radius: inherit;
+      border-end-end-radius: inherit;
+    }
+  }
+  > .u-dt-footer {
+    padding: var(--u-dt-inset-y) var(--u-dt-inset-x);
+    border-top: 1px solid var(--u-border);
+  }
+}
+// Langsung di dalam <Card>: kartu itulah bingkainya; jarak dalam sejajar dengan kepala kartu.
+.u-card > .u-data-table[data-framed] {
+  --u-dt-inset-x: var(--u-space-5);
+  &:not([data-cards]) {
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    box-shadow: none;
+  }
+  // Kartu ponsel di dalam Card: seluruh isi diberi jarak dalam supaya tidak menempel tepi kartu.
+  &[data-cards] {
+    padding: var(--u-space-3);
+  }
+}
+
 .u-dt-bulk {
   display: flex;
   align-items: center;
@@ -315,12 +381,12 @@
   .u-dt-hide-sm {
     display: none;
   }
-  .u-dt-toolbar {
-    flex-direction: column;
-    align-items: stretch;
+  // Ponsel: tetap satu bilah. Saringan (cari + tombol Saring) di kiri, tombol tabel ikon saja di kanan.
+  .u-dt-toolbar-start {
+    flex-basis: 12rem;
   }
-  .u-dt-toolbar-end {
-    justify-content: flex-end;
+  .u-data-table[data-framed]:not([data-cards]) {
+    --u-dt-inset-x: var(--u-space-3);
   }
   .u-dt-footer {
     flex-direction: row;

@@ -1,6 +1,6 @@
 import { Archive, Download, Mail, Pencil, Trash2, UserPlus } from 'lucide-react';
 import * as React from 'react';
-import { ambilSemuaHalaman, Badge, Button, DataTable, useToast, type DataColumn } from 'unipo-ui';
+import { ambilSemuaHalaman, Badge, Button, Card, CardHeader, DataTable, FilterBar, useToast, type DataColumn, type FilterValues } from 'unipo-ui';
 import type { DemoMeta } from '../registry';
 
 export const meta: DemoMeta = {
@@ -10,7 +10,7 @@ export const meta: DemoMeta = {
   order: 1,
   description: 'Tabel inti untuk semua daftar: urut, halaman, pilih baris dengan aksi massal, menu aksi per baris, pilih kolom, kerapatan, unduh CSV, kerangka saat memuat, keadaan kosong dan galat. Di layar di bawah 640 px baris berubah menjadi kartu bertumpuk.',
   importLine: "import { DataTable, type DataColumn } from 'unipo-ui';",
-  demos: { Dasar: 'Data lokal: urut, halaman, kolom', Pilih: 'Pilih baris dan aksi massal', Memuat: 'Memuat, kosong, galat', TanpaHalaman: 'Tabel kecil tanpa kaki halaman (pagination={false})', Server: 'Paging server: format kolom, baris per halaman, unduh CSV semua data' },
+  demos: { Dasar: 'Data lokal: urut, halaman, kolom', Pilih: 'Pilih baris dan aksi massal', Memuat: 'Memuat, kosong, galat', TanpaHalaman: 'Tabel kecil tanpa kaki halaman (pagination={false})', Server: 'Paging server: format kolom, baris per halaman, unduh CSV semua data', Saringan: 'Bingkai standar: FilterBar di slot toolbar, sebaris dengan kerapatan, Kolom, dan CSV', DalamKartu: 'Di dalam <Card>: kartu menjadi bingkai, bilah alat tetap berjarak dalam' },
   props: [
     ['columns', 'DataColumn<T>[]', "key, header, cell, value, sortable, align, shrink, hideable, defaultHidden, mobile, format ('angka' | 'rupiah' | 'persen' rata kanan, 'tanggal', 'tanggal-waktu', 'status' + peta status)."],
     ['rows, rowKey', 'T[], (row) => string', 'Data dan kunci unik baris.'],
@@ -26,6 +26,7 @@ export const meta: DemoMeta = {
     ['exportAll, exportLimit', '({ signal, batas, onProgress }) => Promise, number', 'Ambil semua halaman dari server (ambilSemuaHalaman) dengan status progres + Batalkan; di atas batas (bawaan 10.000) ada peringatan dan berkas ditandai "sebagian". useSiakadTable/TabelSumber mengisinya otomatis.'],
     ['empty, emptyFiltered, filtered', 'object', 'Keadaan kosong vs tidak ada yang cocok.'],
     ['storageKey', 'string', 'Ingat pilihan kolom dan kerapatan di localStorage.'],
+    ['framed', 'boolean', 'Bawaan true: bilah alat (saringan + kerapatan, Kolom, CSV), tabel, dan kaki halaman dalam satu bingkai ber-jarak dalam token. Jangan bungkus DataTable dengan div berbingkai. Langsung di dalam <Card>, kartu itulah bingkainya. false = hanya tabel yang berbingkai.'],
   ],
 };
 
@@ -167,5 +168,51 @@ export function Server() {
       exportLimit={1000}
       toolbar={<strong style={{ lineHeight: '2rem' }}>Tagihan (1.234 baris, batas unduh contoh 1.000)</strong>}
     />
+  );
+}
+
+// ---------------------------------------------------------------- Bingkai + saringan sebaris
+const FIELDS_PRODI = [
+  { key: 'fakultas', label: 'Fakultas', type: 'select' as const, options: [...new Set(PRODI.map((p) => p.fakultas))].map((f) => ({ value: f, label: f })) },
+  { key: 'akreditasi', label: 'Akreditasi', type: 'select' as const, options: ['Unggul', 'Baik Sekali', 'Baik'].map((a) => ({ value: a, label: a })) },
+];
+function useSaringProdi() {
+  const [f, setF] = React.useState<FilterValues>({});
+  const q = String(f.q ?? '').toLowerCase();
+  const rows = PRODI.filter((p) => (!q || p.nama.toLowerCase().includes(q) || p.kode.includes(q)) && (!f.fakultas || p.fakultas === f.fakultas) && (!f.akreditasi || p.akreditasi === f.akreditasi));
+  return { f, setF, rows, filtered: Object.keys(f).length > 0 };
+}
+
+export function Saringan() {
+  const s = useSaringProdi();
+  return (
+    <DataTable
+      columns={COLS}
+      rows={s.rows}
+      rowKey={(r) => r.kode}
+      perPage={5}
+      exportCsv="program-studi"
+      filtered={s.filtered}
+      emptyFiltered={{ onReset: () => s.setF({}) }}
+      toolbar={<FilterBar value={s.f} onValueChange={s.setF} search={{ placeholder: 'Cari nama atau kode prodi…' }} fields={FIELDS_PRODI} />}
+      rowActions={(r) => [{ label: `Ubah ${r.nama}`, icon: <Pencil /> }]}
+    />
+  );
+}
+
+export function DalamKartu() {
+  const s = useSaringProdi();
+  return (
+    <Card>
+      <CardHeader title="Program studi" description="DataTable langsung di dalam Card: tanpa bingkai ganda." />
+      <DataTable
+        columns={COLS}
+        rows={s.rows}
+        rowKey={(r) => r.kode}
+        perPage={5}
+        exportCsv="program-studi"
+        toolbar={<FilterBar value={s.f} onValueChange={s.setF} search={{ placeholder: 'Cari prodi…' }} fields={FIELDS_PRODI} />}
+      />
+    </Card>
   );
 }
