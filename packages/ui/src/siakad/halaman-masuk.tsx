@@ -30,6 +30,7 @@ import { Ilustrasi } from '../ikon/ilustrasi';
 import { terapkanModeTampilan, type DataTemaAplikasi } from '../tema';
 import { PengumumanTampil } from './pengumuman-lintas';
 import { useOptionalSiakad, useSiakadQuery } from './provider';
+import { Tekan } from '../components/tekan';
 
 // ---------------------------------------------------------------- Tipe dan pilihan
 
@@ -572,12 +573,12 @@ function Slider({ slide, interval, transisi, jalan, peta, nama, pratinjau }: { s
       {n > 1 && (
         <div className="u-masuk-slider-kendali" role="group" aria-label="Kendali slide">
           {jalan && (
-            <button type="button" className="u-masuk-slider-jeda" onClick={() => setJeda((j) => !j)} aria-label={jeda ? 'Putar slide' : 'Jeda slide'} tabIndex={pratinjau ? -1 : undefined}>
+            <Tekan className="u-masuk-slider-jeda" onClick={() => setJeda((j) => !j)} aria-label={jeda ? 'Putar slide' : 'Jeda slide'} tabIndex={pratinjau ? -1 : undefined}>
               {jeda ? <Play aria-hidden /> : <Pause aria-hidden />}
-            </button>
+            </Tekan>
           )}
           {slide.map((_, i) => (
-            <button key={i} type="button" className="u-masuk-slider-titik" aria-label={`Slide ${i + 1} dari ${n}`} aria-current={i === aktif || undefined} onClick={() => setAktif(i)} tabIndex={pratinjau ? -1 : undefined} />
+            <Tekan key={i} className="u-masuk-slider-titik" aria-label={`Slide ${i + 1} dari ${n}`} aria-current={i === aktif || undefined} onClick={() => setAktif(i)} tabIndex={pratinjau ? -1 : undefined} />
           ))}
         </div>
       )}

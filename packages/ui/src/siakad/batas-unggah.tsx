@@ -8,6 +8,7 @@ import { SliderNilai } from '../components/alokasi';
 import { Sheet } from '../components/overlays';
 import { formatBytes } from '../lib/format';
 import { invalidateSiakad, pesanGalat, useSiakad } from './provider';
+import { Tekan } from '../components/tekan';
 
 /**
  * Batas unggah per aplikasi dan per unit (aturan penyimpanan Pustikom, docs/PENYIMPANAN.md "Batas unggah per aplikasi
@@ -99,7 +100,7 @@ export function PemilihEkstensi({ value, onValueChange, label, description, teks
                   <Tag
                     key={k}
                     active={semua}
-                    render={<button type="button" aria-pressed={semua} title={p.ekstensi.map((e) => `.${e}`).join(' ')} />}
+                    render={<Tekan terpilih={semua} title={p.ekstensi.map((e) => `.${e}`).join(' ')} />}
                     onClick={() => (semua ? kurangi(p.ekstensi) : tambah(p.ekstensi))}
                     icon={semua ? <Check size={12} aria-hidden /> : <Plus size={12} aria-hidden />}
                   >

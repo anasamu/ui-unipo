@@ -7,15 +7,8 @@
   gap: 0.5rem;
   font-size: var(--u-text-sm);
   color: var(--u-muted-foreground);
-  select {
-    min-height: 2.25rem;
+  .u-select-trigger {
     max-width: 18rem;
-    padding: 0 0.625rem;
-    border: 1px solid var(--u-input, var(--u-border));
-    border-radius: var(--u-radius-md);
-    background: var(--u-background);
-    color: var(--u-foreground);
-    font: inherit;
   }
 }
 .u-pmb-galat-kecil {

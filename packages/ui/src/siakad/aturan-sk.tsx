@@ -25,7 +25,7 @@ import {
 import { cn } from '../lib/cn';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Card, Empty, Tabs } from '../components/display';
-import { Field, Input, SegmentedControl, Textarea } from '../components/forms';
+import { Checkbox, Field, Input, SegmentedControl, Textarea } from '../components/forms';
 import { Pilihan, PilihanBanyak } from '../components/formulir';
 import { Dialog, useToast } from '../components/overlays';
 import { PanelLangkah } from '../components/panel-langkah';
@@ -36,6 +36,9 @@ import { GalatApi } from './galat';
 import { PilihSK, type SKRegistri } from './isian-sk';
 import { useFakultasReferensi, useProdiReferensi } from './prodi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { IsianAngka } from '../components/isian-angka';
+import { keAngka } from '../lib/angka';
+import { Tekan } from '../components/tekan';
 
 /*
  * Aturan berdasarkan SK dan rantai validator per unit (SIAKAD docs/ATURAN-SK.md). Keluarga komponen yang dipakai ulang
@@ -712,7 +715,7 @@ export function EditorRantaiValidator({ value, onChange, katalog, galat }: { val
               />
             </Field>
             <Field label="Batas waktu (hari)" optional description="Lewat batas, validator dan pengaju diingatkan setiap hari.">
-              <Input type="number" min={1} max={90} value={t.batas_hari ?? ''} onChange={(e) => ubah(i, { batas_hari: e.target.value ? Number(e.target.value) : null })} placeholder="mis. 3" />
+              <IsianAngka value={keAngka(t.batas_hari)} min={1} max={90} placeholder="mis. 3" onValueChange={(n) => ubah(i, { batas_hari: n })} />
             </Field>
           </div>
         </Card>
@@ -839,7 +842,7 @@ function FormValidator({ open, onOpenChange, awal, katalog, templat }: { open: b
                       <Pilihan tampilan="daftar" options={[{ value: '', label: 'Semua jenis aturan' }, ...katalog.kategori.map((k) => ({ value: k.kode, label: k.label }))]} value={v.kategori ?? ''} onValueChange={(x) => set({ kategori: x || null })} />
                     </Field>
                     <label className="u-ask-centang">
-                      <input type="checkbox" checked={v.warisi} onChange={(e) => set({ warisi: e.target.checked })} /> Berlaku juga untuk sub-unit (mis. prodi di bawah fakultas). Sub-unit bisa diberi rantai sendiri untuk menimpa.
+                      <Checkbox checked={v.warisi} onCheckedChange={(c) => set({ warisi: c })} /> Berlaku juga untuk sub-unit (mis. prodi di bawah fakultas). Sub-unit bisa diberi rantai sendiri untuk menimpa.
                     </label>
                   </div>
                 ),
@@ -1476,11 +1479,10 @@ export function WizardTemplatAturan({
           ) : (
             <div className="u-ask-jenis" role="radiogroup" aria-label="Jenis aturan">
               {kat.data.jenis.map((x) => (
-                <button
+                <Tekan
                   key={x.kode}
-                  type="button"
                   role="radio"
-                  aria-checked={jenis === x.kode}
+                  terpilih={jenis === x.kode}
                   className="u-ask-jenis-kartu"
                   data-pilih={jenis === x.kode ? '' : undefined}
                   onClick={() => {
@@ -1491,7 +1493,7 @@ export function WizardTemplatAturan({
                   <strong>{x.judul}</strong>
                   <span>{x.keterangan}</span>
                   {!x.siap && <Badge variant="outline">Segera tersedia</Badge>}
-                </button>
+                </Tekan>
               ))}
             </div>
           ),
@@ -1504,11 +1506,10 @@ export function WizardTemplatAturan({
           content: (
             <div className="u-ask-kasus" role="radiogroup" aria-label="Kasus">
               {(j?.templat ?? []).map((t) => (
-                <button
+                <Tekan
                   key={t.kode}
-                  type="button"
                   role="radio"
-                  aria-checked={kasus?.kode === t.kode}
+                  terpilih={kasus?.kode === t.kode}
                   className="u-ask-jenis-kartu"
                   data-pilih={kasus?.kode === t.kode ? '' : undefined}
                   disabled={!t.siap}
@@ -1526,7 +1527,7 @@ export function WizardTemplatAturan({
                     Bila tidak dipenuhi: {t.akibat_label.toLowerCase()}
                     {t.titik_judul ? ` · diperiksa saat ${t.titik_judul.charAt(0).toLowerCase()}${t.titik_judul.slice(1)}` : ''}
                   </span>
-                </button>
+                </Tekan>
               ))}
             </div>
           ),
@@ -1597,7 +1598,7 @@ export function WizardTemplatAturan({
                 required={!simpanSaja}
               />
               <label className="u-ask-centang">
-                <input type="checkbox" checked={simpanSaja} onChange={(e) => setSimpanSaja(e.target.checked)} /> Simpan sebagai draf dulu (ajukan nanti)
+                <Checkbox checked={simpanSaja} onCheckedChange={(c) => setSimpanSaja(c)} /> Simpan sebagai draf dulu (ajukan nanti)
               </label>
               <section>
                 <h4 className="u-ask-judul">

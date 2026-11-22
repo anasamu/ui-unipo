@@ -90,6 +90,7 @@ import { DasarPedoman } from './pedoman';
 import { useFakultasReferensi } from './prodi';
 import { DasarSkAturanDaftar, LencanaDasarSk, PenjelasanPengaturValidator, PanelAjukanAturan, PanelLampirSkDasar, ValidatorAturan, WizardTemplatAturan, type DasarSkAturan, type UnitRingkas } from './aturan-sk';
 import { KetentuanAkibat, PanelAkibatAturan, kalimatAkibat } from './aturan-akibat';
+import { Tekan } from '../components/tekan';
 
 /*
  * Aturan akademik, kelulusan, dan keuangan dinamis (/v1/aturan): aturan disusun di satu titik penerapan (langkah
@@ -1108,8 +1109,7 @@ export function KartuAturan({ aturan: a, katalog, onBuka, onLampirkan, className
         </span>
         <div className="u-aturan-kartu-judul">
           {onBuka ? (
-            <button
-              type="button"
+            <Tekan
               className="u-aturan-kartu-buka"
               title={a.nama}
               onClick={(e) => {
@@ -1118,7 +1118,7 @@ export function KartuAturan({ aturan: a, katalog, onBuka, onLampirkan, className
               }}
             >
               {a.nama}
-            </button>
+            </Tekan>
           ) : (
             <strong title={a.nama}>{a.nama}</strong>
           )}
@@ -1210,9 +1210,9 @@ export function KartuAturanKelompok({
           {ikonAturan(a)}
         </span>
         <div className="u-aturan-kartu-judul">
-          <button type="button" className="u-aturan-kartu-buka" title={a.nama} aria-expanded={buka} onClick={() => setBuka((v) => !v)}>
+          <Tekan className="u-aturan-kartu-buka" title={a.nama} aria-expanded={buka} onClick={() => setBuka((v) => !v)}>
             {a.nama}
-          </button>
+          </Tekan>
           <span title={labelTitik(a.titik, a.titik_judul)}>{labelTitik(a.titik, a.titik_judul)}</span>
         </div>
       </div>
@@ -2264,11 +2264,10 @@ function PilihTitikAturan({
                   const pilih = value === t.kode;
                   const contoh = t.contoh?.[0]?.judul;
                   return (
-                    <button
+                    <Tekan
                       key={t.kode}
-                      type="button"
                       role="radio"
-                      aria-checked={pilih}
+                      terpilih={pilih}
                       className="u-aturan-titik-opsi"
                       data-pilih={pilih || undefined}
                       disabled={Boolean(alasan) || (terkunci && !pilih)}
@@ -2281,7 +2280,7 @@ function PilihTitikAturan({
                       </span>
                       {t.keterangan && <span className="u-aturan-titik-opsi-ket">{ringkasKeterangan(t.keterangan)}</span>}
                       {alasan ? <span className="u-aturan-titik-opsi-alasan">{alasan}</span> : contoh ? <span className="u-aturan-titik-opsi-contoh">Contoh: {contoh}</span> : null}
-                    </button>
+                    </Tekan>
                   );
                 })}
             </div>
@@ -2750,11 +2749,10 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
           const boleh = Boolean(t?.jenis.includes(j)) && !(ubah && aturan && aturan.jenis !== j);
           const pilih = isi.jenis === j;
           return (
-            <button
+            <Tekan
               key={j}
-              type="button"
               role="radio"
-              aria-checked={pilih}
+              terpilih={pilih}
               disabled={!boleh}
               className="u-aturan-jenis-opsi"
               data-pilih={pilih || undefined}
@@ -2770,7 +2768,7 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
               <span className="u-aturan-jenis-kalimat">{PENJELASAN_JENIS[j].kalimat}</span>
               <span className="u-aturan-jenis-contoh">{PENJELASAN_JENIS[j].contoh}</span>
               {!boleh && <span className="u-aturan-titik-opsi-alasan">{ubah ? 'Jenis tidak bisa diganti setelah disimpan' : 'Tidak tersedia di langkah ini'}</span>}
-            </button>
+            </Tekan>
           );
         })}
       </div>
@@ -2804,9 +2802,8 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
             {t!
               .contoh!.filter((c) => t!.jenis.includes(c.jenis))
               .map((c, i) => (
-                <button
+                <Tekan
                   key={i}
-                  type="button"
                   className="u-aturan-contoh-opsi"
                   onClick={() => {
                     setIsi((x) => terapkanContoh(x, c));
@@ -2826,7 +2823,7 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
                     </em>
                   </span>
                   <ArrowRight aria-hidden />
-                </button>
+                </Tekan>
               ))}
           </div>
         </div>
@@ -3176,11 +3173,10 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
               { v: 'peringatan', judul: 'Peringatan', ikon: <TriangleAlert />, ket: 'Langkah tetap jalan. Pengguna hanya melihat pesan peringatan.' },
             ] as const
           ).map((m) => (
-            <button
+            <Tekan
               key={m.v}
-              type="button"
               role="radio"
-              aria-checked={isi.mode === m.v}
+              terpilih={isi.mode === m.v}
               className="u-aturan-mode-opsi"
               data-mode={m.v}
               data-pilih={isi.mode === m.v || undefined}
@@ -3189,7 +3185,7 @@ export function FormAturan({ aturan, titik: titikAwal, kategori: kategoriAwal, o
               <span aria-hidden>{m.ikon}</span>
               <strong>{m.judul}</strong>
               <span>{m.ket}</span>
-            </button>
+            </Tekan>
           ))}
         </div>
       </Field>
@@ -5367,7 +5363,7 @@ export function AturanBawaanPanel({
     );
   return (
     <section className={cn('u-aturan-bawaan', className)} data-perlu={r.menunggu_sk > 0 || tanpaSkAktif > 0 || undefined}>
-      <button type="button" className="u-aturan-bawaan-kepala" aria-expanded={terbuka} onClick={() => setBuka(!terbuka)}>
+      <Tekan className="u-aturan-bawaan-kepala" aria-expanded={terbuka} onClick={() => setBuka(!terbuka)}>
         <span className="u-aturan-ikon" data-ukuran="sm" aria-hidden>
           <FileBadge />
         </span>
@@ -5380,7 +5376,7 @@ export function AturanBawaanPanel({
           </span>
         </span>
         <ChevronDown aria-hidden data-buka={terbuka || undefined} />
-      </button>
+      </Tekan>
       {terbuka && (
         <>
           <p className="u-aturan-sub">

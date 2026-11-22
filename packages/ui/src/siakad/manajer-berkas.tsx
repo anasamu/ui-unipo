@@ -60,7 +60,7 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '../components/actions';
-import { Input } from '../components/forms';
+import { Checkbox, Input, RadioGroup } from '../components/forms';
 import { ConfirmDialog, Dialog, Menu, Tooltip, type MenuEntry } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { formatBytes, formatDate } from '../lib/format';
@@ -109,6 +109,9 @@ import {
   type UrutKolom,
   type UrutServer,
 } from './berkas-finder';
+import { usePilihBerkas } from '../components/pilih-berkas-lokal';
+import { IsianCari } from '../components/isian-cari';
+import { Tekan } from '../components/tekan';
 
 // ================================================================ Tipe dan aturan (sama dengan /v1/berkas)
 
@@ -518,8 +521,7 @@ function PohonFolder({ pohon, aktif, onPilih, akarLabel, akarInfo, nonaktif, onL
         {...drag(path)}
       >
         {path !== null ? (
-          <button
-            type="button"
+          <Tekan
             className="u-mb-pohon-panah"
             tabIndex={-1}
             aria-hidden={!punyaAnak}
@@ -530,7 +532,7 @@ function PohonFolder({ pohon, aktif, onPilih, akarLabel, akarInfo, nonaktif, onL
             }}
           >
             <ChevronRight aria-hidden data-buka={buka ? '' : undefined} />
-          </button>
+          </Tekan>
         ) : (
           <HardDrive aria-hidden className="u-mb-pohon-akar" />
         )}
@@ -667,9 +669,9 @@ function DialogNamaFolder({
         <div className="u-mb-warna" role="radiogroup" aria-label="Warna folder">
           {([null, ...Object.keys(WARNA_FOLDER)] as Array<WarnaFolder | null>).map((w) => (
             <Tooltip key={w ?? 'bawaan'} content={w ? WARNA_FOLDER[w] : 'Bawaan'}>
-              <button type="button" role="radio" aria-checked={warna === w} aria-label={w ? WARNA_FOLDER[w] : 'Bawaan'} data-warna={w ?? undefined} onClick={() => setWarna(w)}>
+              <Tekan role="radio" terpilih={warna === w} aria-label={w ? WARNA_FOLDER[w] : 'Bawaan'} data-warna={w ?? undefined} onClick={() => setWarna(w)}>
                 {warna === w && <Check aria-hidden />}
-              </button>
+              </Tekan>
             </Tooltip>
           ))}
         </div>
@@ -1263,8 +1265,6 @@ export function ManajerBerkas({
   const [pesan, setPesan] = React.useState<{ nada: 'sukses' | 'galat'; teks: string; aksi?: { label: string; jalan: () => void } } | null>(null);
   const sasaranMenu = React.useRef<Sasaran>({ jenis: 'kosong' });
   const [menuSasaran, setMenuSasaran] = React.useState<Sasaran>({ jenis: 'kosong' });
-  const inputFile = React.useRef<HTMLInputElement>(null);
-  const inputFolder = React.useRef<HTMLInputElement>(null);
   const hitungSeret = React.useRef(0);
 
   const daftarFolder = pohonQ.data?.folder ?? [];
@@ -1718,7 +1718,7 @@ export function ManajerBerkas({
     return [
       ...(bisaTempel ? ([{ label: `Tempel ${papan?.folder ? `folder ${papan.folder.nama}` : `${papan?.berkas.length} berkas`}`, icon: <ClipboardPaste aria-hidden />, shortcut: 'Ctrl+V', onSelect: () => void tempel(folder) }, sep] as MenuEntry[]) : []),
       ...entriBaru,
-      ...(bolehUnggah ? ([{ label: 'Unggah folder', icon: <FolderUp aria-hidden />, onSelect: () => inputFolder.current?.click() }] as MenuEntry[]) : []),
+      ...(bolehUnggah ? ([{ label: 'Unggah folder', icon: <FolderUp aria-hidden />, onSelect: () => pemilihFolder.buka() }] as MenuEntry[]) : []),
       sep,
       ...(!bagi ? ([{ label: 'Keamanan berkas…', icon: <ShieldCheck aria-hidden />, onSelect: () => setDialog({ jenis: 'kebijakan' }) }] as MenuEntry[]) : []),
       { label: 'Segarkan', icon: <RotateCw aria-hidden />, onSelect: () => aksi.segarkan() },
@@ -1729,7 +1729,7 @@ export function ManajerBerkas({
   const entriBaru: MenuEntry[] = [
     ...(bolehKelola ? ([{ label: 'Folder baru', icon: <FolderPlus aria-hidden />, onSelect: () => setDialog({ jenis: 'folder-baru' }) }] as MenuEntry[]) : []),
     ...(bolehUnggah ? opsiBaru.map((t) => ({ label: BERKAS_BARU[t].label, icon: <FilePlus aria-hidden />, onSelect: () => setDialog({ jenis: 'baru', tipe: t }) })) : []),
-    ...(bolehUnggah ? ([{ label: 'Unggah berkas', icon: <Upload aria-hidden />, onSelect: () => inputFile.current?.click() }] as MenuEntry[]) : []),
+    ...(bolehUnggah ? ([{ label: 'Unggah berkas', icon: <Upload aria-hidden />, onSelect: () => pemilihBerkas.buka() }] as MenuEntry[]) : []),
   ];
 
   const setelSasaran = (s: Sasaran) => (e: React.MouseEvent) => {
@@ -1838,9 +1838,9 @@ export function ManajerBerkas({
     const tombolAksi = (
       <Menu
         trigger={
-          <button type="button" className="u-mb-aksi" aria-label={`Aksi folder ${f.nama}`} onClick={(e) => e.stopPropagation()}>
+          <Tekan className="u-mb-aksi" aria-label={`Aksi folder ${f.nama}`} onClick={(e) => e.stopPropagation()}>
             <Ellipsis aria-hidden />
-          </button>
+          </Tekan>
         }
         items={entriMenu({ jenis: 'folder', f })}
       />
@@ -1942,11 +1942,14 @@ export function ManajerBerkas({
         setelSasaran({ jenis: 'berkas', b })(e);
       },
     };
+    // Sasaran klik tetikus; papan ketik memilih lewat baris (Spasi/Ctrl+klik), jadi tidak menambah henti Tab per berkas.
     const cek = (
-      <span
+      <Tekan
+        elemen="span"
         className="u-mb-cek"
         role="checkbox"
-        aria-checked={dipilih}
+        terpilih={dipilih}
+        tabIndex={-1}
         aria-label={`Pilih ${b.nama}`}
         onClick={(e) => {
           e.stopPropagation();
@@ -1954,14 +1957,14 @@ export function ManajerBerkas({
         }}
       >
         {dipilih && <Check aria-hidden />}
-      </span>
+      </Tekan>
     );
     const tombolAksi = (
       <Menu
         trigger={
-          <button type="button" className="u-mb-aksi" aria-label={`Aksi berkas ${b.nama}`} onClick={(e) => e.stopPropagation()}>
+          <Tekan className="u-mb-aksi" aria-label={`Aksi berkas ${b.nama}`} onClick={(e) => e.stopPropagation()}>
             <Ellipsis aria-hidden />
-          </button>
+          </Tekan>
         }
         items={entriMenu({ jenis: 'berkas', b })}
       />
@@ -2139,10 +2142,10 @@ export function ManajerBerkas({
       <>
         <div className="u-mb-bagian">
           <h4 className="u-mb-bagian-judul">Pintasan</h4>
-          <button type="button" className="u-mb-pintas" aria-current={terbaru ? 'page' : undefined} title="Terbaru" onClick={opsiSamping.terbaru.onPilih}>
+          <Tekan className="u-mb-pintas" aria-current={terbaru ? 'page' : undefined} title="Terbaru" onClick={opsiSamping.terbaru.onPilih}>
             <Clock aria-hidden />
             <span>Terbaru</span>
-          </button>
+          </Tekan>
         </div>
         <div className="u-mb-bagian">
           <h4 className="u-mb-bagian-judul">{judul}</h4>
@@ -2161,25 +2164,24 @@ export function ManajerBerkas({
   );
   const kepalaKolom = (k: KunciUrut, label: string, cls?: string) => (
     <span role="columnheader" className={cls} aria-sort={urut.kunci === k ? (urut.arah === 'naik' ? 'ascending' : 'descending') : 'none'}>
-      <button type="button" className="u-mb-kolom-urut" data-aktif={urut.kunci === k ? '' : undefined} onClick={() => setUrut((u) => klikKolom(u, k))}>
+      <Tekan className="u-mb-kolom-urut" terpilih={urut.kunci === k} data-aktif={urut.kunci === k ? '' : undefined} onClick={() => setUrut((u) => klikKolom(u, k))}>
         {label}
         {urut.kunci === k ? urut.arah === 'naik' ? <ChevronUp aria-hidden /> : <ChevronDown aria-hidden /> : null}
-      </button>
+      </Tekan>
     </span>
   );
   const centangSemua =
     pilih !== 'satu' && isi.length > 0 ? (
-      <span
+      <Tekan
+        elemen="span"
         className="u-mb-cek"
         role="checkbox"
-        tabIndex={0}
         aria-checked={terpilih.size === isi.length ? true : terpilih.size ? 'mixed' : false}
         aria-label="Pilih semua berkas"
         onClick={() => setTerpilih(terpilih.size === isi.length ? new Set() : new Set(semuaId))}
-        onKeyDown={(e) => (e.key === ' ' || e.key === 'Enter') && (e.preventDefault(), setTerpilih(terpilih.size === isi.length ? new Set() : new Set(semuaId)))}
       >
         {terpilih.size === isi.length ? <Check aria-hidden /> : terpilih.size ? <span className="u-mb-cek-sebagian" /> : null}
-      </span>
+      </Tekan>
     ) : null;
   const muatLagi = adaLagi && !memuat && (
     <Button variant="ghost" size="sm" className="u-mb-lagi" onClick={() => setHalaman((h) => h + 1)}>
@@ -2333,9 +2335,9 @@ export function ManajerBerkas({
           {subfolder.map((f) => kartuFolder(f, 'strip'))}
           {isiTampil.map((b) => kartuBerkas(b, 'strip'))}
           {adaLagi && !memuat && (
-            <button type="button" className="u-mb-strip-lagi" onClick={() => setHalaman((h) => h + 1)}>
+            <Tekan className="u-mb-strip-lagi" onClick={() => setHalaman((h) => h + 1)}>
               +{total - isi.length}
-            </button>
+            </Tekan>
           )}
         </div>
       </div>
@@ -2352,7 +2354,7 @@ export function ManajerBerkas({
   const jumlahSaring = (jenis !== 'semua' ? 1 : 0) + (periode ? 1 : 0);
   const entriLain: MenuEntry[] = [
     ...entriBaru,
-    ...(bolehUnggah ? ([{ label: 'Unggah folder', icon: <FolderUp aria-hidden />, onSelect: () => inputFolder.current?.click() }] as MenuEntry[]) : []),
+    ...(bolehUnggah ? ([{ label: 'Unggah folder', icon: <FolderUp aria-hidden />, onSelect: () => pemilihFolder.buka() }] as MenuEntry[]) : []),
     ...(entriBaru.length || bolehUnggah ? ([{ type: 'separator' }] as MenuEntry[]) : []),
     ...(!bagi ? ([{ label: enkripsiEfektif === 'wajib' ? 'Keamanan berkas (terenkripsi)…' : 'Keamanan berkas…', icon: <ShieldCheck aria-hidden />, onSelect: () => setDialog({ jenis: 'kebijakan' }) }] as MenuEntry[]) : []),
     { label: panelInfo ? 'Sembunyikan panel info' : 'Tampilkan panel info', icon: <Info aria-hidden />, shortcut: '⌘I', onSelect: () => setPanelInfo((x) => !x) },
@@ -2376,6 +2378,23 @@ export function ManajerBerkas({
     window.addEventListener('pointermove', gerak);
     window.addEventListener('pointerup', lepas);
   };
+  const pemilihBerkas = usePilihBerkas({
+    multiple: pilih !== 'satu',
+    accept: accept ?? (info?.ekstensi.length ? info.ekstensi.map((x) => `.${x}`).join(',') : undefined),
+    onFiles: (files) => void tambahUnggah(files.map((file) => ({ file, sub: null })), folder),
+  });
+  const pemilihFolder = usePilihBerkas({
+    folder: true,
+    onFiles: (files) =>
+      void tambahUnggah(
+        files.map((file) => {
+          const rel = (file as File & { webkitRelativePath?: string }).webkitRelativePath ?? '';
+          const dir = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : '';
+          return { file, sub: dir ? dir.split('/').map(rapikanSegmen).join('/') : null };
+        }),
+        folder,
+      ),
+  });
 
   return (
     <div
@@ -2476,8 +2495,7 @@ export function ManajerBerkas({
             <nav aria-label="Lokasi folder">
               <ol>
                 <li>
-                  <button
-                    type="button"
+                  <Tekan
                     aria-current={diAkar ? 'page' : undefined}
                     data-sasaran={sasaranLepas === '' ? '' : undefined}
                     onClick={() => buka(akarBagi)}
@@ -2495,21 +2513,20 @@ export function ManajerBerkas({
                     }}
                   >
                     {judul}
-                  </button>
+                  </Tekan>
                 </li>
                 {terbaru ? (
                   <li>
                     <ChevronRight aria-hidden />
-                    <button type="button" aria-current="page">
+                    <Tekan aria-current="page">
                       Terbaru
-                    </button>
+                    </Tekan>
                   </li>
                 ) : (
                   jejak.map((j, i) => (
                     <li key={j.path}>
                       <ChevronRight aria-hidden />
-                      <button
-                        type="button"
+                      <Tekan
                         aria-current={i === jejak.length - 1 ? 'page' : undefined}
                         data-sasaran={sasaranLepas === j.path ? '' : undefined}
                         onClick={() => buka(j.path)}
@@ -2527,7 +2544,7 @@ export function ManajerBerkas({
                         }}
                       >
                         {j.label}
-                      </button>
+                      </Tekan>
                     </li>
                   ))
                 )}
@@ -2559,17 +2576,16 @@ export function ManajerBerkas({
             )}
             {enkripsiEfektif === 'opsional' && bolehUnggah && (
               <Tooltip content={enkripsiUnggah ? 'Berkas yang diunggah akan dienkripsi' : 'Enkripsi berkas yang diunggah'}>
-                <button
-                  type="button"
+                <Tekan
                   className="u-mb-enkripsi"
-                  aria-pressed={enkripsiUnggah}
+                  terpilih={enkripsiUnggah}
                   data-aktif={enkripsiUnggah ? '' : undefined}
                   aria-label="Enkripsi berkas yang diunggah"
                   onClick={() => setEnkripsiUnggah((x) => !x)}
                 >
                   {enkripsiUnggah ? <Lock aria-hidden /> : <LockOpen aria-hidden />}
                   <span className="u-mb-sembunyi-sedang">{enkripsiUnggah ? 'Enkripsi aktif' : 'Enkripsi'}</span>
-                </button>
+                </Tekan>
               </Tooltip>
             )}
             {entriBaru.length > 0 && (
@@ -2580,11 +2596,11 @@ export function ManajerBerkas({
                     <span className="u-mb-sembunyi-sedang">Baru</span>
                   </Button>
                 }
-                items={[...entriBaru, ...(bolehUnggah ? ([{ label: 'Unggah folder', icon: <FolderUp aria-hidden />, onSelect: () => inputFolder.current?.click() }] as MenuEntry[]) : [])]}
+                items={[...entriBaru, ...(bolehUnggah ? ([{ label: 'Unggah folder', icon: <FolderUp aria-hidden />, onSelect: () => pemilihFolder.buka() }] as MenuEntry[]) : [])]}
               />
             )}
             {bolehUnggah && (
-              <Button size="sm" aria-label="Unggah berkas" onClick={() => inputFile.current?.click()}>
+              <Button size="sm" aria-label="Unggah berkas" onClick={() => pemilihBerkas.buka()}>
                 <Upload aria-hidden />
                 <span className="u-mb-sembunyi-kecil">Unggah</span>
               </Button>
@@ -2602,9 +2618,9 @@ export function ManajerBerkas({
             <div className="u-mb-tampilan" role="radiogroup" aria-label="Tampilan">
               {tombolTampilan.map((t) => (
                 <Tooltip key={t.v} content={`Tampilan ${LABEL_TAMPILAN[t.v].toLowerCase()}`}>
-                  <button type="button" role="radio" aria-checked={tampilan === t.v} aria-label={`Tampilan ${LABEL_TAMPILAN[t.v].toLowerCase()}`} onClick={() => setTampilan(t.v)}>
+                  <Tekan role="radio" terpilih={tampilan === t.v} aria-label={`Tampilan ${LABEL_TAMPILAN[t.v].toLowerCase()}`} onClick={() => setTampilan(t.v)}>
                     {t.ikon}
-                  </button>
+                  </Tekan>
                 </Tooltip>
               ))}
             </div>
@@ -2678,72 +2694,28 @@ export function ManajerBerkas({
             {jenis !== 'semua' && (
               <span className="u-mb-chip">
                 {JENIS_BERKAS[jenis].label}
-                <button type="button" aria-label={`Hapus saringan ${JENIS_BERKAS[jenis].label}`} onClick={() => setJenis('semua')}>
+                <Tekan aria-label={`Hapus saringan ${JENIS_BERKAS[jenis].label}`} onClick={() => setJenis('semua')}>
                   <X aria-hidden />
-                </button>
+                </Tekan>
               </span>
             )}
             {periode && (
               <span className="u-mb-chip">
                 {periode === 'tanpa' ? 'Tanpa periode' : namaPeriode(periode)}
-                <button type="button" aria-label="Hapus saringan periode" onClick={() => setPeriode(null)}>
+                <Tekan aria-label="Hapus saringan periode" onClick={() => setPeriode(null)}>
                   <X aria-hidden />
-                </button>
+                </Tekan>
               </span>
             )}
             <span className="u-mb-spasi" />
-            <div className="u-mb-cari">
-              <Search aria-hidden />
-              <input
-                type="search"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder={terbaru ? 'Cari di semua berkas' : folder ? `Cari di ${namaDari(folder)}` : 'Cari berkas dan folder'}
-                aria-label="Cari berkas dan folder"
-              />
-              {q && (
-                <button type="button" aria-label="Hapus pencarian" onClick={() => setQ('')}>
-                  <X aria-hidden />
-                </button>
-              )}
-            </div>
+            <IsianCari className="u-mb-cari" size="sm" value={q} onValueChange={setQ} placeholder={terbaru ? 'Cari di semua berkas' : folder ? `Cari di ${namaDari(folder)}` : 'Cari berkas dan folder'} aria-label="Cari berkas dan folder" />
             <Tooltip content={panelInfo ? 'Sembunyikan info' : 'Tampilkan info'} shortcut="⌘I">
               <Button variant="ghost" size="sm" iconOnly className="u-mb-tombol-info" aria-label="Panel info" aria-pressed={panelInfo} data-aktif={panelInfo ? '' : undefined} onClick={() => setPanelInfo((x) => !x)}>
                 <Info aria-hidden />
               </Button>
             </Tooltip>
-            <input
-              ref={inputFile}
-              type="file"
-              multiple={pilih !== 'satu'}
-              accept={accept ?? (info?.ekstensi.length ? info.ekstensi.map((x) => `.${x}`).join(',') : undefined)}
-              hidden
-              onChange={(e) => {
-                void tambahUnggah(
-                  Array.from(e.target.files ?? []).map((file) => ({ file, sub: null })),
-                  folder,
-                );
-                e.target.value = '';
-              }}
-            />
-            <input
-              ref={inputFolder}
-              type="file"
-              multiple
-              hidden
-              {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
-              onChange={(e) => {
-                void tambahUnggah(
-                  Array.from(e.target.files ?? []).map((file) => {
-                    const rel = (file as File & { webkitRelativePath?: string }).webkitRelativePath ?? '';
-                    const dir = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : '';
-                    return { file, sub: dir ? dir.split('/').map(rapikanSegmen).join('/') : null };
-                  }),
-                  folder,
-                );
-                e.target.value = '';
-              }}
-            />
+            {pemilihBerkas.elemen}
+            {pemilihFolder.elemen}
           </div>
         </div>
 
@@ -2864,7 +2836,7 @@ export function ManajerBerkas({
                     </Button>
                   ) : (
                     bolehUnggah && (
-                      <Button size="sm" onClick={() => inputFile.current?.click()}>
+                      <Button size="sm" onClick={() => pemilihBerkas.buka()}>
                         <Upload aria-hidden />
                         Pilih file
                       </Button>
@@ -2976,13 +2948,13 @@ export function ManajerBerkas({
             {pesan.nada === 'galat' ? <CircleAlert aria-hidden /> : <CircleCheck aria-hidden />}
             <span>{pesan.teks}</span>
             {pesan.aksi && (
-              <button type="button" className="u-mb-pesan-aksi" onClick={pesan.aksi.jalan}>
+              <Tekan className="u-mb-pesan-aksi" onClick={pesan.aksi.jalan}>
                 {pesan.aksi.label}
-              </button>
+              </Tekan>
             )}
-            <button type="button" aria-label="Tutup pesan" onClick={() => setPesan(null)}>
+            <Tekan aria-label="Tutup pesan" onClick={() => setPesan(null)}>
               <X aria-hidden />
-            </button>
+            </Tekan>
           </div>
         )}
 
@@ -2990,13 +2962,13 @@ export function ManajerBerkas({
           <div className="u-mb-antrean" data-tutup={antreanTutup ? '' : undefined} aria-label="Unggahan">
             <div className="u-mb-antrean-kepala">
               <b>{aktifUnggah ? `Mengunggah ${aktifUnggah} berkas` : `${selesai} dari ${antrean.length} berkas terunggah`}</b>
-              <button type="button" aria-label={antreanTutup ? 'Tampilkan unggahan' : 'Ciutkan unggahan'} aria-expanded={!antreanTutup} onClick={() => setAntreanTutup((t) => !t)}>
+              <Tekan aria-label={antreanTutup ? 'Tampilkan unggahan' : 'Ciutkan unggahan'} aria-expanded={!antreanTutup} onClick={() => setAntreanTutup((t) => !t)}>
                 <ChevronDown aria-hidden />
-              </button>
+              </Tekan>
               {!aktifUnggah && (
-                <button type="button" aria-label="Tutup daftar unggahan" onClick={() => setAntrean([])}>
+                <Tekan aria-label="Tutup daftar unggahan" onClick={() => setAntrean([])}>
                   <X aria-hidden />
-                </button>
+                </Tekan>
               )}
             </div>
             {!antreanTutup && (
@@ -3028,17 +3000,16 @@ export function ManajerBerkas({
                     ) : it.status === 'gagal' || it.status === 'batal' ? (
                       it.status === 'batal' || !it.galat?.startsWith('Jenis') ? (
                         <Tooltip content="Ulangi">
-                          <button type="button" aria-label={`Ulangi ${it.file.name}`} onClick={() => ulangi(it)}>
+                          <Tekan aria-label={`Ulangi ${it.file.name}`} onClick={() => ulangi(it)}>
                             <RotateCw aria-hidden />
-                          </button>
+                          </Tekan>
                         </Tooltip>
                       ) : (
                         <CircleAlert aria-label="Gagal" className="u-mb-antrean-gagal" />
                       )
                     ) : (
                       <Tooltip content="Batalkan">
-                        <button
-                          type="button"
+                        <Tekan
                           aria-label={`Batalkan ${it.file.name}`}
                           onClick={() => {
                             if (it.ctrl) it.ctrl.abort();
@@ -3049,7 +3020,7 @@ export function ManajerBerkas({
                           }}
                         >
                           <X aria-hidden />
-                        </button>
+                        </Tekan>
                       </Tooltip>
                     )}
                   </li>
@@ -3298,21 +3269,20 @@ function DialogLihat({ unit, b, f, pengelola, tutup, selesai }: { unit: string; 
         </>
       }
     >
-      <div className="u-mb-lihat-opsi" role="radiogroup" aria-label="Siapa yang bisa melihat">
-        {opsi.map((o) => (
-          <label key={o.v} data-kunci={o.kunci ? '' : undefined}>
-            <input type="radio" name="lihat" checked={mode === o.v} disabled={o.kunci} onChange={() => setMode(o.v)} />
-            <span>
-              <b>{o.label}</b>
-              <small>{o.kunci ? 'Hanya pengelola unit yang bisa membuka berkas untuk mahasiswa, dosen, atau tendik.' : o.ket}</small>
-            </span>
-          </label>
-        ))}
+      <div className="u-mb-lihat-opsi">
+        <RadioGroup<typeof mode>
+          variant="card"
+          columns={1}
+          aria-label="Siapa yang bisa melihat"
+          value={mode}
+          onValueChange={setMode}
+          options={opsi.map((o) => ({ value: o.v, label: o.label, description: o.kunci ? 'Hanya pengelola unit yang bisa membuka berkas untuk mahasiswa, dosen, atau tendik.' : o.ket, disabled: o.kunci }))}
+        />
         {mode === 'pilih' && (
           <div className="u-mb-lihat-peran">
             {(['semua', 'mahasiswa', 'dosen', 'tendik'] as const).map((k) => (
               <label key={k}>
-                <input type="checkbox" checked={peran.includes(k)} onChange={(e) => ubahPeran(k, e.target.checked)} />
+                <Checkbox checked={peran.includes(k)} onCheckedChange={(c) => ubahPeran(k, c)} />
                 {LABEL_LIHAT[k]}
               </label>
             ))}

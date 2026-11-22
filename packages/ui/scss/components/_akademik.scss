@@ -355,33 +355,9 @@
   overflow-x: auto;
   padding-bottom: 0.125rem;
   scrollbar-width: thin;
-  > button {
-    all: unset;
+  > .u-button {
     flex-shrink: 0;
-    padding: 0.3125rem 0.75rem;
-    border: 1px solid var(--u-border);
     border-radius: 999px;
-    font-size: var(--u-text-xs);
-    font-weight: var(--u-weight-medium, 500);
-    color: var(--u-muted-foreground);
-    cursor: pointer;
-    transition:
-      background var(--u-duration-fast) var(--u-ease-out),
-      color var(--u-duration-fast) var(--u-ease-out),
-      border-color var(--u-duration-fast) var(--u-ease-out);
-    &:hover {
-      color: var(--u-foreground);
-      border-color: color-mix(in oklab, var(--u-foreground) 25%, var(--u-border));
-    }
-    &[aria-selected='true'] {
-      background: var(--u-foreground);
-      border-color: var(--u-foreground);
-      color: var(--u-background);
-    }
-    &:focus-visible {
-      outline: 2px solid var(--u-primary);
-      outline-offset: 2px;
-    }
   }
 }
 .u-khs-ringkas {

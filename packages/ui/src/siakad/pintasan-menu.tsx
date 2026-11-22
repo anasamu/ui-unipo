@@ -7,6 +7,7 @@ import { Button } from '../components/actions';
 import type { NavGroup, NavItem, SidebarProps } from '../components/layout';
 import { Dialog, Tooltip } from '../components/overlays';
 import { cn } from '../lib/cn';
+import { Tekan } from '../components/tekan';
 
 /**
  * Pintasan menu per aplikasi + pengguna (disimpan di browser): menu yang disematkan (urutan pilihan pengguna, maks. 8)
@@ -226,11 +227,10 @@ export function BintangPintasan({ pin, item, className, label }: { pin: Pintasan
   const penuh = !di && pin.penuh;
   return (
     <Tooltip content={di ? 'Lepas dari Pintasan' : penuh ? `Pintasan penuh (maks. ${MAKS_SEMATAN})` : 'Sematkan ke Pintasan'}>
-      <button
-        type="button"
+      <Tekan
         className={cn('u-pin-bintang', className)}
         data-disematkan={di ? '' : undefined}
-        aria-pressed={di}
+        terpilih={di}
         aria-disabled={penuh || undefined}
         aria-label={di ? `Lepas ${nama} dari Pintasan` : `Sematkan ${nama} ke Pintasan`}
         onClick={(e) => {
@@ -240,7 +240,7 @@ export function BintangPintasan({ pin, item, className, label }: { pin: Pintasan
         }}
       >
         <Star aria-hidden />
-      </button>
+      </Tekan>
     </Tooltip>
   );
 }
@@ -345,14 +345,14 @@ function IsiPintasan({ pin, activeKey, renderLink, onTutup }: { pin: PintasanMen
                   </TautanPintasan>
                   <span className="u-pin-aksi">
                     <Tooltip content="Naikkan">
-                      <button type="button" className="u-pin-tombol" aria-label={`Naikkan ${it.teks}`} disabled={i === 0} onClick={() => pin.pindah(it.key, -1)}>
+                      <Button variant="ghost" size="xs" iconOnly className="u-pin-tombol" aria-label={`Naikkan ${it.teks}`} disabled={i === 0} onClick={() => pin.pindah(it.key, -1)}>
                         <ArrowUp aria-hidden />
-                      </button>
+                      </Button>
                     </Tooltip>
                     <Tooltip content="Turunkan">
-                      <button type="button" className="u-pin-tombol" aria-label={`Turunkan ${it.teks}`} disabled={i === pin.disematkan.length - 1} onClick={() => pin.pindah(it.key, 1)}>
+                      <Button variant="ghost" size="xs" iconOnly className="u-pin-tombol" aria-label={`Turunkan ${it.teks}`} disabled={i === pin.disematkan.length - 1} onClick={() => pin.pindah(it.key, 1)}>
                         <ArrowDown aria-hidden />
-                      </button>
+                      </Button>
                     </Tooltip>
                   </span>
                   <BintangPintasan pin={pin} item={it} />
@@ -376,9 +376,9 @@ function IsiPintasan({ pin, activeKey, renderLink, onTutup }: { pin: PintasanMen
                     </TautanPintasan>
                     <span className="u-pin-aksi">
                       <Tooltip content="Sembunyikan dari Sering dibuka">
-                        <button type="button" className="u-pin-tombol" aria-label={`Sembunyikan ${it.teks} dari Sering dibuka`} onClick={() => pin.sembunyikan(it.key)}>
+                        <Button variant="ghost" size="xs" iconOnly className="u-pin-tombol" aria-label={`Sembunyikan ${it.teks} dari Sering dibuka`} onClick={() => pin.sembunyikan(it.key)}>
                           <EyeOff aria-hidden />
-                        </button>
+                        </Button>
                       </Tooltip>
                     </span>
                     <BintangPintasan pin={pin} item={it} />

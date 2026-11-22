@@ -12,6 +12,7 @@ import { FormGrid, WizardReview } from '../components/wizard';
 import { IsianSK, bodySK, type NilaiSK } from './isian-sk';
 import { LencanaPeriode, PilihPeriodeAkademik, tanggalKunci, useKunciPeriode } from './kunci-periode';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { IsianTanggal } from '../components/formulir';
 
 /*
  * Kunci fitur per periode (SIAKAD /v1/kalender/kunci-fitur*, docs/KUNCI_PERIODE.md "Aturan kunci per fitur"): keputusan
@@ -512,10 +513,10 @@ function PanelAturan({ k, tahunId, awal, onTutup, onSimpan }: { k: Katalog; tahu
           content: (
             <FormGrid columns={2}>
               <Field label="Mulai" description="Kosong = sekarang." error={galat.mulai}>
-                <Input type="date" aria-label="Mulai" value={isi.mulai} onChange={(e) => set({ mulai: e.target.value })} />
+                <IsianTanggal value={isi.mulai} aria-label="Mulai" onValueChange={(v) => set({ mulai: v })} />
               </Field>
               <Field label="Sampai" required={buka} error={galat.sampai} description={buka ? 'Paling lama 180 hari; lewat tanggal ini otomatis terkunci lagi.' : 'Kosong = sampai dicabut.'}>
-                <Input type="date" aria-label="Sampai" value={isi.sampai} onChange={(e) => set({ sampai: e.target.value })} />
+                <IsianTanggal value={isi.sampai} aria-label="Sampai" onValueChange={(v) => set({ sampai: v })} />
               </Field>
             </FormGrid>
           ),

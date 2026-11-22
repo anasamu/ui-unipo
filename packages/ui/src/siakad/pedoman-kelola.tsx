@@ -6,7 +6,7 @@ import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Empty } from '../components/display';
 import { StatCard, StatGrid } from '../components/charts';
 import { DataTable } from '../components/data-table';
-import { Field, Input, Textarea } from '../components/forms';
+import { Checkbox, Field, Input, Textarea } from '../components/forms';
 import { Select } from '../components/select';
 import { Sheet } from '../components/overlays';
 import { IsianTanggal } from '../components/formulir';
@@ -792,7 +792,7 @@ function PanelJenis({ awal, onOpenChange }: { awal: JenisPedoman | null; onOpenC
                 <div className="u-pdm-pilihan">
                   {(['universitas', 'fakultas', 'prodi', 'unit'] as LingkupPedoman[]).map((l) => (
                     <label key={l} className="u-pdm-centang">
-                      <input type="checkbox" checked={f.lingkup.includes(l)} onChange={(e) => setF({ ...f, lingkup: e.target.checked ? [...f.lingkup, l] : f.lingkup.filter((x) => x !== l) })} /> {LABEL_LINGKUP_PEDOMAN[l]}
+                      <Checkbox checked={f.lingkup.includes(l)} onCheckedChange={(c) => setF({ ...f, lingkup: c ? [...f.lingkup, l] : f.lingkup.filter((x) => x !== l) })} /> {LABEL_LINGKUP_PEDOMAN[l]}
                     </label>
                   ))}
                 </div>

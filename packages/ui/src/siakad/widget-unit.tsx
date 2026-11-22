@@ -10,6 +10,7 @@ import { usePlatform } from '../lib/platform';
 import { useDasborSpmi, useLaporanArsip, useRekapLppm, useRingkasAkademik, useRingkasanSdm, useSerapanAnggaran, useStatistikPmb, useTrenAkademik } from './dasbor';
 import { usePresensiSaya } from './presensi';
 import { pesanGalat, type QueryState } from './provider';
+import { Tekan } from '../components/tekan';
 
 // Widget per unit dengan lima varian tampilan yang sama: kartu (angka + progres), ringkas (satu baris), cincin,
 // baris (daftar rincian), sorot (kartu berwarna besar). Setiap widget memakai hook dasbor yang sudah ada, jadi
@@ -564,9 +565,9 @@ export function WidgetPengajuan({ judul = 'Pengajuan saya', items, varian = 'daf
               {isi}
             </a>
           ) : it.onClick ? (
-            <button key={it.id} type="button" className="u-wp-item" onClick={it.onClick}>
+            <Tekan key={it.id} className="u-wp-item" onClick={it.onClick}>
               {isi}
-            </button>
+            </Tekan>
           ) : (
             <div key={it.id} className="u-wp-item">
               {isi}

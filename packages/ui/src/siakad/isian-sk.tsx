@@ -117,7 +117,8 @@ export function useCariSK(aktif = true) {
     async (q: string, signal: AbortSignal): Promise<SKDitemukan[]> => {
       if (!siakad || !aktif) return [];
       try {
-        const r = await siakad.request<SKRegistri[]>({ method: 'GET', path: '/v1/sk', query: { q: q || undefined, per_page: 15 } }, { signal });
+        // untuk=rujuk: di aplikasi Fakultas server menambahkan SK Universitas/Rektor dan Yayasan (dasar aturan) ke SK unit sendiri.
+        const r = await siakad.request<SKRegistri[]>({ method: 'GET', path: '/v1/sk', query: { q: q || undefined, per_page: 15, untuk: 'rujuk' } }, { signal });
         return (Array.isArray(r.data) ? r.data : []).map(keDitemukan);
       } catch (e) {
         if ((e as Error)?.name === 'AbortError') throw e;
@@ -579,6 +580,11 @@ export interface AjukanPencatatanSKProps {
   perihal?: string;
   /** SK hasil pencatatan (atau SK yang ternyata sudah ada). */
   onTercatat: (sk: SKRegistri, pesan?: string) => void;
+  /**
+   * Dibuka dari pemilih SK dasar (bawaan true): di aplikasi Fakultas pilihan penerbit ikut unit di atas fakultas
+   * (Universitas, Yayasan). false untuk Registri SK, yang hanya mencatat SK unit sendiri.
+   */
+  rujuk?: boolean;
 }
 
 const LUAR = -1;
@@ -726,7 +732,8 @@ export function IsianPihakSK({ value, onValueChange, disabled }: { value: PihakS
  * Pemegang sk.catat di unit penerbit: SK langsung terbit. Unit lain: ajuan pencatatan (draf) yang diverifikasi
  * penerbit. Di ponsel panel menjadi lembar bawah.
  */
-export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor: nomorLama, jenis: jenisLama, penerbitUnitId: penerbitLama, perihal: perihalLama, onTercatat }: AjukanPencatatanSKProps) {
+export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor: nomorLama, jenis: jenisLama, penerbitUnitId: penerbitLama, perihal: perihalLama, onTercatat, rujuk = true }: AjukanPencatatanSKProps) {
+  const untuk = rujuk ? 'rujuk' : undefined;
   const isian: IsianAwalSK = { nomor: nomorLama, jenis: jenisLama, penerbitUnitId: penerbitLama, perihal: perihalLama, ...(isianProp ?? {}) };
   const siakad = useOptionalSiakad();
   const periksa = usePeriksaSK();
@@ -756,7 +763,7 @@ export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor
   React.useEffect(() => {
     if (!siakad || !open) return;
     siakad
-      .request<PenerbitSK[]>({ method: 'GET', path: '/v1/sk/penerbit' })
+      .request<PenerbitSK[]>({ method: 'GET', path: '/v1/sk/penerbit', query: { untuk } })
       .then((r) => {
         const d = Array.isArray(r.data) ? r.data : [];
         setDaftarPenerbit(d);
@@ -795,7 +802,7 @@ export function AjukanPencatatanSK({ open, onOpenChange, isian: isianProp, nomor
     if (!siakad || !open || !unitPenerbit) return setTempatBawaan(null);
     const ac = new AbortController();
     siakad
-      .request<SKRegistri[]>({ method: 'GET', path: '/v1/sk', query: { penerbit: unitPenerbit, per_page: 10, arsip: 0 } }, { signal: ac.signal })
+      .request<SKRegistri[]>({ method: 'GET', path: '/v1/sk', query: { penerbit: unitPenerbit, per_page: 10, arsip: 0, untuk } }, { signal: ac.signal })
       .then((r) => {
         const t = (Array.isArray(r.data) ? r.data : []).find((s) => s.tempat)?.tempat ?? null;
         setTempatBawaan(t);

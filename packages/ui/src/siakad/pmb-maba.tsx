@@ -71,6 +71,9 @@ import {
   usePmb,
   type SyaratBerkasPmb,
 } from './pmb-publik';
+import { IsianBerkas, TombolPilihBerkas } from '../components/pilih-berkas-lokal';
+import { Select } from '../components/select';
+import { Tekan } from '../components/tekan';
 
 /**
  * Area pendaftar PMB (`/v1/pmb/saya/*`): dasbor tahapan, pilih gelombang, formulir, berkas, tagihan dan pembayaran
@@ -405,17 +408,16 @@ export function PemilihPendaftaranPmb() {
   const { daftar, aktif, pilih } = usePendaftaranAktifPmb();
   if (daftar.length < 2) return null;
   return (
-    <label className="u-pmb-pemilih">
+    <div className="u-pmb-pemilih">
       <span>Pendaftaran</span>
-      <select value={aktif?.id ?? ''} onChange={(e) => pilih(e.target.value)}>
-        {daftar.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.gelombang.nama}
-            {p.no_pmb ? ` · ${p.no_pmb}` : ''}
-          </option>
-        ))}
-      </select>
-    </label>
+      <Select<string>
+        size="sm"
+        aria-label="Pilih pendaftaran"
+        value={aktif?.id != null ? String(aktif.id) : null}
+        onValueChange={(v) => v && pilih(v)}
+        options={daftar.map((p) => ({ value: String(p.id), label: `${p.gelombang.nama}${p.no_pmb ? ` · ${p.no_pmb}` : ''}` }))}
+      />
+    </div>
   );
 }
 
@@ -820,7 +822,7 @@ export function PilihGelombangPendaftarPmb({ awal, onDibuat, banner }: { awal?: 
               const terdaftar = sudah.has(g.id);
               const bisa = g.sedang_buka && !terdaftar;
               return (
-                <button key={g.id} type="button" className="u-pmb-pilih-gel" disabled={!bisa} aria-pressed={pilih === g.id} onClick={() => setPilih(g.id)}>
+                <Tekan key={g.id} className="u-pmb-pilih-gel" disabled={!bisa} terpilih={pilih === g.id} onClick={() => setPilih(g.id)}>
                   {pilih === g.id && <CheckCircle2 aria-hidden className="u-pmb-pilih-cek" />}
                   <Cluster gap={2}>
                     <Badge variant={k.variant} dot>
@@ -843,7 +845,7 @@ export function PilihGelombangPendaftarPmb({ awal, onDibuat, banner }: { awal?: 
                       <ClipboardCheck aria-hidden /> {g.perlu_tes ? 'Dengan tes seleksi' : 'Tanpa tes'} · maks. {g.maks_pilihan} pilihan prodi
                     </span>
                   </span>
-                </button>
+                </Tekan>
               );
             })}
           </Grid>
@@ -884,7 +886,6 @@ const STATUS_BERKAS = {
 export function KartuSyaratBerkasPmb({ pendaftaranId, syarat, berkas, kunci }: { pendaftaranId: string; syarat: SyaratBerkasPmb; berkas?: BerkasPendaftarPmb; kunci: boolean }) {
   const siakad = useSiakad();
   const { urlBerkas } = usePmb();
-  const input = React.useRef<HTMLInputElement>(null);
   const [proses, setProses] = React.useState(false);
   const [galat, setGalat] = React.useState<string | null>(null);
   const ekstensi = (Array.isArray(syarat.ekstensi) ? syarat.ekstensi : String(syarat.ekstensi).split(',')).map((e) => e.trim().toLowerCase()).filter(Boolean);
@@ -903,7 +904,6 @@ export function KartuSyaratBerkasPmb({ pendaftaranId, syarat, berkas, kunci }: {
       setGalat(pesanGalat(e));
     } finally {
       setProses(false);
-      if (input.current) input.current.value = '';
     }
   };
   const hapus = async () => {
@@ -970,11 +970,10 @@ export function KartuSyaratBerkasPmb({ pendaftaranId, syarat, berkas, kunci }: {
           {galat && <Alert variant="danger">{galat}</Alert>}
           {bolehGanti && (
             <>
-              <input ref={input} type="file" hidden accept={ekstensi.map((e) => `.${e}`).join(',')} onChange={(e) => e.target.files?.[0] && void unggah(e.target.files[0])} />
               <div>
-                <Button size="sm" variant={berkas ? 'outline' : 'primary'} loading={proses} onClick={() => input.current?.click()}>
+                <TombolPilihBerkas size="sm" variant={berkas ? 'outline' : 'primary'} loading={proses} accept={ekstensi.map((e) => `.${e}`).join(',')} onFiles={(f) => void unggah(f[0])}>
                   {berkas ? <RefreshCw aria-hidden /> : <FileUp aria-hidden />} {berkas ? 'Ganti berkas' : 'Unggah'}
-                </Button>
+                </TombolPilihBerkas>
               </div>
             </>
           )}
@@ -1071,7 +1070,7 @@ function PilihMetodeBayar({ pendaftaranId, tagihan, metode, onSelesai }: { penda
         {opsi.map((o) => {
           const I = IKON[o.metode];
           return (
-            <button key={o.kunci} type="button" className="u-pmb-metode" aria-pressed={pilih === o.kunci} onClick={() => setPilih(o.kunci)}>
+            <Tekan key={o.kunci} className="u-pmb-metode" terpilih={pilih === o.kunci} onClick={() => setPilih(o.kunci)}>
               <span className="u-pmb-metode-ikon">
                 <I aria-hidden />
               </span>
@@ -1079,7 +1078,7 @@ function PilihMetodeBayar({ pendaftaranId, tagihan, metode, onSelesai }: { penda
                 <strong>{o.label}</strong>
                 <small>{o.sub}</small>
               </span>
-            </button>
+            </Tekan>
           );
         })}
       </Grid>
@@ -1220,7 +1219,7 @@ function UnggahBukti({ open, onOpenChange, pendaftaranId, tagihan, onSelesai }: 
           </Alert>
         )}
         <Field label="Foto / PDF bukti transfer" required description="JPG, PNG, atau PDF, maksimal 2 MB.">
-          <Input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => setBerkas((e.target as HTMLInputElement).files?.[0] ?? null)} />
+          <IsianBerkas value={berkas} onValueChange={setBerkas} accept=".jpg,.jpeg,.png,.pdf" maxSize={2 * 1024 * 1024} info={false} />
         </Field>
         <Grid cols={2} gap={4}>
           <Field label="Jumlah ditransfer" required>
@@ -1806,7 +1805,7 @@ export function NotifikasiPendaftarPmbDaftar() {
         <ul className="u-pmb-notif">
           {data.map((n) => (
             <li key={n.id}>
-              <button type="button" data-baru={!n.dibaca_at || undefined} onClick={() => !n.dibaca_at && void baca(n.id)}>
+              <Tekan data-baru={!n.dibaca_at || undefined} onClick={() => !n.dibaca_at && void baca(n.id)}>
                 <span className="u-pmb-notif-titik" aria-hidden />
                 <span>
                   <span className="u-pmb-notif-kepala">
@@ -1815,7 +1814,7 @@ export function NotifikasiPendaftarPmbDaftar() {
                   </span>
                   {n.isi && <span className="u-pmb-notif-isi">{n.isi}</span>}
                 </span>
-              </button>
+              </Tekan>
             </li>
           ))}
         </ul>

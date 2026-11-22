@@ -11,6 +11,8 @@ import { KepalaCetak, KerangkaLaporan, StatistikRingkas, TabelLaporan, TabelReka
 import { GalatApi } from './galat';
 import { KodeQrSiakad } from './qr';
 import { useSiakadQuery } from './provider';
+import { SegmentedControl } from '../components/forms';
+import { Tekan } from '../components/tekan';
 
 /*
  * Payroll gaji dosen dan tendik (/v1/gaji). Hak (gaji pokok, tunjangan, honor) ditetapkan SDM berdasarkan SK;
@@ -474,19 +476,17 @@ export function RekapGaji({ filter, onPilihSlip, denganRekening, penandatangan, 
               </ul>
             </Alert>
           )}
-          <div className="u-gaji-tab u-cetak-sembunyi" role="tablist">
-            {(
-              [
-                ['pegawai', `Per pegawai (${d.pegawai.length})`],
-                ['unit', `Per unit (${d.per_unit.length})`],
-                ['komponen', 'Per komponen'],
-              ] as const
-            ).map(([v, l]) => (
-              <button key={v} type="button" role="tab" aria-selected={tab === v} data-aktif={tab === v ? '' : undefined} onClick={() => setTab(v)}>
-                {l}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl<typeof tab>
+            className="u-gaji-tab u-cetak-sembunyi"
+            aria-label="Tampilan rekap"
+            value={tab}
+            onValueChange={setTab}
+            options={[
+              { value: 'pegawai', label: `Per pegawai (${d.pegawai.length})` },
+              { value: 'unit', label: `Per unit (${d.per_unit.length})` },
+              { value: 'komponen', label: 'Per komponen' },
+            ]}
+          />
           {tab === 'pegawai' && <TabelRekap kolom={kolomPegawai} baris={d.pegawai} kunci={(b) => String(b.slip_id)} onPilih={onPilihSlip ? (b) => onPilihSlip(b.slip_id) : undefined} kosong="Belum ada slip pada periode ini." />}
           {tab === 'unit' && <TabelRekap kolom={kolomUnit} baris={d.per_unit} kunci={(b) => String(b.unit_id ?? 0)} />}
           {tab === 'komponen' && <TabelLaporan kolom={kolomKomponen} baris={barisKomponen} denganKode labelKolom="Komponen" />}
@@ -717,14 +717,16 @@ export function DaftarSlipSaya({ tautanVerifikasi, onPilih, logo, className }: D
         </div>
         <div className="u-laporan-aksi">
           <Select<number> size="sm" aria-label="Tahun" value={tahun} options={opsiTahun()} onValueChange={(t) => t && setTahun(t)} />
-          <div className="u-gaji-tab" role="tablist">
-            <button type="button" role="tab" aria-selected={lihat === 'slip'} data-aktif={lihat === 'slip' ? '' : undefined} onClick={() => setLihat('slip')}>
-              Slip
-            </button>
-            <button type="button" role="tab" aria-selected={lihat === 'pajak'} data-aktif={lihat === 'pajak' ? '' : undefined} onClick={() => setLihat('pajak')}>
-              PPh 21 setahun
-            </button>
-          </div>
+          <SegmentedControl<typeof lihat>
+            className="u-gaji-tab"
+            aria-label="Tampilan"
+            value={lihat}
+            onValueChange={setLihat}
+            options={[
+              { value: 'slip', label: 'Slip' },
+              { value: 'pajak', label: 'PPh 21 setahun' },
+            ]}
+          />
         </div>
       </header>
       {lihat === 'pajak' ? (
@@ -758,7 +760,7 @@ export function DaftarSlipSaya({ tautanVerifikasi, onPilih, logo, className }: D
             <ul className="u-gaji-saya-daftar">
               {d.slip.map((s) => (
                 <li key={s.id}>
-                  <button type="button" onClick={() => setPilih(s.id)}>
+                  <Tekan onClick={() => setPilih(s.id)}>
                     <span className="u-gaji-saya-bulan">
                       <CalendarClock />
                       <span>
@@ -772,7 +774,7 @@ export function DaftarSlipSaya({ tautanVerifikasi, onPilih, logo, className }: D
                       <strong>{formatRupiah(s.netto)}</strong>
                       <small>PPh 21 {formatRupiah(s.pph21)}</small>
                     </span>
-                  </button>
+                  </Tekan>
                 </li>
               ))}
             </ul>

@@ -228,23 +228,7 @@
   }
 }
 .u-pilih-unit-ikon-tombol {
-  display: grid;
-  place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border: 0;
-  border-radius: calc(var(--u-radius) - 3px);
-  background: transparent;
   color: var(--u-muted-foreground);
-  cursor: pointer;
-  svg {
-    width: 0.875rem;
-    height: 0.875rem;
-  }
-  &:hover {
-    background: var(--u-hover);
-    color: var(--u-foreground);
-  }
 }
 .u-pilih-unit-bilah {
   flex: none;

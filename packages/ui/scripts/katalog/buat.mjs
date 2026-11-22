@@ -4,6 +4,8 @@
  *
  *   npm run katalog -w unipo-ui -- ../unipo-sdk/openapi.json
  *   npm run katalog -w unipo-ui -- https://siakad.unipo.ac.id/api/v1/openapi.json
+ *   npm run katalog -w unipo-ui -- --periksa ../unipo-sdk/openapi.json   (tidak menulis; kode 1 bila katalog basi
+ *     atau ada tag OpenAPI yang belum dipetakan ke modul di scripts/katalog/modul.mjs)
  *
  * Hasil (di-commit, ikut terbit di paket):
  *   src/katalog/data/indeks.json        grup, modul, dan sumber data (kecil)
@@ -15,15 +17,18 @@
  * ("Status harus draf, menjadi buka") diambil dari dokumen OpenAPI yang dibuat dari aturan backend
  * (PusatData\\Aturan dan PusatData\\Aksi), jadi frontend dan backend memakai aturan yang sama.
  */
-import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rm, readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GRUP, MODUL, TAG_DISEMBUNYIKAN } from './modul.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const sumber = process.argv[2] || process.env.OPENAPI_URL;
+const argumen = process.argv.slice(2);
+// --periksa: bandingkan hasil dengan data yang sudah di-commit tanpa menulis apa pun (untuk CI/bangun_lokal).
+const PERIKSA = argumen.includes('--periksa');
+const sumber = argumen.find((a) => !a.startsWith('--')) || process.env.OPENAPI_URL;
 if (!sumber) {
-  console.error('Pemakaian: npm run katalog -w unipo-ui -- <url atau path openapi.json>');
+  console.error('Pemakaian: npm run katalog -w unipo-ui -- [--periksa] <url atau path openapi.json>');
   process.exit(1);
 }
 
@@ -398,8 +403,8 @@ for (const o of ops) {
 
 // ---------------------------------------------------------------- tulis
 const outDir = join(root, 'src', 'katalog', 'data');
-await rm(join(outDir, 'modul'), { recursive: true, force: true });
-await mkdir(join(outDir, 'modul'), { recursive: true });
+/** Isi berkas hasil (path relatif terhadap outDir -> teks); ditulis atau dibandingkan di akhir. */
+const berkas = new Map();
 
 const opById = new Map(ops.map((o) => [o.id, o]));
 const indeks = { versi: spec.info?.version ?? '', grup: GRUP, modul: [] };
@@ -421,8 +426,8 @@ for (const m of MODUL) {
     ops2[o.id] = rest;
   }
   const opMandiri = mandiri.filter((id) => opById.get(id).modul === m.key);
-  await writeFile(
-    join(outDir, 'modul', `${m.key}.json`),
+  berkas.set(
+    `modul/${m.key}.json`,
     JSON.stringify({ key: m.key, resources: res.map(({ modul, ...r }) => r), ops: ops2, mandiri: opMandiri, skema }),
   );
   indeks.modul.push({
@@ -442,21 +447,54 @@ for (const m of MODUL) {
 }
 // Peta path sumber -> modul, supaya <Fitur sumber="/v1/..."> tahu modul mana yang dimuat.
 indeks.peta = Object.fromEntries([...resources.values()].filter((r) => indeks.modul.some((m) => m.key === r.modul)).map((r) => [r.id, r.modul]));
-await writeFile(join(outDir, 'indeks.json'), JSON.stringify(indeks));
+berkas.set('indeks.json', JSON.stringify(indeks));
 
 // Impor dinamis per modul: bundler memecah tiap modul jadi berkas sendiri, dimuat saat modul dibuka.
 const kunciModul = indeks.modul.map((m) => m.key);
-await writeFile(
-  join(outDir, 'muat.ts'),
+berkas.set(
+  'muat.ts',
   `// Dibuat oleh scripts/katalog/buat.mjs. Jangan diubah manual.\nimport type { ModulKatalog } from '../tipe';\n\nconst j = (m: { default?: unknown }) => (m.default ?? m) as ModulKatalog;\n\nexport const MUAT_MODUL: Record<string, () => Promise<ModulKatalog>> = {\n${kunciModul
     .map((k) => `  '${k}': () => import('./modul/${k}.json').then(j),`)
     .join('\n')}\n};\n`,
 );
 const idSumber = [...resources.values()].filter((r) => kunciModul.includes(r.modul)).map((r) => r.id).sort();
-await writeFile(
-  join(outDir, 'id.ts'),
+berkas.set(
+  'id.ts',
   `// Dibuat oleh scripts/katalog/buat.mjs. Jangan diubah manual.\n/** Kunci modul fitur. */\nexport type IdModul =\n${kunciModul.map((k) => `  | '${k}'`).join('\n')};\n\n/** Path sumber data (koleksi) di API SIAKAD, mis. '/v1/kemahasiswaan/beasiswa'. */\nexport type IdSumber =\n${idSumber.map((k) => `  | '${k}'`).join('\n')};\n`,
 );
+
+if (PERIKSA) {
+  // Bandingkan dengan data di repo. Basi = sumber/operasi baru di API yang belum ada di katalog (mis. <KelolaSumber
+  // sumber="/v1/spmi/alur"> menampilkan "Sumber ... tidak ada di katalog").
+  const bacaLama = async (f) => readFile(join(outDir, f), 'utf8').catch(() => null);
+  const lamaModul = (await readdir(join(outDir, 'modul')).catch(() => [])).map((f) => `modul/${f}`);
+  const beda = [];
+  for (const [f, isi] of berkas) if ((await bacaLama(f)) !== isi) beda.push(f);
+  for (const f of lamaModul) if (!berkas.has(f)) beda.push(`${f} (tidak dibuat lagi)`);
+  // Tag tanpa modul tidak masuk katalog sama sekali (sumbernya "tidak ada di katalog"), jadi ikut dianggap basi.
+  if (tagTakDikenal.size) {
+    console.error(`Tag OpenAPI belum dipetakan ke modul katalog (tambahkan di scripts/katalog/modul.mjs): ${[...tagTakDikenal].join(', ')}.`);
+    if (!beda.length) process.exit(1);
+  }
+  if (!beda.length) {
+    console.log(`Katalog mutakhir terhadap ${sumber}: ${indeks.modul.length} modul, ${resources.size} sumber data, ${total} operasi.`);
+    process.exit(0);
+  }
+  let petaLama = {};
+  try {
+    petaLama = JSON.parse((await bacaLama('indeks.json')) ?? '{}').peta ?? {};
+  } catch {}
+  const baru = Object.keys(indeks.peta).filter((k) => !(k in petaLama));
+  const hilang = Object.keys(petaLama).filter((k) => !(k in indeks.peta));
+  console.error(`Katalog BASI terhadap ${sumber}: ${beda.length} berkas berbeda (${beda.slice(0, 8).join(', ')}${beda.length > 8 ? ', ...' : ''}).`);
+  console.error(`Sumber data baru di API belum ada di katalog: ${baru.length}${baru.length ? ' (' + baru.slice(0, 15).join(', ') + (baru.length > 15 ? ', ...' : '') + ')' : ''}.`);
+  if (hilang.length) console.error(`Sumber data di katalog yang sudah tidak ada di API: ${hilang.length} (${hilang.slice(0, 15).join(', ')}).`);
+  console.error('Perbarui: npm run katalog -w unipo-ui -- <openapi.json> lalu commit packages/ui/src/katalog/data.');
+  process.exit(1);
+}
+await rm(join(outDir, 'modul'), { recursive: true, force: true });
+await mkdir(join(outDir, 'modul'), { recursive: true });
+for (const [f, isi] of berkas) await writeFile(join(outDir, f), isi);
 
 console.log(`Katalog dibuat: ${indeks.modul.length} modul, ${resources.size} sumber data, ${mandiri.length} operasi mandiri, ${total} operasi.`);
 if (tagTakDikenal.size) {

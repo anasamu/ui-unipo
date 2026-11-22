@@ -27,6 +27,7 @@ import {
 import { GalatApi } from './galat';
 import { useSiakadQuery } from './provider';
 import { LabelProdi, judulProdi, namaRapi } from './prodi';
+import { Checkbox } from '../components/forms';
 
 /*
  * Keuangan universitas (/v1/keu): laporan keuangan entitas nirlaba (ISAK 35) dari buku besar keu_jurnal, saldo kas per
@@ -347,7 +348,7 @@ export function LaporanKeuangan({ jenis: jenisAwal = 'posisi', pilihJenis = true
           <PilihPeriode value={r} onChange={setR} satuTanggal={satu} />
           {(jenis === 'posisi' || jenis === 'aktivitas') && (
             <label className="u-keu-banding">
-              <input type="checkbox" checked={banding} onChange={(e) => setBanding(e.target.checked)} /> Pembanding
+              <Checkbox checked={banding} onCheckedChange={(c) => setBanding(c)} /> Pembanding
             </label>
           )}
         </>

@@ -14,6 +14,8 @@ import { useUnggahBerkas } from './berkas';
 import { PilihSK } from './isian-sk';
 import { lupakanFotoBagan, useFotoApi } from './foto-bagan';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { usePilihBerkas } from '../components/pilih-berkas-lokal';
+import { Tekan } from '../components/tekan';
 
 /*
  * Profil Yayasan / Badan Penyelenggara dan kewenangan penerbitan SK (SIAKAD /v1/sk/yayasan, /v1/sk/kewenangan,
@@ -433,7 +435,7 @@ export function DaftarPengurusYayasan({ pengurus, boleh }: { pengurus: PengurusY
           <ul className="u-yys-kartu">
             {k.isi.map((p) => (
               <li key={p.id} data-nonaktif={p.aktif === false ? '' : undefined}>
-                <button type="button" onClick={() => boleh && setPanel(p)} disabled={!boleh} aria-label={`Ubah ${p.nama_lengkap ?? p.nama}`}>
+                <Tekan onClick={() => boleh && setPanel(p)} disabled={!boleh} aria-label={`Ubah ${p.nama_lengkap ?? p.nama}`}>
                   <FotoPengurus p={p} />
                   <span>
                     <b>{p.nama_lengkap ?? p.nama}</b>
@@ -441,7 +443,7 @@ export function DaftarPengurusYayasan({ pengurus, boleh }: { pengurus: PengurusY
                     <small>{p.mulai ? formatDate(p.mulai) : '…'} – {p.selesai ? formatDate(p.selesai) : 'sekarang'}</small>
                     {p.aktif === false && <Badge variant="neutral">Tidak menjabat</Badge>}
                   </span>
-                </button>
+                </Tekan>
               </li>
             ))}
           </ul>
@@ -469,7 +471,7 @@ function PanelPengurusYayasan({ awal, tutup }: { awal: PengurusYayasan | null; t
   const [galat, setGalat] = React.useState<Record<string, string>>({});
   const [sibuk, setSibuk] = React.useState<null | 'foto' | 'simpan' | 'hapus'>(null);
   const [hapus, setHapus] = React.useState(false);
-  const masuk = React.useRef<HTMLInputElement>(null);
+  const masuk = usePilihBerkas({ accept: '.jpg,.jpeg,.png,image/jpeg,image/png', onFiles: (f) => void pilihFoto(f[0]) });
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
   const pilihFoto = async (file?: File | null) => {
     if (!file) return;
@@ -549,11 +551,11 @@ function PanelPengurusYayasan({ awal, tutup }: { awal: PengurusYayasan | null; t
             <b>Pas foto</b>
             <small>JPG/PNG maks 2 MB; dipotong otomatis ke 3:4 (tengah). Gunakan latar polos.</small>
             <span>
-              <Button size="sm" variant="outline" loading={sibuk === 'foto'} onClick={() => masuk.current?.click()}>{foto ? 'Ganti foto' : 'Unggah pas foto'}</Button>
+              <Button size="sm" variant="outline" loading={sibuk === 'foto'} onClick={() => masuk.buka()}>{foto ? 'Ganti foto' : 'Unggah pas foto'}</Button>
               {f.foto_berkas_id && <Button size="sm" variant="ghost" onClick={() => { set('foto_berkas_id', null); setPratinjau(null); }}>Hapus foto</Button>}
             </span>
             {galat.foto_berkas_id && <em role="alert">{galat.foto_berkas_id}</em>}
-            <input ref={masuk} type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" hidden onChange={(e) => { void pilihFoto(e.target.files?.[0]); e.target.value = ''; }} />
+            {masuk.elemen}
           </div>
         </div>
         <Field label="Jabatan" required error={galat.jabatan}>

@@ -5,6 +5,7 @@
 @use 'base';
 @use 'vendor/leaflet';
 @use 'components/actions';
+@use 'components/tekan';
 @use 'components/forms';
 @use 'components/overlays';
 @use 'components/modal-fitur';
@@ -38,6 +39,7 @@
 @use 'components/pedoman';
 @use 'components/aturan-karier';
 @use 'components/dupak';
+@use 'components/hapus-draf';
 @use 'components/kurikulum-aturan';
 @use 'components/kurikulum-pengajuan';
 @use 'components/akreditasi-kelengkapan';
@@ -61,6 +63,7 @@
 @use 'components/lms';
 @use 'components/cbt';
 @use 'components/akademik';
+@use 'components/akademik-komponen';
 @use 'components/siakad';
 @use 'components/aplikasi';
 @use 'components/katalog';

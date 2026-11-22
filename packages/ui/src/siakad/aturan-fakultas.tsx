@@ -4,6 +4,7 @@ import { BadgeCheck, CircleAlert, CircleCheck, CircleX, FileBadge, FlaskConical,
 import { cn } from '../lib/cn';
 import { Badge, Button, Skeleton, Tag } from '../components/actions';
 import { Alert, DescriptionList, Empty, Stepper, Tabs } from '../components/display';
+import { DataTable } from '../components/data-table';
 import { Field, Textarea } from '../components/forms';
 import { Pilihan } from '../components/formulir';
 import { Dialog, useToast } from '../components/overlays';
@@ -24,6 +25,7 @@ import {
   type Aturan,
   type HasilPeriksaAturan,
 } from './aturan';
+import { Tekan } from '../components/tekan';
 
 /*
  * Aturan fakultas (SIAKAD docs/ATURAN-FAKULTAS.md): syarat dosen PA, pembimbing, dan penguji yang ditetapkan fakultas
@@ -342,9 +344,9 @@ function LencanaSk({ a, onLampirkan }: { a: AturanBerlingkup; onLampirkan?: () =
   if (a.sk?.nomor) return <Tag size="sm" icon={<FileBadge />}>SK {a.sk.nomor}</Tag>;
   if (!tanpaSk(a)) return null;
   return (
-    <button type="button" className="u-lencana-sk" data-nada="warning" onClick={onLampirkan} title="Lampirkan SK Dekan dari registri SK">
+    <Tekan className="u-lencana-sk" data-nada="warning" onClick={onLampirkan} title="Lampirkan SK Dekan dari registri SK">
       <CircleAlert aria-hidden /> Belum ada SK, lampirkan (SK Dekan)
-    </button>
+    </Tekan>
   );
 }
 
@@ -369,10 +371,10 @@ function KartuAturanFakultas({
   const berubah = bawaan && (a.status !== 'aktif' || a.versi > 1 || Boolean(a.usulan));
   return (
     <li className="u-aturan-fak-kartu" data-status={a.status} data-universitas={universitas || undefined}>
-      <button type="button" className="u-aturan-fak-isi" onClick={onBuka}>
+      <Tekan className="u-aturan-fak-isi" onClick={onBuka}>
         <strong>{a.nama}</strong>
         <span>{kalimatSyarat(a.kondisi, katalog.data, 'Dosen boleh ditetapkan jika')}</span>
-      </button>
+      </Tekan>
       <div className="u-aturan-fak-lencana">
         <StatusAturanBadge status={statusTampil(a)} />
         {a.usulan?.status === 'diajukan' && (
@@ -649,32 +651,20 @@ export function KelolaAturanFakultas({ kodeFakultas, judul = 'Aturan fakultas', 
             content: d.dampak ? (
               <div className="u-aturan-fak-dampak">
                 <p className="u-aturan-sub">Menurut data sekarang, untuk dosen homebase fakultas ini (prodi homebase dosen sebagai contoh mahasiswa).</p>
-                <div className="u-aturan-fak-tabel-gulir">
-                  <table className="u-aturan-fak-tabel">
-                    <thead>
-                      <tr>
-                        <th>Langkah</th>
-                        <th>Aturan aktif</th>
-                        <th>Dosen</th>
-                        <th>Memenuhi</th>
-                        <th>Belum memenuhi</th>
-                        <th>Data belum lengkap</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {d.dampak.map((x) => (
-                        <tr key={x.titik}>
-                          <td>{x.judul}</td>
-                          <td>{x.aturan_aktif}</td>
-                          <td>{x.dosen}</td>
-                          <td>{x.memenuhi}</td>
-                          <td data-nada={x.tidak_memenuhi ? 'tolak' : undefined}>{x.tidak_memenuhi}</td>
-                          <td data-nada={x.data_kurang ? 'peringatan' : undefined}>{x.data_kurang}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <DataTable
+                  className="u-aturan-fak-tabel"
+                  columns={[
+                    { key: 'judul', header: 'Langkah', mobile: 'title' },
+                    { key: 'aturan_aktif', header: 'Aturan aktif', format: 'angka' },
+                    { key: 'dosen', header: 'Dosen', format: 'angka' },
+                    { key: 'memenuhi', header: 'Memenuhi', format: 'angka' },
+                    { key: 'tidak_memenuhi', header: 'Belum memenuhi', align: 'end', value: (x) => x.tidak_memenuhi, cell: (x) => (x.tidak_memenuhi ? <Badge variant="danger">{x.tidak_memenuhi}</Badge> : 0) },
+                    { key: 'data_kurang', header: 'Data belum lengkap', align: 'end', value: (x) => x.data_kurang, cell: (x) => (x.data_kurang ? <Badge variant="warning">{x.data_kurang}</Badge> : 0) },
+                  ]}
+                  rows={d.dampak}
+                  rowKey={(x) => String(x.titik)}
+                  pagination={false} columnToggle={false} densityToggle={false} defaultDensity="compact"
+                />
                 <p className="u-aturan-di-titik-label">Dosen dengan data belum lengkap ({d.dosen_data_kurang?.length ?? 0})</p>
                 <p className="u-aturan-sub">Syarat yang datanya kosong dilewati dengan peringatan. Lengkapi di aplikasi SDM: riwayat jabatan fungsional, pendidikan, dan TMT pengangkatan.</p>
                 {d.dosen_data_kurang?.length ? (
