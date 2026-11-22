@@ -4,8 +4,9 @@ import { Calculator, CircleCheck, Download, FileBadge, HandCoins, History, ListC
 import { cn } from '../lib/cn';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Card, Empty } from '../components/display';
-import { Field, Input, SegmentedControl, Switch, Textarea } from '../components/forms';
+import { Field, SegmentedControl, Switch, Textarea } from '../components/forms';
 import { Dialog, useToast } from '../components/overlays';
+import { PilihTahunAkademik } from './cari';
 import { GalatApi } from './galat';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 
@@ -402,10 +403,10 @@ export function SimulasiAkibat({ aturanId, usulan, tahunId: tahunAwal, className
   return (
     <div className={cn('u-akb-simulasi', className)}>
       <div className="u-akb-bilah">
-        <Field label="Periode simulasi" description={`Biarkan kosong untuk memakai periode mulai berlaku atau periode berjalan. Isi 5 angka: 20261 = 2026/2027 Ganjil.${tahun.length === 5 ? ` (${namaPeriodeAkibat(tahun)})` : ''}`}>
+        <Field label="Periode simulasi" description="Kosongkan untuk memakai periode mulai berlaku atau periode berjalan.">
           <div className="u-akb-bilah-isi">
-            <Input inputMode="numeric" maxLength={5} value={tahun} onChange={(e) => setTahun(e.target.value.replace(/\D/g, ''))} placeholder="mis. 20261" aria-label="Periode simulasi" />
-            <Button variant="outline" onClick={() => setTahunDipakai(tahun)} disabled={tahun !== '' && tahun.length !== 5}>
+            <PilihTahunAkademik value={tahun || null} onValueChange={(v) => setTahun(v ?? '')} placeholder="Periode mulai berlaku" aria-label="Periode simulasi" />
+            <Button variant="outline" onClick={() => setTahunDipakai(tahun)} disabled={tahun === tahunDipakai}>
               Hitung ulang
             </Button>
           </div>

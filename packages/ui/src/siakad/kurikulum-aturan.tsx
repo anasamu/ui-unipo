@@ -11,6 +11,7 @@ import { Select } from '../components/select';
 import { ConfirmDialog, Sheet, useToast } from '../components/overlays';
 import { WizardReview } from '../components/wizard';
 import { PanelLangkah, type PanelLangkahStep } from '../components/panel-langkah';
+import { PilihTahunAkademik } from './cari';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { PilihSK } from './isian-sk';
 import { PilihBerkas } from './pilih-berkas';
@@ -1775,9 +1776,15 @@ function PanelMulaiEvaluasi({ prodi, jenis: j, mkPilihan, onOpenChange, onSelesa
             <Select options={mkPilihan.map((m) => ({ value: m.kode_mk, label: `${m.kode_mk} · ${m.nama_mk}` }))} value={mk} onValueChange={(v) => setMk(v ? String(v) : null)} placeholder="Pilih…" />
           </Field>
         ) : null}
-        <Field label={j.siklus === 'semester' ? 'Periode (tahun_id)' : 'Tahun'} required description={j.siklus === 'semester' ? 'Mis. 20251' : 'Mis. 2025'}>
-          <Input inputMode="numeric" value={periode} onChange={(e) => setPeriode(e.target.value.replace(/\D/g, '').slice(0, 5))} />
-        </Field>
+        {j.siklus === 'semester' ? (
+          <Field label="Periode" required description="Semester yang dievaluasi.">
+            <PilihTahunAkademik value={periode || null} onValueChange={(v) => setPeriode(v ?? '')} aria-label="Periode" />
+          </Field>
+        ) : (
+          <Field label="Tahun" required description="Mis. 2025">
+            <Input inputMode="numeric" value={periode} onChange={(e) => setPeriode(e.target.value.replace(/\D/g, '').slice(0, 4))} />
+          </Field>
+        )}
         {j.tahap.some((t) => t.peran.includes('tim_penyusun')) ? (
           <Field label="Tim penyusun" optional description="Username/NIDN dosen, pisahkan koma. Koordinator MK otomatis.">
             <Input value={tim} onChange={(e) => setTim(e.target.value)} />
