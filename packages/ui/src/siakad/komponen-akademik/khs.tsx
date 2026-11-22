@@ -4,7 +4,7 @@ import { BookOpen, TrendingDown, TrendingUp } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { Empty } from '../../components/display';
 import { Select } from '../../components/select';
-import { labelTahunAkademik } from '../akademik';
+import { labelTahunAkademik } from '../label-tahun';
 import { DeretAngka, KakiCetak, KepalaAkademik, KepalaCetak, LegendaSkalaNilai, TabelNilaiCetak, TabelNilaiMk, TombolCetakAkademik, keadaanData, type KeadaanDataProps } from './bersama';
 import { normalSkala, type SumberSkala } from './skala';
 import { adaAngka, angka, duaDesimal, type IdentitasAkademik, type PeriodeKhs } from './tipe';

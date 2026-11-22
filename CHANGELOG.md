@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## Belum dirilis (widget nilai lama; nomor versi diberikan saat digabung)
+
+- **Widget KHS dan transkrip lama memakai komponen akademik baru** (`siakad/akademik.tsx`): `KhsMahasiswa` dan `TranskripMahasiswa` (juga tab KHS/Transkrip di `DetailMahasiswa`) kini merender `LembarKhs`/`LembarTranskrip` dengan skala nilai server (`useSkalaNilai` per prodi mahasiswa), legenda, sebaran nilai, versi cetak, dan identitas mahasiswa; tanpa judul ganda (judul dari tab). Props tetap sama. `NilaiHuruf` ditandai usang, ganti dengan `LencanaNilai`. `labelTahunAkademik` pindah ke `siakad/label-tahun.ts` (tetap diekspor dari tempat lama) supaya komponen akademik tidak mengimpor widget lama.
+
 ## 1.55.0 (belum dirilis)
 
 - **Tab di panel samping selalu menjadi pilihan bila tidak muat** (`components/display.tsx` `tataTab`; keputusan Anas 2026-11-22 13.17): `Tabs` dengan `orientation="horizontal"` yang berada di dalam panel samping (`Sheet`) kini ikut tata letak panel, yaitu deret horizontal yang berubah menjadi pilihan tarik-turun bila tidak muat selebar panel. Sebelumnya orientasi horizontal eksplisit melewati aturan ini sehingga deret tab bisa terpotong. Hanya `orientation="vertical"` eksplisit yang tetap dihormati di panel. Uji `packages/ui/test/tab-bersarang.test.tsx`, contoh di galeri Navigasi.
