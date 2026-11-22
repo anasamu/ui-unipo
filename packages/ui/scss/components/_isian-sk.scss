@@ -191,6 +191,9 @@
 }
 .u-kelola-sk {
   display: grid;
+  // Satu kolom selebar wadah: tanpa minmax(0) kolom grid melebar mengikuti isi terpanjang (pilihan status) dan
+  // halaman meluap di ponsel 390.
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 .u-kelola-sk-alat {
@@ -203,8 +206,10 @@
     flex: 1 1 14rem;
   }
   > .u-kelola-sk-penerbit {
-    flex: 0 1 18rem;
+    // Selebar baris di ponsel, maksimal 24rem di layar lebar.
+    flex: 1 1 14rem;
     width: auto;
+    max-width: 24rem;
   }
 }
 .u-kelola-sk-daftar,
