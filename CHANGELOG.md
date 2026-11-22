@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.65.1 (2026-11-22)
+
+- `DataTable`: baris yang `rowActions`-nya mengembalikan daftar kosong tidak lagi menampilkan tombol titik tiga yang membuka menu kosong (mis. kode pemasangan yang sudah dipakai di Pustikom).
+
 ## 1.65.0 (2026-11-22)
 
 - **Kerangka situs publik: kepala, menu utama, kaki, sidebar** (`components/situs.tsx`, `components/situs-skema.ts` baru; butuh SIAKAD dengan `GET /v1/tema/{aplikasi}/situs`): `KerangkaSitus` membungkus halaman publik aplikasi dengan pita pengumuman, bilah atas (kontak, jam layanan, tautan cepat, media sosial), navbar (gaya aplikasi/portal/ringkas, lengket, tembus pandang di atas hero foto, kotak cari, sampai dua tombol ajakan), menu utama tiga tingkat (tautan, dropdown, mega menu berkolom dengan kartu sorotan), sidebar halaman dalam (widget kabar dari portal Humas, tautan, teks, kontak, ajakan, cari) dan kaki situs berkolom dengan pita ajakan. Tujuan tautan: `/alamat`, `#bagian`, `https://`, `mailto:`, `tel:`, `aksi:<kunci>`, atau berkas publik. Tanpa HTML/CSS bebas; semua gaya dari token. Ada tautan "Lewati ke isi", `scroll-padding` untuk navbar lengket, dan gerak mengikuti `prefers-reduced-motion`.
