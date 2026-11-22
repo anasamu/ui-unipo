@@ -20,6 +20,7 @@ import { PilihEntitas, type SumberEntitas } from './pilih';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 import { CatatArsipSurat, EditorSuratKeluar, PengaturanPenomoran } from './persuratan';
 import { KelolaTemplatSurat, type UnitArsip } from './surat';
+import { IsianTanggal } from '../components/formulir';
 
 // ---------------------------------------------------------------- tipe
 
@@ -770,9 +771,9 @@ export function DetailSuratArsip({ uuid, onClose, onSunting }: DetailSuratArsipP
                         {tujuan.map((t) => (
                           <Badge key={t} variant="secondary">
                             {t}{' '}
-                            <button type="button" aria-label={`Hapus ${t}`} className="u-psu-hapus" onClick={() => setTujuan(tujuan.filter((x) => x !== t))}>
+                            <Button variant="ghost" size="xs" iconOnly aria-label={`Hapus ${t}`} className="u-psu-hapus" onClick={() => setTujuan(tujuan.filter((x) => x !== t))}>
                               ×
-                            </button>
+                            </Button>
                           </Badge>
                         ))}
                       </div>
@@ -782,7 +783,7 @@ export function DetailSuratArsip({ uuid, onClose, onSunting }: DetailSuratArsipP
                         <Textarea rows={3} value={catatan} onChange={(e) => setCatatan(e.target.value)} placeholder="Mis. tindak lanjuti, hadiri, siapkan bahan" />
                       </Field>
                       <Field label="Batas waktu" optional>
-                        <Input type="date" value={batas} onChange={(e) => setBatas(e.target.value)} />
+                        <IsianTanggal value={batas} onValueChange={(v) => setBatas(v)} />
                       </Field>
                     </FormGrid>
                     <Button
@@ -1092,7 +1093,7 @@ export function KelolaPetugasSurat({ unitId, bolehUbah = false }: KelolaPetugasS
                 <Input value={form.jabatan ?? ''} onChange={(e) => setForm({ ...form, jabatan: e.target.value })} placeholder="Mis. Kepala BAAK" />
               </Field>
               <Field label="Masa tugas sampai" optional>
-                <Input type="date" value={form.selesai ?? ''} onChange={(e) => setForm({ ...form, selesai: e.target.value })} />
+                <IsianTanggal value={form.selesai ?? ''} onValueChange={(v) => setForm({ ...form, selesai: v })} />
               </Field>
             </FormGrid>
             <label className="u-psu-tombol-alih">

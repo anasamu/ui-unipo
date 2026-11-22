@@ -61,6 +61,7 @@ import { HADIR_MIN_BAWAAN, SampulKelas, nadaNilaiLms, sisaTenggat, type KelasLms
 import { KalenderAkademik } from './kalender';
 import type { CalendarEvent } from '../components/schedule';
 import { PenandaKurikulum, SiapkanKelasDariRps } from './kurikulum-aturan';
+import { TombolPilihBerkas } from '../components/pilih-berkas-lokal';
 
 /*
  * Komponen belajar LMS (/v1/lms) untuk mahasiswa e-learning: isi kelas per pertemuan, materi (bacaan, berkas, video,
@@ -3247,14 +3248,10 @@ export function GabungKelasKodeLms({ open, onOpenChange, onBergabung }: { open: 
 
 /** Kartu ringkas tombol unggah (dipakai bila Dropzone terlalu besar). */
 export function TombolUnggahLms({ onFiles, label = 'Pilih berkas', accept }: { onFiles: (f: File[]) => void; label?: string; accept?: string }) {
-  const ref = React.useRef<HTMLInputElement>(null);
   return (
-    <>
-      <Button variant="outline" size="sm" onClick={() => ref.current?.click()}>
-        <Upload /> {label}
-      </Button>
-      <input ref={ref} type="file" hidden multiple accept={accept} onChange={(e) => e.target.files && onFiles([...e.target.files])} />
-    </>
+    <TombolPilihBerkas multiple accept={accept} onFiles={onFiles}>
+      <Upload /> {label}
+    </TombolPilihBerkas>
   );
 }
 

@@ -5,7 +5,7 @@ import { Toggle as BaseToggle } from '@base-ui/react/toggle';
 import { Check, CircleDot } from 'lucide-react';
 import { cn, dataFlag } from '../lib/cn';
 import { Button, Tag } from './actions';
-import { DatePicker } from './calendar';
+import { DatePicker, type DatePickerProps } from './calendar';
 import { Alert } from './display';
 import { Input, type ControlSize } from './forms';
 import { KodeLaporan } from './galat';
@@ -190,7 +190,7 @@ const keTanggal = (s: unknown) => {
 };
 const dariTanggal = (d: Date | null) => (d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '');
 
-export interface IsianTanggalProps {
+export interface IsianTanggalProps extends Pick<DatePickerProps, 'aria-label' | 'aria-describedby' | 'size' | 'name' | 'required' | 'tampilanAwal' | 'onGalat' | 'tampilGalat'> {
   /** Tanggal format API, `YYYY-MM-DD` (bagian jam diabaikan). */
   value?: string | null;
   onValueChange?: (value: string) => void;

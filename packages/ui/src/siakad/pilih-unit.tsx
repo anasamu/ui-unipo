@@ -6,7 +6,7 @@ import {
   ShieldCheck, X,
 } from 'lucide-react';
 import { cn, dataFlag } from '../lib/cn';
-import { Spinner } from '../components/actions';
+import { Button, Spinner } from '../components/actions';
 import type { ControlSize } from '../components/forms';
 import { GAYA_JENIS_BAGAN } from '../components/bagan-organisasi';
 import { susunPohon, type NodePohon } from '../components/pohon';
@@ -746,9 +746,9 @@ export function PilihUnit(props: PilihUnitProps) {
                   spellCheck={false}
                 />
                 {kata && (
-                  <button type="button" className="u-pilih-unit-ikon-tombol" aria-label="Hapus kata cari" onClick={() => { setKata(''); inputRef.current?.focus(); }}>
+                  <Button variant="ghost" size="xs" iconOnly className="u-pilih-unit-ikon-tombol" aria-label="Hapus kata cari" onClick={() => { setKata(''); inputRef.current?.focus(); }}>
                     <X />
-                  </button>
+                  </Button>
                 )}
               </div>
               <div className="u-pilih-unit-bilah">

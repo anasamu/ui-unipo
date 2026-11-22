@@ -270,30 +270,6 @@
     width: 100%;
   }
 }
-.u-verif-unggah {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 1.5rem 1rem;
-  border: 1.5px dashed var(--u-border);
-  border-radius: var(--u-radius-lg, 0.75rem);
-  color: var(--u-muted-foreground);
-  text-align: center;
-  cursor: pointer;
-  &:hover,
-  &:focus-within {
-    border-color: var(--u-primary);
-    color: var(--u-foreground);
-  }
-  input {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: pointer;
-  }
-}
 .u-verif-kartu {
   --nada: var(--u-success);
   display: grid;

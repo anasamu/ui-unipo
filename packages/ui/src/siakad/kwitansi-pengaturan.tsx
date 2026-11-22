@@ -24,6 +24,8 @@ import {
   type VarianKwitansi,
 } from './kwitansi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { usePilihBerkas } from '../components/pilih-berkas-lokal';
+import { IsianWarnaHex } from '../components/isian-warna';
 
 // Pengaturan kwitansi resmi per unit penerbit (GET/POST /v1/kwitansi/penerbit), aturan catatan pembayaran
 // (/v1/kwitansi/catatan), daftar kwitansi terbit (/v1/kwitansi/terbit), dan log (/v1/kwitansi/log).
@@ -156,7 +158,20 @@ async function gambarKeDataUri(f: File, maks = 640): Promise<string> {
 
 function UnggahGambar({ label, nilai, onChange, keterangan }: { label: string; nilai: string | null | undefined; onChange: (v: string | null) => void; keterangan: string }) {
   const toast = useToast();
-  const ref = React.useRef<HTMLInputElement>(null);
+  const pemilih = usePilihBerkas({
+    accept: 'image/png,image/jpeg,image/webp',
+    onFiles: async (files) => {
+      const f = files[0];
+      if (!f) return;
+      try {
+        const uri = await gambarKeDataUri(f);
+        if (uri.length > 520_000) throw new Error('Gambar terlalu besar setelah diperkecil (maks. 400 KB). Pakai PNG berlatar transparan yang lebih sederhana.');
+        onChange(uri);
+      } catch (er) {
+        toast.add({ title: `${label} tidak dapat dipakai`, description: (er as Error).message, type: 'error' });
+      }
+    },
+  });
   return (
     <Field label={label} description={keterangan} optional>
       <div className="u-kwp-gambar">
@@ -164,25 +179,8 @@ function UnggahGambar({ label, nilai, onChange, keterangan }: { label: string; n
           {nilai ? <img src={nilai} alt={label} /> : <ImageUp aria-hidden />}
         </span>
         <span className="u-kwp-gambar-aksi">
-          <input
-            ref={ref}
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            hidden
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              e.target.value = '';
-              if (!f) return;
-              try {
-                const uri = await gambarKeDataUri(f);
-                if (uri.length > 520_000) throw new Error('Gambar terlalu besar setelah diperkecil (maks. 400 KB). Pakai PNG berlatar transparan yang lebih sederhana.');
-                onChange(uri);
-              } catch (er) {
-                toast.add({ title: `${label} tidak dapat dipakai`, description: (er as Error).message, type: 'error' });
-              }
-            }}
-          />
-          <Button size="sm" variant="outline" onClick={() => ref.current?.click()}>
+          {pemilih.elemen}
+          <Button size="sm" variant="outline" onClick={pemilih.buka}>
             <ImageUp /> {nilai ? 'Ganti' : 'Unggah'}
           </Button>
           {nilai && (
@@ -287,15 +285,7 @@ function FormPenerbit({ p, open, onOpenChange }: { p: PengaturanPenerbitKwitansi
                 <RadioGroup<VarianKwitansi> variant="card" columns={2} value={v.varian} onValueChange={(x) => set('varian', x)} options={VARIAN_KWITANSI.map((x) => ({ value: x.value, label: x.label, description: `${x.keterangan} (${x.kertas})` }))} />
               </Field>
               <Field label="Warna aksen" error={warnaSalah}>
-                <div className="u-kwp-warna">
-                  <input type="color" aria-label="Pilih warna" value={/^#[0-9a-fA-F]{6}$/.test(v.warna) ? v.warna : '#0b6b3a'} onChange={(e) => set('warna', e.target.value)} />
-                  <Input value={v.warna} maxLength={7} onChange={(e) => set('warna', e.target.value)} className="u-kwp-kode" aria-label="Kode warna" />
-                  <span className="u-kwp-swatch" role="group" aria-label="Warna cepat">
-                    {WARNA_CEPAT.map((w) => (
-                      <button key={w} type="button" style={{ background: w }} aria-label={w} aria-pressed={v.warna === w} onClick={() => set('warna', w)} />
-                    ))}
-                  </span>
-                </div>
+                <IsianWarnaHex value={v.warna} onValueChange={(w) => set('warna', w)} bawaan="#0b6b3a" cepat={WARNA_CEPAT} aria-label="Warna aksen kwitansi" />
               </Field>
               <Field label="Judul kwitansi" description="Bawaan BUKTI KAS MASUK.">
                 <Input value={v.judul} maxLength={60} placeholder="BUKTI KAS MASUK" onChange={(e) => set('judul', e.target.value)} />

@@ -14,6 +14,10 @@ import type { JenisSoalCbt, OpsiSoal } from './cbt';
 import { GalatApi } from './galat';
 import { PilihEntitas, type SumberEntitas } from './pilih';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { IsianAngka } from '../components/isian-angka';
+import { IsianTanggal } from '../components/formulir';
+import { keAngka } from '../lib/angka';
+import { DataTable } from '../components/data-table';
 
 // ================================================================ Kontrak API (/v1/integrasi/ai)
 
@@ -374,6 +378,7 @@ export function TeksAi({ teks, className }: { teks: string; className?: string }
         const k = kunci();
         out.push(
           <div key={k} className="u-ai-tabel-bungkus">
+            {/* unipo-ui-izinkan tabel-bawaan: tabel di dalam jawaban AI (markdown yang dirender), bukan tabel data */}
             <table>
               <thead>
                 <tr>
@@ -1704,10 +1709,10 @@ export function BuatSoalAi({ tujuan = 'cbt', ujianId: ujianAwal, kodeMk: mkAwal,
       </Field>
       <div className="u-ai-form" data-kolom="4">
         <Field label="Jumlah">
-          <Input type="number" min={1} max={30} value={jumlah} onChange={(e) => setJumlah(Math.max(1, Math.min(30, Number(e.target.value) || 1)))} />
+          <IsianAngka value={keAngka(jumlah)} min={1} max={30} onValueChange={(n) => setJumlah(Math.max(1, Math.min(30, n || 1)))} />
         </Field>
         <Field label="Poin per soal">
-          <Input type="number" min={0} max={1000} step="0.5" value={poin} onChange={(e) => setPoin(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))} />
+          <IsianAngka value={keAngka(poin)} desimal={1} langkah={0.5} min={0} max={1000} onValueChange={(n) => setPoin(Math.max(0, Math.min(1000, n || 0)))} />
         </Field>
         <Field label="Tingkat">
           <Select<'campuran' | 'mudah' | 'sedang' | 'sulit'>
@@ -2032,8 +2037,8 @@ export function PemakaianAi({ klienId, className }: { klienId?: string; classNam
           </div>
         </div>
         <div className="u-ai-alat">
-          <Input type="date" aria-label="Dari tanggal" value={dari} max={sampai} onChange={(e) => e.target.value && setDari(e.target.value)} />
-          <Input type="date" aria-label="Sampai tanggal" value={sampai} min={dari} onChange={(e) => e.target.value && setSampai(e.target.value)} />
+          <IsianTanggal value={dari} aria-label="Dari tanggal" max={sampai} onValueChange={(v) => v && setDari(v)} />
+          <IsianTanggal value={sampai} aria-label="Sampai tanggal" min={dari} onValueChange={(v) => v && setSampai(v)} />
         </div>
       </header>
       {q.error ? (
@@ -2049,41 +2054,33 @@ export function PemakaianAi({ klienId, className }: { klienId?: string; classNam
           {q.data && q.data.rincian.length === 0 ? (
             <Empty icon={<Bot />} title="Belum ada pemakaian" description="Belum ada permintaan AI pada rentang tanggal ini." bordered />
           ) : (
-            <div className="u-ai-tabel-bungkus">
-              <table className="u-ai-tabel">
-                <thead>
-                  <tr>
-                    <th>Tanggal</th>
-                    <th>Aplikasi</th>
-                    <th>Model</th>
-                    <th data-angka>Permintaan</th>
-                    <th data-angka>Token</th>
-                    <th data-angka>Ditolak/gagal</th>
-                    <th data-angka>Rata-rata</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(q.data?.rincian ?? []).map((x, i) => (
-                    <tr key={i}>
-                      <td>{x.tanggal}</td>
-                      <td>{x.klien_id}</td>
-                      <td>
-                        <span className="u-ai-model">
-                          <IkonDriverAi driver={x.driver} />
-                          {x.model}
-                        </span>
-                      </td>
-                      <td data-angka>{formatNumber(x.permintaan)}</td>
-                      <td data-angka>{formatNumber(x.token_masuk + x.token_keluar)}</td>
-                      <td data-angka>
-                        {x.ditolak} / {x.gagal}
-                      </td>
-                      <td data-angka>{(x.rata_ms / 1000).toLocaleString('id-ID', { maximumFractionDigits: 1 })} dtk</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable<PemakaianAiData['rincian'][number] & { __i: number }>
+              className="u-ai-tabel"
+              columns={[
+                { key: 'tanggal', header: 'Tanggal', format: 'tanggal', sortable: true },
+                { key: 'klien_id', header: 'Aplikasi', sortable: true, mobile: 'title' },
+                {
+                  key: 'model',
+                  header: 'Model',
+                  sortable: true,
+                  cell: (x) => (
+                    <span className="u-ai-model">
+                      <IkonDriverAi driver={x.driver} />
+                      {x.model}
+                    </span>
+                  ),
+                },
+                { key: 'permintaan', header: 'Permintaan', format: 'angka', sortable: true },
+                { key: 'token', header: 'Token', align: 'end', sortable: true, value: (x) => x.token_masuk + x.token_keluar, cell: (x) => formatNumber(x.token_masuk + x.token_keluar) },
+                { key: 'ditolak', header: 'Ditolak/gagal', align: 'end', value: (x) => x.ditolak + x.gagal, cell: (x) => `${x.ditolak} / ${x.gagal}` },
+                { key: 'rata_ms', header: 'Rata-rata', align: 'end', sortable: true, value: (x) => x.rata_ms, cell: (x) => `${(x.rata_ms / 1000).toLocaleString('id-ID', { maximumFractionDigits: 1 })} dtk` },
+              ]}
+              rows={(q.data?.rincian ?? []).map((x, i) => ({ ...x, __i: i }))}
+              rowKey={(x) => String(x.__i)}
+              loading={q.loading}
+              exportCsv={`pemakaian-ai-${dari}-${sampai}`}
+              defaultDensity="compact"
+            />
           )}
         </>
       )}

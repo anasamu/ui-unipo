@@ -23,7 +23,8 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Badge, Button, Skeleton, type BadgeVariant } from '../components/actions';
-import { Alert, Card, Empty, Pagination, Table, TableContainer } from '../components/display';
+import { Alert, Card, Empty, Pagination } from '../components/display';
+import { DataTable } from '../components/data-table';
 import { CheckboxGroup, Field, Input, SegmentedControl, Switch, Textarea } from '../components/forms';
 import { IsianTanggal, PanelForm, Pilihan } from '../components/formulir';
 import { ConfirmDialog, Dialog, Menu, useToast } from '../components/overlays';
@@ -35,6 +36,8 @@ import { PilihUnit } from './pilih-unit';
 import { PilihBerkas } from './pilih-berkas';
 import { idPerangkatPresensi } from './presensi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { IsianJam, IsianAngka } from '../components/isian-angka';
+import { keAngka, teksAngka } from '../lib/angka';
 
 /*
  * Presensi kerja berbasis lokasi (/v1/sdm/presensi) untuk dosen dan tendik: layar presensi hari ini (peta, jam
@@ -827,69 +830,104 @@ export function RiwayatPresensiKerja({ sebagai = 'saya', status, saring = true, 
       ) : daftar.length === 0 ? (
         <Empty bordered icon={<Clock aria-hidden />} title={st === 'ditinjau' ? 'Tidak ada presensi yang menunggu tinjauan' : 'Belum ada percobaan presensi'} description={st === 'ditinjau' ? 'Presensi di luar area atau berisiko akan muncul di sini.' : undefined} />
       ) : (
-        <TableContainer>
-          <Table density="compact" className="u-presensi-kerja-tabel">
-            <thead>
-              <tr>
-                <th>Waktu</th>
-                {sebagai !== 'saya' && <th>Pegawai</th>}
-                <th>Lokasi</th>
-                <th>Tanda</th>
-                <th>Status</th>
-                {bisaTinjau && <th aria-label="Aksi" />}
-              </tr>
-            </thead>
-            <tbody>
-              {daftar.map((k) => (
-                <tr key={k.id}>
-                  <td>
-                    <span className="u-presensi-nama">
-                      {k.aksi === 'masuk' ? 'Masuk' : 'Pulang'} {jam(k.waktu)}
+        <DataTable<(typeof daftar)[number]>
+          className="u-presensi-kerja-tabel"
+          columns={[
+            {
+              key: 'waktu',
+              header: 'Waktu',
+              mobile: 'title',
+              cell: (k) => (
+                <>
+                  <span className="u-presensi-nama">
+                    {k.aksi === 'masuk' ? 'Masuk' : 'Pulang'} {jam(k.waktu)}
+                  </span>
+                  <span className="u-presensi-sub">
+                    {tanggalPendek(k.tanggal)} · {k.platform && k.platform !== k.sumber ? k.platform : k.sumber}
+                  </span>
+                </>
+              ),
+            },
+            ...(sebagai !== 'saya'
+              ? [
+                  {
+                    key: 'pegawai_nama',
+                    header: 'Pegawai',
+                    value: (k: (typeof daftar)[number]) => k.pegawai_nama ?? '',
+                    cell: (k: (typeof daftar)[number]) => (
+                      <>
+                        <span className="u-presensi-nama">{k.pegawai_nama ?? 'Pegawai'}</span>
+                        {k.pegawai_jenis && <span className="u-presensi-sub">{k.pegawai_jenis === 'dosen' ? 'Dosen' : 'Tendik'}</span>}
+                      </>
+                    ),
+                  },
+                ]
+              : []),
+            {
+              key: 'lokasi',
+              header: 'Lokasi',
+              cell: (k) => (
+                <>
+                  <span className="u-presensi-nama">{k.lat == null ? 'Tanpa lokasi' : k.di_area ? (k.lokasi?.nama ?? 'Di area') : `${jarakTeks(k.jarak_m)} dari ${k.lokasi?.nama ?? 'area'}`}</span>
+                  {k.akurasi_m != null && <span className="u-presensi-sub">akurasi ±{k.akurasi_m} m</span>}
+                </>
+              ),
+            },
+            {
+              key: 'tanda',
+              header: 'Tanda',
+              value: (k) => k.tanda_label.join(', '),
+              cell: (k) => (
+                <>
+                  {k.tanda_label.length ? (
+                    <span className="u-presensi-kerja-tanda">
+                      {k.tanda_label.map((t) => (
+                        <Badge key={t} variant="warning">
+                          {t}
+                        </Badge>
+                      ))}
                     </span>
-                    <span className="u-presensi-sub">
-                      {tanggalPendek(k.tanggal)} · {k.platform && k.platform !== k.sumber ? k.platform : k.sumber}
-                    </span>
-                  </td>
-                  {sebagai !== 'saya' && (
-                    <td>
-                      <span className="u-presensi-nama">{k.pegawai_nama ?? `#${k.pegawai_id}`}</span>
-                      {k.pegawai_jenis && <span className="u-presensi-sub">{k.pegawai_jenis === 'dosen' ? 'Dosen' : 'Tendik'}</span>}
-                    </td>
+                  ) : (
+                    <span className="u-presensi-sub">–</span>
                   )}
-                  <td>
-                    <span className="u-presensi-nama">{k.lat == null ? 'Tanpa lokasi' : k.di_area ? (k.lokasi?.nama ?? 'Di area') : `${jarakTeks(k.jarak_m)} dari ${k.lokasi?.nama ?? 'area'}`}</span>
-                    {k.akurasi_m != null && <span className="u-presensi-sub">akurasi ±{k.akurasi_m} m</span>}
-                  </td>
-                  <td>
-                    {k.tanda_label.length ? (
-                      <span className="u-presensi-kerja-tanda">
-                        {k.tanda_label.map((t) => (
-                          <Badge key={t} variant="warning">
-                            {t}
-                          </Badge>
-                        ))}
-                      </span>
-                    ) : (
-                      <span className="u-presensi-sub">–</span>
-                    )}
-                    {k.skor_risiko > 0 && <span className="u-presensi-sub">skor risiko {k.skor_risiko}</span>}
-                  </td>
-                  <td>
-                    <Badge variant={VARIAN_STATUS_KEJADIAN[k.status]}>{LABEL_STATUS_KEJADIAN[k.status]}</Badge>
-                    {k.status === 'ditolak' && k.alasan && <span className="u-presensi-sub">{k.alasan}</span>}
-                  </td>
-                  {bisaTinjau && (
-                    <td>
+                  {k.skor_risiko > 0 && <span className="u-presensi-sub">skor risiko {k.skor_risiko}</span>}
+                </>
+              ),
+            },
+            {
+              key: 'status',
+              header: 'Status',
+              mobile: 'badge',
+              value: (k) => LABEL_STATUS_KEJADIAN[k.status],
+              cell: (k) => (
+                <>
+                  <Badge variant={VARIAN_STATUS_KEJADIAN[k.status]}>{LABEL_STATUS_KEJADIAN[k.status]}</Badge>
+                  {k.status === 'ditolak' && k.alasan && <span className="u-presensi-sub">{k.alasan}</span>}
+                </>
+              ),
+            },
+            ...(bisaTinjau
+              ? [
+                  {
+                    key: 'aksi',
+                    header: <span className="u-sr-only">Aksi</span>,
+                    label: 'Aksi',
+                    shrink: true,
+                    hideable: false,
+                    cell: (k: (typeof daftar)[number]) => (
                       <Button size="xs" variant={k.status === 'ditinjau' ? 'primary' : 'ghost'} onClick={() => setTinjau(k)}>
                         {k.status === 'ditinjau' ? 'Tinjau' : 'Rincian'}
                       </Button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </TableContainer>
+                    ),
+                  },
+                ]
+              : []),
+          ]}
+          rows={daftar}
+          rowKey={(k) => String(k.id)}
+          pagination={false}
+          defaultDensity="compact"
+        />
       )}
       {(q.meta?.total_pages ?? 1) > 1 && <Pagination page={hal} totalPages={q.meta?.total_pages ?? 1} total={q.meta?.total ?? undefined} perPage={perHalaman} onPageChange={setHal} />}
       <TinjauKejadianPresensi kejadian={tinjau} onOpenChange={(o) => !o && setTinjau(null)} />
@@ -1438,9 +1476,9 @@ export function FormJadwalKerja({ open, onOpenChange, jadwal, onSimpan }: { open
                   <Switch size="sm" checked={h.aktif} onCheckedChange={(v) => setHari(i, { aktif: v })} aria-label={`${NAMA_HARI[Number(i) - 1]} hari kerja`} />
                   {NAMA_HARI[Number(i) - 1]}
                 </label>
-                <Input type="time" value={h.masuk} disabled={!h.aktif} onChange={(e) => setHari(i, { masuk: e.target.value })} aria-label={`Masuk ${NAMA_HARI[Number(i) - 1]}`} />
+                <IsianJam value={h.masuk || null} disabled={!h.aktif} aria-label={`Masuk ${NAMA_HARI[Number(i) - 1]}`} onValueChange={(v) => setHari(i, { masuk: v ?? '' })} />
                 <span aria-hidden>–</span>
-                <Input type="time" value={h.pulang} disabled={!h.aktif} onChange={(e) => setHari(i, { pulang: e.target.value })} aria-label={`Pulang ${NAMA_HARI[Number(i) - 1]}`} />
+                <IsianJam value={h.pulang || null} disabled={!h.aktif} aria-label={`Pulang ${NAMA_HARI[Number(i) - 1]}`} onValueChange={(v) => setHari(i, { pulang: v ?? '' })} />
               </div>
             ))}
           </div>
@@ -1448,18 +1486,18 @@ export function FormJadwalKerja({ open, onOpenChange, jadwal, onSimpan }: { open
         <div className="u-presensi-form-baris">
           {f.jenis === 'fleksibel' ? (
             <Field label="Lama kerja minimal (menit)" error={galat.min_kerja_menit}>
-              <Input type="number" min={30} max={1440} value={f.min_kerja_menit} onChange={(e) => set('min_kerja_menit', e.target.value)} />
+              <IsianAngka value={keAngka(f.min_kerja_menit)} min={30} max={1440} onValueChange={(n) => set('min_kerja_menit', teksAngka(n))} />
             </Field>
           ) : (
             <Field label="Toleransi terlambat (menit)">
-              <Input type="number" min={0} max={240} value={f.toleransi_terlambat_menit} onChange={(e) => set('toleransi_terlambat_menit', e.target.value)} />
+              <IsianAngka value={keAngka(f.toleransi_terlambat_menit)} min={0} max={240} onValueChange={(n) => set('toleransi_terlambat_menit', teksAngka(n))} />
             </Field>
           )}
           <Field label="Masuk dibuka (menit sebelum)">
-            <Input type="number" min={0} max={720} value={f.buka_masuk_menit} onChange={(e) => set('buka_masuk_menit', e.target.value)} />
+            <IsianAngka value={keAngka(f.buka_masuk_menit)} min={0} max={720} onValueChange={(n) => set('buka_masuk_menit', teksAngka(n))} />
           </Field>
           <Field label="Pulang ditutup (menit setelah)">
-            <Input type="number" min={0} max={1080} value={f.batas_pulang_menit} onChange={(e) => set('batas_pulang_menit', e.target.value)} />
+            <IsianAngka value={keAngka(f.batas_pulang_menit)} min={0} max={1080} onValueChange={(n) => set('batas_pulang_menit', teksAngka(n))} />
           </Field>
         </div>
         <div className="u-presensi-kerja-saklar-grid">
@@ -1740,48 +1778,39 @@ export function KelolaPenugasanPresensi({ className }: { className?: string }) {
       ) : daftar.length === 0 ? (
         <Empty bordered icon={<Clock aria-hidden />} title="Belum ada penugasan" description="Semua pegawai memakai jam kerja bawaan dan area unitnya." actions={<Button onClick={() => setForm(null)}>Buat penugasan</Button>} />
       ) : (
-        <TableContainer>
-          <Table density="compact">
-            <thead>
-              <tr>
-                <th>Untuk</th>
-                <th>Jadwal</th>
-                <th>Lokasi</th>
-                <th>Berlaku</th>
-                <th aria-label="Aksi" />
-              </tr>
-            </thead>
-            <tbody>
-              {daftar.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <span className="u-presensi-nama">{sasaran(p)}</span>
-                    <span className="u-presensi-sub">{LABEL_SASARAN[p.sasaran]}</span>
-                  </td>
-                  <td>{p.jadwal_nama ?? '–'}</td>
-                  <td>{p.mode_lokasi === 'bebas' ? <Badge variant="info">Jarak jauh</Badge> : p.lokasi_nama?.length ? p.lokasi_nama.join(', ') : <span className="u-presensi-sub">Area unit</span>}</td>
-                  <td>
-                    {tanggalPendek(p.mulai)} – {p.selesai ? tanggalPendek(p.selesai) : 'seterusnya'}
-                  </td>
-                  <td>
-                    <Menu
-                      trigger={
-                        <Button size="xs" variant="ghost" iconOnly aria-label="Aksi penugasan">
-                          <MoreHorizontal aria-hidden />
-                        </Button>
-                      }
-                      items={[
-                        { label: 'Ubah', icon: <Pencil aria-hidden />, onSelect: () => setForm(p) },
-                        { type: 'separator' as const },
-                        { label: 'Hapus', icon: <Trash2 aria-hidden />, destructive: true, onSelect: () => setHapus(p) },
-                      ]}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </TableContainer>
+        <DataTable<(typeof daftar)[number]>
+          columns={[
+            {
+              key: 'sasaran',
+              header: 'Untuk',
+              mobile: 'title',
+              value: (p) => sasaran(p),
+              cell: (p) => (
+                <>
+                  <span className="u-presensi-nama">{sasaran(p)}</span>
+                  <span className="u-presensi-sub">{LABEL_SASARAN[p.sasaran]}</span>
+                </>
+              ),
+            },
+            { key: 'jadwal_nama', header: 'Jadwal', cell: (p) => p.jadwal_nama ?? '–' },
+            {
+              key: 'lokasi',
+              header: 'Lokasi',
+              value: (p) => (p.mode_lokasi === 'bebas' ? 'Jarak jauh' : (p.lokasi_nama ?? []).join(', ')),
+              cell: (p) => (p.mode_lokasi === 'bebas' ? <Badge variant="info">Jarak jauh</Badge> : p.lokasi_nama?.length ? p.lokasi_nama.join(', ') : <span className="u-presensi-sub">Area unit</span>),
+            },
+            { key: 'mulai', header: 'Berlaku', value: (p) => p.mulai, cell: (p) => `${tanggalPendek(p.mulai)} – ${p.selesai ? tanggalPendek(p.selesai) : 'seterusnya'}` },
+          ]}
+          rows={daftar}
+          rowKey={(p) => String(p.id)}
+          rowActions={(p) => [
+            { label: 'Ubah', icon: <Pencil aria-hidden />, onSelect: () => setForm(p) },
+            { type: 'separator' as const },
+            { label: 'Hapus', icon: <Trash2 aria-hidden />, destructive: true, onSelect: () => setHapus(p) },
+          ]}
+          pagination={false}
+          defaultDensity="compact"
+        />
       )}
       <FormPenugasanPresensi open={form !== false} onOpenChange={(o) => !o && setForm(false)} penugasan={form || null} onSimpan={() => setForm(false)} />
       <ConfirmDialog
@@ -1971,10 +2000,10 @@ export function FormKoreksiPresensi({ open, onOpenChange, kejadian, tanggal, onS
         </div>
         <div className="u-presensi-form-baris">
           <Field label="Jam masuk" optional error={galat.jam}>
-            <Input type="time" value={f.jam_masuk} onChange={(e) => set('jam_masuk', e.target.value)} />
+            <IsianJam value={f.jam_masuk || null} onValueChange={(v) => set('jam_masuk', v ?? '')} />
           </Field>
           <Field label="Jam pulang" optional>
-            <Input type="time" value={f.jam_pulang} onChange={(e) => set('jam_pulang', e.target.value)} />
+            <IsianJam value={f.jam_pulang || null} onValueChange={(v) => set('jam_pulang', v ?? '')} />
           </Field>
         </div>
         <label className="u-presensi-kerja-saklar">

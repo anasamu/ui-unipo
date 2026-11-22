@@ -46,7 +46,7 @@ import {
 } from 'lucide-react';
 import { Badge, Button, Skeleton, Spinner } from '../components/actions';
 import { Alert, Avatar, Empty, Tabs } from '../components/display';
-import { Checkbox, Field, Input, InputGroup, SegmentedControl, Switch } from '../components/forms';
+import { Checkbox, Field, Input, InputGroup, RadioGroup, SegmentedControl, Switch } from '../components/forms';
 import { ConfirmDialog, Dialog, Menu, Popover, Tooltip, useToast, type MenuEntry } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { formatBytes } from '../lib/format';
@@ -54,6 +54,7 @@ import { judulRuang, lawanDari, mesinObrolan, namaDepan, type KeadaanObrolan, ty
 import type { IsiPesan } from './obrolan-kripto';
 import { pesanGalat, useSiakad } from './provider';
 import { TabKabar } from './notifikasi';
+import { usePilihBerkas } from '../components/pilih-berkas-lokal';
 
 export type { KeadaanObrolan, MesinObrolan, OrangObrolan, PesanObrolan, RuangObrolanData } from './obrolan-mesin';
 export { mesinObrolan } from './obrolan-mesin';
@@ -963,7 +964,7 @@ function InfoRuang({ r, open, onOpenChange, onKeluar }: { r: RuangObrolanData; o
   React.useEffect(() => setJudul(r.judul ?? ''), [r.judul]);
   const jalan = (f: Promise<unknown>) => void f.then(() => setGalat(null)).catch((e) => setGalat(pesanGalat(e)));
   const [fotoProses, setFotoProses] = React.useState(false);
-  const fotoRef = React.useRef<HTMLInputElement>(null);
+  const pilihFoto = usePilihBerkas({ accept: 'image/jpeg,image/png,image/webp', onFiles: (f) => void gantiFoto(f[0]) });
   const kembaliRef = React.useRef<HTMLButtonElement>(null);
   const bolehFoto = r.jenis === 'grup' && admin;
   const gantiFoto = async (f: File | undefined) => {
@@ -976,7 +977,6 @@ function InfoRuang({ r, open, onOpenChange, onKeluar }: { r: RuangObrolanData; o
       setGalat(pesanGalat(e));
     } finally {
       setFotoProses(false);
-      if (fotoRef.current) fotoRef.current.value = '';
     }
   };
   React.useEffect(() => {
@@ -1004,13 +1004,13 @@ function InfoRuang({ r, open, onOpenChange, onKeluar }: { r: RuangObrolanData; o
             <div className="u-ob-info-kepala">
               {bolehFoto ? (
                 <div className="u-ob-info-foto">
-                  <button type="button" className="u-ob-info-foto-tombol" onClick={() => fotoRef.current?.click()} disabled={fotoProses} aria-label={r.foto ? 'Ganti foto grup' : 'Pasang foto grup'}>
+                  <button type="button" className="u-ob-info-foto-tombol" onClick={() => pilihFoto.buka()} disabled={fotoProses} aria-label={r.foto ? 'Ganti foto grup' : 'Pasang foto grup'}>
                     <AvatarRuang r={r} saya={saya} size="xl" />
                     <span className="u-ob-info-foto-ikon" aria-hidden>
                       {fotoProses ? <Spinner size="sm" /> : <Camera />}
                     </span>
                   </button>
-                  <input ref={fotoRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => void gantiFoto(e.target.files?.[0])} />
+                  {pilihFoto.elemen}
                   {r.foto && (
                     <Button size="sm" variant="ghost" disabled={fotoProses} onClick={() => jalan(mesin.hapusFoto(r.id))}>
                       Hapus foto
@@ -1305,7 +1305,7 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
   const [dipilih, setDipilih] = React.useState<string | null>(null);
   const [seret, setSeret] = React.useState(false);
   const areaRef = React.useRef<HTMLTextAreaElement>(null);
-  const fileRef = React.useRef<HTMLInputElement>(null);
+  const pilihLampiran = usePilihBerkas({ multiple: true, onFiles: (f) => tambahBerkas(f) });
 
   React.useEffect(() => {
     setTeksMentah(draf.get(id) ?? '');
@@ -1618,9 +1618,9 @@ export function RuangObrolan({ id, onKembali, onTutup, className }: RuangObrolan
             void kirim();
           }}
         >
-          <input ref={fileRef} type="file" multiple hidden onChange={(e) => (tambahBerkas(e.target.files), (e.target.value = ''))} />
+          {pilihLampiran.elemen}
           <Tooltip content={`Lampirkan berkas (maks. ${k.lampiranMb} MB)`}>
-            <Button type="button" variant="ghost" size="sm" iconOnly aria-label="Lampirkan berkas" onClick={() => fileRef.current?.click()} disabled={Boolean(ubah) || unggah || !siap}>
+            <Button type="button" variant="ghost" size="sm" iconOnly aria-label="Lampirkan berkas" onClick={() => pilihLampiran.buka()} disabled={Boolean(ubah) || unggah || !siap}>
               <Paperclip />
             </Button>
           </Tooltip>
@@ -1795,23 +1795,21 @@ function DialogBersihkan({
             <legend>
               {info.lampiran} lampiran di obrolan ini{info.sudah_disimpan ? ` (${info.sudah_disimpan} sudah ada di Berkas saya)` : ''}
             </legend>
-            <label data-aktif={lampiran === 'simpan' ? '' : undefined}>
-              <input type="radio" name="lampiran" checked={lampiran === 'simpan'} onChange={() => setLampiran('simpan')} />
-              <span>
-                <strong>{hapus ? 'Simpan ke Berkas saya' : 'Simpan lampiran ke Berkas saya'}</strong>
-                <small>
-                  {belum ? `${belum} lampiran disalin ke Berkas saya › Obrolan/${nama}.` : 'Semua lampiran yang bisa disalin sudah ada di Berkas saya.'}
-                  {info.tidak_bisa_disimpan ? ` ${info.tidak_bisa_disimpan} lampiran lama tidak bisa disalin.` : ''}
-                </small>
-              </span>
-            </label>
-            <label data-aktif={lampiran === 'hapus' ? '' : undefined}>
-              <input type="radio" name="lampiran" checked={lampiran === 'hapus'} onChange={() => setLampiran('hapus')} />
-              <span>
-                <strong>{hapus ? 'Hapus lampiran juga (hanya dari tampilan Anda)' : 'Hapus lampiran juga'}</strong>
-                <small>Lampiran ikut hilang dari tampilan Anda (tidak disalin).</small>
-              </span>
-            </label>
+            <RadioGroup<'simpan' | 'hapus'>
+              variant="card"
+              columns={1}
+              value={lampiran}
+              onValueChange={setLampiran}
+              aria-label="Lampiran"
+              options={[
+                {
+                  value: 'simpan',
+                  label: hapus ? 'Simpan ke Berkas saya' : 'Simpan lampiran ke Berkas saya',
+                  description: `${belum ? `${belum} lampiran disalin ke Berkas saya › Obrolan/${nama}.` : 'Semua lampiran yang bisa disalin sudah ada di Berkas saya.'}${info.tidak_bisa_disimpan ? ` ${info.tidak_bisa_disimpan} lampiran lama tidak bisa disalin.` : ''}`,
+                },
+                { value: 'hapus', label: hapus ? 'Hapus lampiran juga (hanya dari tampilan Anda)' : 'Hapus lampiran juga', description: 'Lampiran ikut hilang dari tampilan Anda (tidak disalin).' },
+              ]}
+            />
           </fieldset>
         ) : null}
       </div>

@@ -6,13 +6,14 @@
  * nomor otomatis, dan tanda tangan + QR verifikasi.
  */
 import * as React from 'react';
-import { BookCopy, Building2, FilePlus2, FileText, GraduationCap, Library, Megaphone, Search, Stamp, UserRound } from 'lucide-react';
+import { BookCopy, Building2, FilePlus2, FileText, GraduationCap, Library, Megaphone, Stamp, UserRound } from 'lucide-react';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Empty } from '../components/display';
 import { Dialog } from '../components/overlays';
 import { isiTemplat, penandaIsian, tanggalSurat } from '../editor/dokumen/templat';
 import { saringHtml } from '../editor/dokumen/saring';
 import { useTemplatSurat, type JenisNaskah, type TemplatSurat } from './surat';
+import { IsianCari } from '../components/isian-cari';
 
 // ---------------------------------------------------------------- isian bertipe
 
@@ -467,10 +468,7 @@ export function PilihTemplatSurat({ open, onOpenChange, unitId, onPilih, tanpaKo
     >
       <div className="u-tgs">
         <div className="u-tgs-daftar">
-          <div className="u-surat-cari">
-            <Search aria-hidden />
-            <input type="search" value={q} placeholder="Cari templat, mis. undangan, tugas, keterangan" aria-label="Cari templat" onChange={(e) => setQ(e.target.value)} />
-          </div>
+          <IsianCari className="u-surat-cari" value={q} onValueChange={setQ} placeholder="Cari templat, mis. undangan, tugas, keterangan" aria-label="Cari templat" />
           <div className="u-tgs-kategori" role="tablist" aria-label="Kategori templat">
             {[{ value: 'semua' as const, label: 'Semua', ikon: null }, ...(adaServer ? [{ value: 'unit' as const, label: 'Milik unit', ikon: <Building2 aria-hidden /> }] : []), ...KATEGORI_TEMPLAT_SURAT].map((k) => (
               <button key={k.value} type="button" role="tab" aria-selected={kat === k.value} data-aktif={kat === k.value || undefined} onClick={() => setKat(k.value)}>

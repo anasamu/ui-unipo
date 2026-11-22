@@ -1,0 +1,6 @@
+{
+  "pengecualian": [
+    { "berkas": "packages/ui/src/siakad/bkd-alur.tsx", "aturan": "tabel-bawaan", "alasan": "HTML cetak laporan BKD di jendela cetak (templat string), bukan tabel data di halaman" },
+    { "berkas": "packages/ui/src/siakad/surat-galeri.tsx", "aturan": "tabel-bawaan", "alasan": "isi templat naskah surat (HTML untuk editor dokumen), bukan tabel data di halaman" }
+  ]
+}

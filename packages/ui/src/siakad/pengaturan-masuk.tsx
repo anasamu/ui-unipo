@@ -29,6 +29,8 @@ import {
   type TataLetakMasuk,
   type TataMasuk,
 } from './halaman-masuk';
+import { TombolPilihBerkas } from '../components/pilih-berkas-lokal';
+import { IsianWarnaHex } from '../components/isian-warna';
 
 type TataTema = Record<string, unknown>;
 type PerubahanTata = ReturnType<typeof tulisTataMasuk>;
@@ -96,7 +98,6 @@ function IsianGambar({
   accept?: string;
 }) {
   const unggah = useUnggahBerkas({ kategori: 'foto', modul: 'tema', visibilitas: 'publik', enkripsi: false, keterangan: `Gambar halaman masuk ${aplikasi}` });
-  const fileRef = React.useRef<HTMLInputElement>(null);
   const [persen, setPersen] = React.useState<number | null>(null);
   const [galat, setGalat] = React.useState<string | null>(null);
   const url = urlGambarTema(value, peta);
@@ -117,7 +118,6 @@ function IsianGambar({
       setGalat(e instanceof Error ? e.message : 'Gambar belum terunggah. Coba lagi.');
     } finally {
       setPersen(null);
-      if (fileRef.current) fileRef.current.value = '';
     }
   };
   return (
@@ -134,10 +134,9 @@ function IsianGambar({
         ) : (
           <Input size="sm" value={value} onChange={(e) => onChange(e.target.value.trim())} placeholder="https://… atau unggah" aria-label={typeof label === 'string' ? `${label}: alamat gambar` : 'Alamat gambar'} />
         )}
-        <input ref={fileRef} type="file" accept={accept} hidden onChange={(e) => void pilihFile(e.target.files?.[0])} />
-        <Button size="sm" variant="outline" loading={persen !== null} onClick={() => fileRef.current?.click()}>
+        <TombolPilihBerkas loading={persen !== null} accept={accept} onFiles={(f) => void pilihFile(f[0])}>
           <Upload /> {persen !== null ? `${Math.round(persen)}%` : berkas ? 'Ganti' : 'Unggah'}
-        </Button>
+        </TombolPilihBerkas>
         {value && (
           <Button size="sm" variant="ghost" iconOnly aria-label="Hapus gambar" onClick={() => onChange('')}>
             <Trash2 />
@@ -151,17 +150,7 @@ function IsianGambar({
 function PilihWarnaMasuk({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <Field label="Warna latar" description="Otomatis = warna utama tema.">
-      <div className="u-tema-warna">
-        <button type="button" className="u-tema-warna-otomatis" aria-pressed={!value} onClick={() => onChange('')}>
-          Otomatis
-        </button>
-        {WARNA.map((c) => (
-          <button key={c} type="button" title={c} aria-label={`Warna ${c}`} aria-pressed={value === c} style={{ background: c }} onClick={() => onChange(c)} />
-        ))}
-        <label className="u-tema-warna-bebas" title="Pilih warna bebas">
-          <input type="color" value={value || '#244ce6'} onChange={(e) => onChange(e.target.value)} aria-label="Warna bebas" />
-        </label>
-      </div>
+      <IsianWarnaHex value={value} onValueChange={onChange} cepat={WARNA} otomatis="Otomatis" tanpaKode aria-label="Warna latar" />
     </Field>
   );
 }

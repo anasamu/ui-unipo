@@ -438,22 +438,13 @@
   }
 }
 .u-pny-tautan {
+  display: block;
   min-width: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--u-primary);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  @include truncate;
-  &:hover {
-    text-decoration: underline;
-  }
-  &:focus-visible {
-    outline: 2px solid var(--u-ring, var(--u-primary));
-    outline-offset: 2px;
-  }
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: start;
 }
 .u-berkas-cepat-kuota {
   margin: 0.5rem 0.75rem 0;

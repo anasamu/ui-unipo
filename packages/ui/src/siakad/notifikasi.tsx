@@ -46,6 +46,7 @@ import { Dialog, Popover, Tooltip } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { useOptionalSiakad } from './provider';
 import { useSinyalRealtime } from './realtime';
+import { SegmentedControl } from '../components/forms';
 
 /**
  * Notifikasi terpusat SIAKAD (`/v1/notif`, docs/NOTIFIKASI.md di siakad_unipo): jumlah belum dibaca per label, kotak
@@ -960,13 +961,24 @@ export function TombolNotifikasi({ onNavigasi, semuaHref, belumLuar, className, 
 /** Tab kecil "Semua | Belum dibaca" di panel bilah atas (pesan). */
 export function TabKabar({ nilai, onUbah, belum }: { nilai: 'semua' | 'belum'; onUbah: (v: 'semua' | 'belum') => void; belum?: number }) {
   return (
-    <div className="u-kabar-tab" role="tablist">
-      {(['semua', 'belum'] as const).map((v) => (
-        <button key={v} type="button" role="tab" aria-selected={nilai === v} onClick={() => onUbah(v)}>
-          {v === 'semua' ? 'Semua' : 'Belum dibaca'}
-          {v === 'belum' && belum ? <span>{belum > 99 ? '99+' : belum}</span> : null}
-        </button>
-      ))}
+    <div className="u-kabar-tab">
+      <SegmentedControl<'semua' | 'belum'>
+        aria-label="Saring pesan"
+        value={nilai}
+        onValueChange={onUbah}
+        options={[
+          { value: 'semua', label: 'Semua' },
+          {
+            value: 'belum',
+            label: (
+              <>
+                Belum dibaca
+                {belum ? <span className="u-kabar-tab-jumlah">{belum > 99 ? '99+' : belum}</span> : null}
+              </>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

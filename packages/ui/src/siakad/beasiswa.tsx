@@ -44,6 +44,7 @@ import { PilihProdi, PilihTahunAkademik } from './cari';
 import { PilihBerkas } from './pilih-berkas';
 import { AlurPemeriksa, LabelPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import { BAWAAN_KIP_PENCAIRAN, IsianAturanPencairan, KartuDepositBeasiswa, ringkasAturanPencairan, type AturanPencairan } from './beasiswa-bauk';
+import { IsianJam, IsianTanggalWaktu } from '../components/isian-angka';
 
 /*
  * Beasiswa (SIAKAD /v1/beasiswa, docs/KEMAHASISWAAN.md "Beasiswa"). Keputusan Anas 2026-11-19: beasiswa dikelola BAAK,
@@ -668,13 +669,13 @@ export function PanelProgramBeasiswa({ peran, program, onOpenChange, onSelesai }
               <IsianTanggal value={d.daftar_mulai} onValueChange={(v) => set('daftar_mulai', v)} disabled={!!terkunci} />
             </Field>
             <Field label="Jam buka">
-              <Input type="time" value={d.jam_buka} onChange={(e) => set('jam_buka', e.target.value)} disabled={!!terkunci} />
+              <IsianJam value={d.jam_buka || null} disabled={!!terkunci} onValueChange={(v) => set('jam_buka', v ?? '')} />
             </Field>
             <Field label="Pendaftaran ditutup" required>
               <IsianTanggal value={d.daftar_selesai} min={d.daftar_mulai || undefined} onValueChange={(v) => set('daftar_selesai', v)} disabled={!!terkunci} />
             </Field>
             <Field label="Jam tutup">
-              <Input type="time" value={d.jam_tutup} onChange={(e) => set('jam_tutup', e.target.value)} disabled={!!terkunci} />
+              <IsianJam value={d.jam_tutup || null} disabled={!!terkunci} onValueChange={(v) => set('jam_tutup', v ?? '')} />
             </Field>
           </FormGrid>
           <p className="u-bsw-ket">Di luar jam buka–tutup, pendaftaran ditolak sistem. Mahasiswa melihat hitung mundur &ldquo;Dibuka dalam …/Ditutup dalam …&rdquo;.</p>
@@ -1322,7 +1323,7 @@ function PanelPendaftar({ program, pendaftar: r, peran, onClose }: { program: Pr
             <CardContent>
               <FormGrid>
                 <Field label="Jadwal">
-                  <Input type="datetime-local" value={w.jadwal} onChange={(e) => setW({ ...w, jadwal: e.target.value })} disabled={!boleh} />
+                  <IsianTanggalWaktu value={w.jadwal || null} disabled={!boleh} onValueChange={(v) => setW({ ...w, jadwal: v ?? '' })} />
                 </Field>
                 <Field label="Tempat/tautan">
                   <Input value={w.tempat} onChange={(e) => setW({ ...w, tempat: e.target.value })} disabled={!boleh} />

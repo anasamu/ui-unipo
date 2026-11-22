@@ -14,6 +14,7 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
 import { PilihBerkas } from './pilih-berkas';
 import { AlurPemeriksa, LabelPemeriksa, type TahapPemeriksa } from './pemeriksa';
 import { GarisWaktuAkreditasi, KartuAkreditasi, type IntegrasiAkreditasiData, type RiwayatAkreditasi } from './akreditasi-rinci';
+import { IsianTanggal } from '../components/formulir';
 
 /*
  * Kelengkapan akreditasi prodi terintegrasi SPMI (SIAKAD /v1/spmi/akreditasi-kelengkapan, docs/AKREDITASI.md
@@ -355,7 +356,7 @@ export function PanelButirKelengkapan({ id, onOpenChange }: { id: number; onOpen
                     <Input value={atur.pic} onChange={(e) => setPj({ ...atur, pic: e.target.value })} />
                   </Field>
                   <Field label="Tenggat">
-                    <Input type="date" value={atur.tenggat} onChange={(e) => setPj({ ...atur, tenggat: e.target.value })} />
+                    <IsianTanggal value={atur.tenggat} onValueChange={(v) => setPj({ ...atur, tenggat: v })} />
                   </Field>
                 </FormGrid>
                 <div className="u-bkd-aksi">
@@ -446,7 +447,7 @@ export function RuangKelengkapanAkreditasi({ kodeProdi, className }: { kodeProdi
                     <Select options={[{ value: 'reakreditasi', label: 'Reakreditasi' }, { value: 'baru', label: 'Akreditasi baru' }, { value: 'peningkatan', label: 'Peningkatan peringkat' }, { value: 'perpanjangan', label: 'Perpanjangan' }]} value={mulai.jenis} onValueChange={(v) => setMulai({ ...mulai, jenis: v ? String(v) : 'reakreditasi' })} placeholder="Pilih…" />
                   </Field>
                   <Field label="Target pengajuan" optional>
-                    <Input type="date" value={mulai.target} onChange={(e) => setMulai({ ...mulai, target: e.target.value })} />
+                    <IsianTanggal value={mulai.target} onValueChange={(v) => setMulai({ ...mulai, target: v })} />
                   </Field>
                 </FormGrid>
                 <div>

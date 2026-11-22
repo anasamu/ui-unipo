@@ -53,30 +53,10 @@
   }
 }
 .u-pgm-tutup {
-  display: grid;
-  place-items: center;
   flex: none;
-  width: 1.75rem;
-  height: 1.75rem;
   // Tengah tombol sejajar tengah kotak ikon / baris judul pertama.
   margin-top: 0.25rem;
-  padding: 0;
-  border: 0;
-  border-radius: var(--u-radius-sm);
-  background: none;
   color: var(--u-muted-foreground);
-  cursor: pointer;
-  svg {
-    width: 1rem;
-    height: 1rem;
-  }
-  &:hover {
-    background: var(--u-hover);
-    color: var(--u-foreground);
-  }
-  &:focus-visible {
-    @include focus-ring;
-  }
   // Tanpa kotak ikon: sejajar baris judul pertama.
   :is(.u-pgm-banner, .u-pgm-toast, .u-pgm-bawah):not(:has(> .u-pgm-ikon)) > & {
     margin-top: calc((1.35rem - 1.75rem) / 2);
@@ -547,18 +527,8 @@
   }
 }
 .u-pgm-tautan-ganti {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--u-primary);
-  font: inherit;
-  font-weight: 500;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
-  &:focus-visible {
-    @include focus-ring;
-  }
+  justify-content: flex-start;
+  text-align: start;
 }
 .u-pgm-tautan-opsi {
   display: grid;

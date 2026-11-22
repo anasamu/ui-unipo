@@ -30,6 +30,7 @@ import { DataTable, type DataColumn } from '../components/data-table';
 import { useUnggahBerkas } from './berkas';
 import { GalatApi } from './galat';
 import { invalidateSiakad, pesanGalat, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
+import { TombolPilihBerkas } from '../components/pilih-berkas-lokal';
 
 /*
  * Pengajuan ke LP2M (API SIAKAD /v1/lppm) yang sama di semua aplikasi:
@@ -265,7 +266,7 @@ export function BerkasLppm({ entitas, entitasId, jenis = BERKAS_USULAN_LPPM, bol
   const kodeDikenal = new Set(jenis.map((j) => j.kode));
   const baris = jenis.some((j) => j.kode === 'lampiran') ? jenis : [...jenis, { kode: 'lampiran', nama: 'Dokumen pendukung lain' }];
 
-  const pilih = async (peran: string, files: FileList | null) => {
+  const pilih = async (peran: string, files: File[] | FileList | null) => {
     const list = Array.from(files ?? []);
     if (!list.length) return;
     for (const f of list) {
@@ -312,21 +313,15 @@ export function BerkasLppm({ entitas, entitasId, jenis = BERKAS_USULAN_LPPM, bol
                   {j.keterangan && <span>{j.keterangan}</span>}
                 </div>
                 {bolehUbah && (
-                  <label className="u-lppm-unggah">
-                    <input
-                      type="file"
-                      multiple={j.kode === 'lampiran'}
-                      accept=".pdf,.doc,.docx,.odt,.xls,.xlsx,.pptx,.jpg,.jpeg,.png,.zip"
-                      disabled={p !== undefined}
-                      onChange={(e) => {
-                        void pilih(j.kode, e.target.files);
-                        e.target.value = '';
-                      }}
-                    />
-                    <span className="u-button" data-variant="outline" data-size="sm">
-                      <Upload aria-hidden /> {p !== undefined ? `Mengunggah ${p}%` : ada.length ? 'Tambah' : 'Unggah'}
-                    </span>
-                  </label>
+                  <TombolPilihBerkas
+                    className="u-lppm-unggah"
+                    multiple={j.kode === 'lampiran'}
+                    accept=".pdf,.doc,.docx,.odt,.xls,.xlsx,.pptx,.jpg,.jpeg,.png,.zip"
+                    loading={p !== undefined}
+                    onFiles={(f) => void pilih(j.kode, f)}
+                  >
+                    <Upload aria-hidden /> {p !== undefined ? `Mengunggah ${p}%` : ada.length ? 'Tambah' : 'Unggah'}
+                  </TombolPilihBerkas>
                 )}
               </div>
               {ada.length > 0 && (
@@ -334,9 +329,9 @@ export function BerkasLppm({ entitas, entitasId, jenis = BERKAS_USULAN_LPPM, bol
                   {ada.map((f) => (
                     <li key={f.id}>
                       <FileText aria-hidden />
-                      <button type="button" className="u-lppm-tautan" onClick={() => void lihat(f, true)}>
+                      <Button variant="link" size="sm" className="u-lppm-tautan" onClick={() => void lihat(f, true)}>
                         {f.nama}
-                      </button>
+                      </Button>
                       <span className="u-lppm-redup">
                         {ukuran(f.ukuran)}
                         {f.diunggah_pada || f.created_at ? ` · ${tgl(f.diunggah_pada ?? f.created_at, true)}` : ''}

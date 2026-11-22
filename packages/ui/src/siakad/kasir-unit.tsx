@@ -31,7 +31,7 @@ import {
 import { Badge, Button, Spinner, type BadgeVariant } from '../components/actions';
 import { Alert, Card, Empty, Tabs } from '../components/display';
 import { DataTable, type DataColumn } from '../components/data-table';
-import { CheckboxGroup, Field, Input, RadioGroup, Switch, Textarea } from '../components/forms';
+import { Checkbox, CheckboxGroup, Field, Input, RadioGroup, Switch, Textarea } from '../components/forms';
 import { IsianTanggal } from '../components/formulir';
 import { ConfirmDialog, Sheet, useToast } from '../components/overlays';
 import { PanelLangkah } from '../components/panel-langkah';
@@ -45,6 +45,7 @@ import { namaRapi } from './prodi';
 import { PerangkatKasir } from './perangkat-kasir';
 import { DaftarAturan, FormAturan as FormAturanUmum, type Aturan } from './aturan';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { IsianJam } from '../components/isian-angka';
 
 // Pengaturan kasir per unit penerbit (SIAKAD /v1/kasir/kelola, docs/KASIR.md "Pengaturan di aplikasi unit"): jenis
 // biaya, loket, aturan penerimaan per status akademik, jadwal aktif pembayaran, dan templat laporan kasir. Dipasang di
@@ -880,10 +881,10 @@ function FormJadwal({ awal, onOpenChange, saya, unitId, jenis }: { awal: IsianJa
             <div className="u-ksu-isian">
               <div className="u-ksu-dua">
                 <Field label="Jam mulai" optional error={jamSalah(v.jam_mulai)}>
-                  <Input type="time" value={v.jam_mulai} onChange={(e) => set({ jam_mulai: e.target.value })} />
+                  <IsianJam value={v.jam_mulai || null} onValueChange={(v) => set({ jam_mulai: v ?? '' })} />
                 </Field>
                 <Field label="Jam selesai" optional error={jamSalah(v.jam_selesai)}>
-                  <Input type="time" value={v.jam_selesai} onChange={(e) => set({ jam_selesai: e.target.value })} />
+                  <IsianJam value={v.jam_selesai || null} onValueChange={(v) => set({ jam_selesai: v ?? '' })} />
                 </Field>
               </div>
               <Field label="Hari layanan" optional description="Kosong = setiap hari.">
@@ -1299,7 +1300,7 @@ export function PratinjauTemplatLaporanKasir({ isi, kolom, unit, baris, periode,
           {isi.subjudul ? <small>{isi.subjudul}</small> : null}
           <small>{periode ?? 'Periode 17–19 November 2026'}</small>
         </div>
-        {kol.length ? (
+        {kol.length ? ( // unipo-ui-izinkan tabel-bawaan: pratinjau kertas laporan kasir sesuai cetakan
           <table className="u-ksu-kertas-tabel">
             <thead>
               <tr>
@@ -1486,7 +1487,7 @@ function FormTemplat({ awal, onOpenChange, saya, unitId }: { awal: IsianTemplat 
                 {dipilih.map((k, i) => (
                   <li key={k} data-pilih>
                     <label>
-                      <input type="checkbox" checked onChange={() => setIsi({ kolom: dipilih.filter((x) => x !== k), kelompok: v.isi.kelompok === k ? null : v.isi.kelompok })} />
+                      <Checkbox checked onCheckedChange={() => setIsi({ kolom: dipilih.filter((x) => x !== k), kelompok: v.isi.kelompok === k ? null : v.isi.kelompok })} />
                       <span>
                         {peta.get(k)?.label ?? k}
                         {peta.get(k)?.angka ? <small> · angka</small> : null}
@@ -1505,7 +1506,7 @@ function FormTemplat({ awal, onOpenChange, saya, unitId }: { awal: IsianTemplat 
                 {lain.map((k) => (
                   <li key={k.kunci}>
                     <label>
-                      <input type="checkbox" checked={false} onChange={() => setIsi({ kolom: [...dipilih, k.kunci] })} />
+                      <Checkbox checked={false} onCheckedChange={() => setIsi({ kolom: [...dipilih, k.kunci] })} />
                       <span>
                         {k.label}
                         {k.angka ? <small> · angka</small> : null}

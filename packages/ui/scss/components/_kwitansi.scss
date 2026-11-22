@@ -1266,39 +1266,6 @@
   font-family: var(--u-font-mono);
   letter-spacing: 0.04em;
 }
-.u-kwp-warna {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  input[type='color'] {
-    width: 2.5rem;
-    height: 2.25rem;
-    padding: 0.125rem;
-    border: 1px solid var(--u-border);
-    border-radius: var(--u-radius-md);
-    background: var(--u-background);
-  }
-}
-.u-kwp-swatch {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  button {
-    width: 1.5rem;
-    height: 1.5rem;
-    border: 2px solid var(--u-background);
-    border-radius: 50%;
-    box-shadow: 0 0 0 1px var(--u-border);
-    cursor: pointer;
-    &[aria-pressed='true'] {
-      box-shadow: 0 0 0 2px var(--u-foreground);
-    }
-    &:focus-visible {
-      @include focus-ring;
-    }
-  }
-}
 .u-kwp-warna-teks i {
   display: inline-block;
   width: 0.75rem;

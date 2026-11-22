@@ -925,7 +925,8 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
-  > .u-input {
+  > .u-input,
+  > .u-isian-cari {
     flex: 0 1 18rem;
   }
   > .u-button {

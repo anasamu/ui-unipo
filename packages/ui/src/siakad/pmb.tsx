@@ -509,6 +509,7 @@ export function IsianRaporPmb({
   return (
     <div className="u-pmb-rapor">
       <TableContainer>
+        {/* unipo-ui-izinkan tabel-primitif: kisi isian nilai rapor (sel = Input), bukan tabel data */}
         <Table density="compact">
           <thead>
             <tr>

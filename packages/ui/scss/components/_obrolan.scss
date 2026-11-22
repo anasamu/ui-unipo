@@ -1675,35 +1675,6 @@
     font-size: var(--u-text-sm);
     font-weight: 600;
   }
-  label {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.625rem;
-    padding: 0.75rem;
-    border: 1px solid var(--u-border);
-    border-radius: var(--u-radius-md);
-    cursor: pointer;
-    &[data-aktif] {
-      border-color: var(--u-primary);
-      background: var(--u-primary-soft);
-    }
-    input {
-      margin-top: 0.2rem;
-      accent-color: var(--u-primary);
-    }
-    span {
-      display: grid;
-      gap: 0.125rem;
-    }
-    strong {
-      font-size: var(--u-text-sm);
-      font-weight: 600;
-    }
-    small {
-      font-size: var(--u-text-xs);
-      color: var(--u-muted-foreground);
-    }
-  }
 }
 .u-ob-bersih-aksi {
   display: flex;

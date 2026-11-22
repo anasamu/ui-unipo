@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { ArrowLeft, BookCopy, FilePlus2, FileText, Network, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { ArrowLeft, BookCopy, FilePlus2, FileText, Network, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Empty } from '../components/display';
 import { Checkbox, Field, Input, RadioGroup } from '../components/forms';
@@ -19,6 +19,7 @@ import { PilihEntitas, type SumberEntitas } from './pilih';
 import { PilihUnit, type PilihUnitTunggalProps, type UnitOrganisasi } from './pilih-unit';
 import { PilihTemplatSurat, jenisDariKode } from './surat-galeri';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { IsianCari } from '../components/isian-cari';
 
 // ---------------------------------------------------------------- tipe data arsip
 
@@ -176,10 +177,7 @@ export function KelolaTemplatSurat({ kop, penandatangan, unggah, tinggi = 'calc(
   return (
     <div className={['u-surat-kelola', className].filter(Boolean).join(' ')}>
       <div className="u-surat-alat">
-        <div className="u-surat-cari">
-          <Search aria-hidden />
-          <input type="search" value={q} placeholder="Cari nama templat" aria-label="Cari templat" onChange={(e) => setQ(e.target.value)} />
-        </div>
+        <IsianCari className="u-surat-cari" value={q} onValueChange={setQ} placeholder="Cari nama templat" aria-label="Cari templat" />
         <PilihUnitArsipSaya aria-label="Saring unit" unit={unit.data ?? []} memuat={unit.loading} value={unitFilter} onValueChange={(v) => setUnitFilter(v)} placeholder="Semua unit" />
         <Button variant="outline" onClick={() => setGaleri(true)} disabled={!unitKelola.length && !unit.loading}>
           <BookCopy />

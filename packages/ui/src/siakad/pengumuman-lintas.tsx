@@ -13,6 +13,8 @@ import { cn } from '../lib/cn';
 import { GalatApi } from './galat';
 import { PilihUnit, useUnitOrganisasi } from './pilih-unit';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakad, useSiakadQuery } from './provider';
+import { IsianAngka, IsianTanggalWaktu } from '../components/isian-angka';
+import { keAngka } from '../lib/angka';
 
 // ================================================================ Pengumuman lintas aplikasi (/v1/notif/pita)
 //
@@ -320,9 +322,9 @@ export function BannerPengumuman({ p, onTutup, className }: { p: PengumumanTayan
         {p.tautan && <Tautan p={p} className="u-button u-pgm-cta" />}
       </div>
       {onTutup && p.dapat_ditutup && (
-        <button type="button" className="u-pgm-tutup" aria-label="Tutup pengumuman" onClick={onTutup}>
+        <Button variant="ghost" size="xs" iconOnly className="u-pgm-tutup" aria-label="Tutup pengumuman" onClick={onTutup}>
           <X />
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -347,9 +349,9 @@ export function ToastPengumuman({ p, onTutup, bawah, className }: { p: Pengumuma
         <Tautan p={p} className="u-pgm-tautan" />
       </div>
       {onTutup && (
-        <button type="button" className="u-pgm-tutup" aria-label="Tutup pengumuman" onClick={onTutup}>
+        <Button variant="ghost" size="xs" iconOnly className="u-pgm-tutup" aria-label="Tutup pengumuman" onClick={onTutup}>
           <X />
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -746,9 +748,9 @@ function PilihTautan({ f }: { f: StateForm }) {
     );
   }
   const kePilihManual = manualBoleh ? (
-    <button type="button" className="u-pgm-tautan-ganti" onClick={() => (setManual(true), pilih(null))}>
+    <Button variant="link" size="sm" className="u-pgm-tautan-ganti" onClick={() => (setManual(true), pilih(null))}>
       Tautan lain (URL)
-    </button>
+    </Button>
   ) : null;
   return (
     <Field
@@ -933,7 +935,7 @@ function IsiFormPengumuman({ f }: { f: StateForm }) {
         )}
         {d.mode === 'toast' && (
           <Field label="Hilang otomatis" description="Detik; 0 = tetap sampai ditutup." className="u-form-lebar">
-            <Input type="number" min={0} max={120} value={d.opsi?.hilang_detik ?? 0} onChange={(e) => ubah('opsi', { ...d.opsi, hilang_detik: Number(e.target.value) || undefined })} />
+            <IsianAngka value={keAngka(d.opsi?.hilang_detik ?? 0)} min={0} max={120} onValueChange={(n) => ubah('opsi', { ...d.opsi, hilang_detik: n || undefined })} />
           </Field>
         )}
         <label className="u-pgm-saklar u-form-lebar">
@@ -1021,10 +1023,10 @@ function IsiFormPengumuman({ f }: { f: StateForm }) {
 
       <BagianForm judul="Jadwal" keterangan="Kapan pengumuman tayang dan urutannya." ikon={<CalendarClock />} kolom={2} className="u-pgm-bag-jadwal">
         <Field label="Mulai tayang" description="Kosong = sekarang." error={galat.mulai}>
-          <Input type="datetime-local" value={keInputWaktu(d.mulai)} onChange={(e) => ubah('mulai', dariInputWaktu(e.target.value))} />
+          <IsianTanggalWaktu value={keInputWaktu(d.mulai) || null} onValueChange={(v) => ubah('mulai', dariInputWaktu(v ?? ''))} />
         </Field>
         <Field label="Selesai" description="Kosong = sampai diarsipkan." error={galat.selesai}>
-          <Input type="datetime-local" value={keInputWaktu(d.selesai)} onChange={(e) => ubah('selesai', dariInputWaktu(e.target.value))} />
+          <IsianTanggalWaktu value={keInputWaktu(d.selesai) || null} onValueChange={(v) => ubah('selesai', dariInputWaktu(v ?? ''))} />
         </Field>
         <Field label="Prioritas" description="Lebih tinggi tampil lebih dulu (pita berganti, popup antre)." className="u-form-lebar">
           <Select value={String(d.prioritas ?? 0)} onValueChange={(v) => v != null && ubah('prioritas', Number(v))} options={[{ value: '0', label: 'Normal' }, { value: '10', label: 'Tinggi' }, { value: '50', label: 'Paling atas' }]} aria-label="Prioritas" />

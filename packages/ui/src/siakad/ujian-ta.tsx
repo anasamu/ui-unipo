@@ -26,7 +26,7 @@ import {
 import { Badge, Button } from '../components/actions';
 import { Alert, Card, DescriptionList, Empty, Tabs } from '../components/display';
 import { DataTable, type DataColumn } from '../components/data-table';
-import { Field, Input, SegmentedControl, Switch, Textarea } from '../components/forms';
+import { Checkbox, Field, Input, SegmentedControl, Switch, Textarea } from '../components/forms';
 import { Select } from '../components/select';
 import { AgendaList, type CalendarEvent } from '../components/schedule';
 import { ConfirmDialog, Dialog, Sheet, useToast } from '../components/overlays';
@@ -36,6 +36,10 @@ import { PilihSK } from './isian-sk';
 import { PilihEntitas } from './pilih';
 import { invalidateSiakad, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
 import { SUMBER_DOSEN_TA } from './tugas-akhir';
+import { IsianAngka, IsianJam } from '../components/isian-angka';
+import { IsianTanggal } from '../components/formulir';
+import { keAngka, teksAngka } from '../lib/angka';
+import { IsianBerkas } from '../components/pilih-berkas-lokal';
 
 /*
  * Ujian tugas akhir (/v1/ta/ujian, SIAKAD docs/UJIAN-TA.md): ujian proposal, seminar hasil, sidang skripsi dalam satu
@@ -370,7 +374,7 @@ export function KirimBuktiSyarat({ aturanId, open, onOpenChange }: { aturanId: s
           {m?.petunjuk && <p className="u-ta-redup">{m.petunjuk}</p>}
           {perluBerkas && (
             <Field label="Berkas" required description={`Format ${(m?.format ?? ['pdf']).join(', ')}, paling besar ${m?.maks_mb ?? 5} MB.`}>
-              <input type="file" accept={(m?.format ?? ['pdf']).map((f) => `.${f}`).join(',')} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              <IsianBerkas value={file} onValueChange={setFile} accept={(m?.format ?? ['pdf']).map((f) => `.${f}`).join(',')} maxSize={(m?.maks_mb ?? 5) * 1024 * 1024} info={false} />
             </Field>
           )}
           {(m?.isian ?? []).map((f) => (
@@ -380,7 +384,7 @@ export function KirimBuktiSyarat({ aturanId, open, onOpenChange }: { aturanId: s
           ))}
           {(m?.ceklis ?? []).map((c, i) => (
             <label key={i} className="u-ujta-centang">
-              <input type="checkbox" checked={Boolean(centang[i])} onChange={(e) => setCentang((o) => Object.assign([...o], { [i]: e.target.checked }))} /> {c}
+              <Checkbox checked={Boolean(centang[i])} onCheckedChange={(c) => setCentang((o) => Object.assign([...o], { [i]: c }))} /> {c}
             </label>
           ))}
         </div>
@@ -511,7 +515,7 @@ export function CekPlagiasiSaya({ jenisAwal }: { jenisAwal?: string }) {
       )}
       {k?.pengecualian && <p className="u-ta-redup">{k.pengecualian}</p>}
       <div className="u-ujta-unggah">
-        <input type="file" accept={(k?.format ?? ['pdf']).map((f) => `.${f}`).join(',')} onChange={(e) => setFile(e.target.files?.[0] ?? null)} aria-label="Naskah" />
+        <IsianBerkas value={file} onValueChange={setFile} accept={(k?.format ?? ['pdf']).map((f) => `.${f}`).join(',')} label="Pilih naskah" aria-label="Naskah" />
         <Button onClick={() => void ajukan()} loading={kirim} disabled={!file || (k ? k.sisa < 1 : false)}>
           <Upload /> Ajukan cek {k?.jenis_label.toLowerCase() ?? ''}
         </Button>
@@ -716,7 +720,7 @@ function NilaiDialog({ u, open, onOpenChange }: { u: UjianTa; open: boolean; onO
       <div className="u-ujta-form">
         {rubrik.map((b) => (
           <Field key={b.kode} label={`${b.label} (${b.bobot}%)`} required>
-            <Input type="number" min={0} max={100} value={r[b.kode] ?? ''} onChange={(e) => setR((o) => ({ ...o, [b.kode]: e.target.value }))} />
+            <IsianAngka value={keAngka(r[b.kode])} min={0} max={100} onValueChange={(n) => setR((o) => ({ ...o, [b.kode]: teksAngka(n) }))} />
           </Field>
         ))}
         <p>
@@ -764,7 +768,7 @@ function PutuskanDialog({ u, open, onOpenChange }: { u: UjianTa; open: boolean; 
               <Textarea rows={4} value={cat} onChange={(e) => setCat(e.target.value)} />
             </Field>
             <Field label="Batas revisi" optional description="Kosong = sesuai pengaturan prodi.">
-              <Input type="date" value={batas} onChange={(e) => setBatas(e.target.value)} />
+              <IsianTanggal value={batas} onValueChange={(v) => setBatas(v)} />
             </Field>
           </>
         )}
@@ -1037,13 +1041,13 @@ export function FormJadwalUjianTa({ u, open, onOpenChange }: { u: UjianTa | null
           </Field>
           <div className="u-form-kisi" data-kolom="3">
             <Field label="Tanggal" required>
-              <Input type="date" value={f.tanggal} onChange={(e) => set('tanggal', e.target.value)} />
+              <IsianTanggal value={f.tanggal} onValueChange={(v) => set('tanggal', v)} />
             </Field>
             <Field label="Mulai" required>
-              <Input type="time" value={f.mulai} onChange={(e) => set('mulai', e.target.value)} />
+              <IsianJam value={f.mulai || null} onValueChange={(v) => set('mulai', v ?? '')} />
             </Field>
             <Field label="Selesai" required>
-              <Input type="time" value={f.selesai} onChange={(e) => set('selesai', e.target.value)} />
+              <IsianJam value={f.selesai || null} onValueChange={(v) => set('selesai', v ?? '')} />
             </Field>
           </div>
           <label className="u-ujta-centang">
@@ -1091,7 +1095,7 @@ export function FormJadwalUjianTa({ u, open, onOpenChange }: { u: UjianTa | null
                   </ul>
                   {lunak.length > 0 && !cek.bentrok.some((b) => b.keras) && (
                     <label className="u-ujta-centang">
-                      <input type="checkbox" checked={f.abaikan_kuliah} onChange={(e) => set('abaikan_kuliah', e.target.checked)} /> Sudah dikoordinasikan (kuliah diganti/ruang dilepas)
+                      <Checkbox checked={f.abaikan_kuliah} onCheckedChange={(c) => set('abaikan_kuliah', c)} /> Sudah dikoordinasikan (kuliah diganti/ruang dilepas)
                     </label>
                   )}
                 </Alert>
@@ -1721,14 +1725,14 @@ export function AntreanPlagiasi() {
             <>
               <div className="u-form-kisi" data-kolom="2">
                 <Field label="Similarity (%)" required>
-                  <Input type="number" min={0} max={100} step="0.01" value={isi.skor} onChange={(e) => setIsi((o) => ({ ...o, skor: e.target.value }))} />
+                  <IsianAngka value={keAngka(isi.skor)} desimal={2} langkah={0.01} min={0} max={100} onValueChange={(n) => setIsi((o) => ({ ...o, skor: teksAngka(n) }))} />
                 </Field>
                 <Field label="Alat" required>
                   <Input value={isi.alat} onChange={(e) => setIsi((o) => ({ ...o, alat: e.target.value }))} />
                 </Field>
               </div>
               <Field label="Laporan hasil (PDF)" required>
-                <input type="file" accept=".pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                <IsianBerkas value={file} onValueChange={setFile} accept=".pdf" info={false} />
               </Field>
             </>
           )}
