@@ -58,14 +58,13 @@ describe('Tekan: status terpilih, kini, nonaktif', () => {
     expect(ariaTerpilih('link', true)).toEqual({});
     expect(html(<Tekan elemen="span" role="checkbox" terpilih>Pilih</Tekan>)).toContain('aria-checked="true"');
   });
-  it('kini → aria-current dan data-kini', () => {
+  it('kini → aria-current', () => {
     const h = html(
       <Tekan href="/krs" kini="page">
         KRS
       </Tekan>,
     );
     expect(h).toContain('aria-current="page"');
-    expect(h).toContain('data-kini=""');
     expect(html(<Tekan kini>Langkah 2</Tekan>)).toContain('aria-current="true"');
   });
   it('nonaktif: <button disabled>; <a> kehilangan href, aria-disabled, keluar dari urutan Tab', () => {

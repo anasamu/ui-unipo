@@ -36,6 +36,7 @@ import {
 } from './surat-galeri';
 import { IsianTanggal } from '../components/formulir';
 import { usePilihBerkas } from '../components/pilih-berkas-lokal';
+import { Tekan } from '../components/tekan';
 
 // ---------------------------------------------------------------- data master arsip
 
@@ -394,10 +395,10 @@ function FormPenomoran({ unitId, awal, jenis, tutup, simpan }: { unitId: number;
         </Field>
         <div className="u-psr-token">
           {Object.entries(TOKEN_NOMOR).map(([t, l]) => (
-            <button key={t} type="button" title={l} onClick={() => sisip(t)}>
+            <Tekan key={t} title={l} onClick={() => sisip(t)}>
               <code>{t}</code>
               <span>{l}</span>
-            </button>
+            </Tekan>
           ))}
         </div>
         <div className="u-psr-contoh" aria-live="polite">
@@ -653,7 +654,6 @@ export function EditorSuratKeluar({ unitId, surat, logo, onSelesai, onTutup, gal
 
   const sebelumIsi = (
     <div className="u-psr-kepala">
-      {/* unipo-ui-izinkan tabel-bawaan: kepala surat resmi (tata letak naskah dinas) */}
       <table className="ub-tabel-polos">
         <tbody>
           <tr>

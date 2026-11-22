@@ -4,6 +4,7 @@ import { AnnouncementList, EventCard, NewsGrid, RankedList, type AnnouncementIte
 import { teksPolos } from '../components/tata-letak';
 import { Alert } from '../components/display';
 import { pesanGalat, useSiakadQuery } from './provider';
+import { Tekan } from '../components/tekan';
 
 /** Bentuk ringkas berita/pengumuman/agenda dari `/v1/portal/*` (kolom yang dipakai widget). */
 export interface KontenPortal {
@@ -80,9 +81,9 @@ function Galat({ error, refetch }: { error: Error; refetch: () => void }) {
       variant="danger"
       title="Konten gagal dimuat"
       actions={
-        <button type="button" className="u-section-link" onClick={refetch}>
+        <Tekan className="u-section-link" onClick={refetch}>
           Coba lagi
-        </button>
+        </Tekan>
       }
     >
       {pesanGalat(error)}

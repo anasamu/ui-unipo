@@ -35,6 +35,7 @@ import { PilihDosenBersyarat } from './aturan-fakultas';
 import { invalidateSiakad, pesanGalat, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
 import { LabelProdi, namaRapi } from './prodi';
 import { IsianBerkas, TombolPilihBerkas } from '../components/pilih-berkas-lokal';
+import { Tekan } from '../components/tekan';
 
 /*
  * Tugas akhir/skripsi (/v1/ta) dan syarat kelulusan mahasiswa (/v1/kelulusan): mahasiswa mengajukan judul dengan
@@ -498,9 +499,9 @@ function BerkasPengajuan({ pengajuan, daftar, bolehUbah }: { pengajuan: Pengajua
                 {ada.map((b) => (
                   <li key={b.id}>
                     <FileText aria-hidden />
-                    <button type="button" className="u-ta-tautan" onClick={() => void lihat(b, true)}>
+                    <Tekan className="u-ta-tautan" onClick={() => void lihat(b, true)}>
                       {b.nama}
-                    </button>
+                    </Tekan>
                     <span className="u-ta-redup">{ukuran(b.ukuran)}</span>
                     <Button variant="ghost" size="sm" iconOnly aria-label={`Unduh ${b.nama}`} onClick={() => void lihat(b, false)}>
                       <Download />
@@ -1005,7 +1006,7 @@ export function DaftarValidasiJudul({ awal = 'saya', className }: DaftarValidasi
         <ul className="u-ta-daftar">
           {baris.map((r) => (
             <li key={r.id}>
-              <button type="button" onClick={() => setBuka(r)}>
+              <Tekan onClick={() => setBuka(r)}>
                 <div className="u-ta-daftar-utama">
                   <strong>{r.judul}</strong>
                   <span className="u-ta-redup">
@@ -1019,7 +1020,7 @@ export function DaftarValidasiJudul({ awal = 'saya', className }: DaftarValidasi
                   </Badge>
                   <span className="u-ta-redup">{tgl(r.diajukan_at ?? r.created_at)}</span>
                 </div>
-              </button>
+              </Tekan>
             </li>
           ))}
         </ul>

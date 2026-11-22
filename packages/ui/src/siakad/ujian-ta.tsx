@@ -40,6 +40,7 @@ import { IsianAngka, IsianJam } from '../components/isian-angka';
 import { IsianTanggal } from '../components/formulir';
 import { keAngka, teksAngka } from '../lib/angka';
 import { IsianBerkas } from '../components/pilih-berkas-lokal';
+import { Tekan } from '../components/tekan';
 
 /*
  * Ujian tugas akhir (/v1/ta/ujian, SIAKAD docs/UJIAN-TA.md): ujian proposal, seminar hasil, sidang skripsi dalam satu
@@ -1072,9 +1073,9 @@ export function FormJadwalUjianTa({ u, open, onOpenChange }: { u: UjianTa | null
               {saran.length === 0 && <li className="u-ta-redup">Tidak ada slot kosong bersama dalam 10 hari kerja.</li>}
               {saran.map((s) => (
                 <li key={`${s.tanggal}${s.mulai}`}>
-                  <button type="button" onClick={() => setF((o) => ({ ...o, tanggal: s.tanggal, mulai: s.mulai, selesai: s.selesai, ruang: s.ruang_kode, daring: false }))}>
+                  <Tekan onClick={() => setF((o) => ({ ...o, tanggal: s.tanggal, mulai: s.mulai, selesai: s.selesai, ruang: s.ruang_kode, daring: false }))}>
                     {tglPendek(s.tanggal)} {s.mulai}–{s.selesai} · {s.ruang_nama}
-                  </button>
+                  </Tekan>
                 </li>
               ))}
             </ul>
@@ -1493,7 +1494,7 @@ export function AgendaUjianTa({ untuk = 'kelola' }: { untuk?: 'kelola' | 'saya' 
                   .filter((u) => (u.daring ? 'Daring' : (u.ruang?.nama ?? '-')) === r)
                   .map((u) => (
                     <li key={u.id}>
-                      <button type="button" onClick={() => setBuka(u.id)}>
+                      <Tekan onClick={() => setBuka(u.id)}>
                         <strong>
                           {tglPendek(u.tanggal)} {u.mulai}–{u.selesai}
                         </strong>
@@ -1501,7 +1502,7 @@ export function AgendaUjianTa({ untuk = 'kelola' }: { untuk?: 'kelola' | 'saya' 
                           {u.jenis_label}: {u.nama}
                         </span>
                         <LencanaStatusUjianTa u={u} />
-                      </button>
+                      </Tekan>
                     </li>
                   ))}
               </ul>

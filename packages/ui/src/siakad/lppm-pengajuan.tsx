@@ -31,6 +31,7 @@ import { useUnggahBerkas } from './berkas';
 import { GalatApi } from './galat';
 import { invalidateSiakad, pesanGalat, useSaatInvalidasi, useSiakad, useSiakadQuery } from './provider';
 import { TombolPilihBerkas } from '../components/pilih-berkas-lokal';
+import { Tekan } from '../components/tekan';
 
 /*
  * Pengajuan ke LP2M (API SIAKAD /v1/lppm) yang sama di semua aplikasi:
@@ -860,10 +861,10 @@ export function VerifikasiProposalKkn({ status: statusAwal = 'diajukan', classNa
     <div className={cn('u-lppm', className)}>
       <div className="u-lppm-rekap">
         {(['diajukan', 'revisi', 'diterima', 'ditolak'] as StatusProposalKkn[]).map((s) => (
-          <button key={s} type="button" className="u-lppm-rekap-kotak" data-aktif={status === s || undefined} data-nada={NADA_PROPOSAL[s]} onClick={() => setStatus(s)}>
+          <Tekan key={s} className="u-lppm-rekap-kotak" terpilih={status === s} data-aktif={status === s || undefined} data-nada={NADA_PROPOSAL[s]} onClick={() => setStatus(s)}>
             <span>{LABEL_STATUS_PROPOSAL_KKN[s]}</span>
             <strong>{r ? r[s] : '–'}</strong>
-          </button>
+          </Tekan>
         ))}
       </div>
       <DataTable<ProposalKkn>

@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { cn, dataFlag } from '../lib/cn';
+import { cn } from '../lib/cn';
 
 // ---------------------------------------------------------------- Tekan
 // Satu komponen untuk permukaan yang bisa diklik: kartu, baris daftar, chip, petak, tautan berbentuk kartu.
@@ -83,9 +83,6 @@ export function propsTekan(o: OpsiTekan) {
   const props: Record<string, unknown> = {
     ...ariaTerpilih(peran, o.terpilih),
     'aria-current': kini,
-    'data-terpilih': dataFlag(o.terpilih),
-    'data-kini': dataFlag(!!kini),
-    'data-disabled': dataFlag(o.disabled),
   };
   if (asli) {
     props.type = o.type ?? 'button';
@@ -148,4 +145,21 @@ export function Tekan({ bentuk = 'polos', elemen, role, href, target, rel, downl
     className: cn('u-tekan', className),
     'data-bentuk': bentuk,
   });
+}
+
+/**
+ * Atribut untuk wadah yang seluruhnya bisa diklik tetapi harus tetap memakai elemen/peran strukturnya sendiri
+ * (baris tabel `<tr>`, butir daftar `role="listitem"`, kartu berisi checkbox + menu ⋯): fokus Tab, Enter/Space,
+ * dan klik dari elemen anak interaktif tidak memicu dua kali. Tanpa `onClick` → objek kosong.
+ *
+ * ```tsx
+ * <tr {...propsKlikWadah(onRowClick && (() => onRowClick(row)))}>…</tr>
+ * ```
+ */
+export function propsKlikWadah(onClick: (() => void) | undefined | false, opsi: { role?: React.AriaRole; terpilih?: boolean; disabled?: boolean } = {}): React.HTMLAttributes<HTMLElement> {
+  if (!onClick) return {};
+  const p = propsTekan({ elemen: 'div', role: opsi.role ?? 'button', terpilih: opsi.terpilih, disabled: opsi.disabled, onClick: () => onClick() });
+  // Peran struktural (row/listitem) dipertahankan oleh elemen pemanggil: jangan kirim role yang sama dua kali.
+  if (!opsi.role) delete p.role;
+  return Object.fromEntries(Object.entries(p).filter(([, v]) => v !== undefined)) as React.HTMLAttributes<HTMLElement>;
 }

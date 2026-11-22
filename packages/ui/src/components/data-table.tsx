@@ -22,6 +22,7 @@ import { Select } from './select';
 import { ConfirmDialog, Menu, Popover, Tooltip, type MenuEntry } from './overlays';
 import { Empty, Pagination, SortButton } from './display';
 import { SelPohon, TombolPohon, susunPohon, usePohon, type NodePohon } from './pohon';
+import { propsKlikWadah } from './tekan';
 
 // ================================================================ Tipe
 export interface DataColumn<T> {
@@ -610,18 +611,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                 className="u-dt-grid-item"
                 data-selected={dataFlag(selected.includes(k))}
                 data-clickable={dataFlag(Boolean(onRowClick))}
-                tabIndex={onRowClick ? 0 : undefined}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
-                onKeyDown={
-                  onRowClick
-                    ? (e) => {
-                        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
-                          e.preventDefault();
-                          onRowClick(row);
-                        }
-                      }
-                    : undefined
-                }
+                {...propsKlikWadah(onRowClick && (() => onRowClick(row)))}
               >
                 {grid(row, i)}
                 {(selectable || rowActions) && (
@@ -676,7 +666,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                 className="u-dt-card"
                 data-selected={dataFlag(selected.includes(k))}
                 data-clickable={dataFlag(Boolean(onRowClick))}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                {...propsKlikWadah(onRowClick && (() => onRowClick(row)))}
               >
                 <div className="u-dt-card-head">
                   {selectable && (
@@ -775,7 +765,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                     key={k}
                     data-selected={dataFlag(sel)}
                     data-clickable={dataFlag(Boolean(onRowClick))}
-                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    {...propsKlikWadah(onRowClick && (() => onRowClick(row)))}
                     aria-level={tree ? (nodeOf.get(k)?.depth ?? 0) + 1 : undefined}
                     data-tree-depth={tree ? (nodeOf.get(k)?.depth ?? 0) : undefined}
                   >

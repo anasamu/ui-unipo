@@ -1040,6 +1040,9 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  // <button> tidak melebar sendiri seperti <div>.
+  width: calc(100% - 1.5rem);
+  text-align: start;
   margin: 0.75rem 0.75rem 0.25rem;
   padding: 0.75rem;
   border: 1px dashed var(--u-border-strong);
