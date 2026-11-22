@@ -540,20 +540,25 @@ export function KelolaAturanFakultas({ kodeFakultas, judul = 'Aturan fakultas', 
   const dekan = d.penyetuju.orang.filter((o) => o.sebagai.includes('Dekan'));
   return (
     <div className={cn('u-aturan-modul u-aturan-fak', className)}>
-      <div className="u-aturan-modul-kepala">
-        <div>
-          <h2>{judul}</h2>
-          <p>
-            Syarat dosen PA, pembimbing, dan penguji di {rapikanNamaUnit(d.fakultas.nama)}. Aturan ini hanya berlaku untuk mahasiswa dan prodi fakultas ini,
-            diperiksa bersama aturan universitas: semua harus terpenuhi.
-          </p>
+      {/* judul={null}: kepala halaman aplikasi sudah memuat judul & keterangan; hanya tombol yang tampil (rata kanan). */}
+      {(judul !== null || d.boleh_atur) && (
+        <div className="u-aturan-modul-kepala" data-tanpa-judul={judul === null ? '' : undefined}>
+          {judul !== null && (
+            <div>
+              <h2>{judul}</h2>
+              <p>
+                Syarat dosen PA, pembimbing, dan penguji di {rapikanNamaUnit(d.fakultas.nama)}. Aturan ini hanya berlaku untuk mahasiswa dan prodi fakultas ini,
+                diperiksa bersama aturan universitas: semua harus terpenuhi.
+              </p>
+            </div>
+          )}
+          {d.boleh_atur && (
+            <Button onClick={() => setForm({ aturan: null })}>
+              <Plus /> Tambah aturan
+            </Button>
+          )}
         </div>
-        {d.boleh_atur && (
-          <Button onClick={() => setForm({ aturan: null })}>
-            <Plus /> Tambah aturan
-          </Button>
-        )}
-      </div>
+      )}
 
       <section className="u-aturan-fak-panduan" aria-label="Cara mengikuti aturan bawaan fakultas">
         <p className="u-aturan-di-titik-label">

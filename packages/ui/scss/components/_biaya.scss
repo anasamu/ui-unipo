@@ -14,6 +14,9 @@
   gap: 1rem;
   min-width: 0;
 }
+.u-biaya-kelola-kepala[data-tanpa-judul] {
+  justify-content: flex-end;
+}
 .u-biaya-kelola-kepala,
 .u-biaya-detail-kepala {
   display: flex;

@@ -297,3 +297,8 @@
     font-weight: 500;
   }
 }
+
+// judul={null}: hanya tombol aksi, rata kanan.
+.u-wisuda-kepala[data-tanpa-judul] {
+  justify-content: flex-end;
+}
