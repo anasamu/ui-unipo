@@ -31,6 +31,7 @@ export * from './lms';
 export * from './cbt';
 export * from './cbt-pantau';
 export * from './akademik';
+export * from './komponen-akademik';
 export * from './navigasi';
 export * from './kerangka-portal';
 export * from './beranda';
