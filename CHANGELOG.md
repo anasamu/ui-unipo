@@ -1,14 +1,17 @@
 # Catatan perubahan
 
+## Belum dirilis (komponen akademik lanjutan; nomor versi diberikan saat digabung)
+
+- **Form isi KRS** (`siakad/komponen-akademik/isi-krs.tsx` baru; butuh SIAKAD dengan `POST /v1/mahasiswa/{nim}/krs/batal` dan jam kelas di penawaran/KRS): `FormIsiKrs` (daftar penawaran per semester, cari, pilih kelas, peringatan bentrok jadwal dari jam kelas, batas SKS dari server, aturan ber-SK), `PanelIsiKrs` bertahap di panel samping, dan `IsiKrsMahasiswa` yang terhubung ke SDK (ajukan ke dosen PA, batalkan mata kuliah yang belum disetujui). Server tetap memeriksa bentrok dan batas saat menyimpan.
+- **Skala nilai per periode** di transkrip dan KHS: huruf dihitung memakai skala yang berlaku pada periode mata kuliah diambil.
+- **Menit per SKS dari aturan kurikulum**: `JadwalMingguan` membaca `GET /v1/referensi/beban-sks` (hook `useBebanSks`, prop `kodeProdi`) untuk tinggi sesi tanpa jam selesai; bawaan 50 menit bila aturan belum mengatur atau tidak ada SDK. Isian aturan kurikulum mendapat kolom menit tatap muka per SKS.
+- Uji `packages/ui/test/komponen-akademik-lanjut.test.tsx`; contoh di galeri Komponen akademik.
+
 ## 1.54.0 (belum dirilis)
 
 - **Kelola berkas: tab tambahan aplikasi + buka dari luar** (`siakad/berkas-cepat.tsx`, `scss/components/_kerangka-aplikasi.scss`; tanpa perubahan SIAKAD): `TombolBerkas`/`KerangkaAplikasi berkas` prop baru `tab: TabKelolaBerkas[]` (`value`, `label`, `icon`, `count`, `content`) yang tampil sebagai tab setelah tab bawaan **Berkas** (file manager) di dialog Kelola berkas; isinya dirender hanya saat aktif, di wadah yang dapat digulir, dan tab bersarang di dalamnya otomatis vertikal. `bukaKelolaBerkas({ tab, ruang })` membuka dialog dari luar bilah atas (mis. rute lama yang dialihkan); permintaan sebelum bilah atas terpasang ditunda lalu dijalankan sekali (`dengarKelolaBerkas`). Pengguna tanpa akses berkas pribadi: ikon tetap tersembunyi, tetapi tab tambahan tetap bisa dibuka lewat `bukaKelolaBerkas`. `tabKelolaAktif` memilih tab (tab tak dikenal kembali ke file manager). Dipakai Fakultas untuk tab **Arsip** (arsip unit, verifikasi dokumen dosen/mahasiswa, arsip pribadi). Uji `packages/ui/test/kelola-berkas-tab.test.tsx`.
 
 ## 1.53.0 (2026-11-22)
-
-- 
-
-## 1.53.0 (belum dirilis)
 
 - **Tata kelola aturan hanya di Pustikom + judul bagian tidak ganda** (`siakad/aturan.tsx`, `aturan-sk.tsx`, `aturan-keputusan.tsx`, `biaya.tsx`, `aturan-fakultas.tsx`; butuh SIAKAD branch fix/aturan-tatakelola untuk penolakan server `403 diatur_di_pustikom` dan tautan `pengatur`/`penyetuju` di `GET /v1/aturan/kebijakan/jenis`; keputusan Anas 2026-11-22):
   - `PengaturAturan`, `PejabatPenyetujuAturan`, `ValidatorAturan`: prop baru `hanyaBaca` (tanpa tombol Atur/Ubah/Tambah/Hapus, dengan satu baris `CatatanDiaturPustikom` "Diatur di Pustikom » … · Buka di Pustikom") dan `kategori` (saring ke kategori aturan milik aplikasi; rantai validator "semua jenis aturan" tetap tampil).

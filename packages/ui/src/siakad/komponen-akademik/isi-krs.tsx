@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { BookOpen, CalendarClock, CircleAlert, ClipboardCheck, Lock, Search, Sparkles, TriangleAlert, Undo2 } from 'lucide-react';
+import { BookOpen, CalendarClock, CircleAlert, ClipboardCheck, ListPlus, Lock, Search, TriangleAlert, Undo2 } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { Badge, Button } from '../../components/actions';
 import { Alert, Empty } from '../../components/display';
@@ -593,7 +593,7 @@ export function IsiKrsMahasiswa({ nim, kodeProdi, className }: IsiKrsMahasiswaPr
         aksi={
           boleh ? (
             <Button onClick={() => setBuka(true)} disabled={!penawaran}>
-              <Sparkles aria-hidden /> {krs.data?.mata_kuliah?.length ? 'Tambah mata kuliah' : 'Isi KRS'}
+              <ListPlus aria-hidden /> {krs.data?.mata_kuliah?.length ? 'Tambah mata kuliah' : 'Isi KRS'}
             </Button>
           ) : undefined
         }
