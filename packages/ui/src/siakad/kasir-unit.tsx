@@ -1838,6 +1838,8 @@ export function PengaturanKasirUnit({ unitId: unitIdProp, unitKode, judul, tabAw
   // ?tab=loket dari tautan notifikasi "Perangkat kasir menunggu persetujuan".
   const tabUrl = typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('tab') as TabKasirUnit | null) : null;
   const tabMula: TabKasirUnit = tabAwal ?? (tabUrl && ['jenis', 'loket', 'aturan', 'jadwal', 'templat'].includes(tabUrl) ? tabUrl : 'jenis');
+  // Pengguna berlingkup banyak unit (BAUK) tanpa unit aplikasi memilih unit yang diatur.
+  const [unitPilih, setUnitPilih] = React.useState<string>('');
   const q = useSiakadQuery<KasirKelolaSaya>([`${API}/saya`], (s, signal) => s.request({ method: 'GET', path: `${API}/saya` }, { signal }), { staleTime: 5 * 60_000 });
   const kepala = judul ? <h2 className="u-ksu-judul">{judul}</h2> : null;
   if (q.error) {
@@ -1869,7 +1871,9 @@ export function PengaturanKasirUnit({ unitId: unitIdProp, unitKode, judul, tabAw
   const saya = q.data;
   const kode = unitKode?.trim().toUpperCase();
   const unitKodeId = kode ? saya.unit.find((u) => (u.kode ?? '').toUpperCase() === kode)?.id : undefined;
-  const unitId = unitIdProp ?? unitKodeId ?? saya.unit_aplikasi ?? undefined;
+  const unitTetap = unitIdProp ?? unitKodeId ?? saya.unit_aplikasi ?? undefined;
+  const unitId = unitTetap ?? (unitPilih ? Number(unitPilih) : undefined);
+  const unitBisaDipilih = saya.unit.filter((u) => u.id !== saya.bauk_id);
   if (kode && unitIdProp == null && unitKodeId == null)
     return (
       <div className={cn('u-ksu', className)}>
@@ -1893,10 +1897,26 @@ export function PengaturanKasirUnit({ unitId: unitIdProp, unitKode, judul, tabAw
   return (
     <div className={cn('u-ksu', className)}>
       {kepala}
-      <p className="u-ksu-lingkup">
-        <ListChecks aria-hidden />
-        <span>Lingkup: {saya.lintas && unitId == null ? 'semua unit' : lingkup.slice(0, 6).join(' · ') + (lingkup.length > 6 ? ` · +${lingkup.length - 6} unit` : '')}</span>
-      </p>
+      {unitTetap == null && unitBisaDipilih.length > 1 ? (
+        <div className="u-ksu-pilih-unit">
+          <Field label="Unit yang diatur" description="Kelima tab ditampilkan untuk unit ini; jenis biaya baru memakai unit ini sebagai penerbit.">
+            <Select<string>
+              value={unitPilih}
+              onValueChange={(x) => setUnitPilih(x ?? '')}
+              aria-label="Unit yang diatur"
+              options={[
+                { value: '', label: saya.lintas ? 'Semua unit' : 'Semua unit dalam lingkup saya' },
+                ...unitBisaDipilih.map((u) => ({ value: String(u.id), label: u.singkatan ? `${u.singkatan} · ${namaRapi(u.nama)}` : namaRapi(u.nama), description: u.kode })),
+              ]}
+            />
+          </Field>
+        </div>
+      ) : (
+        <p className="u-ksu-lingkup">
+          <ListChecks aria-hidden />
+          <span>Lingkup: {saya.lintas && unitId == null ? 'semua unit' : lingkup.slice(0, 6).join(' · ') + (lingkup.length > 6 ? ` · +${lingkup.length - 6} unit` : '')}</span>
+        </p>
+      )}
       <Tabs<TabKasirUnit>
         defaultValue={tabMula}
         items={[
