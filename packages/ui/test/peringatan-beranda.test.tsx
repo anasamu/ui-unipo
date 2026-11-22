@@ -17,8 +17,8 @@ const jenis: JenisPeringatan[] = [
 describe('PeringatanBeranda', () => {
   it('urut: tingkat dulu, lalu tenggat terdekat; jenis kosong dibuang; butir urut tenggat', () => {
     const u = urutPeringatan(jenis);
-    expect(u.map((j) => j.key)).toEqual(['akred-habis', 'akred-segera', 'krs', 'info']);
-    expect(u[1].butir.map((b) => b.key)).toEqual(['a', 'b']);
+    expect(u.map((j) => j.key)).toEqual(['akred-habis', 'krs', 'akred-segera', 'info']);
+    expect(u[2].butir.map((b) => b.key)).toEqual(['a', 'b']);
   });
 
   it('status tenggat dalam bahasa awam', () => {
@@ -35,6 +35,14 @@ describe('PeringatanBeranda', () => {
     expect(h).toContain('2 prodi');
     expect(h).toContain('Lihat semua (5)');
     expect(h).not.toContain('>Info<');
+  });
+
+  it('kartu bergeser bertanda slide berposisi dan wilayah status untuk pembaca layar', () => {
+    const h = renderToStaticMarkup(<PeringatanBeranda jenis={jenis} kini={kini} />);
+    expect(h).toContain('aria-roledescription="slide"');
+    expect(h).toContain('aria-label="1 dari 3: Akreditasi habis"');
+    expect(h).toContain('role="status"');
+    expect(h).not.toContain('<button type="button" class="u-peringatan-lagi"');
   });
 
   it('tanpa peringatan merender `kosong`', () => {

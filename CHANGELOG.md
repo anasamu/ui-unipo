@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## 1.52.0 (belum dirilis)
+
+- **Peringatan beranda berlingkup** (`siakad/peringatan-beranda.tsx` baru, `scss/components/_peringatan-beranda.scss`): `PeringatanBeranda` menggabungkan peringatan sejenis dalam satu kartu ringkas ("Akreditasi habis · 2 prodi"), urut paling mendesak (tingkat, lalu tenggat terdekat), maks 3 jenis + "Lihat semua" (panel samping atau `hrefSemua`). Di layar sempit kartu menjadi slide scroll-snap: tiap kartu `role=group` berlabel posisi ("1 dari 3"), tombol sebelum/berikut menggeser ke kartu tetangga dari posisi gulir sebenarnya, wilayah status mengumumkan kartu setelah geser berhenti (`scrollend`, cadangan `scroll` tertunda), fokus pindah ke tombol lawan saat tombol menjadi nonaktif, `overscroll-behavior-x: contain`, gerak halus hanya tanpa `prefers-reduced-motion`. Lingkup data wajib disaring server. Uji `packages/ui/test/peringatan-beranda.test.tsx`.
+
 ## 1.51.0 (belum dirilis)
 
 - **Versi disamakan** (`npm run versi -- 1.51.0`): `unipo-ui-tokens` dan paket akar ikut 1.51.0 (sebelumnya 1.50.0), dependensi `unipo-ui` → `unipo-ui-tokens` 1.51.0.

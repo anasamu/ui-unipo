@@ -91,6 +91,9 @@
     grid-auto-columns: calc((100% - var(--u-space-3, 0.75rem)) / 2);
     overflow-x: auto;
     scroll-snap-type: x mandatory;
+    // Gulir yang mencapai ujung tetap di kartu, tidak menggulir halaman (hanya sumbu geser).
+    overscroll-behavior-x: contain;
+    touch-action: manipulation;
     scrollbar-width: none;
     &::-webkit-scrollbar {
       display: none;
@@ -108,6 +111,9 @@
     grid-auto-columns: 86%;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
+    // Gulir yang mencapai ujung tetap di kartu, tidak menggulir halaman (hanya sumbu geser).
+    overscroll-behavior-x: contain;
+    touch-action: manipulation;
     scroll-padding-inline: 0;
     scrollbar-width: none;
     &::-webkit-scrollbar {
@@ -296,8 +302,9 @@
     padding-inline: var(--u-space-3, 0.75rem);
   }
 }
-@media (prefers-reduced-motion: reduce) {
+// Gerak halus hanya bila pengguna tidak meminta gerak dikurangi.
+@media (prefers-reduced-motion: no-preference) {
   .u-peringatan-geser {
-    scroll-behavior: auto;
+    scroll-behavior: smooth;
   }
 }

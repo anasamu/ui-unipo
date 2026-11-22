@@ -144,7 +144,11 @@ function KartuJenis({ j, maksButir, kini, renderLink, onSemua, posisi }: { j: Je
   const tampil = j.butir.slice(0, maksButir);
   const sisa = j.butir.length - tampil.length;
   return (
-    <article className="u-peringatan-kartu" data-tingkat={j.tingkat} aria-labelledby={id} aria-roledescription={posisi ? 'slide' : undefined} aria-label={posisi}>
+    <article
+      className="u-peringatan-kartu"
+      data-tingkat={j.tingkat}
+      {...(posisi ? { role: 'group', 'aria-roledescription': 'slide', 'aria-label': `${posisi}: ${j.judul}` } : { 'aria-labelledby': id })}
+    >
       <header className="u-peringatan-kepala">
         <span className="u-peringatan-ikon" aria-hidden>
           {j.ikon ?? IKON[j.tingkat]}
@@ -164,9 +168,9 @@ function KartuJenis({ j, maksButir, kini, renderLink, onSemua, posisi }: { j: Je
       {(j.href || sisa > 0) && (
         <footer className="u-peringatan-kaki">
           {sisa > 0 ? (
-            <button type="button" className="u-peringatan-lagi" onClick={onSemua}>
+            <Button size="sm" variant="link" className="u-peringatan-lagi" onClick={onSemua}>
               +{angka(sisa)} {j.satuan ?? 'butir'} lainnya
-            </button>
+            </Button>
           ) : (
             <span />
           )}
@@ -188,6 +192,10 @@ export function PeringatanBeranda({ jenis, maks = 3, maksButir = 3, judul = 'Per
   const [buka, setBuka] = React.useState(false);
   const geser = React.useRef<HTMLDivElement>(null);
   const [ujung, setUjung] = React.useState({ awal: true, akhir: true });
+  const [umum, setUmum] = React.useState('');
+  const sebelum = React.useRef<HTMLButtonElement>(null);
+  const berikut = React.useRef<HTMLButtonElement>(null);
+  const terakhir = React.useRef<number | null>(null);
   const tampil = urut.slice(0, maks);
   const totalButir = urut.reduce((n, j) => n + j.butir.length, 0);
   const terpotong = urut.length > tampil.length || tampil.some((j) => j.butir.length > maksButir);
@@ -196,15 +204,44 @@ export function PeringatanBeranda({ jenis, maks = 3, maksButir = 3, judul = 'Per
     const el = geser.current;
     if (!el) return;
     const hitung = () => setUjung({ awal: el.scrollLeft <= 4, akhir: el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 });
+    // Setelah geser berhenti: perbarui tombol dan umumkan slide yang terlihat (hanya bila berubah, tidak saat dimuat).
+    const tenang = () => {
+      hitung();
+      const kartu = [...el.querySelectorAll<HTMLElement>(':scope > .u-peringatan-kartu')];
+      if (kartu.length < 2) return;
+      const awal = el.getBoundingClientRect().left;
+      let i = 0;
+      kartu.forEach((k, n) => {
+        if (Math.abs(k.getBoundingClientRect().left - awal) < Math.abs(kartu[i].getBoundingClientRect().left - awal)) i = n;
+      });
+      if (terakhir.current !== null && terakhir.current !== i) setUmum(`Peringatan ${i + 1} dari ${kartu.length}`);
+      terakhir.current = i;
+    };
     hitung();
-    el.addEventListener('scroll', hitung, { passive: true });
+    terakhir.current = 0;
+    const adaScrollend = typeof window !== 'undefined' && 'onscrollend' in window;
+    let tunda: ReturnType<typeof setTimeout> | undefined;
+    const geserLama = () => {
+      clearTimeout(tunda);
+      tunda = setTimeout(tenang, 120);
+    };
+    if (adaScrollend) el.addEventListener('scrollend', tenang);
+    else el.addEventListener('scroll', geserLama, { passive: true });
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(hitung) : null;
     ro?.observe(el);
     return () => {
-      el.removeEventListener('scroll', hitung);
+      if (adaScrollend) el.removeEventListener('scrollend', tenang);
+      else el.removeEventListener('scroll', geserLama);
+      clearTimeout(tunda);
       ro?.disconnect();
     };
   }, [tampil.length]);
+
+  // Tombol yang menjadi nonaktif saat difokus: pindahkan fokus ke tombol lawannya.
+  React.useEffect(() => {
+    if (ujung.awal && document.activeElement === sebelum.current) berikut.current?.focus();
+    if (ujung.akhir && document.activeElement === berikut.current) sebelum.current?.focus();
+  }, [ujung]);
 
   if (loading) {
     return (
@@ -222,11 +259,18 @@ export function PeringatanBeranda({ jenis, maks = 3, maksButir = 3, judul = 'Per
   }
   if (!urut.length) return <>{kosong}</>;
 
+  // Geser ke kartu tetangga dari posisi gulir sebenarnya (bukan lebar tetap); gerak halus diatur CSS (hormati reduced motion).
   const langkah = (arah: 1 | -1) => {
     const el = geser.current;
-    const kartu = el?.querySelector<HTMLElement>('.u-peringatan-kartu');
-    if (el && kartu) el.scrollBy({ left: arah * (kartu.offsetWidth + 12), behavior: 'smooth' });
+    if (!el) return;
+    const awal = el.getBoundingClientRect().left;
+    const kartu = [...el.querySelectorAll<HTMLElement>(':scope > .u-peringatan-kartu')];
+    const jarak = kartu.map((k) => k.getBoundingClientRect().left - awal);
+    const kini = jarak.reduce((m, d, n) => (Math.abs(d) < Math.abs(jarak[m]) ? n : m), 0);
+    const tujuan = Math.min(kartu.length - 1, Math.max(0, kini + arah));
+    el.scrollBy({ left: jarak[tujuan] });
   };
+
   const bisaGeser = !(ujung.awal && ujung.akhir);
   const semua = hrefSemua ? (
     <Tautan className="u-peringatan-semua" href={hrefSemua} renderLink={renderLink}>
@@ -239,7 +283,7 @@ export function PeringatanBeranda({ jenis, maks = 3, maksButir = 3, judul = 'Per
   );
 
   return (
-    <section className={cn('u-peringatan', className)} aria-label={typeof judul === 'string' ? judul : undefined}>
+    <section className={cn('u-peringatan', className)} aria-label={typeof judul === 'string' ? judul : undefined} aria-roledescription={bisaGeser ? 'carousel' : undefined}>
       <div className="u-peringatan-head">
         <div className="u-peringatan-head-teks">
           <h2 className="u-peringatan-judul">{judul}</h2>
@@ -252,10 +296,10 @@ export function PeringatanBeranda({ jenis, maks = 3, maksButir = 3, judul = 'Per
         <div className="u-peringatan-head-aksi">
           {bisaGeser && (
             <span className="u-peringatan-nav">
-              <Button size="sm" iconOnly variant="outline" aria-label="Peringatan sebelumnya" disabled={ujung.awal} onClick={() => langkah(-1)}>
+              <Button ref={sebelum} size="sm" iconOnly variant="outline" aria-label="Peringatan sebelumnya" disabled={ujung.awal} onClick={() => langkah(-1)}>
                 <ChevronLeft />
               </Button>
-              <Button size="sm" iconOnly variant="outline" aria-label="Peringatan berikutnya" disabled={ujung.akhir} onClick={() => langkah(1)}>
+              <Button ref={berikut} size="sm" iconOnly variant="outline" aria-label="Peringatan berikutnya" disabled={ujung.akhir} onClick={() => langkah(1)}>
                 <ChevronRight />
               </Button>
             </span>
@@ -263,11 +307,14 @@ export function PeringatanBeranda({ jenis, maks = 3, maksButir = 3, judul = 'Per
           {terpotong && semua}
         </div>
       </div>
-      <div ref={geser} className="u-peringatan-geser" data-jumlah={tampil.length} role="region" aria-roledescription="carousel" aria-label="Daftar peringatan" tabIndex={bisaGeser ? 0 : undefined}>
+      <div ref={geser} className="u-peringatan-geser" data-jumlah={tampil.length} role="group" aria-label="Daftar peringatan" tabIndex={bisaGeser ? 0 : undefined}>
         {tampil.map((j, i) => (
           <KartuJenis key={j.key} j={j} maksButir={maksButir} kini={kini} renderLink={renderLink} onSemua={() => setBuka(true)} posisi={tampil.length > 1 ? `${i + 1} dari ${tampil.length}` : undefined} />
         ))}
       </div>
+      <p className="u-sr-only" role="status" aria-live="polite">
+        {umum}
+      </p>
       {!hrefSemua && (
         <Sheet open={buka} onOpenChange={setBuka} title={typeof judul === 'string' ? `Semua ${judul.toLowerCase()}` : 'Semua peringatan'} description={`${angka(urut.length)} jenis, ${angka(totalButir)} butir, urut paling mendesak`} size="md">
           <div className="u-peringatan-semua-isi">
