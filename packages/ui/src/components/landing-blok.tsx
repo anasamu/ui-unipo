@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { ArrowRight, CheckCircle2, Clock, ExternalLink, Mail, MapPin, MessageCircle, Phone, Puzzle } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Clock, ExternalLink, Mail, MapPin, MessageCircle, Phone, Puzzle, Search } from 'lucide-react';
 import { cn, dataFlag } from '../lib/cn';
 import { Badge, Button, type ButtonVariant } from './actions';
 import { Animasi } from './animasi';
@@ -259,13 +259,19 @@ function Ikon({ nama }: { nama: unknown }) {
 
 function BlokHero({ isi }: { isi: IsiBlok }) {
   const { berkas, slot, pratinjau } = React.useContext(KonteksLanding);
+  const tautan = useTautan();
   const tata = s(isi.tata) || 'belah';
   const gambar = gambarAman(isi.gambar, berkas);
-  const media = tata === 'tengah' ? 'tanpa' : s(isi.media) || 'ilustrasi';
+  const media = tata === 'belah' ? s(isi.media) || 'ilustrasi' : 'tanpa';
   const angka = daftar<{ nilai?: string; label?: string }>(isi.angka).filter((a) => s(a.nilai));
-  const varian = tata === 'gambar' ? 'image' : tata === 'tengah' ? 'plain' : 'split';
+  const varian = tata === 'gambar' || tata === 'layar' || tata === 'kartu' ? 'image' : tata === 'tengah' || tata === 'cari' ? 'plain' : 'split';
+  const pintasan = daftar<{ ikon?: string; label?: string; url?: string }>(isi.pintasan).flatMap((p) => {
+    const t = tautan(p.url);
+    return s(p.label) && (t || pratinjau) ? [{ ...p, t }] : [];
+  });
+  const idCari = React.useId();
   return (
-    <div className="u-hero ul-hero" data-variant={varian} style={varian === 'image' && gambar ? ({ '--hero-image': cssUrl(gambar) } as React.CSSProperties) : undefined}>
+    <div className="u-hero ul-hero" data-variant={varian} data-tata={tata} style={varian === 'image' && gambar ? ({ '--hero-image': cssUrl(gambar) } as React.CSSProperties) : undefined}>
       <div className="u-hero-grid">
         <div className="u-hero-text">
           {s(isi.lencana) && (
@@ -285,6 +291,30 @@ function BlokHero({ isi }: { isi: IsiBlok }) {
             )}
           </h1>
           {s(isi.deskripsi) && <p className="u-hero-desc">{s(isi.deskripsi)}</p>}
+          {tata === 'cari' && (
+            <form role="search" className="ul-hero-cari" action={/^(\/(?!\/)|https?:)/.test(urlAman(isi.cari_url) ?? '') ? urlAman(isi.cari_url) : '/cari'} method="get" onSubmit={pratinjau ? (e) => e.preventDefault() : undefined}>
+              <label className="u-sr-only" htmlFor={idCari}>
+                {s(isi.cari_contoh) || 'Cari di situs ini'}
+              </label>
+              <Search aria-hidden />
+              <input id={idCari} type="search" name="q" placeholder={s(isi.cari_contoh) || 'Cari di situs ini'} autoComplete="off" enterKeyHint="search" />
+              <Button type="submit" size="lg">
+                Cari
+              </Button>
+            </form>
+          )}
+          {tata === 'cari' && pintasan.length > 0 && (
+            <ul className="ul-hero-pintasan" aria-label="Pintasan">
+              {pintasan.map((p, i) => (
+                <li key={i}>
+                  <a href={p.t?.href} onClick={p.t?.onClick}>
+                    <Ikon nama={p.ikon} />
+                    {s(p.label)}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
           <DeretTombol tombol={isi.tombol} className="u-hero-actions" />
           {s(isi.catatan) && <p className="ul-catatan">{s(isi.catatan)}</p>}
           {angka.length > 0 && (

@@ -122,7 +122,7 @@ interface KolomDasar {
 export type KolomBlok =
   | (KolomDasar & { jenis: 'teks'; maks: number; contoh?: string })
   | (KolomDasar & { jenis: 'paragraf'; maks: number; baris?: number; ringan?: boolean; contoh?: string })
-  | (KolomDasar & { jenis: 'url'; contoh?: string })
+  | (KolomDasar & { jenis: 'url'; contoh?: string; /** Boleh memilih berkas unduhan (berkas:<uuid>). */ berkas?: boolean })
   | (KolomDasar & { jenis: 'gambar' })
   | (KolomDasar & { jenis: 'pilihan'; opsi: Array<{ v: string; label: string }>; tampil?: 'segmen' | 'daftar' })
   | (KolomDasar & { jenis: 'angka'; min: number; max: number; langkah?: number; desimal?: boolean })
@@ -250,6 +250,10 @@ const daftarSosial = (k = 'sosial'): KolomBlok => ({
   ],
 });
 const teks = (v: unknown) => (typeof v === 'string' ? v : '');
+/** Tata hero yang memakai foto sebagai latar. */
+const TATA_FOTO = ['gambar', 'layar', 'kartu'];
+/** Tata hero berkolom teks + media. */
+const tataBelah = (i: IsiBlok) => !i.tata || i.tata === 'belah';
 
 // ---------------------------------------------------------------- definisi blok
 
@@ -270,16 +274,37 @@ export const SKEMA_BLOK: Record<TipeBlok, DefinisiBlok> = {
         k: 'tata',
         jenis: 'pilihan',
         label: 'Tata letak',
+        tampil: 'daftar',
         opsi: [
           { v: 'belah', label: 'Teks + media' },
           { v: 'tengah', label: 'Teks di tengah' },
           { v: 'gambar', label: 'Di atas foto' },
+          { v: 'layar', label: 'Foto selayar penuh' },
+          { v: 'kartu', label: 'Foto dengan kartu teks' },
+          { v: 'cari', label: 'Kotak cari + pintasan' },
         ],
       },
-      { k: 'media', jenis: 'pilihan', label: 'Media', opsi: [{ v: 'ilustrasi', label: 'Ilustrasi' }, { v: 'gambar', label: 'Gambar' }, { v: 'slot', label: 'Data aplikasi' }, { v: 'tanpa', label: 'Tanpa' }], bila: (i) => i.tata !== 'tengah' && i.tata !== 'gambar' },
-      { k: 'slot', jenis: 'slot', label: 'Bagian data di samping judul', bila: (i) => i.tata !== 'tengah' && i.tata !== 'gambar' && i.media === 'slot' },
-      { k: 'ilustrasi', jenis: 'ilustrasi', label: 'Ilustrasi', bila: (i) => i.tata !== 'tengah' && i.tata !== 'gambar' && (i.media ?? 'ilustrasi') === 'ilustrasi' },
-      { k: 'gambar', jenis: 'gambar', label: 'Gambar', bantuan: 'Mendatar, minimal lebar 1600 px untuk tata "Di atas foto".', bila: (i) => i.tata === 'gambar' || (i.tata !== 'tengah' && i.media === 'gambar') },
+      { k: 'media', jenis: 'pilihan', label: 'Media', opsi: [{ v: 'ilustrasi', label: 'Ilustrasi' }, { v: 'gambar', label: 'Gambar' }, { v: 'slot', label: 'Data aplikasi' }, { v: 'tanpa', label: 'Tanpa' }], bila: (i) => tataBelah(i) },
+      { k: 'slot', jenis: 'slot', label: 'Bagian data di samping judul', bila: (i) => tataBelah(i) && i.media === 'slot' },
+      { k: 'ilustrasi', jenis: 'ilustrasi', label: 'Ilustrasi', bila: (i) => tataBelah(i) && (i.media ?? 'ilustrasi') === 'ilustrasi' },
+      { k: 'gambar', jenis: 'gambar', label: 'Gambar', bantuan: 'Mendatar, minimal lebar 1600 px untuk tata bergambar penuh.', bila: (i) => TATA_FOTO.includes(String(i.tata)) || (tataBelah(i) && i.media === 'gambar') },
+      { k: 'cari_url', jenis: 'url', label: 'Halaman hasil cari', contoh: '/cari', bantuan: 'Kata kunci dikirim sebagai ?q=…', bila: (i) => i.tata === 'cari' },
+      { k: 'cari_contoh', jenis: 'teks', label: 'Teks contoh di kotak cari', maks: 80, contoh: 'Cari program studi, layanan, atau berita', bila: (i) => i.tata === 'cari' },
+      {
+        k: 'pintasan',
+        jenis: 'daftar',
+        label: 'Pintasan di bawah kotak cari',
+        maks: 6,
+        butir: 'pintasan',
+        judulButir: (b, i) => teks(b.label) || `Pintasan ${i + 1}`,
+        baru: () => ({ ikon: 'bintang', label: '', url: '' }),
+        bila: (i) => i.tata === 'cari',
+        kolom: [
+          { k: 'ikon', jenis: 'ikon', label: 'Ikon' },
+          { k: 'label', jenis: 'teks', label: 'Label', maks: 40 },
+          { k: 'url', jenis: 'url', label: 'Tujuan' },
+        ],
+      },
       {
         k: 'angka',
         jenis: 'daftar',

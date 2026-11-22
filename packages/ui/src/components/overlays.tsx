@@ -9,6 +9,7 @@ import { Toast as BaseToast } from '@base-ui/react/toast';
 import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { AkarTingkatTab } from '../lib/tingkat-tab';
+import { useWadahPortal } from '../lib/wadah-portal';
 import { usePlatform } from '../lib/platform';
 import { Button, Kbd, Spinner } from './actions';
 import { infoGalatDari, TombolLaporGalat, type InfoGalat } from './galat';
@@ -48,6 +49,7 @@ export interface DialogProps {
 export function Dialog({ open, defaultOpen, onOpenChange, trigger, title, description, footer, size = 'md', side: sideProp, children, className, initialFocus, finalFocus }: DialogProps) {
   // Di platform mobile dialog dan panel kanan menjadi lembar bawah (bottom sheet), kecuali ukuran penuh.
   const plat = usePlatform();
+  const wadah = useWadahPortal();
   const side = plat.mobile && size !== 'full' && sideProp !== 'left' ? 'bottom' : sideProp;
   const popup = (
     <BaseDialog.Popup className={cn(side ? 'u-sheet' : 'u-dialog', className)} data-size={size} data-side={side} initialFocus={initialFocus} finalFocus={finalFocus}>
@@ -70,7 +72,7 @@ export function Dialog({ open, defaultOpen, onOpenChange, trigger, title, descri
   return (
     <BaseDialog.Root open={open} defaultOpen={defaultOpen} onOpenChange={(o) => onOpenChange?.(o)}>
       {trigger && <BaseDialog.Trigger render={trigger} />}
-      <BaseDialog.Portal>
+      <BaseDialog.Portal container={wadah}>
         <BaseDialog.Backdrop className="u-backdrop" />
         {side ? popup : <BaseDialog.Viewport className="u-dialog-viewport">{popup}</BaseDialog.Viewport>}
       </BaseDialog.Portal>
@@ -235,10 +237,11 @@ export interface MenuProps {
 }
 /** Menu tarik-turun untuk aksi baris tabel, profil pengguna, dsb. */
 export function Menu({ trigger, items, align = 'end', side = 'bottom', openOnHover }: MenuProps) {
+  const wadah = useWadahPortal();
   return (
     <BaseMenu.Root>
       <BaseMenu.Trigger render={trigger} openOnHover={openOnHover} delay={openOnHover ? 80 : undefined} />
-      <BaseMenu.Portal>
+      <BaseMenu.Portal container={wadah}>
         <BaseMenu.Positioner className="u-popup-positioner" align={align} side={side} sideOffset={6}>
           <BaseMenu.Popup className="u-menu">
             {items.map((it, i) => {

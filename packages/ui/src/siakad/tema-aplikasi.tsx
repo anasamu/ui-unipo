@@ -9,6 +9,7 @@ import { ConfirmDialog, Dialog, useToast } from '../components/overlays';
 import { GalatApi } from './galat';
 import { PengaturanHalamanMasuk } from './pengaturan-masuk';
 import { KartuHalamanDepan, PenyuntingLanding } from './penyunting-landing';
+import { KartuKerangkaSitus, PenyuntingSitus } from './penyunting-situs';
 import { LANDING_APLIKASI } from '../components/landing-kit';
 import type { AksiLanding, SlotLanding } from '../components/landing-blok';
 import type { TataMasuk } from './halaman-masuk';
@@ -156,7 +157,7 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
   const [tab, setTab] = React.useState<'atur' | 'riwayat'>('atur');
   const [seluruh, setSeluruh] = React.useState(false);
   const [menyimpan, setMenyimpan] = React.useState(false);
-  const [sunting, setSunting] = React.useState(false);
+  const [sunting, setSunting] = React.useState<null | 'halaman' | 'situs'>(null);
   const [suntingBerubah, setSuntingBerubah] = React.useState(false);
   const [tanyaTutup, setTanyaTutup] = React.useState(false);
   const terdaftar = LANDING_APLIKASI[aplikasi];
@@ -369,7 +370,12 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
             )}
             {opsiLanding && (
               <Card className="u-tema-kartu">
-                <KartuHalamanDepan aplikasi={aplikasi} lingkup={lingkup} nama={typeof nama === 'string' ? nama : undefined} boleh={boleh} buka={() => setSunting(true)} />
+                <KartuHalamanDepan aplikasi={aplikasi} lingkup={lingkup} nama={typeof nama === 'string' ? nama : undefined} boleh={boleh} buka={() => setSunting('halaman')} />
+              </Card>
+            )}
+            {opsiLanding && (
+              <Card className="u-tema-kartu">
+                <KartuKerangkaSitus aplikasi={aplikasi} lingkup={lingkup} nama={typeof nama === 'string' ? nama : undefined} boleh={boleh} buka={() => setSunting('situs')} />
               </Card>
             )}
             {tataTambahan && <Card className="u-tema-kartu">{tataTambahan(tataBerlaku, ubahTata)}</Card>}
@@ -414,16 +420,31 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
       )}
       {opsiLanding && (
         <Dialog
-          open={sunting}
+          open={!!sunting}
           onOpenChange={(o) => {
-            if (o) return setSunting(true);
+            if (o) return;
             if (suntingBerubah) setTanyaTutup(true);
-            else setSunting(false);
+            else setSunting(null);
           }}
-          title={`Halaman depan ${typeof nama === 'string' ? nama : aplikasi}`}
+          title={`${sunting === 'situs' ? 'Kepala & kaki situs' : 'Halaman depan'} ${typeof nama === 'string' ? nama : aplikasi}`}
           size="full"
           className="upl-dialog"
         >
+          {sunting === 'situs' ? (
+            <PenyuntingSitus
+              aplikasi={aplikasi}
+              lingkup={lingkup}
+              nama={nama}
+              bawaan={opsiLanding.bawaan}
+              slot={opsiLanding.slot}
+              aksi={opsiLanding.aksi}
+              merek={opsiLanding.merek}
+              cssTema={buatTema({ ...berlaku, muatFont: false })}
+              boleh={boleh}
+              onBerubah={setSuntingBerubah}
+              onTutup={() => (suntingBerubah ? setTanyaTutup(true) : setSunting(null))}
+            />
+          ) : (
           <PenyuntingLanding
             aplikasi={aplikasi}
             lingkup={lingkup}
@@ -435,21 +456,22 @@ export function PengaturanTema<T extends Tata = Tata>({ aplikasi, lingkup, nama,
             cssTema={sunting ? buatTema({ ...berlaku, muatFont: false }) : undefined}
             boleh={boleh}
             onBerubah={setSuntingBerubah}
-            onTutup={() => (suntingBerubah ? setTanyaTutup(true) : setSunting(false))}
+            onTutup={() => (suntingBerubah ? setTanyaTutup(true) : setSunting(null))}
           />
+          )}
         </Dialog>
       )}
       <ConfirmDialog
         open={tanyaTutup}
         onOpenChange={setTanyaTutup}
         title="Tutup tanpa menyimpan?"
-        description="Perubahan halaman depan yang belum disimpan sebagai draf akan hilang."
+        description={`Perubahan ${sunting === 'situs' ? 'kepala dan kaki situs' : 'halaman depan'} yang belum disimpan sebagai draf akan hilang.`}
         confirmLabel="Tutup tanpa menyimpan"
         tone="warning"
         onConfirm={() => {
           setTanyaTutup(false);
           setSuntingBerubah(false);
-          setSunting(false);
+          setSunting(null);
         }}
       />
     </div>

@@ -1,8 +1,14 @@
 # Catatan perubahan
 
-## 1.64.0 (2026-11-22)
+## 1.65.0 (2026-11-22)
 
-- 
+- **Kerangka situs publik: kepala, menu utama, kaki, sidebar** (`components/situs.tsx`, `components/situs-skema.ts` baru; butuh SIAKAD dengan `GET /v1/tema/{aplikasi}/situs`): `KerangkaSitus` membungkus halaman publik aplikasi dengan pita pengumuman, bilah atas (kontak, jam layanan, tautan cepat, media sosial), navbar (gaya aplikasi/portal/ringkas, lengket, tembus pandang di atas hero foto, kotak cari, sampai dua tombol ajakan), menu utama tiga tingkat (tautan, dropdown, mega menu berkolom dengan kartu sorotan), sidebar halaman dalam (widget kabar dari portal Humas, tautan, teks, kontak, ajakan, cari) dan kaki situs berkolom dengan pita ajakan. Tujuan tautan: `/alamat`, `#bagian`, `https://`, `mailto:`, `tel:`, `aksi:<kunci>`, atau berkas publik. Tanpa HTML/CSS bebas; semua gaya dari token. Ada tautan "Lewati ke isi", `scroll-padding` untuk navbar lengket, dan gerak mengikuti `prefers-reduced-motion`.
+- `normalisasiSitus`, `situsBawaan()` (setara tampilan sebelum ada pengaturan), `PRESET_SITUS` (portal kampus, aplikasi, unit, pendaftaran), operasi pohon menu (`pindahButir`, `geserButir`, `menjorokButir`, `keluarkanButir`, `bentukMenu`, dll.).
+- **Penyunting situs** (`siakad/penyunting-situs.tsx`): bagian Pita, Bilah atas, Kepala situs, Menu utama, Kaki situs, Sidebar; pohon menu dengan seret-lepas, tombol pindah, dan papan ketik (Alt+↑/↓, Alt+→, Alt+←); preset; pratinjau desktop/tablet/ponsel halaman depan atau halaman dalam; draf, terbit, riwayat, pulihkan. Kartu **Kepala & kaki situs** di Pengaturan tema (`TemaAplikasi`).
+- `SitusAplikasi`, `useSitusAplikasi` (salinan terakhir di peramban selama memuat) dan `HalamanDepanAplikasi` (kerangka + landing dalam satu komponen, pengganti `<Navbar menus={menuLanding(dok)} /> + <LandingAplikasi />`).
+- **Varian hero baru**: `tata` `layar` (foto layar penuh), `kartu` (teks dalam kartu di atas foto), `cari` (kotak cari + pintasan berikon); isian `cari_url`, `cari_contoh`, `pintasan`.
+- Isian tautan di penyunting landing dan situs bisa memilih berkas publik dari Kelola berkas. `WadahPortal` membuat dropdown, dialog, dan menu tampil di dalam bingkai pratinjau. Navbar membaca gulir dari jendela dokumennya sendiri.
+- Uji `packages/ui/test/situs.test.tsx`; contoh di galeri Fondasi » Kepala dan kaki situs.
 
 ## 1.64.0 (2026-11-22)
 

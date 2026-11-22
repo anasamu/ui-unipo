@@ -19,6 +19,7 @@ export {
 } from './lib/tabel';
 export * from './lib/tautan';
 export * from './lib/tingkat-tab';
+export * from './lib/wadah-portal';
 export * from './components/actions';
 export * from './components/tekan';
 export * from './components/forms';
@@ -53,6 +54,8 @@ export * from './components/landing';
 export * from './components/landing-skema';
 export * from './components/landing-blok';
 export * from './components/landing-kit';
+export * from './components/situs-skema';
+export * from './components/situs';
 export * from './components/kaki-situs';
 export * from './ikon/unipo';
 export * from './ikon/kotak';

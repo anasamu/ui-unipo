@@ -1,0 +1,730 @@
+@use '../mixins' as *;
+
+// ================================================================ Kerangka situs (us-*)
+// Renderer KerangkaSitus (components/situs.tsx): pita, bilah atas, navbar, isi + sidebar, kaki. Warna dan jarak dari
+// token tema sehingga terang/gelap dan tema aplikasi ikut berlaku. Navbar, Footer, PitaPengumuman, dan TopbarKontak
+// memakai gaya masing-masing; berkas ini hanya menambah penataan kerangka.
+
+.us-situs {
+  --us-gutter: 1.25rem;
+  --us-kepala-h: 0px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--u-background);
+  color: var(--u-foreground);
+  // Isi yang difokus lewat jangkar tidak tertutup navbar lengket (WCAG 2.4.11).
+  scroll-padding-top: calc(var(--us-kepala-h) + 1rem);
+}
+
+// Pembungkus kepala tidak membentuk kotak agar navbar lengket terhadap seluruh halaman, bukan terhadap pembungkusnya.
+.us-kepala,
+.us-kepala > [data-bagian] {
+  display: contents;
+}
+
+.us-lewati {
+  position: absolute;
+  inset-inline-start: 1rem;
+  inset-block-start: 0.5rem;
+  z-index: 60;
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--u-radius-md);
+  background: var(--u-primary);
+  color: var(--u-primary-foreground);
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-medium);
+  text-decoration: none;
+  translate: 0 -200%;
+  &:focus-visible {
+    translate: 0 0;
+    @include focus-ring;
+  }
+}
+
+// ---------------------------------------------------------------- pita: nada tambahan
+.u-pita.us-pita {
+  &[data-priority='aksen'] {
+    --tone: var(--u-secondary);
+    color: var(--u-secondary-foreground);
+    background: var(--u-secondary);
+  }
+  &[data-priority='lembut'] {
+    background: color-mix(in oklab, var(--u-primary) 10%, var(--u-card));
+    color: var(--u-foreground);
+    border-bottom: 1px solid var(--u-border);
+    button:hover {
+      background: color-mix(in oklab, var(--u-primary) 14%, transparent);
+    }
+  }
+  &[data-priority='gelap'] {
+    background: color-mix(in oklab, var(--u-primary) 12%, #0b0e14);
+    color: #f4f6fb;
+  }
+}
+
+// ---------------------------------------------------------------- navbar
+.u-navbar.us-navbar {
+  container: us-navbar / inline-size;
+}
+.us-atas-sosial {
+  gap: 0.25rem;
+  a {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+.us-tombol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+// Navbar tembus pandang ditumpuk di atas bagian pertama halaman (hanya bila bagian itu berlatar foto/gelap).
+.us-situs[data-transparan] .us-isi {
+  margin-block-start: calc(-1 * var(--us-kepala-h));
+  > .ul-halaman > .ul-blok:first-child {
+    padding-block-start: calc(var(--ul-pad) + var(--us-kepala-h));
+  }
+}
+
+// ---------------------------------------------------------------- kotak cari
+.us-cari {
+  position: relative;
+  display: flex;
+  align-items: center;
+  inline-size: 14rem;
+  block-size: 2.25rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-full);
+  background: var(--u-card);
+  transition: border-color var(--u-duration-fast) var(--u-ease-out);
+  &:focus-within {
+    border-color: var(--u-ring, var(--u-primary));
+    @include focus-ring(0px);
+  }
+}
+.us-cari-isian {
+  flex: 1;
+  min-inline-size: 0;
+  block-size: 100%;
+  padding: 0 0.25rem 0 0.875rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--u-text-sm);
+  outline: none;
+  &::placeholder {
+    color: var(--u-muted-foreground);
+  }
+  &::-webkit-search-cancel-button {
+    display: none;
+  }
+}
+.us-cari-tombol {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  inline-size: 2rem;
+  block-size: 2rem;
+  margin-inline-end: 0.125rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--u-radius-full);
+  background: none;
+  color: var(--u-muted-foreground);
+  cursor: pointer;
+  &:hover {
+    background: var(--u-muted);
+    color: var(--u-foreground);
+  }
+  svg {
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+}
+.u-navbar[data-transparent] .us-cari {
+  border-color: rgb(255 255 255 / 0.3);
+  background: rgb(255 255 255 / 0.1);
+  .us-cari-isian::placeholder,
+  .us-cari-tombol {
+    color: rgb(255 255 255 / 0.8);
+  }
+}
+// Navbar sempit: kotak cari menjadi tombol ikon dan melebar saat difokus.
+@container us-navbar (max-width: 72rem) {
+  .us-cari {
+    inline-size: 2.25rem;
+    border-color: transparent;
+    background: transparent;
+    transition: inline-size var(--u-duration-base) var(--u-ease-out);
+    &:focus-within {
+      inline-size: min(16rem, 60cqi);
+      border-color: var(--u-border);
+      background: var(--u-card);
+    }
+    &:not(:focus-within) .us-cari-isian {
+      inline-size: 0;
+      padding: 0;
+    }
+  }
+}
+
+// ---------------------------------------------------------------- isi + sidebar
+.us-badan {
+  flex: 1;
+  container: us-badan / inline-size;
+  &[data-sidebar] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+    inline-size: min(100% - 2 * var(--us-gutter), 80rem);
+    margin-inline: auto;
+    padding-block: 2rem 3rem;
+  }
+}
+.us-isi {
+  min-inline-size: 0;
+  &:focus {
+    outline: none;
+  }
+}
+@container us-badan (min-width: 60rem) {
+  .us-badan[data-sidebar='kanan'] {
+    grid-template-columns: minmax(0, 1fr) 18.5rem;
+  }
+  .us-badan[data-sidebar='kiri'] {
+    grid-template-columns: 18.5rem minmax(0, 1fr);
+    .us-sidebar {
+      grid-row: 1;
+      grid-column: 1;
+    }
+  }
+  .us-sidebar[data-lengket] {
+    position: sticky;
+    inset-block-start: calc(var(--us-kepala-h) + 1.5rem);
+    align-self: start;
+  }
+}
+.us-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-inline-size: 0;
+}
+.us-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.125rem 1.25rem 1.25rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card);
+  font-size: var(--u-text-sm);
+  ul {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  &[data-jenis='tautan'] li + li {
+    border-block-start: 1px solid var(--u-border);
+  }
+  &[data-jenis='tautan'] a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding-block: 0.5rem;
+    color: var(--u-foreground);
+    text-decoration: none;
+    svg {
+      inline-size: 0.875rem;
+      block-size: 0.875rem;
+      color: var(--u-muted-foreground);
+      transition: translate var(--u-duration-fast) var(--u-ease-out);
+    }
+    &:hover {
+      color: var(--u-primary);
+      svg {
+        translate: 2px 0;
+        color: currentColor;
+      }
+    }
+    &:focus-visible {
+      @include focus-ring;
+      border-radius: 4px;
+    }
+  }
+  &[data-jenis='kontak'] li {
+    padding-block: 0.25rem;
+    color: var(--u-muted-foreground);
+    overflow-wrap: anywhere;
+    a {
+      color: var(--u-foreground);
+    }
+  }
+  &[data-jenis='cari'] .us-cari {
+    inline-size: 100%;
+    border-color: var(--u-border);
+    background: var(--u-background);
+    .us-cari-isian {
+      inline-size: auto;
+      padding: 0 0.25rem 0 0.875rem;
+    }
+  }
+  &[data-jenis='ajakan'] {
+    background: color-mix(in oklab, var(--u-primary) 6%, var(--u-card));
+    border-color: color-mix(in oklab, var(--u-primary) 22%, var(--u-border));
+  }
+  // Kabar ringkas dari KabarPortal (tampilan daftar).
+  .ul-kabar-daftar {
+    gap: 0;
+    li {
+      padding-block: 0.625rem;
+      border-block-start: 1px solid var(--u-border);
+      &:first-child {
+        border-block-start: 0;
+        padding-block-start: 0;
+      }
+    }
+  }
+}
+.us-widget-judul {
+  margin: 0;
+  font-family: var(--u-font-heading);
+  font-size: var(--u-text-base);
+  font-weight: var(--u-weight-semibold);
+  letter-spacing: -0.01em;
+}
+.us-widget-teks {
+  color: var(--u-muted-foreground);
+  line-height: 1.6;
+}
+.us-widget-penanda {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px dashed var(--u-border);
+  border-radius: var(--u-radius-md);
+  color: var(--u-muted-foreground);
+}
+
+// ---------------------------------------------------------------- kaki: pita ajakan
+.us-kaki-ajakan {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  > div:first-child {
+    max-inline-size: 40rem;
+  }
+}
+.us-kaki-ajakan-judul {
+  margin: 0;
+  font-family: var(--u-font-heading);
+  font-size: clamp(1.25rem, 2.4vw, 1.625rem);
+  font-weight: var(--u-weight-bold);
+  letter-spacing: -0.02em;
+  color: var(--u-foreground);
+  text-wrap: balance;
+}
+.us-kaki-ajakan-teks {
+  margin: 0.375rem 0 0;
+  color: var(--u-muted-foreground);
+}
+
+// ---------------------------------------------------------------- penyunting: sorot bagian terpilih
+.us-situs[data-pratinjau] {
+  min-height: 100%;
+  [data-bagian],
+  .u-navbar,
+  .us-sidebar,
+  .us-kaki {
+    cursor: pointer;
+  }
+}
+@mixin sorot {
+  outline: 2px solid var(--u-primary);
+  outline-offset: -2px;
+}
+.us-situs[data-terpilih='pita'] .us-pita,
+.us-situs[data-terpilih='atas'] .u-navbar-topbar,
+.us-situs[data-terpilih='kepala'] .u-navbar-bar,
+.us-situs[data-terpilih='menu'] .u-navbar-list,
+.us-situs[data-terpilih='sidebar'] .us-sidebar,
+.us-situs[data-terpilih='kaki'] .us-kaki {
+  @include sorot;
+}
+.us-situs[data-terpilih='menu'] .u-navbar-list {
+  border-radius: var(--u-radius-md);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .us-cari,
+  .us-widget a svg {
+    transition: none;
+  }
+}
+
+// ================================================================ Varian hero tambahan (blok landing)
+// layar: foto selayar penuh; kartu: foto dengan kartu teks bertoken; cari: kotak cari besar + pintasan.
+.ul-hero[data-tata='layar'] {
+  display: grid;
+  align-items: end;
+  min-block-size: min(86svh, 54rem);
+  border-radius: 0;
+  .u-hero-grid {
+    inline-size: min(100%, 76rem);
+    margin-inline: auto;
+  }
+  .u-hero-title {
+    font-size: clamp(2.25rem, 6.2cqi, 4rem);
+  }
+}
+.ul-hero.u-hero[data-tata='kartu'] {
+  display: grid;
+  align-items: end;
+  min-block-size: min(70svh, 40rem);
+  background: var(--hero-image, linear-gradient(135deg, var(--u-primary), color-mix(in oklab, var(--u-primary) 50%, black))) center / cover;
+  .u-hero-text {
+    gap: 0.875rem;
+    max-inline-size: 34rem;
+    padding: clamp(1.25rem, 3.5cqi, 2.25rem);
+    border-radius: var(--u-radius-xl);
+    background: var(--u-card);
+    color: var(--u-foreground);
+    box-shadow: var(--u-shadow-lg);
+  }
+  .u-hero-title {
+    font-size: clamp(1.75rem, 4cqi, 2.5rem);
+  }
+  .u-hero-desc,
+  .u-hero-stats dt,
+  .ul-catatan {
+    color: var(--u-muted-foreground);
+  }
+  .u-hero-stats {
+    border-color: var(--u-border);
+  }
+  .u-hero-announce {
+    background: var(--u-card);
+    border-color: var(--u-border);
+    color: var(--u-foreground);
+    backdrop-filter: none;
+  }
+  .ul-sorot {
+    color: var(--u-primary);
+  }
+}
+.ul-hero[data-tata='cari'] .u-hero-text {
+  max-inline-size: 46rem;
+}
+.ul-hero-cari {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  inline-size: 100%;
+  margin-block-start: 0.5rem;
+  padding: 0.375rem 0.375rem 0.375rem 1rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-xl);
+  background: var(--u-card);
+  color: var(--u-foreground);
+  box-shadow: var(--u-shadow-sm);
+  &:focus-within {
+    border-color: var(--u-primary);
+    @include focus-ring(0px);
+  }
+  > svg {
+    flex-shrink: 0;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    color: var(--u-muted-foreground);
+  }
+  input {
+    flex: 1;
+    min-inline-size: 0;
+    block-size: 2.75rem;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: var(--u-text-base);
+    outline: none;
+    &::placeholder {
+      color: var(--u-muted-foreground);
+    }
+  }
+}
+.ul-hero-pintasan {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-block-size: 2.25rem;
+    padding: 0 0.875rem;
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-full);
+    background: var(--u-card);
+    color: var(--u-foreground);
+    font-size: var(--u-text-sm);
+    text-decoration: none;
+    transition: border-color var(--u-duration-fast) var(--u-ease-out);
+    &:hover {
+      border-color: var(--u-primary);
+    }
+    &:focus-visible {
+      @include focus-ring;
+    }
+    svg {
+      inline-size: 1rem;
+      block-size: 1rem;
+      color: var(--u-primary);
+    }
+  }
+}
+@container ul-halaman (max-width: 479px) {
+  .ul-hero-cari {
+    flex-wrap: wrap;
+    padding: 0.5rem;
+    > svg {
+      display: none;
+    }
+    input {
+      flex-basis: 100%;
+      padding-inline: 0.5rem;
+    }
+    .u-button {
+      inline-size: 100%;
+    }
+  }
+}
+
+// ================================================================ Penyunting kerangka situs (ups-*)
+// Memakai kerangka penyunting halaman depan (upl-*); di sini hanya daftar bagian, pohon menu, dan preset.
+.ups {
+  .upl-daftar-blok li[data-mati] .upl-blok-tombol {
+    > svg,
+    small {
+      opacity: 0.6;
+    }
+  }
+  .upl-daftar-blok li {
+    padding-inline-start: 0.375rem;
+  }
+}
+.ups-panah {
+  margin-inline-start: auto;
+  color: var(--u-muted-foreground);
+  .upl-blok-tombol > & {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+.ups-keterangan {
+  margin: 0;
+  padding: 0 1rem 0.75rem;
+  font-size: var(--u-text-sm);
+  color: var(--u-muted-foreground);
+}
+
+.ups-pohon {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.ups-akar,
+.ups-anak {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ups-anak {
+  margin-block-start: 0.25rem;
+  margin-inline-start: 1rem;
+  padding-inline-start: 0.625rem;
+  border-inline-start: 1px solid var(--u-border);
+}
+.ups-baris {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-block-size: 2.5rem;
+  padding-inline: 0.25rem 0.5rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-md);
+  background: var(--u-card);
+  transition:
+    border-color var(--u-duration-fast) var(--u-ease-out),
+    background var(--u-duration-fast) var(--u-ease-out);
+  &:hover {
+    border-color: color-mix(in oklab, var(--u-primary) 30%, var(--u-border));
+  }
+  &[data-pilih] {
+    border-color: color-mix(in oklab, var(--u-primary) 55%, var(--u-border));
+    background: var(--u-primary-soft);
+  }
+  &:has(.ups-label:focus-visible) {
+    @include focus-ring(1px);
+  }
+  &[data-seret] {
+    opacity: 0.45;
+  }
+  // Penanda tempat jatuh: garis di atas/bawah, atau bingkai bila menjadi sub menu.
+  &[data-jatuh='sebelum']::before,
+  &[data-jatuh='sesudah']::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0.25rem;
+    block-size: 2px;
+    border-radius: 2px;
+    background: var(--u-primary);
+    pointer-events: none;
+  }
+  &[data-jatuh='sebelum']::before {
+    inset-block-start: -4px;
+  }
+  &[data-jatuh='sesudah']::after {
+    inset-block-end: -4px;
+  }
+  &[data-jatuh='dalam'] {
+    border-color: var(--u-primary);
+    background: color-mix(in oklab, var(--u-primary) 8%, var(--u-card));
+  }
+}
+.ups-pegangan {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  inline-size: 1.5rem;
+  block-size: 1.75rem;
+  border-radius: var(--u-radius-sm);
+  color: var(--u-muted-foreground);
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  &:hover {
+    background: var(--u-muted);
+    color: var(--u-foreground);
+  }
+  &:active {
+    cursor: grabbing;
+  }
+  svg {
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+}
+.ups-label {
+  display: grid;
+  flex: 1;
+  min-inline-size: 0;
+  padding-block: 0.375rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  outline: none;
+  strong,
+  small {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  strong {
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-medium);
+  }
+  small {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+}
+.ups-alat {
+  position: sticky;
+  inset-block-end: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card);
+}
+.ups-alat-pisah {
+  inline-size: 1px;
+  block-size: 1.25rem;
+  margin-inline: 0.25rem;
+  background: var(--u-border);
+}
+.ups-butir-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin-block-start: 0.5rem;
+  padding-block-start: 1rem;
+  border-block-start: 1px solid var(--u-border);
+  > .u-label {
+    margin: 0;
+  }
+}
+
+.ups-preset {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ups-preset-kartu {
+  display: grid;
+  gap: 0.25rem;
+  inline-size: 100%;
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  background: var(--u-card);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color var(--u-duration-fast) var(--u-ease-out);
+  &:hover {
+    border-color: var(--u-primary);
+  }
+  &:focus-visible {
+    @include focus-ring;
+  }
+  strong {
+    font-weight: var(--u-weight-semibold);
+  }
+  span {
+    font-size: var(--u-text-sm);
+    color: var(--u-muted-foreground);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ups-baris,
+  .ups-preset-kartu {
+    transition: none;
+  }
+}
