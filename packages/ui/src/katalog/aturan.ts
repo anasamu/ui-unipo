@@ -9,7 +9,7 @@
  * Validasi di browser mencegah kiriman yang pasti ditolak; server tetap memeriksa ulang (kunci tabel lama
  * harus ada, nilai unik, hak pengelola), dan galat 422 dari server dipetakan ke isian yang sama.
  */
-import type { Baris, Operasi, Parameter, Skema } from './tipe';
+import type { Acuan, Baris, Operasi, Parameter, Skema } from './tipe';
 
 // ================================================================ Label dan teks
 const KHUSUS: Record<string, string> = {
@@ -29,6 +29,10 @@ const KHUSUS: Record<string, string> = {
   kode_prodi: 'Program studi',
   kode_fakultas: 'Fakultas',
   tahun_id: 'Tahun akademik',
+  tahun_id_mulai: 'Tahun akademik mulai',
+  tahun_id_selesai: 'Tahun akademik selesai',
+  tahun_id_awal: 'Tahun akademik awal',
+  tahun_id_akhir: 'Tahun akademik akhir',
   nik_karyawan: 'Karyawan',
   username: 'Pengguna',
   created_at: 'Dibuat',
@@ -75,6 +79,8 @@ export function keteranganIsian(s: Skema): string | undefined {
     .replace(/\b[a-z_]+\.[A-Za-z_]+\b/g, '')
     .replace(/^[\s;:,()-]+|[\s;:,()-]+$/g, '')
     .trim();
+  // Keterangan yang hanya "ID indikator" / "ID unit" tidak berguna di pemilih bercari (nama sudah tampil di pilihan).
+  if (/^ID( [a-z]+){1,3}$/.test(t)) return undefined;
   return t || undefined;
 }
 
@@ -120,11 +126,24 @@ const TELEPON = /^(telepon|telp|hp|no_hp|nomor_hp|no_telp|whatsapp|wa|no_wa|kont
 export const POLA_KODE = '^[A-Za-z0-9._\\-/]+$';
 const POLA_JAM = '^\\d{2}:\\d{2}$';
 
+/**
+ * Acuan isian: dari skema (`rf`), atau tersirat dari nama kolom bila backend belum menandainya. Kolom `tahun_id`,
+ * `tahun_id_mulai`/`_selesai`/`_awal`/`_akhir` selalu kode tahun akademik SIAKAD (mis. 20251), jadi dipilih dari daftar
+ * tahun akademik, bukan diketik.
+ */
+export function acuanIsian(nama: string, s: Skema): Acuan | undefined {
+  if (s.rf) return s.rf;
+  if (/^tahun_id(_(mulai|selesai|awal|akhir))?$/i.test(nama) && (!s.t || s.t === 'string' || s.t === 'integer') && !(s.e && s.e.length)) {
+    return { l: '/v1/referensi/tahun-akademik', k: 'tahun_id', q: 0 };
+  }
+  return undefined;
+}
+
 /** Jenis isian untuk satu properti skema; menentukan kontrol dan aturan validasi. */
 export function jenisIsian(nama: string, s: Skema): JenisIsian {
   if (berkasPusat(nama, s)) return 'berkas';
   if (s.f === 'binary' || (s.t === 'array' && s.i?.f === 'binary')) return 'file';
-  if (s.rf && (!s.t || s.t === 'string' || s.t === 'integer')) return 'acuan';
+  if (acuanIsian(nama, s) && (!s.t || s.t === 'string' || s.t === 'integer')) return 'acuan';
   if (s.t === 'boolean') return 'boolean';
   if (s.e && s.e.length) return 'enum';
   if (s.t === 'integer') return 'bulat';
@@ -480,7 +499,7 @@ export function pilihKolom(skema: Skema | undefined, baris: Baris[] = [], maks =
 /** Judul satu baris untuk panel detail dan konfirmasi. */
 export function judulBaris(b: Baris | null | undefined, kunci?: string): string {
   if (!b) return '';
-  for (const k of ['nama', 'judul', 'title', 'nama_lengkap', 'perihal', 'subjek', 'nama_prodi', 'nama_fakultas', 'nama_mk', 'nomor']) {
+  for (const k of ['nama', 'judul', 'title', 'nama_lengkap', 'perihal', 'subjek', 'pernyataan', 'uraian', 'nama_prodi', 'nama_fakultas', 'nama_mk', 'nomor']) {
     if (typeof b[k] === 'string' && b[k]) return b[k];
   }
   const kn = Object.keys(b).find((k) => /^(nama|judul)/.test(k) && typeof b[k] === 'string' && b[k]);
