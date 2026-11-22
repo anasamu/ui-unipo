@@ -19,6 +19,8 @@ Setiap pengembangan komponen unipo-ui memakai dua skill berikut. `.claude/settin
    - Dipakai saat membuat atau merapikan tampilan, supaya antarmuka tidak terlihat buatan AI: tanpa gradien ungu, cahaya, teks bergradien, emoji di label, lencana "Baru", label huruf kapital berjarak, atau jarak yang tidak seragam.
    - Ikuti urutan lapisan unslop: jarak, warna, ikon, teks, tipografi, tata letak, detail, visual, gerak. Bingkai tetap tenang dengan token warna unipo-ui; satu elemen menonjol per layar.
 
+Skill desain yang juga wajib (sudah terpasang di Mac Anas, dipakai bersama dua skill di atas): **frontend-design**, **ui-ux-pro-max**, **design-system**, **ui-styling**, dan **design**. Di lingkungan yang tidak memilikinya, ikuti token dan pola unipo-ui yang ada lalu catat di PR bahwa skill itu tidak tersedia.
+
 Pasang di Claude Code lokal bila belum ada:
 ```sh
 claude plugin marketplace add googlechrome/modern-web-guidance
