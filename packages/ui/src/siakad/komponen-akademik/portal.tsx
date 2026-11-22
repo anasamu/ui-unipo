@@ -4,7 +4,7 @@ import { cn } from '../../lib/cn';
 import { Progress } from '../../components/display';
 import { StatCard, StatGrid } from '../../components/charts';
 import type { RenderLink } from '../../lib/tautan';
-import { labelTahunAkademik } from '../akademik';
+import { labelTahunAkademik } from '../label-tahun';
 import { statusKrs } from './krs';
 import { predikatDariIpk, type PredikatKelulusan } from './skala';
 import { tahapanSaatIni, type TahapanKalender } from './tahapan';
