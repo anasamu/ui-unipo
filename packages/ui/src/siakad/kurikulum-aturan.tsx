@@ -69,7 +69,7 @@ export interface IsiAturanKurikulum {
   mbkm: { aktif: boolean; sks_luar_prodi_maks: number | null; semester_luar_prodi_maks: number | null; semester_mulai: number | null; bentuk: (ButirKode & { sks_maks: number | null })[]; konversi: string };
   kelulusan: { sks_min: number | null; ipk_min: number | null; nilai_d_maks: number | null; nilai_e_boleh: boolean | null; mk_wajib: string[]; ta_wajib: boolean | null; skpi_wajib: boolean | null; syarat_lain: string[] };
   obe: { aktif: boolean; ambang_cpl: number | null; ambang_persen_mahasiswa: number | null; sumber_nilai: 'komponen' | 'mk'; metode_asesmen: ButirKode[]; rubrik: (ButirKode & { min: number })[] };
-  mata_kuliah: { perangkat: PerangkatAturan[]; pertemuan_min: number | null; metode: ButirKode[]; kategori: ButirKode[]; isian_wajib: string[] };
+  mata_kuliah: { perangkat: PerangkatAturan[]; pertemuan_min: number | null; /** Menit tatap muka satu SKS kuliah per minggu (null = 50). */ menit_tatap_muka_sks?: number | null; metode: ButirKode[]; kategori: ButirKode[]; isian_wajib: string[] };
   turunan: { boleh: string[] };
   rujukan: { kode: string; pedoman: string; pasal: string; pedoman_id?: string | null }[];
 }
@@ -397,7 +397,7 @@ function RingkasanIsi({ isi, boleh }: { isi: IsiAturanKurikulum; boleh?: string[
         </CardContent>
       </Card>
       <Card className="u-kur-lebar">
-        <CardHeader title="Perangkat mata kuliah wajib" description={`Pertemuan minimal ${isi.mata_kuliah.pertemuan_min ?? '-'} · isian wajib: ${isi.mata_kuliah.isian_wajib.join(', ') || '-'}`} />
+        <CardHeader title="Perangkat mata kuliah wajib" description={`Pertemuan minimal ${isi.mata_kuliah.pertemuan_min ?? '-'} · ${isi.mata_kuliah.menit_tatap_muka_sks ?? 50} menit tatap muka per SKS · isian wajib: ${isi.mata_kuliah.isian_wajib.join(', ') || '-'}`} />
         <CardContent>
           {isi.mata_kuliah.perangkat.length ? (
             <ul className="u-kur-perangkat-ringkas">
@@ -851,6 +851,13 @@ export function PanelAturanKurikulum({ referensi: r, aturan: a, onOpenChange, on
         <div className="u-bkd-form">
           <EditorPerangkat value={isi.mata_kuliah.perangkat} onChange={(v) => set('mata_kuliah', { perangkat: v })} opsi={r} />
           <IsianAngka label="Pertemuan minimal per semester" value={isi.mata_kuliah.pertemuan_min} onChange={(v) => set('mata_kuliah', { pertemuan_min: v })} />
+          <IsianAngka
+            label="Menit tatap muka per SKS"
+            satuan="menit"
+            description="Lama tatap muka satu SKS kuliah per minggu. Kosongkan untuk memakai 50 menit. Dipakai tampilan jadwal kuliah."
+            value={isi.mata_kuliah.menit_tatap_muka_sks ?? null}
+            onChange={(v) => set('mata_kuliah', { menit_tatap_muka_sks: v })}
+          />
           <p className="u-bkd-label">Pilihan metode perkuliahan</p>
           <EditorDaftarKode value={isi.mata_kuliah.metode} onChange={(v) => set('mata_kuliah', { metode: v })} baru={() => ({ kode: '', nama: '' })} tambahLabel="Tambah metode" />
           <p className="u-bkd-label">Kategori kurikulum MK (mis. inti, institusional)</p>

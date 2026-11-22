@@ -27,8 +27,13 @@ export interface KelasPenawaran {
   kelas?: string;
   hari?: string;
   jamke?: number;
+  /** Jam dari m_jam prodi jadwal (SIAKAD terbaru), untuk deteksi bentrok di klien. */
+  jam_mulai?: string | null;
+  jam_selesai?: string | null;
   ruang?: string;
+  nama_ruang?: string | null;
   nidn?: string;
+  nama_dosen?: string | null;
   kapasitas?: number;
 }
 export interface MkPenawaran {
@@ -52,8 +57,19 @@ export interface PenawaranKrs {
   alasan?: string | null;
   mode?: string;
   batas_sks: number;
+  /** Batas SKS per semester dari aturan kurikulum berversi (bila ada) dan sumber batas efektif. */
+  batas_sks_kurikulum?: number | null;
+  batas_sks_sumber?: string | null;
   ips_sebelumnya?: number | null;
   sks_terambil: number;
+  /** Ringkasan aturan dinamis titik krs.ambil (Mesin::ringkas): pelanggaran & peringatan ber-SK, apa adanya. */
+  aturan?: {
+    titik?: string;
+    boleh?: boolean;
+    pelanggaran?: Array<{ id?: string | number; nama?: string; pesan: string }>;
+    peringatan?: Array<{ id?: string | number; nama?: string; pesan: string }>;
+    batas?: Record<string, unknown>;
+  } | null;
   mata_kuliah: MkPenawaran[];
   pesan?: string[];
 }
