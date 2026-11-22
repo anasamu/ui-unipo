@@ -840,3 +840,147 @@
     width: 100%;
   }
 }
+
+// ================================================================ Legenda skala per versi (transkrip)
+.u-ak-legenda-versi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u-space-3);
+}
+
+// ================================================================ Isi KRS (form, panel bertahap, KRS saya)
+.u-ak-krs-saya {
+  > .u-alert {
+    margin: 0;
+  }
+}
+.u-ak-krs-aturan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u-space-2);
+  ul {
+    margin: 0;
+    padding-left: var(--u-space-4);
+  }
+}
+.u-ak-isi-krs-langkah {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u-space-4);
+  min-width: 0;
+  .u-alert ul {
+    margin: 0;
+    padding-left: var(--u-space-4);
+  }
+}
+.u-ak-isi-krs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u-space-3);
+  min-width: 0;
+}
+.u-ak-isi-krs-smt {
+  border: 1px solid var(--u-border);
+  border-radius: var(--u-radius-lg);
+  overflow: hidden;
+  h4 {
+    margin: 0;
+    padding: var(--u-space-2) var(--u-space-3);
+    font-size: var(--u-text-xs);
+    font-weight: var(--u-weight-semibold);
+    color: var(--u-muted-foreground);
+    background: var(--u-muted);
+    border-bottom: 1px solid var(--u-border);
+  }
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  li {
+    padding: var(--u-space-3);
+    border-bottom: 1px solid var(--u-border);
+    &:last-child {
+      border-bottom: 0;
+    }
+    &[data-dipilih] {
+      background: color-mix(in oklab, var(--u-primary) 6%, transparent);
+    }
+  }
+}
+.u-ak-isi-krs-mk {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--u-space-3);
+  cursor: pointer;
+  &[data-disabled] {
+    cursor: not-allowed;
+    .u-ak-isi-krs-teks {
+      opacity: 0.7;
+    }
+  }
+  > .u-checkbox {
+    margin-top: 2px;
+  }
+}
+.u-ak-isi-krs-teks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u-space-1);
+  min-width: 0;
+  small {
+    font-size: var(--u-text-xs);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-ak-isi-krs-nama {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--u-space-1) var(--u-space-2);
+  b {
+    font-size: var(--u-text-sm);
+    font-weight: var(--u-weight-medium);
+    color: var(--u-foreground);
+  }
+}
+.u-ak-isi-krs-ket {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--u-space-1);
+  color: var(--u-warning) !important;
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex: none;
+    margin-top: 1px;
+  }
+}
+.u-ak-isi-krs-sks {
+  font-size: var(--u-text-sm);
+  font-weight: var(--u-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  small {
+    font-weight: var(--u-weight-regular);
+    color: var(--u-muted-foreground);
+  }
+}
+.u-ak-isi-krs-kelas {
+  margin-top: var(--u-space-3);
+  padding-left: calc(var(--u-space-3) + 1.125rem);
+}
+.u-ak-isi-krs-opsi {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--u-space-2);
+}
+.u-ak-isi-krs-kaki {
+  font-variant-numeric: tabular-nums;
+  &.is-lebih {
+    color: var(--u-danger);
+    font-weight: var(--u-weight-medium);
+  }
+}

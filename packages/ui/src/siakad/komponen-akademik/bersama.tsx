@@ -9,7 +9,7 @@ import { ProgressBertumpuk } from '../../components/progres';
 import { TombolCetak } from '../../components/laporan';
 import { GalatApi } from '../galat';
 import type { SkalaNilai } from '../alur';
-import { cariSkala, nadaNilai, normalSkala, type NadaNilai, type SumberSkala } from './skala';
+import { cariSkala, nadaNilai, normalSkala, type NadaNilai, type PenentuSkala, type SumberSkala } from './skala';
 import { adaAngka, duaDesimal, type BarisNilaiMk, type IdentitasAkademik } from './tipe';
 import { labelTahunAkademik } from '../label-tahun';
 
@@ -119,22 +119,41 @@ export function LegendaSkalaNilai({ skala, judul = 'Skala nilai', className }: {
 const fmtAngka = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0$/, ''));
 
 /** Sebaran huruf nilai (berapa MK tiap huruf) diurut menurut skala server; huruf di luar skala dikumpulkan di akhir. */
-export function SebaranNilaiSkala({ data, skala, label = 'Sebaran nilai', className }: { data: ReadonlyArray<BarisNilaiMk>; skala?: SumberSkala | null; label?: React.ReactNode; className?: string }) {
+export function SebaranNilaiSkala({
+  data,
+  skala,
+  skalaUntuk,
+  label = 'Sebaran nilai',
+  className,
+}: {
+  data: ReadonlyArray<BarisNilaiMk>;
+  skala?: SumberSkala | null;
+  /** Skala per periode MK: warna tiap huruf mengikuti versi skala periode terbaru yang memakai huruf itu. */
+  skalaUntuk?: PenentuSkala;
+  label?: React.ReactNode;
+  className?: string;
+}) {
   const s = React.useMemo(() => normalSkala(skala), [skala]);
   const bagian = React.useMemo(() => {
     const hitung = new Map<string, number>();
+    const periode = new Map<string, string>();
     for (const m of data) {
       if (m.nilai_ditampilkan === false) continue;
-      const h = (m.nilai_huruf ?? '').trim();
-      if (h) hitung.set(h.toUpperCase(), (hitung.get(h.toUpperCase()) ?? 0) + 1);
+      const h = (m.nilai_huruf ?? '').trim().toUpperCase();
+      if (!h) continue;
+      hitung.set(h, (hitung.get(h) ?? 0) + 1);
+      const t = m.tahun_id ?? '';
+      if (!periode.has(h) || t > periode.get(h)!) periode.set(h, t);
     }
+    const skalaHuruf = (h: string) => (skalaUntuk ? skalaUntuk(periode.get(h) || null) : s);
     const urut = s.map((x) => x.huruf.toUpperCase()).filter((h) => hitung.has(h));
     const lain = [...hitung.keys()].filter((h) => !urut.includes(h)).sort();
     return [...urut, ...lain].map((h) => {
-      const nada = nadaNilai(h, s);
-      return { label: cariSkala(h, s)?.huruf ?? h, nilai: hitung.get(h) ?? 0, tone: nada === 'neutral' ? ('muted' as const) : nada };
+      const sk = skalaHuruf(h);
+      const nada = nadaNilai(h, sk);
+      return { label: cariSkala(h, sk)?.huruf ?? h, nilai: hitung.get(h) ?? 0, tone: nada === 'neutral' ? ('muted' as const) : nada };
     });
-  }, [data, s]);
+  }, [data, s, skalaUntuk]);
   if (!bagian.length) return null;
   return <ProgressBertumpuk className={cn('u-ak-sebaran', className)} label={label} bagian={bagian} format={(n) => `${n} MK`} tinggi="sm" />;
 }
@@ -145,6 +164,8 @@ type BarisTabel = BarisNilaiMk & { __k: string };
 export interface TabelNilaiMkProps {
   data: ReadonlyArray<BarisNilaiMk>;
   skala?: ReadonlyArray<SkalaNilai>;
+  /** Skala per periode mata kuliah (penentuSkala): tiap baris memakai versi skala periode `tahun_id` barisnya. */
+  skalaUntuk?: PenentuSkala;
   /** Tampilkan kolom periode (transkrip satu tabel). */
   periode?: boolean;
   /** Tampilkan kolom semester. */
@@ -155,7 +176,8 @@ export interface TabelNilaiMkProps {
   className?: string;
 }
 /** Tabel nilai mata kuliah (DataTable: urut per kolom, ekspor CSV, kartu di ponsel). */
-export function TabelNilaiMk({ data, skala = [], periode, semester, ekspor = false, kosong, className }: TabelNilaiMkProps) {
+export function TabelNilaiMk({ data, skala = [], skalaUntuk, periode, semester, ekspor = false, kosong, className }: TabelNilaiMkProps) {
+  const skalaBaris = (r: BarisNilaiMk) => (skalaUntuk ? skalaUntuk(r.tahun_id) : skala);
   const baris = React.useMemo<BarisTabel[]>(() => data.map((r, i) => ({ ...r, __k: `${r.kode_mk ?? ''}-${r.tahun_id ?? ''}-${i}` })), [data]);
   const kolom: DataColumn<BarisTabel>[] = [
     { key: 'nama_mk', header: 'Mata kuliah', sortable: true, mobile: 'title', cell: (r) => <span className="u-ak-mk">{r.nama_mk ?? '–'}</span> },
@@ -175,8 +197,8 @@ export function TabelNilaiMk({ data, skala = [], periode, semester, ekspor = fal
       width: '6.5rem',
       mobile: 'badge',
       // Urut menurut bobot skala, bukan abjad.
-      value: (r) => (r.nilai_ditampilkan === false ? null : adaAngka(r.bobot) ? Number(r.bobot) : (cariSkala(r.nilai_huruf, skala)?.bobot ?? null)),
-      cell: (r) => (r.nilai_ditampilkan === false ? <span className="u-muted">Belum dirilis</span> : <LencanaNilai nilai={r.nilai_huruf} skala={skala} />),
+      value: (r) => (r.nilai_ditampilkan === false ? null : adaAngka(r.bobot) ? Number(r.bobot) : (cariSkala(r.nilai_huruf, skalaBaris(r))?.bobot ?? null)),
+      cell: (r) => (r.nilai_ditampilkan === false ? <span className="u-muted">Belum dirilis</span> : <LencanaNilai nilai={r.nilai_huruf} skala={skalaBaris(r)} />),
     },
     { key: 'bobot', header: 'Bobot', align: 'end', sortable: true, width: '5.5rem', value: (r) => (adaAngka(r.bobot) ? Number(r.bobot) : null), cell: (r) => duaDesimal(r.bobot) },
     { key: 'mutu', header: 'Mutu', align: 'end', sortable: true, width: '5.5rem', value: (r) => (adaAngka(r.mutu) ? Number(r.mutu) : null), cell: (r) => duaDesimal(r.mutu) },

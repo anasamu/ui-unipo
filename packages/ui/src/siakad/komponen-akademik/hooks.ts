@@ -1,4 +1,4 @@
-import { useSiakadQuery } from '../provider';
+import { useOptionalSiakad, useSiakadQuery } from '../provider';
 import type { KegiatanTerpadu } from '../kalender';
 import type { SesiKuliah } from './tipe';
 
@@ -30,4 +30,40 @@ export function useTahapanPeriode(opsi: { tahunId?: string | null; kodeProdi?: s
       ),
     { staleTime: 5 * 60_000, enabled: opsi.enabled !== false },
   );
+}
+
+/** Menit tatap muka per SKS bila aturan kurikulum belum mengaturnya (sama dengan bawaan server). */
+export const MENIT_PER_SKS_BAWAAN = 50;
+
+/** GET /v1/referensi/beban-sks: menit tatap muka per SKS dari aturan kurikulum berversi ber-SK. */
+export interface BebanSks {
+  menit_per_sks: number;
+  /** `aturan_kurikulum` bila diatur versi aturan yang berlaku, `bawaan` bila belum. */
+  sumber?: 'aturan_kurikulum' | 'bawaan' | string;
+  bawaan?: number;
+  kode_prodi?: string | null;
+  tahun_id?: string | null;
+  versi?: { id: number; nama: string; versi?: number; lingkup?: string; berlaku_mulai?: string | null } | null;
+}
+
+/** Menit per SKS dari respons beban SKS; bawaan 50 bila belum dimuat/tidak valid. */
+export function menitPerSksDari(beban: Pick<BebanSks, 'menit_per_sks'> | null | undefined): number {
+  const n = Number(beban?.menit_per_sks);
+  return Number.isFinite(n) && n > 0 ? n : MENIT_PER_SKS_BAWAAN;
+}
+
+/**
+ * Beban tatap muka per SKS yang berlaku untuk prodi dan periode (aturan kurikulum ber-SK; bawaan 50 menit). Tanpa
+ * `prodi`, token mahasiswa memakai prodinya sendiri. Tidak memanggil API bila tidak ada SDK (mis. galeri tanpa
+ * penyedia): `menitPerSks` tetap 50.
+ */
+export function useBebanSks(opsi: { prodi?: string | null; tahunId?: string | null; enabled?: boolean } = {}) {
+  const siakad = useOptionalSiakad();
+  const q = useSiakadQuery<BebanSks>(
+    ['referensi', 'beban-sks', opsi.prodi ?? '', opsi.tahunId ?? ''],
+    (s, signal) =>
+      s.request<BebanSks>({ method: 'GET', path: '/v1/referensi/beban-sks', query: { ...(opsi.prodi ? { prodi: opsi.prodi } : {}), ...(opsi.tahunId ? { tahun_id: opsi.tahunId } : {}) } }, { signal }),
+    { staleTime: 10 * 60_000, enabled: !!siakad && opsi.enabled !== false },
+  );
+  return { ...q, menitPerSks: menitPerSksDari(q.data) };
 }

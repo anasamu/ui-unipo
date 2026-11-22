@@ -1,5 +1,11 @@
 # Catatan perubahan
 
+## Belum dirilis (komponen akademik lanjutan; nomor versi diberikan saat digabung)
+
+- **Form isi KRS** (`siakad/komponen-akademik/isi-krs.tsx` baru; butuh SIAKAD dengan `POST /v1/mahasiswa/{nim}/krs/batal` dan jam kelas di penawaran/KRS): `FormIsiKrs` (daftar penawaran per semester, cari, pilih kelas, peringatan bentrok jadwal dari jam kelas, batas SKS dari server, aturan ber-SK), `PanelIsiKrs` bertahap di panel samping, dan `IsiKrsMahasiswa` yang terhubung ke SDK (ajukan ke dosen PA, batalkan mata kuliah yang belum disetujui). Server tetap memeriksa bentrok dan batas saat menyimpan.
+- **Skala nilai per periode** di transkrip dan KHS: huruf dihitung memakai skala yang berlaku pada periode mata kuliah diambil.
+- **Menit per SKS dari aturan kurikulum**: `JadwalMingguan` membaca `GET /v1/referensi/beban-sks` (hook `useBebanSks`, prop `kodeProdi`) untuk tinggi sesi tanpa jam selesai; bawaan 50 menit bila aturan belum mengatur atau tidak ada SDK. Isian aturan kurikulum mendapat kolom menit tatap muka per SKS.
+- Uji `packages/ui/test/komponen-akademik-lanjut.test.tsx`; contoh di galeri Komponen akademik.
 ## Belum dirilis (kunci fitur Pustikom)
 
 - **Kunci fitur per periode: pemilik tunggal Pustikom** (`siakad/kunci-fitur.tsx`; keputusan Anas 2026-11-22, menggantikan 2026-11-21): teks komponen tidak lagi menyebut BAAK sebagai pengatur. `hanyaLihat` tetap ada untuk aplikasi pemantau lain; tanpa prop itu tombol atur tampil bila server menjawab `meta.boleh_atur` (izin `kalender.kunci.atur`, kini milik Admin Pustikom lewat migration SIAKAD `2027_01_29_780100_rbac_kunci_fitur_pustikom`).

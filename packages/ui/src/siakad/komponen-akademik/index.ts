@@ -7,6 +7,8 @@
 export {
   skalaBerlaku,
   normalSkala,
+  penentuSkala,
+  kunciSkala,
   cariSkala,
   nadaNilai as nadaNilaiSkala,
   predikatDariIpk,
@@ -15,6 +17,8 @@ export {
   type BarisSkalaNilai,
   type PredikatKelulusan,
   type SumberSkala,
+  type SkalaPerPeriode,
+  type PenentuSkala,
   type NadaNilai,
 } from './skala';
 export {
@@ -54,4 +58,29 @@ export {
   type LampiranBerkasAkademik,
   type StatusSyaratBerkas,
 } from './unggah';
-export { useJadwalMahasiswa, useTahapanPeriode } from './hooks';
+export { useJadwalMahasiswa, useTahapanPeriode, useBebanSks, menitPerSksDari, MENIT_PER_SKS_BAWAAN, type BebanSks } from './hooks';
+export {
+  FormIsiKrs,
+  PanelIsiKrs,
+  IsiKrsMahasiswa,
+  PesanAturanKrs,
+  cariBentrok,
+  bentrokPilihan,
+  ringkasPilihanKrs,
+  bodyAjukanKrs,
+  pesanHasilAjukan,
+  rentangSlot,
+  slotDariKrs,
+  slotDariKelas,
+  sesiDariKelas,
+  teksWaktuKelas,
+  type FormIsiKrsProps,
+  type PanelIsiKrsProps,
+  type IsiKrsMahasiswaProps,
+  type AturanKrsRingkas,
+  type HasilAjukanKrs,
+  type PilihanKrs,
+  type SlotKuliah,
+  type BentrokJadwal,
+  type RingkasPilihanKrs,
+} from './isi-krs';

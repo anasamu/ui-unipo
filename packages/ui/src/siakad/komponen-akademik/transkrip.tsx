@@ -5,7 +5,9 @@ import { cn } from '../../lib/cn';
 import { Empty, Progress } from '../../components/display';
 import { SegmentedControl } from '../../components/forms';
 import { DeretAngka, KakiCetak, KepalaAkademik, KepalaCetak, LegendaSkalaNilai, SebaranNilaiSkala, TabelNilaiCetak, TabelNilaiMk, TombolCetakAkademik, keadaanData, type KeadaanDataProps } from './bersama';
-import { normalSkala, predikatDariIpk, type PredikatKelulusan, type SumberSkala } from './skala';
+import { kunciSkala, penentuSkala, predikatDariIpk, type PredikatKelulusan, type SkalaPerPeriode, type SumberSkala } from './skala';
+import type { SkalaNilai } from '../alur';
+import { labelTahunAkademik } from '../akademik';
 import { adaAngka, angka, duaDesimal, type BarisNilaiMk, type DataTranskrip, type IdentitasAkademik } from './tipe';
 
 export type TampilanTranskrip = 'semester' | 'tabel';
@@ -13,8 +15,14 @@ export type TampilanTranskrip = 'semester' | 'tabel';
 export interface LembarTranskripProps extends KeadaanDataProps {
   /** Respons GET /v1/mahasiswa/{nim}/transkrip (atau transkrip-sementara). */
   data?: DataTranskrip | null;
-  /** Skala nilai server (useSkalaNilai) untuk warna, sebaran, dan legenda. */
-  skala?: SumberSkala | null;
+  /**
+   * Skala nilai server untuk warna, sebaran, dan legenda. Tiap mata kuliah memakai versi skala yang berlaku di
+   * periode MK itu diambil: teruskan baris m_nilai mentah (`useSkalaNilai().baris`, berversi `tahun_id`) atau fungsi
+   * periode → skala. Skala tunggal dipakai untuk semua baris.
+   */
+  skala?: SumberSkala | SkalaPerPeriode | null;
+  /** Kode prodi untuk memilih baris m_nilai prodi (bila `skala` berisi beberapa prodi). */
+  prodi?: string | null;
   /** Daftar predikat m_predikat (usePredikatKelulusan); predikat dihitung dari IPK. */
   predikat?: ReadonlyArray<PredikatKelulusan> | null;
   /** Kode jenjang untuk memilih baris predikat (bila m_predikat per jenjang). */
@@ -47,11 +55,26 @@ export function hitungIp(mk: ReadonlyArray<BarisNilaiMk>): { sks: number; mutu: 
  * Transkrip nilai: IPK, predikat (m_predikat), SKS terhadap SKS lulus prodi, total mutu, sebaran nilai menurut skala,
  * nilai per semester (dengan IP semester) atau satu tabel, dan versi cetak A4 berkop.
  */
-export function LembarTranskrip({ data, skala, predikat, jenjang, sksLulus, identitas, kop, tampilan = 'semester', judul, aksi, cetak = true, className, ...k }: LembarTranskripProps) {
+export function LembarTranskrip({ data, skala, prodi, predikat, jenjang, sksLulus, identitas, kop, tampilan = 'semester', judul, aksi, cetak = true, className, ...k }: LembarTranskripProps) {
   const ref = React.useRef<HTMLElement>(null);
   const [mode, setMode] = React.useState<TampilanTranskrip>(tampilan);
-  const s = React.useMemo(() => normalSkala(skala), [skala]);
   const mk = React.useMemo(() => data?.mata_kuliah ?? [], [data]);
+  const skalaUntuk = React.useMemo(() => penentuSkala(skala, { prodi: prodi ?? data?.kode_prodi }), [skala, prodi, data?.kode_prodi]);
+  // Skala periode terakhir (urutan sebaran) dan versi skala yang dipakai baris-baris transkrip (legenda per versi).
+  const terakhir = React.useMemo(() => mk.reduce<string | null>((a, m) => (m.tahun_id && (!a || m.tahun_id > a) ? m.tahun_id : a), null), [mk]);
+  const s = React.useMemo(() => skalaUntuk(terakhir), [skalaUntuk, terakhir]);
+  const versiSkala = React.useMemo(() => {
+    const per = new Map<string, { skala: SkalaNilai[]; dari: string | null; sampai: string | null }>();
+    for (const t of [...new Set(mk.map((m) => m.tahun_id ?? ''))].sort()) {
+      const sk = skalaUntuk(t || null);
+      if (!sk.length) continue;
+      const kunci = kunciSkala(sk);
+      const v = per.get(kunci);
+      if (v) v.sampai = t || v.sampai;
+      else per.set(kunci, { skala: sk, dari: t || null, sampai: t || null });
+    }
+    return [...per.values()];
+  }, [mk, skalaUntuk]);
   const grup = React.useMemo(() => {
     const m = new Map<number, BarisNilaiMk[]>();
     for (const r of mk) m.set(r.semester ?? 0, [...(m.get(r.semester ?? 0) ?? []), r]);
@@ -98,17 +121,17 @@ export function LembarTranskrip({ data, skala, predikat, jenjang, sksLulus, iden
         ]}
       />
       {sksLulus ? <Progress className="u-ak-layar" value={Math.min(sks, sksLulus)} max={sksLulus} size="sm" tone={sks >= sksLulus ? 'success' : 'primary'} label="Menuju SKS lulus" format={() => `${sks} dari ${sksLulus} SKS`} /> : null}
-      <SebaranNilaiSkala className="u-ak-layar" data={mk} skala={s} />
+      <SebaranNilaiSkala className="u-ak-layar" data={mk} skala={s} skalaUntuk={skalaUntuk} />
       <div className="u-ak-layar u-ak-transkrip-isi">
         {mode === 'tabel' ? (
-          <TabelNilaiMk data={mk} skala={s} semester periode ekspor={`transkrip-${identitas?.nim ?? data?.nim ?? ''}`} />
+          <TabelNilaiMk data={mk} skala={s} skalaUntuk={skalaUntuk} semester periode ekspor={`transkrip-${identitas?.nim ?? data?.nim ?? ''}`} />
         ) : (
           grup.map(([smt, rows]) => {
             const h = hitungIp(rows);
             return (
               <section key={smt} className="u-ak-smt">
                 <KepalaAkademik judul={smt ? `Semester ${smt}` : 'Tanpa semester'} meta={`${rows.reduce((a, r) => a + angka(r.sks), 0)} SKS${h.ip != null ? ` · IP ${h.ip.toFixed(2)}` : ''}`} />
-                <TabelNilaiMk data={rows} skala={s} />
+                <TabelNilaiMk data={rows} skala={s} skalaUntuk={skalaUntuk} />
               </section>
             );
           })
@@ -137,7 +160,18 @@ export function LembarTranskrip({ data, skala, predikat, jenjang, sksLulus, iden
           )}
         </dl>
       </div>
-      {s.length > 0 && <LegendaSkalaNilai skala={s} />}
+      {versiSkala.length === 1 && <LegendaSkalaNilai skala={versiSkala[0]!.skala} />}
+      {versiSkala.length > 1 && (
+        <div className="u-ak-legenda-versi">
+          {versiSkala.map((v) => (
+            <LegendaSkalaNilai
+              key={kunciSkala(v.skala)}
+              skala={v.skala}
+              judul={`Skala nilai ${v.dari === v.sampai ? labelTahunAkademik(v.dari, true) : `${labelTahunAkademik(v.dari, true)} – ${labelTahunAkademik(v.sampai, true)}`}`}
+            />
+          ))}
+        </div>
+      )}
       <KakiCetak />
     </section>
   );
