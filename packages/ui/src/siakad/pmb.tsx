@@ -1,12 +1,12 @@
 'use client';
 import * as React from 'react';
 import { Pilihan } from '../components/formulir';
-import { Check, GraduationCap, Medal, Plus, Trash2 } from 'lucide-react';
+import { Check, GraduationCap, MapPin, Medal, Plus, Trash2 } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Alert, Empty, Table, TableContainer } from '../components/display';
 import { DatePicker, parseISODate, toISODate } from '../components/calendar';
 import { Field, Input, RadioGroup, Textarea } from '../components/forms';
-import { Select } from '../components/select';
+import { Combobox, OptionContent, Select } from '../components/select';
 import { Badge, Button, Skeleton } from '../components/actions';
 import { Dialog } from '../components/overlays';
 import { FormGrid, Wizard, WizardReview, type ReviewSection, type WizardStep } from '../components/wizard';
@@ -90,7 +90,46 @@ export function IsianDataDiri({ value: v, onChange, ref_, errors = {} }: BagianP
   );
 }
 
-export function IsianAlamat({ value: v, onChange, errors = {} }: Omit<BagianProps, 'ref_'> & { ref_?: ReferensiFormulir }) {
+/** Kecamatan PDDikti (r_wilayah level 3) dari GET /v1/pmb/info/wilayah. */
+export interface WilayahPmb {
+  kode: string;
+  nama: string;
+  kabupaten?: string;
+  provinsi?: string;
+}
+export const labelWilayah = (w: WilayahPmb) => [w.nama, w.kabupaten].filter(Boolean).join(', ');
+
+/**
+ * Pemilih kecamatan formulir PMB (audit PMB-26: dulu teks bebas). Menyimpan KODE kecamatan PDDikti, sama dengan
+ * m_mahasiswa.kecamatan di Kelengkapan data, sehingga terbawa ke data mahasiswa dan Feeder setelah daftar ulang.
+ * Nilai lama berupa teks (draf sebelum pemilih ini) tampil sebagai label dan bisa diganti.
+ */
+export function CariKecamatanPmb({ kode, label, onPilih, disabled }: { kode?: string; label?: string; onPilih: (w: WilayahPmb | null) => void; disabled?: boolean }) {
+  const siakad = useSiakad();
+  const nilai = React.useMemo<WilayahPmb | null>(() => (kode ? { kode, nama: label || kode } : null), [kode, label]);
+  const muat = React.useCallback(
+    async (q: string, signal: AbortSignal) => (await siakad.request<WilayahPmb[]>({ method: 'GET', path: '/v1/pmb/info/wilayah', query: { q }, public: true }, { signal })).data,
+    [siakad],
+  );
+  return (
+    <Combobox<WilayahPmb>
+      value={nilai}
+      onValueChange={onPilih}
+      loadItems={muat}
+      minQueryLength={3}
+      disabled={disabled}
+      placeholder="Cari kecamatan, mis. Marisa"
+      hintText="Ketik minimal 3 huruf nama kecamatan atau kabupaten."
+      emptyText="Kecamatan tidak ditemukan. Coba nama kabupaten/kota."
+      icon={<MapPin />}
+      itemKey={(w) => w.kode}
+      itemToString={labelWilayah}
+      renderItem={(w) => <OptionContent title={w.nama} meta={[w.kabupaten, w.provinsi].filter(Boolean).join(' · ')} />}
+    />
+  );
+}
+
+export function IsianAlamat({ value: v, onChange, errors = {}, pilihKecamatan = false }: Omit<BagianProps, 'ref_'> & { ref_?: ReferensiFormulir; /** Kecamatan lewat pemilih wilayah PMB (kode PDDikti) alih-alih teks. */ pilihKecamatan?: boolean }) {
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange({ [k]: e.target.value });
   return (
     <FormGrid columns={3}>
@@ -112,9 +151,19 @@ export function IsianAlamat({ value: v, onChange, errors = {} }: Omit<BagianProp
       <Field label="Desa/kelurahan" required error={errors.desa}>
         <Input value={teks(v.desa)} onChange={set('desa')} />
       </Field>
-      <Field label="Kecamatan" required error={errors.kecamatan}>
-        <Input value={teks(v.kecamatan)} onChange={set('kecamatan')} />
-      </Field>
+      {pilihKecamatan ? (
+        <Field label="Kecamatan" required error={errors.kecamatan} description="Ketik nama kecamatan atau kabupaten, lalu pilih." style={{ gridColumn: '1 / -1' }}>
+          <CariKecamatanPmb
+            kode={teks(v.kecamatan)}
+            label={teks(v.kecamatan_nama) || teks(v.kecamatan)}
+            onPilih={(w) => onChange({ kecamatan: w?.kode ?? '', kecamatan_nama: w ? labelWilayah(w) : '' })}
+          />
+        </Field>
+      ) : (
+        <Field label="Kecamatan" required error={errors.kecamatan}>
+          <Input value={teks(v.kecamatan)} onChange={set('kecamatan')} />
+        </Field>
+      )}
     </FormGrid>
   );
 }
@@ -733,7 +782,7 @@ export function WizardPendaftaranPmb({ id, onDiajukan, kontak, langkah, onLangka
       content: <IsianDataDiri value={p} ref_={r} errors={errors} onChange={(x) => ubah('pribadi', x)} />,
       onNext: simpan('pribadi'),
     },
-    { id: 'alamat', title: 'Alamat', description: 'Domisili saat ini', content: <IsianAlamat value={a} errors={errors} onChange={(x) => ubah('alamat', x)} />, onNext: simpan('alamat') },
+    { id: 'alamat', title: 'Alamat', description: 'Domisili saat ini', content: <IsianAlamat value={a} errors={errors} onChange={(x) => ubah('alamat', x)} pilihKecamatan />, onNext: simpan('alamat') },
     {
       id: 'asal',
       title: 'Asal sekolah',
@@ -882,7 +931,7 @@ function PmbReview({
       items: [
         { label: 'Alamat', value: [a.alamat, a.rt && `RT ${a.rt}`, a.rw && `RW ${a.rw}`].filter(Boolean).join(', ') },
         { label: 'Desa/kelurahan', value: a.desa },
-        { label: 'Kecamatan', value: a.kecamatan },
+        { label: 'Kecamatan', value: a.kecamatan_nama || a.kecamatan },
       ],
     },
     {
