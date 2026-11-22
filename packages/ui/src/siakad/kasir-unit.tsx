@@ -96,6 +96,8 @@ export interface KasirKelolaSaya {
   universitas: boolean;
   bauk_id: number | null;
   unit: UnitKasirKelola[];
+  /** Unit aplikasi pemanggil dari server (fakultas aplikasi Fakultas, header X-Unipo-Fakultas); null = tanpa batas. */
+  unit_aplikasi?: number | null;
   status: Array<{ kode: string; label: string; jumlah: number }>;
   kategori: Record<string, string>;
   perlakuan: string[];
@@ -1814,6 +1816,12 @@ export type TabKasirUnit = 'jenis' | 'loket' | 'aturan' | 'jadwal' | 'templat';
 export interface PengaturanKasirUnitProps {
   /** Saring tampilan ke satu unit (induk_unit.id), mis. aplikasi Fakultas untuk fakultasnya. Kosong = semua unit dalam lingkup. */
   unitId?: number;
+  /**
+   * Kunci ke satu unit berdasarkan kode struktur organisasi (induk_unit.kode), mis. "BAAK" atau "PMB": aplikasi unit
+   * hanya menampilkan jenis biaya, loket, aturan, jadwal, dan templat unit itu (dan turunannya). Tanpa `unitId`/`unitKode`
+   * server dapat mengunci lewat unit aplikasi (fakultas aplikasi Fakultas).
+   */
+  unitKode?: string;
   /** Judul di atas tab (opsional; halaman aplikasi biasanya sudah punya judul). */
   judul?: React.ReactNode;
   /** Tab awal. */
@@ -1826,7 +1834,7 @@ export interface PengaturanKasirUnitProps {
  * aktif pembayaran (garis waktu), dan templat laporan kasir. Semua formulir di panel samping bertahap. Izin
  * kasir.pengaturan berlingkup unit (SIAKAD /v1/kasir/kelola); scope token kasir:read / kasir:write.
  */
-export function PengaturanKasirUnit({ unitId, judul, tabAwal, className }: PengaturanKasirUnitProps) {
+export function PengaturanKasirUnit({ unitId: unitIdProp, unitKode, judul, tabAwal, className }: PengaturanKasirUnitProps) {
   // ?tab=loket dari tautan notifikasi "Perangkat kasir menunggu persetujuan".
   const tabUrl = typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('tab') as TabKasirUnit | null) : null;
   const tabMula: TabKasirUnit = tabAwal ?? (tabUrl && ['jenis', 'loket', 'aturan', 'jadwal', 'templat'].includes(tabUrl) ? tabUrl : 'jenis');
@@ -1859,6 +1867,21 @@ export function PengaturanKasirUnit({ unitId, judul, tabAwal, className }: Penga
   }
   if (!q.data) return <Spinner />;
   const saya = q.data;
+  const kode = unitKode?.trim().toUpperCase();
+  const unitKodeId = kode ? saya.unit.find((u) => (u.kode ?? '').toUpperCase() === kode)?.id : undefined;
+  const unitId = unitIdProp ?? unitKodeId ?? saya.unit_aplikasi ?? undefined;
+  if (kode && unitIdProp == null && unitKodeId == null)
+    return (
+      <div className={cn('u-ksu', className)}>
+        {kepala}
+        <Empty
+          bordered
+          icon={<ShieldAlert />}
+          title={`Unit ${kode} belum ada dalam lingkup kasir Anda`}
+          description={`Pastikan unit berkode ${kode} ada di struktur organisasi Pustikom dan Anda punya peran Bendahara penerimaan untuk unit itu.`}
+        />
+      </div>
+    );
   if (!saya.lintas && !saya.universitas && !saya.unit.length)
     return (
       <div className={cn('u-ksu', className)}>

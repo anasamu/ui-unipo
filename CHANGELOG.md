@@ -1,5 +1,9 @@
 # Catatan perubahan
 
+## Belum dirilis (kasir unit terkunci per aplikasi; nomor versi diberikan saat digabung)
+
+- **Kasir unit terkunci ke unit aplikasi** (`siakad/kasir-unit.tsx`): `PengaturanKasirUnit` menerima `unitKode` (kode struktur organisasi, mis. `"BAAK"`, `"PMB"`) dan memakai `unit_aplikasi` dari server (fakultas aplikasi Fakultas). Aplikasi unit hanya menampilkan jenis biaya, loket, aturan, jadwal, dan templat unit itu, dan pilihan "Unit penerbit" saat menambah jenis biaya hanya unit itu (tanpa Universitas). Bila kode unit tidak ada dalam lingkup pengguna, tampil keterangan, bukan daftar semua unit.
+
 ## Belum dirilis (komponen akademik lanjutan; nomor versi diberikan saat digabung)
 
 - **Form isi KRS** (`siakad/komponen-akademik/isi-krs.tsx` baru; butuh SIAKAD dengan `POST /v1/mahasiswa/{nim}/krs/batal` dan jam kelas di penawaran/KRS): `FormIsiKrs` (daftar penawaran per semester, cari, pilih kelas, peringatan bentrok jadwal dari jam kelas, batas SKS dari server, aturan ber-SK), `PanelIsiKrs` bertahap di panel samping, dan `IsiKrsMahasiswa` yang terhubung ke SDK (ajukan ke dosen PA, batalkan mata kuliah yang belum disetujui). Server tetap memeriksa bentrok dan batas saat menyimpan.
