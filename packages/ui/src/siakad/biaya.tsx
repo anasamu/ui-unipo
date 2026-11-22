@@ -1444,6 +1444,8 @@ export interface KelolaAturanBiayaProps {
   sumber?: SumberBiaya;
   /** Tab awal, mis. "diajukan" untuk layar persetujuan WR bidang keuangan. */
   tabAwal?: 'berlaku' | 'diajukan' | 'draf' | 'semua';
+  /** Batasi ke satu jenis biaya (halaman Komponen biaya). */
+  kodeBiaya?: string;
   className?: string;
 }
 
@@ -1451,16 +1453,16 @@ export interface KelolaAturanBiayaProps {
  * Daftar aturan biaya dengan tab status, cari, susun baru (biaya.susun), dan panel detail untuk lampiran SK, ajukan,
  * serta tetapkan/tolak (biaya.setujui). Dipakai BAUK, fakultas, LP2M, dan dasbor pimpinan; isi mengikuti izin RBAC.
  */
-export function KelolaAturanBiaya({ unitId, sumber, judul = 'Aturan biaya', deskripsi, tabAwal = 'berlaku', className }: KelolaAturanBiayaProps) {
+export function KelolaAturanBiaya({ unitId, sumber, judul = 'Aturan biaya', deskripsi, tabAwal = 'berlaku', kodeBiaya, className }: KelolaAturanBiayaProps) {
   const hak = useHakBiaya();
   const [tab, setTab] = React.useState(tabAwal);
   React.useEffect(() => setTab(tabAwal), [tabAwal]);
   const [q, setQ] = React.useState('');
   const [page, setPage] = React.useState(1);
   const [pilih, setPilih] = React.useState<string | null>(null);
-  const filter: FilterAturanBiaya = { status: tab === 'semua' ? undefined : tab, q: q.trim() || undefined, unit_id: unitId ?? undefined, sumber, page, per_page: 25 };
+  const filter: FilterAturanBiaya = { status: tab === 'semua' ? undefined : tab, q: q.trim() || undefined, unit_id: unitId ?? undefined, sumber, kode_biaya: kodeBiaya, page, per_page: 25 };
   const daftar = useDaftarAturanBiaya(filter);
-  const menunggu = useDaftarAturanBiaya({ status: 'diajukan', unit_id: unitId ?? undefined, sumber, per_page: 1 });
+  const menunggu = useDaftarAturanBiaya({ status: 'diajukan', unit_id: unitId ?? undefined, sumber, kode_biaya: kodeBiaya, per_page: 1 });
   const b = hak.data?.boleh;
   const kolom: DataColumn<AturanBiaya>[] = [
     {

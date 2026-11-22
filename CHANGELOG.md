@@ -1,5 +1,11 @@
 # Catatan perubahan
 
+## Belum dirilis
+
+- **Komponen biaya** (`siakad/komponen-biaya.tsx` baru; butuh SIAKAD dengan `GET /v1/keuangan/tarif/biaya`): satu halaman BAUK untuk mengatur satu jenis biaya dari hulu ke hilir. `DaftarKomponenBiaya` (daftar jenis biaya dalam lingkup, tambah lewat form bertahap) dan `DetailKomponenBiaya` dengan tab Identitas & penerbit, Tarif (nominal per prodi, angkatan, kelas, kampus, dan syarat KRS/ujian/her per periode; form di panel samping), Pembagian (aturan biaya jenis itu), dan Penerimaan kasir (jadwal aktif jenis itu + aturan penerimaan). `HalamanKomponenBiaya` memilih daftar/detail dari `kodeBiaya`.
+- `kasir-unit.tsx` mengekspor bagian yang dipakai ulang: `useKasirKelolaSaya`, `useJenisBiayaKasir`, `FormJenisBiayaKasir`, `JadwalPenerimaanBiaya`, `AturanPenerimaanKasir`, `labelPerlakuanKasir`, `namaUnitPenerbitKasir`.
+- `KelolaAturanBiaya` menerima `kodeBiaya` untuk membatasi daftar ke satu jenis biaya.
+
 ## 1.60.0 (2026-11-22)
 
 - **Kasir unit: pemilih "Unit yang diatur"** (`siakad/kasir-unit.tsx`): pengguna berlingkup lebih dari satu unit tanpa unit aplikasi (BAUK lintas unit) memilih unit di kepala halaman, menggantikan teks "Lingkup: semua unit"; kelima tab tersaring dan jenis biaya baru memakai unit itu sebagai penerbit bawaan.

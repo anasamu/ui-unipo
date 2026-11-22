@@ -588,6 +588,32 @@ function Sakelar({ nilai, ubah, label, ket }: { nilai: boolean; ubah: (c: boolea
   );
 }
 
+/** Isian form jenis biaya dari baris yang ada (ubah). */
+function isianJenisDari(j: JenisBiayaKasir, saya: KasirKelolaSaya): IsianJenis {
+  return ({
+  baru: false,
+  kode_biaya: j.kode_biaya,
+  nama: j.nama,
+  unit: kunciUnit(j.unit_id, saya),
+  kategori: j.kategori || null,
+  perlakuan: j.perlakuan,
+  nominal_bawaan: j.nominal_bawaan ? String(Math.round(j.nominal_bawaan)) : '',
+  tagih_otomatis: j.tagih_otomatis,
+  batasi_prodi: j.batasi_prodi,
+  potongan_kasir: j.potongan_kasir,
+  bayar_dimuka: !!j.bayar_dimuka,
+  dimuka_hari: j.dimuka_hari ? String(j.dimuka_hari) : '',
+  urutan: String(j.urutan),
+  aktif: j.aktif,
+  keterangan: j.keterangan ?? '',
+});
+}
+
+/** Isian form jenis biaya baru. */
+function isianJenisBaru(saya: KasirKelolaSaya, unitId?: number): IsianJenis {
+  return { baru: true, kode_biaya: '', nama: '', unit: unitAwal(saya, unitId), kategori: null, perlakuan: 'sewaktu', nominal_bawaan: '', tagih_otomatis: false, batasi_prodi: false, potongan_kasir: false, bayar_dimuka: false, dimuka_hari: '', urutan: '100', aktif: true, keterangan: '' };
+}
+
 function TabJenis({ saya, unitId }: { saya: KasirKelolaSaya; unitId?: number }) {
   const q = useSiakadQuery<JenisBiayaKasir[]>([`${API}/jenis`], (s, signal) => s.request({ method: 'GET', path: `${API}/jenis` }, { signal }));
   const [form, setForm] = React.useState<IsianJenis | null>(null);
@@ -604,23 +630,7 @@ function TabJenis({ saya, unitId }: { saya: KasirKelolaSaya; unitId?: number }) 
     { key: 'tagih', header: 'Tagih otomatis', value: (j) => (j.tagih_otomatis ? 'Ya' : 'Tidak'), cell: (j) => (j.tagih_otomatis ? <Badge variant="info">Ya{j.nominal_bawaan ? ` · ${formatRupiah(j.nominal_bawaan)}` : ''}</Badge> : <span className="u-ksu-redup">Tidak</span>) },
     { key: 'aktif', header: 'Status', value: (j) => (j.aktif ? 'Aktif' : 'Nonaktif'), cell: (j) => <LencanaAktif aktif={j.aktif} />, mobile: 'badge', shrink: true },
   ];
-  const ubah = (j: JenisBiayaKasir): IsianJenis => ({
-    baru: false,
-    kode_biaya: j.kode_biaya,
-    nama: j.nama,
-    unit: kunciUnit(j.unit_id, saya),
-    kategori: j.kategori || null,
-    perlakuan: j.perlakuan,
-    nominal_bawaan: j.nominal_bawaan ? String(Math.round(j.nominal_bawaan)) : '',
-    tagih_otomatis: j.tagih_otomatis,
-    batasi_prodi: j.batasi_prodi,
-    potongan_kasir: j.potongan_kasir,
-    bayar_dimuka: !!j.bayar_dimuka,
-    dimuka_hari: j.dimuka_hari ? String(j.dimuka_hari) : '',
-    urutan: String(j.urutan),
-    aktif: j.aktif,
-    keterangan: j.keterangan ?? '',
-  });
+  const ubah = (j: JenisBiayaKasir): IsianJenis => isianJenisDari(j, saya);
   return (
     <div className="u-ksu-tumpuk">
       <DataTable<JenisBiayaKasir>
@@ -639,7 +649,7 @@ function TabJenis({ saya, unitId }: { saya: KasirKelolaSaya; unitId?: number }) 
           </span>
         }
         actions={
-          <Button onClick={() => setForm({ baru: true, kode_biaya: '', nama: '', unit: unitAwal(saya, unitId), kategori: null, perlakuan: 'sewaktu', nominal_bawaan: '', tagih_otomatis: false, batasi_prodi: false, potongan_kasir: false, bayar_dimuka: false, dimuka_hari: '', urutan: '100', aktif: true, keterangan: '' })}>
+          <Button onClick={() => setForm(isianJenisBaru(saya, unitId))}>
             <Plus /> Tambah jenis biaya
           </Button>
         }
@@ -1034,7 +1044,7 @@ function GarisWaktuJadwal({ data }: { data: PratinjauJadwalKasir }) {
   );
 }
 
-function TabJadwal({ saya, unitId }: { saya: KasirKelolaSaya; unitId?: number }) {
+function TabJadwal({ saya, unitId, jenisTetap }: { saya: KasirKelolaSaya; unitId?: number; jenisTetap?: JenisBiayaKasir }) {
   const siakad = useSiakad();
   const toast = useToast();
   const q = useSiakadQuery<JadwalAktifKasir[]>([`${API}/jadwal`], (s, signal) => s.request({ method: 'GET', path: `${API}/jadwal` }, { signal }));
@@ -1045,8 +1055,12 @@ function TabJadwal({ saya, unitId }: { saya: KasirKelolaSaya; unitId?: number })
   const [form, setForm] = React.useState<IsianJadwal | null>(null);
   const [hapus, setHapus] = React.useState<JadwalAktifKasir | null>(null);
   const [riwayat, setRiwayat] = React.useState<JadwalAktifKasir | null>(null);
-  const rows = dalamUnit(q.data, saya, unitId, true);
-  const baru = (): IsianJadwal => ({ unit: unitAwal(saya, unitId), cakupan: 'jenis', kode_biaya: null, kategori: null, sumber: 'kalender', tahapan: null, mulai: null, selesai: null, jam_mulai: '', jam_selesai: '', hari: [], aktif: true, catatan: '' });
+  const semuaBaris = dalamUnit(q.data, saya, unitId, true);
+  // Halaman Komponen biaya: hanya jadwal yang mengenai jenis ini (khusus jenis, kategorinya, atau semua jenis).
+  const rows = jenisTetap
+    ? semuaBaris?.filter((r) => (r.kode_biaya ? r.kode_biaya === jenisTetap.kode_biaya : !r.kategori || r.kategori === jenisTetap.kategori))
+    : semuaBaris;
+  const baru = (): IsianJadwal => ({ unit: jenisTetap ? kunciUnit(jenisTetap.unit_id, saya) : unitAwal(saya, unitId), cakupan: 'jenis', kode_biaya: jenisTetap?.kode_biaya ?? null, kategori: null, sumber: 'kalender', tahapan: null, mulai: null, selesai: null, jam_mulai: '', jam_selesai: '', hari: [], aktif: true, catatan: '' });
   const ubah = (r: JadwalAktifKasir): IsianJadwal => ({
     ...sasaranDari(saya, r),
     kunci: r.kunci,
@@ -1929,4 +1943,53 @@ export function PengaturanKasirUnit({ unitId: unitIdProp, unitKode, judul, tabAw
       />
     </div>
   );
+}
+
+// ================================================================ Bagian yang dipakai ulang (halaman Komponen biaya BAUK)
+
+/** Ringkasan hak pengaturan kasir pengguna (GET /v1/kasir/kelola/saya). */
+export function useKasirKelolaSaya() {
+  return useSiakadQuery<KasirKelolaSaya>([`${API}/saya`], (s, signal) => s.request({ method: 'GET', path: `${API}/saya` }, { signal }), { staleTime: 5 * 60_000 });
+}
+
+/** Jenis biaya dalam lingkup pengaturan kasir pengguna (GET /v1/kasir/kelola/jenis). */
+export function useJenisBiayaKasir() {
+  return useSiakadQuery<JenisBiayaKasir[]>([`${API}/jenis`], (s, signal) => s.request({ method: 'GET', path: `${API}/jenis` }, { signal }));
+}
+
+/** Label perlakuan penagihan (per semester, satu kali, per SKS, ...). */
+export function labelPerlakuanKasir(kode: string): string {
+  return PERLAKUAN[kode]?.label ?? kode;
+}
+
+/** Nama unit penerbit pendek untuk tampilan ("Universitas (BAUK)" bila tanpa unit). */
+export function namaUnitPenerbitKasir(saya: KasirKelolaSaya, id: number | null | undefined, cadangan?: string | null): string {
+  return namaUnit(saya, id, cadangan);
+}
+
+export interface FormJenisBiayaKasirProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  saya: KasirKelolaSaya;
+  /** Jenis yang diubah; kosong = tambah jenis baru. */
+  jenis?: JenisBiayaKasir | null;
+  /** Semua jenis (untuk cek kode ganda). */
+  daftar: JenisBiayaKasir[];
+  unitId?: number;
+}
+
+/** Form bertahap tambah/ubah jenis biaya (identitas, unit penerbit, kategori, penagihan) di panel samping. */
+export function FormJenisBiayaKasir({ open, onOpenChange, saya, jenis, daftar, unitId }: FormJenisBiayaKasirProps) {
+  const awal = React.useMemo(() => (!open ? null : jenis ? isianJenisDari(jenis, saya) : isianJenisBaru(saya, unitId)), [open, jenis, saya, unitId]);
+  return <FormJenis awal={awal} onOpenChange={onOpenChange} saya={saya} unitId={unitId} daftar={daftar} />;
+}
+
+/** Jadwal aktif penerimaan kasir untuk satu jenis biaya (jadwal khusus jenis itu, kategori, dan semua jenis). */
+export function JadwalPenerimaanBiaya({ saya, jenis }: { saya: KasirKelolaSaya; jenis: JenisBiayaKasir }) {
+  return <TabJadwal saya={saya} jenisTetap={jenis} />;
+}
+
+/** Aturan penerimaan kasir (titik kasir.terima, berdasar SK) dengan cek satu mahasiswa. */
+export function AturanPenerimaanKasir({ saya }: { saya: KasirKelolaSaya }) {
+  return <TabAturan saya={saya} />;
 }
