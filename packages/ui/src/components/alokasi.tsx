@@ -5,6 +5,7 @@ import { cn } from '../lib/cn';
 import { formatBytes } from '../lib/format';
 import { Slider } from './forms';
 import { chartColor } from './charts';
+import { sedangMenyusunIme } from '../lib/ime';
 
 /**
  * Komponen alokasi generik (mis. kuota penyimpanan, anggaran):
@@ -114,7 +115,7 @@ export function SliderNilai({ label, value, onValueChange, max, min = 0, step, k
             }}
             onChange={(e) => setTeks(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') terapkanTeks(teks);
+              if (e.key === 'Enter' && !sedangMenyusunIme(e)) terapkanTeks(teks);
             }}
             aria-describedby={keterangan ? `${id}-ket` : undefined}
           />

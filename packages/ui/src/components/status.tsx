@@ -185,18 +185,15 @@ export function useServiceChecks(checks: ServiceCheck[], { intervalMs = 60_000, 
     const out: Record<string, Partial<ServiceInfo>> = {};
     await Promise.all(
       ref.current.map(async (c) => {
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+        const signal = AbortSignal.timeout(Math.max(1, timeoutMs));
         const t = performance.now();
         try {
-          const r = (await c.check(ctrl.signal)) || {};
+          const r = (await c.check(signal)) || {};
           const ms = Math.round(performance.now() - t);
           out[c.key] = { status: ms > slowMs ? 'degraded' : 'ok', latency: ms, ...r };
         } catch (e) {
           const err = e as { status?: number; name?: string; message?: string };
-          out[c.key] = { status: 'down', latency: Math.round(performance.now() - t), detail: ctrl.signal.aborted ? 'waktu habis' : err?.status ? String(err.status) : err?.message?.slice(0, 40) };
-        } finally {
-          clearTimeout(timer);
+          out[c.key] = { status: 'down', latency: Math.round(performance.now() - t), detail: signal.aborted ? 'waktu habis' : err?.status ? String(err.status) : err?.message?.slice(0, 40) };
         }
       }),
     );

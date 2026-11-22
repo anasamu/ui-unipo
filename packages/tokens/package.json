@@ -1,6 +1,6 @@
 {
   "name": "unipo-ui-tokens",
-  "version": "1.54.0",
+  "version": "1.58.0",
   "description": "Design token UNIPO untuk web (CSS/SCSS/LESS/Tailwind), React Native, dan Android (Kotlin Compose/XML).",
   "type": "module",
   "license": "MIT",

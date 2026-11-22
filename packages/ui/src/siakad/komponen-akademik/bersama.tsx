@@ -11,7 +11,7 @@ import { GalatApi } from '../galat';
 import type { SkalaNilai } from '../alur';
 import { cariSkala, nadaNilai, normalSkala, type NadaNilai, type PenentuSkala, type SumberSkala } from './skala';
 import { adaAngka, duaDesimal, type BarisNilaiMk, type IdentitasAkademik } from './tipe';
-import { labelTahunAkademik } from '../akademik';
+import { labelTahunAkademik } from '../label-tahun';
 
 // ================================================================ Keadaan memuat / galat / kosong
 export interface KeadaanDataProps {

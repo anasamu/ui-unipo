@@ -163,6 +163,28 @@ describe('Aturan Anas 2026-11-22: 2 tab tetap horizontal; di panel samping horiz
     expect(tataTab(undefined, { tingkat: 1, dalamVertikal: false, dalamPanel: true }, true, 8)).toBe('panel');
     expect(tataTab('vertical', { tingkat: 1, dalamVertikal: false, dalamPanel: true }, true, 8)).toBe('vertical');
   });
+  it('tataTab: orientation="horizontal" eksplisit di panel samping juga "panel" (keputusan Anas 13:17)', () => {
+    expect(tataTab('horizontal', { tingkat: 0, dalamVertikal: false, dalamPanel: true }, true, 2)).toBe('panel');
+    expect(tataTab('horizontal', { tingkat: 2, dalamVertikal: true, dalamPanel: true }, false, 9)).toBe('panel');
+    // Di luar panel horizontal eksplisit tetap horizontal biasa.
+    expect(tataTab('horizontal', { tingkat: 1, dalamVertikal: false, dalamPanel: false }, true, 9)).toBe('horizontal');
+  });
+  it('Tabs orientation="horizontal" di panel samping: data-panel (diukur lalu jadi Select bila tidak muat)', () => {
+    const h = html(
+      <AkarTingkatTab panel>
+        <Tabs orientation="horizontal" aria-label="Jenis riwayat" items={SUB} />
+      </AkarTingkatTab>,
+    );
+    expect(h).toContain('data-panel=""');
+    expect(daftarTab(h)[0]).not.toContain('aria-orientation');
+    const v = html(
+      <AkarTingkatTab panel>
+        <Tabs orientation="vertical" aria-label="Jenis riwayat" items={SUB} />
+      </AkarTingkatTab>,
+    );
+    expect(v).not.toContain('data-panel');
+    expect(daftarTab(v)[0]).toContain('aria-orientation="vertical"');
+  });
   it('AkarTingkatTab panel: konteks dalamPanel diteruskan ke tab bersarang', () => {
     const catat: Array<boolean | undefined> = [];
     function Catat() {

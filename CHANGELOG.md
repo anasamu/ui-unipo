@@ -6,6 +6,24 @@
 - **Skala nilai per periode** di transkrip dan KHS: huruf dihitung memakai skala yang berlaku pada periode mata kuliah diambil.
 - **Menit per SKS dari aturan kurikulum**: `JadwalMingguan` membaca `GET /v1/referensi/beban-sks` (hook `useBebanSks`, prop `kodeProdi`) untuk tinggi sesi tanpa jam selesai; bawaan 50 menit bila aturan belum mengatur atau tidak ada SDK. Isian aturan kurikulum mendapat kolom menit tatap muka per SKS.
 - Uji `packages/ui/test/komponen-akademik-lanjut.test.tsx`; contoh di galeri Komponen akademik.
+## Belum dirilis (kunci fitur Pustikom)
+
+- **Kunci fitur per periode: pemilik tunggal Pustikom** (`siakad/kunci-fitur.tsx`; keputusan Anas 2026-11-22, menggantikan 2026-11-21): teks komponen tidak lagi menyebut BAAK sebagai pengatur. `hanyaLihat` tetap ada untuk aplikasi pemantau lain; tanpa prop itu tombol atur tampil bila server menjawab `meta.boleh_atur` (izin `kalender.kunci.atur`, kini milik Admin Pustikom lewat migration SIAKAD `2027_01_29_780100_rbac_kunci_fitur_pustikom`).
+## 1.58.0 (belum dirilis)
+
+- **Periode dipilih dari daftar, bukan diketik** (`siakad/aturan-akibat.tsx`, `aturan-sk.tsx`, `biaya.tsx`, `kurikulum-aturan.tsx`): periode simulasi aturan berakibat, isian templat kasus bertipe periode, angkatan di Form aturan biaya, dan periode di aturan kurikulum memakai `PilihTahunAkademik` (nama periode seperti "Ganjil 2026/2027"), bukan kotak isian 5 angka. Pesan validasi menjadi "pilih periode dari daftar".
+
+## 1.57.0 (belum dirilis)
+
+- **Widget KHS dan transkrip lama memakai komponen akademik baru** (`siakad/akademik.tsx`): `KhsMahasiswa` dan `TranskripMahasiswa` (juga tab KHS/Transkrip di `DetailMahasiswa`) kini merender `LembarKhs`/`LembarTranskrip` dengan skala nilai server (`useSkalaNilai` per prodi mahasiswa), legenda, sebaran nilai, versi cetak, dan identitas mahasiswa; tanpa judul ganda (judul dari tab). Props tetap sama. `NilaiHuruf` ditandai usang, ganti dengan `LencanaNilai`. `labelTahunAkademik` pindah ke `siakad/label-tahun.ts` (tetap diekspor dari tempat lama) supaya komponen akademik tidak mengimpor widget lama.
+
+## 1.56.0 (belum dirilis)
+
+- **Pola platform modern (legacy-scan modern-web-guidance)**: tombol Enter pada isian yang menambah/menerapkan/mencari (`Alokasi` teks, isian label/tag `formulir`, cari di Pengolah dokumen, cari blok di Penyisip, ekstensi di `BatasUnggah`) tidak lagi bereaksi saat Enter dipakai papan ketik bahasa (IME) untuk mengonfirmasi huruf; pembantu baru `lib/ime.ts` `sedangMenyusunIme` (`isComposing` + `keyCode` 229 untuk Safari). Salinan dalam memakai `structuredClone` (landing, aturan BKD, DUPAK, karier, SKP) dan batas waktu pemeriksa status layanan memakai `AbortSignal.timeout`. Temuan `copying-array-methods` (51) belum diubah karena `lib` TypeScript masih ES2022. Uji `packages/ui/test/ime.test.ts`.
+
+## 1.55.0 (belum dirilis)
+
+- **Tab di panel samping selalu menjadi pilihan bila tidak muat** (`components/display.tsx` `tataTab`; keputusan Anas 2026-11-22 13.17): `Tabs` dengan `orientation="horizontal"` yang berada di dalam panel samping (`Sheet`) kini ikut tata letak panel, yaitu deret horizontal yang berubah menjadi pilihan tarik-turun bila tidak muat selebar panel. Sebelumnya orientasi horizontal eksplisit melewati aturan ini sehingga deret tab bisa terpotong. Hanya `orientation="vertical"` eksplisit yang tetap dihormati di panel. Uji `packages/ui/test/tab-bersarang.test.tsx`, contoh di galeri Navigasi.
 
 ## 1.54.0 (belum dirilis)
 

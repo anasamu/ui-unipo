@@ -5,12 +5,16 @@ import { cn } from '../lib/cn';
 import { formatDate, formatNumber } from '../lib/format';
 import { Badge, Button, Skeleton, type BadgeVariant } from '../components/actions';
 import { Avatar, DescriptionList, Empty, Tabs } from '../components/display';
-import { LineChart, SegmentBar } from '../components/charts';
+import { LineChart } from '../components/charts';
 import { Sheet } from '../components/overlays';
-import { DataTable, type DataColumn } from '../components/data-table';
+import { DataTable } from '../components/data-table';
 import { pesanGalat, useSiakadQuery, type QueryState } from './provider';
 import { KodeLaporan } from '../components/galat';
 import { LabelProdi } from './prodi';
+import { LembarKhs } from './komponen-akademik/khs';
+import { LembarTranskrip } from './komponen-akademik/transkrip';
+import { useSkalaNilai } from './komponen-akademik/skala';
+import type { DataTranskrip, IdentitasAkademik, PeriodeKhs } from './komponen-akademik/tipe';
 
 /*
  * Detail data akademik dari API SIAKAD: profil mahasiswa (biodata, riwayat studi, KRS, KHS, transkrip),
@@ -105,13 +109,8 @@ function Galat({ q }: { q: QueryState<unknown> }) {
 const muatDari = (q: QueryState<unknown>) => q.loading && !q.data;
 const Mono = ({ children }: { children: React.ReactNode }) => <span className="u-mono">{children}</span>;
 
-/** 20251 → "Ganjil 2025/2026". */
-export function labelTahunAkademik(t?: string | null, pendek = false): string {
-  if (!t || t.length !== 5) return t ?? '–';
-  const th = Number(t.slice(0, 4));
-  const smt = ({ '1': 'Ganjil', '2': 'Genap', '3': 'Pendek' } as Record<string, string>)[t[4]!] ?? 'Semester';
-  return pendek ? `${smt} ${String(th).slice(2)}/${String(th + 1).slice(2)}` : `${smt} ${th}/${th + 1}`;
-}
+export { labelTahunAkademik } from './label-tahun';
+import { labelTahunAkademik } from './label-tahun';
 
 const STATUS_MHS: Record<string, { label: string; variant: BadgeVariant }> = {
   A: { label: 'Aktif', variant: 'success' },
@@ -126,7 +125,10 @@ const KELAS: Record<string, string> = { R: 'Reguler', K: 'Karyawan', D: 'Daring'
 const HARI: Record<string, string> = { '1': 'Senin', '2': 'Selasa', '3': 'Rabu', '4': 'Kamis', '5': 'Jumat', '6': 'Sabtu', '7': 'Minggu' };
 const jadwalKrs = (m: Row): string => (m.hari ? `${HARI[m.hari] ?? m.hari}${m.jam_mulai ? `, ${String(m.jam_mulai).slice(0, 5)}` : m.jam_ke ? `, jam ke-${m.jam_ke}` : ''}${m.ruang ? ` · ${m.ruang}` : ''}` : '');
 
-/** Lencana nilai huruf dengan warna mengikuti mutu (A hijau → E merah). */
+/**
+ * Lencana nilai huruf dengan warna tetap per huruf (A hijau → E merah).
+ * @deprecated Pakai `LencanaNilai` dengan `skala` dari `useSkalaNilai` (warna mengikuti skala nilai kampus, bukan huruf tetap).
+ */
 export function NilaiHuruf({ nilai, className }: { nilai?: string | null; className?: string }) {
   if (!nilai)
     return (
@@ -337,147 +339,58 @@ export function RiwayatStudi({ nim, className }: { nim: string; className?: stri
   );
 }
 
-// ================================================================ Tabel nilai bersama
-type BarisNilai = MataKuliahNilai & { __k: string };
-const angka2 = (v: unknown) => (v != null && v !== '' ? Number(v).toFixed(2) : '–');
+// ================================================================ KHS
+/** Identitas cetak KHS/transkrip dari data mahasiswa (GET /v1/mahasiswa/{nim}). */
+function identitasDari(m: Row | undefined, nim: string): IdentitasAkademik {
+  return { nim, nama: m?.nama ?? null, prodi: m?.nama_prodi ?? m?.kode_prodi ?? null, jenjang: m?.kode_jenjang ?? null, angkatan: m?.tahun_masuk ?? null, dosenPa: m?.dosen_pa_nama ?? m?.nama_dosen_pa ?? null };
+}
 
-function TabelNilai({ rows, tampilTahun, kosong, ekspor }: { rows: MataKuliahNilai[]; tampilTahun?: boolean; kosong?: string; ekspor?: string }) {
-  const baris = React.useMemo<BarisNilai[]>(() => rows.map((r, i) => ({ ...r, __k: `${r.kode_mk}-${r.tahun_id ?? ''}-${i}` })), [rows]);
-  const kolom: DataColumn<BarisNilai>[] = [
-    { key: 'kode_mk', header: 'Kode', cell: (r) => <Mono>{r.kode_mk}</Mono>, sortable: true, width: '6.5rem', mobile: 'subtitle' },
-    { key: 'nama_mk', header: 'Mata kuliah', sortable: true, mobile: 'title' },
-    ...(tampilTahun
-      ? [{ key: 'tahun_id', header: 'Periode', cell: (r: BarisNilai) => <span className="u-muted">{labelTahunAkademik(r.tahun_id, true)}</span>, value: (r: BarisNilai) => r.tahun_id ?? '', sortable: true, width: '8rem' } satisfies DataColumn<BarisNilai>]
-      : []),
-    { key: 'sks', header: 'SKS', align: 'end', sortable: true, width: '4rem', value: (r) => (r.sks != null ? Number(r.sks) : null), cell: (r) => r.sks ?? '–' },
-    {
-      key: 'nilai_huruf',
-      header: 'Nilai',
-      align: 'center',
-      sortable: true,
-      width: '6rem',
-      mobile: 'badge',
-      value: (r) => (r.nilai_ditampilkan === false ? '' : (r.nilai_huruf ?? '')),
-      cell: (r) => (r.nilai_ditampilkan === false ? <span className="u-muted">Belum dirilis</span> : <NilaiHuruf nilai={r.nilai_huruf} />),
-    },
-    { key: 'bobot', header: 'Bobot', align: 'end', sortable: true, width: '5rem', value: (r) => (r.bobot != null ? Number(r.bobot) : null), cell: (r) => angka2(r.bobot) },
-    { key: 'mutu', header: 'Mutu', align: 'end', sortable: true, width: '5rem', value: (r) => (r.mutu != null ? Number(r.mutu) : null), cell: (r) => angka2(r.mutu) },
-  ];
+/**
+ * KHS per periode untuk satu mahasiswa (terhubung SDK). Memakai `LembarKhs` komponen akademik: pemilih periode, IPS dan
+ * IPK, tabel nilai berwarna menurut skala nilai server, legenda, dan versi cetak. Judul dari wadah (mis. tab Detail).
+ */
+export function KhsMahasiswa({ nim, tahunId, className }: { nim: string; tahunId?: string; className?: string }) {
+  const q = useKhs(nim);
+  const mhs = useMahasiswa(nim);
+  const skala = useSkalaNilai({ prodi: mhs.data?.kode_prodi ?? null, enabled: !!mhs.data });
+  const [pilih, setPilih] = React.useState<string | undefined>(tahunId);
   return (
-    <DataTable
-      className="u-tabel-nilai-dt"
-      columns={kolom}
-      rows={baris}
-      rowKey={(r) => r.__k}
-      pagination={false}
-      columnToggle={false}
-      densityToggle={false}
-      defaultDensity="compact"
-      exportCsv={ekspor ?? false}
-      empty={{ icon: <BookOpen />, title: kosong ?? 'Belum ada mata kuliah' }}
+    <LembarKhs
+      periode={(q.data?.periode ?? null) as PeriodeKhs[] | null}
+      tahunId={pilih}
+      onTahunIdChange={setPilih}
+      skala={skala.skala}
+      identitas={identitasDari(mhs.data, nim)}
+      judul={false}
+      memuat={q.loading}
+      galat={q.error}
+      onUlang={q.refetch}
+      className={className}
     />
   );
 }
 
-// ================================================================ KHS
-/** KHS per semester dengan pemilih periode, IPS, dan IPK berjalan. */
-export function KhsMahasiswa({ nim, tahunId, className }: { nim: string; tahunId?: string; className?: string }) {
-  const q = useKhs(nim);
-  const periode = React.useMemo(() => (q.data?.periode ?? []).filter((p) => p.tahun_id).sort((a, b) => String(b.tahun_id).localeCompare(String(a.tahun_id))), [q.data]);
-  const [pilih, setPilih] = React.useState<string | undefined>(tahunId);
-  if (q.error) return <Galat q={q} />;
-  if (muatDari(q)) return <Skeleton className={className} style={{ height: 320 }} />;
-  if (!periode.length) return <Empty icon={<BookOpen />} title="Belum ada KHS" className={className} />;
-  const aktif = periode.find((p) => p.tahun_id === pilih) ?? periode[0]!;
-  return (
-    <div className={cn('u-khs', className)}>
-      <div className="u-khs-periode" role="tablist" aria-label="Periode">
-        {periode.map((p) => (
-          <Button key={p.tahun_id} size="xs" variant={p.tahun_id === aktif.tahun_id ? 'primary' : 'outline'} role="tab" aria-selected={p.tahun_id === aktif.tahun_id} onClick={() => setPilih(p.tahun_id!)}>
-            {labelTahunAkademik(p.tahun_id, true)}
-          </Button>
-        ))}
-      </div>
-      <div className="u-khs-ringkas">
-        <div>
-          <span>IPS</span>
-          <b>{ip(aktif.ips?.nilai)}</b>
-        </div>
-        <div>
-          <span>IPK</span>
-          <b>{ip(aktif.ipk?.nilai)}</b>
-        </div>
-        <div>
-          <span>SKS semester</span>
-          <b>{n(aktif.jumlah_sks ?? aktif.ips?.sks)}</b>
-        </div>
-        <div>
-          <span>SKS kumulatif</span>
-          <b>{aktif.ipk?.sks ?? '–'}</b>
-        </div>
-      </div>
-      <TabelNilai rows={aktif.mata_kuliah ?? []} ekspor={`khs-${nim}-${aktif.tahun_id}`} />
-    </div>
-  );
-}
-
 // ================================================================ Transkrip
-const URUT_HURUF = ['A', 'B', 'C', 'D', 'E'];
-const WARNA_HURUF: Record<string, string> = {
-  A: 'var(--u-success)',
-  B: 'var(--u-primary)',
-  C: 'var(--u-warning)',
-  D: 'color-mix(in oklab, var(--u-danger) 70%, var(--u-warning))',
-  E: 'var(--u-danger)',
-};
-/** Transkrip: IPK, total SKS dan mutu, sebaran nilai, dan daftar MK per semester. */
+/**
+ * Transkrip satu mahasiswa (terhubung SDK) memakai `LembarTranskrip`: IPK, total SKS dan mutu, sebaran nilai menurut
+ * skala server, daftar per semester atau satu tabel, dan versi cetak.
+ */
 export function TranskripMahasiswa({ nim, kelompok = 'semester', className }: { nim: string; kelompok?: 'semester' | 'tidak'; className?: string }) {
   const q = useTranskrip(nim);
-  if (q.error) return <Galat q={q} />;
-  if (muatDari(q)) return <Skeleton className={className} style={{ height: 360 }} />;
-  const t = q.data ?? {};
-  const mk: MataKuliahNilai[] = t.mata_kuliah ?? [];
-  if (!mk.length) return <Empty icon={<GraduationCap />} title="Belum ada nilai" description="Transkrip terisi setelah nilai semester pertama dirilis." className={className} />;
-  const sebaran = URUT_HURUF.map((h) => ({ label: h, value: mk.filter((m) => (m.nilai_huruf ?? '').toUpperCase().startsWith(h)).length, color: WARNA_HURUF[h] }));
-  const grup = new Map<number, MataKuliahNilai[]>();
-  for (const m of mk) grup.set(m.semester ?? 0, [...(grup.get(m.semester ?? 0) ?? []), m]);
+  const mhs = useMahasiswa(nim);
+  const skala = useSkalaNilai({ prodi: mhs.data?.kode_prodi ?? null, enabled: !!mhs.data });
   return (
-    <div className={cn('u-transkrip', className)}>
-      <div className="u-khs-ringkas">
-        <div>
-          <span>IPK</span>
-          <b>{ip(t.ipk?.nilai)}</b>
-        </div>
-        <div>
-          <span>Total SKS</span>
-          <b>{n(t.jumlah_sks ?? t.ipk?.sks)}</b>
-        </div>
-        <div>
-          <span>Total mutu</span>
-          <b>{t.jumlah_mutu != null ? n(t.jumlah_mutu).toFixed(2) : '–'}</b>
-        </div>
-        <div>
-          <span>Mata kuliah</span>
-          <b>{mk.length}</b>
-        </div>
-      </div>
-      {mk.length > 0 && <SegmentBar data={sebaran} format={(v) => `${v} MK`} />}
-      {kelompok === 'semester' ? (
-        [...grup]
-          .sort((a, b) => a[0] - b[0])
-          .map(([smt, rows]) => (
-            <section key={smt} className="u-transkrip-smt">
-              <h4>
-                {smt ? `Semester ${smt}` : 'Lainnya'}
-                <span>{rows.reduce((s, r) => s + n(r.sks), 0)} SKS</span>
-              </h4>
-              <TabelNilai rows={rows} />
-            </section>
-          ))
-      ) : (
-        <TabelNilai rows={mk} tampilTahun ekspor={`transkrip-${nim}`} />
-      )}
-    </div>
+    <LembarTranskrip
+      data={(q.data ?? null) as DataTranskrip | null}
+      skala={skala.skala}
+      identitas={identitasDari(mhs.data, nim)}
+      tampilan={kelompok === 'semester' ? 'semester' : 'tabel'}
+      judul={false}
+      memuat={q.loading}
+      galat={q.error}
+      onUlang={q.refetch}
+      className={className}
+    />
   );
 }
 
