@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { Tekan, ariaTerpilih, kunciTekan, propsTekan } from '../src/components/tekan';
+import { Tekan, ariaTerpilih, kunciTekan, propsKlikWadah, propsTekan } from '../src/components/tekan';
 
 const html = (el: React.ReactElement) => renderToStaticMarkup(el);
 
@@ -133,5 +133,27 @@ describe('Tekan: papan ketik (Enter/Space)', () => {
     const p = propsTekan({ elemen: 'div', onClick, onKeyDown: (e) => e.preventDefault() });
     const { el } = tekanKunci(p, 'Enter');
     expect(el.click).not.toHaveBeenCalled();
+  });
+});
+
+describe('propsKlikWadah: baris tabel / butir daftar yang bisa diklik', () => {
+  it('tanpa onClick: tidak menambah apa pun (baris biasa tidak jadi henti Tab)', () => {
+    expect(propsKlikWadah(undefined)).toEqual({});
+    expect(propsKlikWadah(false)).toEqual({});
+  });
+  it('dengan onClick: dapat difokus, tanpa role tambahan (peran <tr>/listitem dipertahankan)', () => {
+    const p = propsKlikWadah(() => {});
+    expect(p.tabIndex).toBe(0);
+    expect(p.role).toBeUndefined();
+    expect(html(<table><tbody><tr {...p}><td>A</td></tr></tbody></table>)).toMatch(/<tr tabindex="0">/);
+  });
+  it('Enter/Space pada baris memanggil onClick; dari tombol di dalam baris diabaikan', () => {
+    const onClick = vi.fn();
+    const p = propsKlikWadah(onClick) as Record<string, unknown>;
+    tekanKunci(p, 'Enter');
+    tekanKunci(p, ' ');
+    expect(onClick).toHaveBeenCalledTimes(2);
+    tekanKunci(p, 'Enter', { tombolMenu: true });
+    expect(onClick).toHaveBeenCalledTimes(2);
   });
 });
