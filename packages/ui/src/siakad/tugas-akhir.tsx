@@ -962,22 +962,10 @@ export function DaftarValidasiJudul({ awal = 'saya', className }: DaftarValidasi
   );
   useSaatInvalidasi('ta', q.refetch);
 
-  const tab = [
-    { value: 'saya' as const, label: 'Menunggu saya', count: saya.data?.menunggu_saya },
-    { value: 'pa' as const, label: 'Mahasiswa PA saya' },
-    ...(kelola ? [{ value: 'kelola' as const, label: 'Semua di prodi' }] : []),
-  ];
   const baris = q.data ?? [];
-  return (
-    <div className={cn('u-ta', className)}>
-      <Tabs<UntukValidasiTa>
-        items={tab}
-        value={untuk}
-        onValueChange={(v) => {
-          setUntuk(v);
-          setStatus(v === 'saya' ? '' : 'diajukan');
-        }}
-      />
+  // Isi tab dirender di dalam Tabs supaya sub tab tingkat kedua (≥3) otomatis vertikal (keputusan Anas 2026-11-22).
+  const isi = (
+    <>
       <div className="u-ta-saring">
         <Input placeholder="Cari judul, NIM, atau nama" aria-label="Cari pengajuan" value={cari} onChange={(e) => setCari(e.target.value)} />
         {untuk !== 'saya' && (
@@ -1025,6 +1013,23 @@ export function DaftarValidasiJudul({ awal = 'saya', className }: DaftarValidasi
           ))}
         </ul>
       )}
+    </>
+  );
+  const tab = [
+    { value: 'saya' as const, label: 'Menunggu saya', count: saya.data?.menunggu_saya, content: isi },
+    { value: 'pa' as const, label: 'Mahasiswa PA saya', content: isi },
+    ...(kelola ? [{ value: 'kelola' as const, label: 'Semua di prodi', content: isi }] : []),
+  ];
+  return (
+    <div className={cn('u-ta', className)}>
+      <Tabs<UntukValidasiTa>
+        items={tab}
+        value={untuk}
+        onValueChange={(v) => {
+          setUntuk(v);
+          setStatus(v === 'saya' ? '' : 'diajukan');
+        }}
+      />
       <Sheet open={buka != null} onOpenChange={(o) => !o && setBuka(null)} title="Pengajuan judul" description={buka ? `${buka.nama_mahasiswa ?? buka.nim} (${buka.nim})` : undefined} size="lg">
         {buka && <DetailPengajuanJudul id={buka.id} onSelesai={() => setBuka(null)} />}
       </Sheet>
