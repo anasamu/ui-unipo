@@ -37,6 +37,7 @@ import { BagianForm, IsianTanggal, PanelForm, Pilihan } from '../components/form
 import { KerangkaLaporan, PilihPeriode as PilihPeriodeLaporan, StatistikRingkas, TabelRekap, type ItemStatistik } from '../components/laporan';
 import { ConfirmDialog, Dialog, Menu, useToast, type MenuEntry } from '../components/overlays';
 import type { SelectOption } from '../components/select';
+import { PilihTahunAkademik } from './cari';
 import { GalatApi } from './galat';
 import { PilihNomorSK } from './isian-sk';
 import { PilihBerkas } from './pilih-berkas';
@@ -882,8 +883,8 @@ export function FormAturanBiaya({ aturan, trigger, open, onOpenChange, onTersimp
         <Field label="Tarif standar" optional description="Dasar komponen nominal. Kosongkan bila tarif berbeda per mahasiswa (mis. UKT per golongan) dan pakai persen.">
           <Input inputMode="numeric" value={isi.tarif} placeholder="mis. 300000" onChange={(e) => set('tarif', e.target.value.replace(/[^\d]/g, ''))} />
         </Field>
-        <Field label="Angkatan" optional description="Semester masuk, mis. 20261. Kosong = semua angkatan.">
-          <Input value={isi.angkatan} maxLength={5} onChange={(e) => set('angkatan', e.target.value.replace(/[^\d]/g, ''))} />
+        <Field label="Angkatan" optional description="Periode mahasiswa masuk. Kosong = semua angkatan.">
+          <PilihTahunAkademik value={isi.angkatan || null} placeholder="Semua angkatan" aria-label="Angkatan" onValueChange={(v) => set('angkatan', v ?? '')} />
         </Field>
         <Field label="Berlaku mulai" required error={galat.berlaku_mulai || undefined}>
           <IsianTanggal value={isi.berlaku_mulai || null} onValueChange={(v) => set('berlaku_mulai', v ?? '')} />

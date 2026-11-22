@@ -85,6 +85,7 @@ import {
 } from './ekstensi';
 import { CariDok } from './cari';
 import { htmlPengolah, penandaKeChip } from './html';
+import { sedangMenyusunIme } from '../../lib/ime';
 
 /** Margin kertas dalam sentimeter. */
 export interface MarginKertas {
@@ -567,7 +568,7 @@ function PanelCari({ editor, tutup }: { editor: Editor; tutup: () => void }) {
         value={kata}
         onChange={(e) => setKata(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') editor.commands.cariLangkah(e.shiftKey ? -1 : 1);
+          if (e.key === 'Enter' && !sedangMenyusunIme(e)) editor.commands.cariLangkah(e.shiftKey ? -1 : 1);
           if (e.key === 'Escape') tutup();
         }}
         placeholder="Cari di dokumen"

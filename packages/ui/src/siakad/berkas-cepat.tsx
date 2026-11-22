@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { Download, File, FileArchive, FileImage, FileSpreadsheet, FileText, Folder, FolderOpen, Trash2, Upload } from 'lucide-react';
 import { Button, Skeleton } from '../components/actions';
-import { Empty } from '../components/display';
+import { Empty, Tabs } from '../components/display';
 import { Dialog, Popover, useToast } from '../components/overlays';
 import { cn } from '../lib/cn';
 import { formatBytes } from '../lib/format';
@@ -36,6 +36,65 @@ function IkonBerkas({ b }: { b: Berkas }) {
   return <File />;
 }
 
+/** Tab tambahan milik aplikasi di dialog Kelola berkas (mis. Arsip dokumen berverifikasi di Fakultas). */
+export interface TabKelolaBerkas {
+  /** Kunci tab, juga dipakai `bukaKelolaBerkas({ tab })`. Jangan 'berkas' (tab bawaan file manager). */
+  value: string;
+  label: string;
+  icon?: React.ReactNode;
+  /** Jumlah di lencana tab (mis. dokumen menunggu verifikasi). */
+  count?: number;
+  /** Isi tab. Dirender hanya saat tab aktif, di dalam wadah yang dapat digulir. */
+  content: React.ReactNode;
+}
+
+/** Ruang awal file manager saat dialog Kelola berkas dibuka. */
+export type RuangKelolaBerkas = 'saya' | 'dibagikan' | 'sampah';
+
+/** Permintaan membuka dialog Kelola berkas dari luar bilah atas (rute lama, tautan notifikasi, tombol di halaman). */
+export interface BukaKelolaBerkas {
+  /** Tab yang dibuka: 'berkas' (file manager, bawaan) atau `value` salah satu `tab` tambahan. */
+  tab?: string;
+  /** Ruang awal file manager (tab 'berkas'). Bawaan 'saya'. */
+  ruang?: RuangKelolaBerkas;
+}
+
+const pendengarKelola = new Set<(p: BukaKelolaBerkas) => void>();
+let kelolaTertunda: BukaKelolaBerkas | null = null;
+
+/**
+ * Buka dialog Kelola berkas di bilah atas (TombolBerkas di KerangkaAplikasi), mis. dari rute lama yang dialihkan:
+ * `bukaKelolaBerkas({ tab: 'arsip' })`. Bila bilah atas belum terpasang (halaman baru dimuat), permintaan disimpan dan
+ * dijalankan begitu TombolBerkas terpasang.
+ */
+export function bukaKelolaBerkas(p: BukaKelolaBerkas | string = {}): void {
+  const minta = typeof p === 'string' ? { tab: p } : p;
+  if (pendengarKelola.size) pendengarKelola.forEach((f) => f(minta));
+  else kelolaTertunda = minta;
+}
+
+/** Dengarkan `bukaKelolaBerkas` (dipakai TombolBerkas). Permintaan tertunda langsung dijalankan. Mengembalikan pelepas. */
+export function dengarKelolaBerkas(f: (p: BukaKelolaBerkas) => void): () => void {
+  pendengarKelola.add(f);
+  if (kelolaTertunda) {
+    const p = kelolaTertunda;
+    kelolaTertunda = null;
+    f(p);
+  }
+  return () => {
+    pendengarKelola.delete(f);
+  };
+}
+
+/**
+ * Tab dialog Kelola berkas yang benar-benar dibuka: tab diminta bila ada; tab yang tidak ada (mis. pengguna tanpa hak
+ * arsip) kembali ke file manager 'berkas', atau ke tab tambahan pertama bila file manager tidak tersedia.
+ */
+export function tabKelolaAktif(diminta: string, tab: Array<Pick<TabKelolaBerkas, 'value'>>, driveTersedia: boolean): string {
+  if (diminta !== 'berkas' && tab.some((t) => t.value === diminta)) return diminta;
+  return driveTersedia || !tab.length ? 'berkas' : tab[0].value;
+}
+
 export interface TombolBerkasProps extends Pick<OpsiUnggahBerkas, 'modul' | 'unit' | 'kategori'> {
   /** Jumlah berkas terbaru di panel. Bawaan 6. */
   jumlah?: number;
@@ -43,19 +102,25 @@ export interface TombolBerkasProps extends Pick<OpsiUnggahBerkas, 'modul' | 'uni
   onKelola?: () => void;
   /** Unit yang tampil di DriveBerkas dialog bawaan (mis. ["bauk"]). */
   unitTampil?: string[];
+  /**
+   * Tab tambahan di dialog Kelola berkas, setelah tab bawaan "Berkas" (file manager). Contoh Fakultas: tab "Arsip"
+   * berisi arsip unit, verifikasi dokumen dosen/mahasiswa, dan arsip pribadi. Buka langsung dengan `bukaKelolaBerkas`.
+   */
+  tab?: TabKelolaBerkas[];
   className?: string;
 }
 
 /**
  * Ikon berkas di bilah atas. Tidak tampil bila token tidak punya akses berkas.
  */
-export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = 'dokumen', className }: TombolBerkasProps) {
+export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = 'dokumen', tab: tabTambahan, className }: TombolBerkasProps) {
   const siakad = useOptionalSiakad();
   const [tersedia, setTersedia] = React.useState(true);
   const [info, setInfo] = React.useState<InfoBerkas | null>(null);
   const pemilih = usePilihBerkas({ multiple: true, accept: info?.ekstensi?.length ? info.ekstensi.map((e) => `.${e}`).join(',') : undefined, onFiles: (f) => void unggah(f) });
   const [buka, setBuka] = React.useState(false);
-  const [drive, setDrive] = React.useState<false | 'saya' | 'dibagikan' | 'sampah'>(false);
+  const [drive, setDrive] = React.useState<false | RuangKelolaBerkas>(false);
+  const [tabDialog, setTabDialog] = React.useState('berkas');
   const [konfirmasi, setKonfirmasi] = React.useState<string | null>(null);
   const toast = useToast();
   const [tab, setTab] = React.useState<'terbaru' | 'dibagikan'>('terbaru');
@@ -64,6 +129,17 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
   const [seret, setSeret] = React.useState(false);
   const saya = useAkunSaya({ foto: false }).data?.akun?.username ?? null;
   const bagi = useDibagikanBerkas('masuk', buka && tab === 'dibagikan' && tersedia);
+
+  // bukaKelolaBerkas() dari luar: buka dialog di tab yang diminta (termasuk permintaan sebelum bilah atas terpasang).
+  React.useEffect(
+    () =>
+      dengarKelolaBerkas((p) => {
+        setBuka(false);
+        setTabDialog(p.tab ?? 'berkas');
+        setDrive(p.ruang ?? 'saya');
+      }),
+    [],
+  );
 
   // Info dimuat ulang tiap panel dibuka supaya bar kuota (aturan penyimpanan) selalu terbaru.
   React.useEffect(() => {
@@ -94,7 +170,31 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
     }
   }, [siakad, jumlah, saya]);
 
-  if (!siakad || !tersedia) return null;
+  const daftarTab = tabTambahan?.filter((t) => t.value !== 'berkas') ?? [];
+  const tabAktif = tabKelolaAktif(tabDialog, daftarTab, tersedia);
+  const dialog = (
+    <Dialog open={drive !== false} onOpenChange={(o) => !o && setDrive(false)} title="Kelola berkas" size="full" className="u-berkas-dialog" initialFocus={false}>
+      {drive &&
+        (daftarTab.length ? (
+          <Tabs
+            className="u-berkas-tab"
+            aria-label="Bagian Kelola berkas"
+            value={tabAktif}
+            onValueChange={(v) => setTabDialog(v)}
+            items={[
+              ...(tersedia ? [{ value: 'berkas', label: 'Berkas', icon: <FolderOpen />, content: <DriveBerkas modul={modul} unitTampil={unitTampil} ruangAwal={drive} tinggi="100%" /> }] : []),
+              ...daftarTab.map((t) => ({ value: t.value, label: t.label, icon: t.icon, count: t.count, content: <div className="u-berkas-tab-isi">{t.content}</div> })),
+            ]}
+          />
+        ) : (
+          <DriveBerkas modul={modul} unitTampil={unitTampil} ruangAwal={drive} tinggi="100%" />
+        ))}
+    </Dialog>
+  );
+
+  if (!siakad) return null;
+  // Tanpa akses berkas pribadi: ikon disembunyikan, tetapi tab tambahan aplikasi tetap bisa dibuka lewat bukaKelolaBerkas.
+  if (!tersedia) return daftarTab.length ? dialog : null;
 
   const unggah = async (files: FileList | File[]) => {
     const daftarFile = Array.from(files);
@@ -171,8 +271,9 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
     }
   };
 
-  const kelola = (ruang: 'saya' | 'dibagikan' | 'sampah' = 'saya') => {
+  const kelola = (ruang: RuangKelolaBerkas = 'saya') => {
     setBuka(false);
+    setTabDialog('berkas');
     // Selalu membuka file manager dalam modal di semua aplikasi.
     setDrive(ruang);
   };
@@ -323,9 +424,7 @@ export function TombolBerkas({ jumlah = 6, unitTampil, modul, unit, kategori = '
           </Button>
         </div>
       </Popover>
-      <Dialog open={drive !== false} onOpenChange={(o) => !o && setDrive(false)} title="Kelola berkas" size="full" className="u-berkas-dialog" initialFocus={false}>
-        {drive && <DriveBerkas modul={modul} unitTampil={unitTampil} ruangAwal={drive} tinggi="100%" />}
-      </Dialog>
+      {dialog}
     </>
   );
 }

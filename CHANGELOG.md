@@ -1,14 +1,29 @@
 # Catatan perubahan
 
-## 1.53.1 (belum dirilis)
+## Belum dirilis (kunci fitur Pustikom)
 
 - **Kunci fitur per periode: pemilik tunggal Pustikom** (`siakad/kunci-fitur.tsx`; keputusan Anas 2026-11-22, menggantikan 2026-11-21): teks komponen tidak lagi menyebut BAAK sebagai pengatur. `hanyaLihat` tetap ada untuk aplikasi pemantau lain; tanpa prop itu tombol atur tampil bila server menjawab `meta.boleh_atur` (izin `kalender.kunci.atur`, kini milik Admin Pustikom lewat migration SIAKAD `2027_01_29_780100_rbac_kunci_fitur_pustikom`).
+## 1.58.0 (belum dirilis)
+
+- **Periode dipilih dari daftar, bukan diketik** (`siakad/aturan-akibat.tsx`, `aturan-sk.tsx`, `biaya.tsx`, `kurikulum-aturan.tsx`): periode simulasi aturan berakibat, isian templat kasus bertipe periode, angkatan di Form aturan biaya, dan periode di aturan kurikulum memakai `PilihTahunAkademik` (nama periode seperti "Ganjil 2026/2027"), bukan kotak isian 5 angka. Pesan validasi menjadi "pilih periode dari daftar".
+
+## 1.57.0 (belum dirilis)
+
+- **Widget KHS dan transkrip lama memakai komponen akademik baru** (`siakad/akademik.tsx`): `KhsMahasiswa` dan `TranskripMahasiswa` (juga tab KHS/Transkrip di `DetailMahasiswa`) kini merender `LembarKhs`/`LembarTranskrip` dengan skala nilai server (`useSkalaNilai` per prodi mahasiswa), legenda, sebaran nilai, versi cetak, dan identitas mahasiswa; tanpa judul ganda (judul dari tab). Props tetap sama. `NilaiHuruf` ditandai usang, ganti dengan `LencanaNilai`. `labelTahunAkademik` pindah ke `siakad/label-tahun.ts` (tetap diekspor dari tempat lama) supaya komponen akademik tidak mengimpor widget lama.
+
+## 1.56.0 (belum dirilis)
+
+- **Pola platform modern (legacy-scan modern-web-guidance)**: tombol Enter pada isian yang menambah/menerapkan/mencari (`Alokasi` teks, isian label/tag `formulir`, cari di Pengolah dokumen, cari blok di Penyisip, ekstensi di `BatasUnggah`) tidak lagi bereaksi saat Enter dipakai papan ketik bahasa (IME) untuk mengonfirmasi huruf; pembantu baru `lib/ime.ts` `sedangMenyusunIme` (`isComposing` + `keyCode` 229 untuk Safari). Salinan dalam memakai `structuredClone` (landing, aturan BKD, DUPAK, karier, SKP) dan batas waktu pemeriksa status layanan memakai `AbortSignal.timeout`. Temuan `copying-array-methods` (51) belum diubah karena `lib` TypeScript masih ES2022. Uji `packages/ui/test/ime.test.ts`.
+
+## 1.55.0 (belum dirilis)
+
+- **Tab di panel samping selalu menjadi pilihan bila tidak muat** (`components/display.tsx` `tataTab`; keputusan Anas 2026-11-22 13.17): `Tabs` dengan `orientation="horizontal"` yang berada di dalam panel samping (`Sheet`) kini ikut tata letak panel, yaitu deret horizontal yang berubah menjadi pilihan tarik-turun bila tidak muat selebar panel. Sebelumnya orientasi horizontal eksplisit melewati aturan ini sehingga deret tab bisa terpotong. Hanya `orientation="vertical"` eksplisit yang tetap dihormati di panel. Uji `packages/ui/test/tab-bersarang.test.tsx`, contoh di galeri Navigasi.
+
+## 1.54.0 (belum dirilis)
+
+- **Kelola berkas: tab tambahan aplikasi + buka dari luar** (`siakad/berkas-cepat.tsx`, `scss/components/_kerangka-aplikasi.scss`; tanpa perubahan SIAKAD): `TombolBerkas`/`KerangkaAplikasi berkas` prop baru `tab: TabKelolaBerkas[]` (`value`, `label`, `icon`, `count`, `content`) yang tampil sebagai tab setelah tab bawaan **Berkas** (file manager) di dialog Kelola berkas; isinya dirender hanya saat aktif, di wadah yang dapat digulir, dan tab bersarang di dalamnya otomatis vertikal. `bukaKelolaBerkas({ tab, ruang })` membuka dialog dari luar bilah atas (mis. rute lama yang dialihkan); permintaan sebelum bilah atas terpasang ditunda lalu dijalankan sekali (`dengarKelolaBerkas`). Pengguna tanpa akses berkas pribadi: ikon tetap tersembunyi, tetapi tab tambahan tetap bisa dibuka lewat `bukaKelolaBerkas`. `tabKelolaAktif` memilih tab (tab tak dikenal kembali ke file manager). Dipakai Fakultas untuk tab **Arsip** (arsip unit, verifikasi dokumen dosen/mahasiswa, arsip pribadi). Uji `packages/ui/test/kelola-berkas-tab.test.tsx`.
 
 ## 1.53.0 (2026-11-22)
-
-- 
-
-## 1.53.0 (belum dirilis)
 
 - **Tata kelola aturan hanya di Pustikom + judul bagian tidak ganda** (`siakad/aturan.tsx`, `aturan-sk.tsx`, `aturan-keputusan.tsx`, `biaya.tsx`, `aturan-fakultas.tsx`; butuh SIAKAD branch fix/aturan-tatakelola untuk penolakan server `403 diatur_di_pustikom` dan tautan `pengatur`/`penyetuju` di `GET /v1/aturan/kebijakan/jenis`; keputusan Anas 2026-11-22):
   - `PengaturAturan`, `PejabatPenyetujuAturan`, `ValidatorAturan`: prop baru `hanyaBaca` (tanpa tombol Atur/Ubah/Tambah/Hapus, dengan satu baris `CatatanDiaturPustikom` "Diatur di Pustikom » … · Buka di Pustikom") dan `kategori` (saring ke kategori aturan milik aplikasi; rantai validator "semua jenis aturan" tetap tampil).

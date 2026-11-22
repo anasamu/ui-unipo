@@ -34,6 +34,7 @@ import { PanelLangkah } from '../components/panel-langkah';
 import { WizardReview } from '../components/wizard';
 import { useAkunSaya } from './akun';
 import { rapikanNamaUnit } from './aturan-kelompok';
+import { PilihTahunAkademik } from './cari';
 import { GalatApi } from './galat';
 import { PilihSK, type SKRegistri } from './isian-sk';
 import { useFakultasReferensi, useProdiReferensi } from './prodi';
@@ -1419,8 +1420,8 @@ function IsianSlot({ s, value, onChange }: { s: SlotTemplat; value: unknown; onC
   }
   if (s.tipe === 'periode') {
     return (
-      <Field label={s.label} description={s.petunjuk ?? 'Tahun + 1 (ganjil) atau 2 (genap), mis. 20261 = 2026/2027 Ganjil.'} required>
-        <Input inputMode="numeric" maxLength={5} value={String(value ?? '')} onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))} placeholder={s.contoh ? `mis. ${s.contoh}` : undefined} />
+      <Field label={s.label} description={s.petunjuk} required>
+        <PilihTahunAkademik value={value ? String(value) : null} onValueChange={(v) => onChange(v ?? '')} aria-label={s.label} />
       </Field>
     );
   }
@@ -1458,7 +1459,7 @@ const cekSlot = (t: TemplatKasus, isian: Record<string, unknown>): string | null
     }
     if (s.tipe === 'ya_tidak') continue;
     if (v === '' || v === null || v === undefined) return `${s.label} wajib diisi.`;
-    if (s.tipe === 'periode' && !/^\d{5}$/.test(String(v))) return `${s.label} berupa 5 angka, mis. 20261.`;
+    if (s.tipe === 'periode' && !/^\d{5}$/.test(String(v))) return `${s.label}: pilih periode dari daftar.`;
     if ((s.tipe === 'angka' || s.tipe === 'uang') && Number.isNaN(angka(v))) return `${s.label} harus angka.`;
     const n = angka(v);
     if (s.tipe === 'angka' && ((s.min !== undefined && n < s.min) || (s.maks !== undefined && n > s.maks))) return `${s.label} harus antara ${s.min} dan ${s.maks}.`;

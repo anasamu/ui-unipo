@@ -1224,6 +1224,38 @@
     min-width: 0;
     max-width: 100%;
   }
+  // Tab tambahan aplikasi (TombolBerkas `tab`): deret tab di atas, isi mengisi sisa tinggi dialog.
+  .u-berkas-tab {
+    flex: 1;
+    min-height: 0;
+    gap: var(--u-space-3, 0.75rem);
+    // Tab melebihi lebar dialog: deret tab digulir (bukan menyusut), berhenti di tepi tab (modern-web-guidance `tabs`).
+    > .u-tabs-list {
+      flex: none;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scroll-snap-type: inline proximity;
+      > * {
+        flex: none;
+        scroll-snap-align: start;
+      }
+    }
+    > .u-tabs-panel {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+    }
+  }
+  .u-berkas-tab-isi {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding-block-end: var(--u-space-2, 0.5rem);
+  }
 }
 @media (max-width: 639px) {
   .u-dialog-viewport:has(> .u-berkas-dialog) {

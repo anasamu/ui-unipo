@@ -6,7 +6,7 @@ import { Badge, type BadgeVariant } from '../../components/actions';
 import { Progress } from '../../components/display';
 import { DataTable, type DataColumn } from '../../components/data-table';
 import type { MenuEntry } from '../../components/overlays';
-import { labelTahunAkademik } from '../akademik';
+import { labelTahunAkademik } from '../label-tahun';
 import { DeretAngka, KepalaAkademik, keadaanData, type KeadaanDataProps } from './bersama';
 import { adaAngka, angka, jamPendek, krsDisetujui, namaHari, type BarisKrs, type DataKrs } from './tipe';
 

@@ -546,7 +546,7 @@ function IsianButirRubrik({ b, onChange, onHapus, jabatan, otomatis }: { b: Buti
 function PanelUbahAturanDupak({ aturan: a, onOpenChange }: { aturan: AturanDupakDetail; onOpenChange: (o: boolean) => void }) {
   const aksi = useAksiDupak();
   const [step, setStep] = React.useState(0);
-  const [isi, setIsi] = React.useState<IsiRubrikDupak>(() => JSON.parse(JSON.stringify(a.isi)) as IsiRubrikDupak);
+  const [isi, setIsi] = React.useState<IsiRubrikDupak>(() => structuredClone(a.isi) as IsiRubrikDupak);
   const [id, setId] = React.useState({ nama: a.nama, dasar_hukum: a.dasar_hukum ?? '', berlaku_tanggal: a.berlaku_tanggal ?? '', catatan_perubahan: a.catatan_perubahan ?? '', sk_id: a.sk?.id ?? (null as string | null) });
   const otomatis = [...a.otomatis.map((o) => ({ value: o.kode, label: o.nama })), ...a.jenis_luaran.map((l) => ({ value: `luaran:${l.kode}`, label: `Luaran LPPM: ${l.nama}` }))];
   const ubahUnsur = (ui: number, fn: (u: IsiRubrikDupak['unsur'][number]) => IsiRubrikDupak['unsur'][number]) => setIsi({ ...isi, unsur: isi.unsur.map((u, n) => (n === ui ? fn(u) : u)) });

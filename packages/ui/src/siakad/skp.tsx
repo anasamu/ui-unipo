@@ -369,7 +369,7 @@ function RincianAturanSkp({ id, onPilih }: { id: number; onPilih: (id: number | 
 function PanelUbahAturanSkp({ aturan: a, onOpenChange }: { aturan: AturanSkpDetail; onOpenChange: (o: boolean) => void }) {
   const aksi = useAksiSkp();
   const [step, setStep] = React.useState(0);
-  const [isi, setIsi] = React.useState<IsiAturanSkp>(() => JSON.parse(JSON.stringify(a.isi)) as IsiAturanSkp);
+  const [isi, setIsi] = React.useState<IsiAturanSkp>(() => structuredClone(a.isi) as IsiAturanSkp);
   const [id, setId] = React.useState({ nama: a.nama, dasar_hukum: a.dasar_hukum ?? '', berlaku_tanggal: a.berlaku_tanggal ?? '', catatan_perubahan: a.catatan_perubahan ?? '', sk_id: a.sk?.id ?? (null as string | null) });
   const hk = isi.hasil_kerja;
   return (
