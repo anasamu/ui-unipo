@@ -4,7 +4,8 @@
  *
  *   npm run katalog -w unipo-ui -- ../unipo-sdk/openapi.json
  *   npm run katalog -w unipo-ui -- https://siakad.unipo.ac.id/api/v1/openapi.json
- *   npm run katalog -w unipo-ui -- --periksa ../unipo-sdk/openapi.json   (tidak menulis; kode 1 bila katalog basi)
+ *   npm run katalog -w unipo-ui -- --periksa ../unipo-sdk/openapi.json   (tidak menulis; kode 1 bila katalog basi
+ *     atau ada tag OpenAPI yang belum dipetakan ke modul di scripts/katalog/modul.mjs)
  *
  * Hasil (di-commit, ikut terbit di paket):
  *   src/katalog/data/indeks.json        grup, modul, dan sumber data (kecil)
@@ -470,6 +471,11 @@ if (PERIKSA) {
   const beda = [];
   for (const [f, isi] of berkas) if ((await bacaLama(f)) !== isi) beda.push(f);
   for (const f of lamaModul) if (!berkas.has(f)) beda.push(`${f} (tidak dibuat lagi)`);
+  // Tag tanpa modul tidak masuk katalog sama sekali (sumbernya "tidak ada di katalog"), jadi ikut dianggap basi.
+  if (tagTakDikenal.size) {
+    console.error(`Tag OpenAPI belum dipetakan ke modul katalog (tambahkan di scripts/katalog/modul.mjs): ${[...tagTakDikenal].join(', ')}.`);
+    if (!beda.length) process.exit(1);
+  }
   if (!beda.length) {
     console.log(`Katalog mutakhir terhadap ${sumber}: ${indeks.modul.length} modul, ${resources.size} sumber data, ${total} operasi.`);
     process.exit(0);

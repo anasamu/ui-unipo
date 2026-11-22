@@ -85,6 +85,14 @@
   - `npm run katalog -w unipo-ui -- --periksa <openapi.json>`: tidak menulis; kode 1 dan daftar sumber baru bila katalog basi. Dijalankan CI (peringatan di PR, gagal di main) terhadap `openapi.json` unipo-sdk.
   - `npx unipo-ui periksa-katalog [src]`: aplikasi memeriksa semua `sumber=`/`sumber:`/`useSumber()`/`<HalamanModul modul>` ada di katalog unipo-ui yang terpasang (kode 1 bila tidak).
   - Uji `packages/ui/test/katalog-data.test.tsx`: konsistensi data katalog, `/v1/spmi/alur`, pemindai CLI, dan kemutakhiran terhadap `../unipo-sdk/openapi.json` bila ada.
+- **Katalog: kelompok untuk semua modul API yang belum punya** (`scripts/katalog/modul.mjs`, `src/katalog/ikon.tsx`, data dibuat ulang): 91 tag OpenAPI (858 operasi) sebelumnya tidak dipetakan sehingga sumbernya tidak masuk katalog. Kini 65 modul (25 baru), 1.190 sumber data, 4.607 operasi:
+  - Sistem & Akses: Akun Pengguna (`akun`), Log & Tugas Terjadwal (`log-sistem`), Infrastruktur (`infra`), Event Domain (`peristiwa`), Tema & Halaman Landing (`tema`), Templat Email (`surel`).
+  - Referensi: Aturan & Kebijakan (`aturan`, termasuk bukti syarat).
+  - Akademik: Aturan Kurikulum (`kurikulum-aturan`), Acara Wisuda (`wisuda`), Tugas Akhir (`ta`), Cek Plagiasi (`plagiasi`), Presensi QR (`presensi-qr`); PMB kini juga memuat tag `PMB: ...` (kebijakan kelulusan seleksi).
+  - Kelembagaan: Pimpinan (`pimpinan`), Registri SK (`sk`), Pedoman & Peraturan (`pedoman`), Kepanitiaan (`panitia`), Alur Pemeriksa Usulan (`pemeriksa`), Gaji & Payroll (`gaji`), Aturan Biaya (`biaya`), Kasir (`kasir`), Kwitansi (`kwitansi`).
+  - Layanan: Dokumen Terbit (`dokumen`), Berkas & Penyimpanan (`berkas`), Obrolan (`obrolan`), Kode QR (`qr`).
+  - `buat.mjs --periksa` kini juga gagal (kode 1) bila ada tag OpenAPI yang belum dipetakan ke modul, supaya endpoint baru dengan tag baru tidak diam-diam hilang dari katalog.
+- `peerDependencies`: `unipo-siakad-sdk` kini `^1.0.0 || ^2.0.0` (sebelumnya `>=1.0.0`). unipo-ui hanya memakai tipe `Siakad`/`ApiResult` yang sama di SDK 1.x dan 2.0.0; versi mayor SDK berikutnya perlu ditinjau dulu.
 
 ## 1.50.0 (belum dirilis)
 
