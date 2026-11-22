@@ -15,8 +15,9 @@ import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provi
 
 /*
  * Kunci fitur per periode (SIAKAD /v1/kalender/kunci-fitur*, docs/KUNCI_PERIODE.md "Aturan kunci per fitur"): keputusan
- * kunci periode per fitur/rute diatur dari aplikasi tanpa mengubah kode. Dipakai BAAK (Kalender » Kunci fitur per
- * periode) dan Pustikom (lihat; atur bila diberi izin kalender.kunci.atur).
+ * kunci periode per fitur/rute diatur dari aplikasi tanpa mengubah kode. Pemilik tunggal Pustikom (Aturan & pengatur »
+ * Kunci fitur; keputusan Anas 2026-11-22, menggantikan 2026-11-21 "diatur BAAK"): atur bila server menjawab
+ * meta.boleh_atur (izin kalender.kunci.atur).
  * - Ikut kunci / Dikecualikan / Bukan berperiode = aturan (kal_kunci_aturan), opsional per periode dan prodi.
  * - Buka sementara di periode ditutup = Pengecualian waktu jenis buka kembali (mekanisme yang sama dengan Batas waktu),
  *   dengan cakupan fitur katalog ("fitur:<kode>").
@@ -130,7 +131,7 @@ export interface KunciFiturPeriodeProps {
   tahunId?: string | null;
   /**
    * Hanya lihat walau server mengizinkan mengatur (`boleh_atur`): untuk aplikasi yang bukan pemilik fitur ini
-   * (pemilik tunggal: BAAK; Pustikom hanya memantau).
+   * (pemilik tunggal: Pustikom; aplikasi lain hanya memantau).
    */
   hanyaLihat?: boolean;
 }
@@ -248,7 +249,7 @@ export function KunciFiturPeriode({ tahunId, hanyaLihat }: KunciFiturPeriodeProp
           {k.periode.ditutup
             ? `Ditutup${k.periode.sejak ? ` sejak ${tanggalKunci(k.periode.sejak)}` : ''}: fitur yang ikut kunci menolak perubahan data periode ini (423). Pengecualian dan buka sementara diatur di sini tanpa mengubah kode.`
             : 'Periode masih dibuka: semua fitur boleh mengubah data periode ini (batas waktu tiap fitur diatur di Batas waktu). Aturan di sini berlaku saat periode ditutup.'}
-          {hanyaLihat ? ' Hanya lihat di aplikasi ini: kunci fitur diatur di aplikasi BAAK.' : !boleh ? ' Anda hanya bisa melihat (mengatur butuh izin kalender.kunci.atur).' : ''}
+          {hanyaLihat ? ' Hanya lihat di aplikasi ini: kunci fitur diatur di aplikasi Pustikom.' : !boleh ? ' Anda hanya bisa melihat (mengatur butuh izin kalender.kunci.atur dari Pustikom).' : ''}
         </Alert>
       ) : null}
       <Tabs
