@@ -1,4 +1,7 @@
 // Aturan berdasarkan SK & rantai validator (siakad/aturan-sk.tsx).
+.u-aturan-modul-kepala[data-tanpa-judul] {
+  justify-content: flex-end;
+}
 .u-aturan-modul-kepala > .u-aturan-modul-tombol {
   flex: 0 0 auto;
   display: flex;

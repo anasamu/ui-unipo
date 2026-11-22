@@ -5299,6 +5299,12 @@ export interface KelolaAturanProps {
    * unit itu (GET /v1/aturan/saya `titik_atur`) juga boleh menambah aturan walau bukan pengatur kategori.
    */
   saringUnit?: boolean;
+  /**
+   * Tampilkan tab tata kelola aturan lintas kategori: Pengatur, Pejabat penyetuju, Validator aturan. Bawaan false;
+   * hanya Pustikom yang memakai true (keputusan Anas 2026-11-22: aplikasi unit tidak menampilkan pengaturan siapa
+   * menyusun/menyetujui aturan, itu urusan Pustikom).
+   */
+  tataKelola?: boolean;
   className?: string;
 }
 
@@ -5500,7 +5506,7 @@ export function PengingatSkAturan({ unit, kategori, href, onBuka, className }: {
  * riwayat), alur persetujuan (menunggu persetujuan saya, telaah SPMI), sampah (admin), pengatur, dan titik penerapan.
  * Hak akses mengikuti GET /v1/aturan/saya.
  */
-export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik dinamis', tampilTitik = false, tautanPejabat, tampilan = 'kartu', fakultas, saringUnit = false, className }: KelolaAturanProps) {
+export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik dinamis', tampilTitik = false, tautanPejabat, tampilan = 'kartu', fakultas, saringUnit = false, tataKelola = false, className }: KelolaAturanProps) {
   const kelompok = tampilan === 'kelompok' && !titik;
   const saya = useAturanSaya();
   const unitSaring = saringUnit && unit ? unit : undefined;
@@ -5541,13 +5547,18 @@ export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik d
   ) : null;
   return (
     <div className={cn('u-aturan-modul', className)}>
-      <div className="u-aturan-modul-kepala">
-        <div>
-          <h2>{judul}</h2>
-          <p>Syarat, batas waktu, dan batas nilai yang diperiksa SIAKAD di setiap langkah. Aturan buatan unit berlaku setelah ber-SK dan disetujui; aturan bawaan kampus sudah aktif dan tinggal dilampiri SK.</p>
+      {/* judul={null}: halaman aplikasi sudah punya kepala halaman sendiri, jadi judul & keterangan tidak diulang; tombol tetap rata kanan. */}
+      {judul === null ? (
+        tombolTambah && <div className="u-aturan-modul-kepala" data-tanpa-judul="">{tombolTambah}</div>
+      ) : (
+        <div className="u-aturan-modul-kepala">
+          <div>
+            <h2>{judul}</h2>
+            <p>Syarat, batas waktu, dan batas nilai yang diperiksa SIAKAD di setiap langkah. Aturan buatan unit berlaku setelah ber-SK dan disetujui; aturan bawaan kampus sudah aktif dan tinggal dilampiri SK.</p>
+          </div>
+          {tombolTambah}
         </div>
-        {tombolTambah}
-      </div>
+      )}
       {kelompok ? null : <div className="u-aturan-statistik">
         {[
           { label: 'Aktif', nilai: hitung('aktif'), ikon: <Power />, nada: 'success' },
@@ -5630,9 +5641,9 @@ export function KelolaAturan({ kategori, titik, unit, judul = 'Aturan akademik d
             ? [{ value: 'sampah' as const, label: 'Sampah', icon: <Trash2 />, content: <DaftarAturan filter={{ kategori, titik, terhapus: true }} onBuka={(a) => setBuka(a.id)} /> }]
             : []),
           ...(bolehTambah ? [{ value: 'dasar' as const, label: 'SK dasar', icon: <FileBadge />, content: <DasarSkAturanDaftar kategori={kategori} /> }] : []),
-          { value: 'pengatur', label: 'Pengatur', icon: <ShieldCheck />, content: <PengaturAturan /> },
-          ...(saya.data?.admin ? [{ value: 'penyetuju' as const, label: 'Pejabat penyetuju', icon: <BadgeCheck />, content: <PejabatPenyetujuAturan tautanPejabat={tautanPejabat} /> }] : []),
-          ...(saya.data?.boleh_validator_lihat ? [{ value: 'validator' as const, label: 'Validator aturan', icon: <GitBranch />, content: <ValidatorAturan /> }] : []),
+          ...(tataKelola ? [{ value: 'pengatur' as const, label: 'Pengatur', icon: <ShieldCheck />, content: <PengaturAturan /> }] : []),
+          ...(tataKelola && saya.data?.admin ? [{ value: 'penyetuju' as const, label: 'Pejabat penyetuju', icon: <BadgeCheck />, content: <PejabatPenyetujuAturan tautanPejabat={tautanPejabat} /> }] : []),
+          ...(tataKelola && saya.data?.boleh_validator_lihat ? [{ value: 'validator' as const, label: 'Validator aturan', icon: <GitBranch />, content: <ValidatorAturan /> }] : []),
           ...(tampilTitik && saya.data?.admin ? [{ value: 'titik' as const, label: 'Titik penerapan', icon: <Waypoints />, content: <KelolaTitikAturan /> }] : []),
         ]}
       />
