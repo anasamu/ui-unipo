@@ -43,6 +43,7 @@ import { GalatApi } from './galat';
 import { FormPanitia, useDaftarPanitia, useTugasPanitiaSaya, type PenugasanPanitia } from './panitia';
 import { KameraPindaiQr } from './presensi';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { IsianJam } from '../components/isian-angka';
 
 /*
  * Acara wisuda (/v1/acara-wisuda, docs/ACARA-WISUDA.md di SIAKAD). Satu set komponen untuk BAAK, Pustikom, dan Tugas
@@ -389,10 +390,10 @@ export function FormAcaraWisuda({ acara, open, onOpenChange, onTersimpan }: Form
                   <IsianTanggal value={isi.tanggal || null} onValueChange={(v) => set('tanggal', v ?? '')} />
                 </Field>
                 <Field label="Jam mulai" optional error={galat.jam_mulai || undefined}>
-                  <Input type="time" value={isi.jam_mulai} onChange={(e) => set('jam_mulai', e.target.value)} />
+                  <IsianJam value={isi.jam_mulai || null} onValueChange={(v) => set('jam_mulai', v ?? '')} />
                 </Field>
                 <Field label="Jam selesai" optional error={galat.jam_selesai || undefined}>
-                  <Input type="time" value={isi.jam_selesai} onChange={(e) => set('jam_selesai', e.target.value)} />
+                  <IsianJam value={isi.jam_selesai || null} onValueChange={(v) => set('jam_selesai', v ?? '')} />
                 </Field>
               </BagianForm>
               <BagianForm judul="Gladi bersih" kolom={2} keterangan="Opsional. Ikut diumumkan ke wisudawan.">
@@ -400,7 +401,7 @@ export function FormAcaraWisuda({ acara, open, onOpenChange, onTersimpan }: Form
                   <IsianTanggal value={isi.gladi_tanggal || null} max={isi.tanggal || undefined} onValueChange={(v) => set('gladi_tanggal', v ?? '')} />
                 </Field>
                 <Field label="Jam gladi" optional error={galat.gladi_jam || undefined}>
-                  <Input type="time" value={isi.gladi_jam} onChange={(e) => set('gladi_jam', e.target.value)} />
+                  <IsianJam value={isi.gladi_jam || null} onValueChange={(v) => set('gladi_jam', v ?? '')} />
                 </Field>
                 <Field label="Tempat gladi" optional className="u-form-lebar">
                   <Input value={isi.gladi_tempat} maxLength={200} placeholder="Sama dengan tempat acara bila kosong" onChange={(e) => set('gladi_tempat', e.target.value)} />
@@ -549,17 +550,22 @@ export function KelolaAcaraWisuda({ unitPanitiaId, judul = 'Acara wisuda', deskr
   if (hak.error) return <GalatApi error={hak.error} onRetry={hak.refetch} />;
   return (
     <div className={cn('u-wisuda', className)}>
-      <div className="u-wisuda-kepala">
-        <div>
-          <h2>{judul}</h2>
-          <p>{deskripsi ?? 'Jadwal, gladi, tempat, peserta dari pendaftar yang diterima, kursi, toga, undangan QR, hari-H, dan laporan. Panitia ber-SK bekerja sesuai tugas seksinya.'}</p>
+      {/* judul={null}: kepala halaman/tab aplikasi sudah memuat judul & keterangan; hanya tombol yang tampil (rata kanan). */}
+      {(judul !== null || hak.data?.kelola) && (
+        <div className="u-wisuda-kepala" data-tanpa-judul={judul === null ? '' : undefined}>
+          {judul !== null && (
+            <div>
+              <h2>{judul}</h2>
+              <p>{deskripsi ?? 'Jadwal, gladi, tempat, peserta dari pendaftar yang diterima, kursi, toga, undangan QR, hari-H, dan laporan. Panitia ber-SK bekerja sesuai tugas seksinya.'}</p>
+            </div>
+          )}
+          {hak.data?.kelola && (
+            <Button onClick={() => setBuat(true)}>
+              <Plus /> Acara baru
+            </Button>
+          )}
         </div>
-        {hak.data?.kelola && (
-          <Button onClick={() => setBuat(true)}>
-            <Plus /> Acara baru
-          </Button>
-        )}
-      </div>
+      )}
       {hak.data?.kelola && hak.data.sumber === 'pustikom' && (
         <Alert variant="info" title="Mengelola dari Pustikom">
           Perubahan di sini tercatat bersumber Pustikom di riwayat acara (mengambil alih bila operator BAAK belum ada).
@@ -782,26 +788,20 @@ function RingkasanAcara({ acara: a, unitPanitiaId }: { acara: DetailAcaraWisuda;
             <GraduationCap aria-hidden /> Per fakultas
           </h3>
           {a.fakultas.length ? (
-            <table className="u-wisuda-tabel">
-              <thead>
-                <tr>
-                  <th>Fakultas</th>
-                  <th>Wisudawan</th>
-                  <th>Hadir</th>
-                  <th>Toga</th>
-                </tr>
-              </thead>
-              <tbody>
-                {a.fakultas.map((f) => (
-                  <tr key={f.kode ?? '-'}>
-                    <td>{f.nama ?? f.kode ?? '—'}</td>
-                    <td>{f.peserta}</td>
-                    <td>{f.hadir}</td>
-                    <td>{f.toga}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable
+              columns={[
+                { key: 'nama', header: 'Fakultas', mobile: 'title', value: (f) => f.nama ?? f.kode ?? '', cell: (f) => f.nama ?? f.kode ?? '—' },
+                { key: 'peserta', header: 'Wisudawan', format: 'angka' },
+                { key: 'hadir', header: 'Hadir', format: 'angka' },
+                { key: 'toga', header: 'Toga', format: 'angka' },
+              ]}
+              rows={a.fakultas}
+              rowKey={(f) => f.kode ?? '-'}
+              pagination={false}
+              columnToggle={false}
+              densityToggle={false}
+              defaultDensity="compact"
+            />
           ) : (
             <p className="u-wisuda-redup">Peserta belum ditarik.</p>
           )}
@@ -1292,44 +1292,27 @@ function LaporanAcaraWisuda({ acara: a }: { acara: DetailAcaraWisuda }) {
           })}
         />
       </div>
-      <div className="u-wisuda-gulir">
-        <table className="u-wisuda-tabel">
-          <thead>
-            <tr>
-              {kolom.map((k) => (
-                <th key={k}>{k}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {l.baris.map((b) => (
-              <tr key={`${b.kode_fakultas}-${b.kode_prodi}`}>
-                <td>{b.nama_fakultas}</td>
-                <td>{b.nama_prodi}</td>
-                <td>{b.peserta}</td>
-                <td>{b.hadir}</td>
-                <td>{b.pendamping_hadir}</td>
-                <td>{b.toga}</td>
-                <td>{b.berkursi}</td>
-                <td>{b.lunas}</td>
-                <td>{b.terbaik}</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <th colSpan={2}>Jumlah</th>
-              <th>{l.total.peserta}</th>
-              <th>{l.total.hadir}</th>
-              <th>{l.total.pendamping_hadir}</th>
-              <th>{l.total.toga}</th>
-              <th>{l.total.berkursi}</th>
-              <th>{l.total.lunas}</th>
-              <th>{l.total.terbaik}</th>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+      <DataTable
+        columns={[
+          { key: 'nama_fakultas', header: 'Fakultas', sortable: true, mobile: 'subtitle' },
+          { key: 'nama_prodi', header: 'Program studi', sortable: true, mobile: 'title' },
+          { key: 'peserta', header: 'Wisudawan', format: 'angka', sortable: true },
+          { key: 'hadir', header: 'Hadir', format: 'angka', sortable: true },
+          { key: 'pendamping_hadir', header: 'Pendamping hadir', format: 'angka', sortable: true },
+          { key: 'toga', header: 'Toga', format: 'angka', sortable: true },
+          { key: 'berkursi', header: 'Berkursi', format: 'angka', sortable: true },
+          { key: 'lunas', header: 'Lunas', format: 'angka', sortable: true },
+          { key: 'terbaik', header: 'Terbaik', format: 'angka', sortable: true },
+        ]}
+        rows={l.baris}
+        rowKey={(b) => `${b.kode_fakultas}-${b.kode_prodi}`}
+        pagination={false}
+        columnToggle={false}
+        densityToggle={false}
+        defaultDensity="compact"
+        stickyHeader
+        ringkasan={{ _label: 'Jumlah', peserta: l.total.peserta, hadir: l.total.hadir, pendamping_hadir: l.total.pendamping_hadir, toga: l.total.toga, berkursi: l.total.berkursi, lunas: l.total.lunas, terbaik: l.total.terbaik }}
+      />
       {l.terbaik.length > 0 && (
         <Card>
           <CardContent>
@@ -1518,12 +1501,14 @@ export function TugasKepanitiaan({ aplikasi, buka, judul = 'Tugas kepanitiaan', 
   const ke = (href: string) => (buka ? buka(href) : (window.location.href = href));
   return (
     <div className={cn('u-wisuda', className)}>
-      <div className="u-wisuda-kepala">
-        <div>
-          <h2>{judul}</h2>
-          <p>Penugasan panitia yang sedang berjalan. Menu ini hilang otomatis setelah masa SK berakhir.</p>
+      {judul !== null && (
+        <div className="u-wisuda-kepala">
+          <div>
+            <h2>{judul}</h2>
+            <p>Penugasan panitia yang sedang berjalan. Menu ini hilang otomatis setelah masa SK berakhir.</p>
+          </div>
         </div>
-      </div>
+      )}
       {t.data.length > 1 && (
         <Tabs value={String(Math.min(pilih, t.data.length - 1))} onValueChange={(v) => setPilih(Number(v))} variant="pill" items={t.data.map((x, i) => ({ value: String(i), label: x.panitia.nama }))} />
       )}

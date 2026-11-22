@@ -8,6 +8,8 @@ import { Alert, Empty, Progress } from '../components/display';
 import { Input, SegmentedControl, Textarea } from '../components/forms';
 import { ConfirmDialog } from '../components/overlays';
 import { invalidateSiakad, pesanGalat, useOptionalSiakad, useSiakadQuery } from './provider';
+import { IsianAngka } from '../components/isian-angka';
+import { keAngka, teksAngka } from '../lib/angka';
 
 /*
  * Layar pengawas sesi CBT (CBT-03), dipakai bersama Fakultas (UTS/UAS), PMB, dan aplikasi lain: token besar, buka/tutup
@@ -239,7 +241,7 @@ export function PantauSesiCbt({ sesiId, className }: { sesiId: number; className
         {tindakan?.a === 'tambah-waktu' && (
           <label className="u-cbt-pantau-isian">
             Menit tambahan
-            <Input type="number" min={1} max={240} value={f.menit} onChange={(e) => setF({ ...f, menit: e.target.value })} />
+            <IsianAngka value={keAngka(f.menit)} min={1} max={240} onValueChange={(n) => setF({ ...f, menit: teksAngka(n) })} />
           </label>
         )}
         <label className="u-cbt-pantau-isian">

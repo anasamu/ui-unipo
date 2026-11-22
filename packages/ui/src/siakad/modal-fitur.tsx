@@ -10,6 +10,7 @@ import { AmbilKrs, PendaftaranWisuda, type HasilAmbilKrs, type SyaratItem } from
 import { useAkunSaya } from './akun';
 import { GalatApi } from './galat';
 import { invalidateSiakad, pulihkanSesi, useSesiHabis, useSiakad, useSiakadQuery } from './provider';
+import { Tekan } from '../components/tekan';
 
 type Dasar = Pick<ModalFiturProps, 'open' | 'onOpenChange' | 'trigger' | 'className'>;
 
@@ -223,12 +224,12 @@ export function ModalAjukanLayanan({ kategori, kodeJenis, onTerkirim, ...p }: Mo
         ) : (
           <div className="u-pilih-layanan" role="group" aria-label="Jenis layanan">
             {daftar.map((j) => (
-              <button key={j.id} type="button" aria-pressed={jenisId === j.id} onClick={() => setJenisId(j.id)}>
+              <Tekan key={j.id} terpilih={jenisId === j.id} onClick={() => setJenisId(j.id)}>
                 <b>{j.nama}</b>
                 <span>
                   {j.kategori} · {rupiah(j.biaya)} · {j.sla_hari ?? 3} hari kerja
                 </span>
-              </button>
+              </Tekan>
             ))}
           </div>
         )

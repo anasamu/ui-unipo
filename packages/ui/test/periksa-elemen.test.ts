@@ -36,6 +36,14 @@ describe('periksa-elemen', () => {
     expect(aturan('<table>', { pengecualian: [{ berkas: 'src/halaman/X.tsx', aturan: 'tabel-bawaan', alasan: 'cetak' }] })).toEqual([]);
     expect(aturan('<table>', { pengecualian: [{ berkas: 'src/halaman/Y.tsx', aturan: 'tabel-bawaan', alasan: 'cetak' }] })).toEqual(['tabel-bawaan']);
   });
+  it('pengecualian berjumlah: lokasi melebihi jumlah tetap dilaporkan', () => {
+    const p = [{ berkas: 'src/halaman/X.tsx', aturan: 'tabel-bawaan', jumlah: 2, alasan: 'tata letak cetak' }];
+    expect(aturan('<table>\n<table>', { pengecualian: p })).toEqual([]);
+    const lebih = periksaTeks('<table>\n<table>\n<table>', 'src/halaman/X.tsx', { pengecualian: p });
+    expect((lebih.pelanggaran as P[]).map((x) => [x.aturan, x.baris])).toEqual([['tabel-bawaan', 3]]);
+    expect((lebih.pelanggaran as P[])[0].pesan).toContain('melebihi 2');
+    expect(lebih.pengecualian).toHaveLength(2);
+  });
   it('nomor baris tepat untuk tag berbaris banyak', () => {
     const r = periksaTeks('a\nb\n<Input\n  value={x}\n  type="number"\n/>', 'x').pelanggaran as P[];
     expect(r).toMatchObject([{ aturan: 'input-angka', baris: 3 }]);

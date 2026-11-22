@@ -12,6 +12,7 @@ import { PilihBerkas } from '../siakad/pilih-berkas';
 import {
   galatDariServer,
   isianSkema,
+  acuanIsian,
   jenisIsian,
   keteranganIsian,
   labelKolom,
@@ -120,7 +121,7 @@ export function IsianSkema({ nama, skema: s, value: v, onValueChange: set, onBlu
       return (
         <PilihEntitas
           id={id}
-          jenis={sumberDariAcuan(s.rf!, nama)}
+          jenis={sumberDariAcuan(acuanIsian(nama, s)!, nama)}
           value={teks(v) || null}
           onValueChange={(x) => {
             set(x ?? '');

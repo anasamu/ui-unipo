@@ -14,6 +14,7 @@ import { DataTable, type DataColumn } from '../components/data-table';
 import { pesanGalat, useSiakadQuery } from './provider';
 import { KodeLaporan } from '../components/galat';
 import { invalidateSso, useSsoAdmin, useSsoQuery } from './aplikasi';
+import { Tekan } from '../components/tekan';
 
 /*
  * Log untuk admin: permintaan API SIAKAD (/v1/rbac/log-api, dari storage/logs/api-*.log), ringkasan grafiknya,
@@ -492,10 +493,10 @@ export function LogAktivitas({ username, clientId, grup, perPage = 30, saringan 
             const l = labelPeristiwa(p.event);
             const on = event === p.event;
             return (
-              <button key={p.event} type="button" data-on={on ? '' : undefined} data-tone={l.nada} onClick={() => (setEvent(on ? null : p.event), setPage(1))}>
+              <Tekan key={p.event} data-on={on ? '' : undefined} data-tone={l.nada} onClick={() => (setEvent(on ? null : p.event), setPage(1))}>
                 {l.label}
                 <span>{formatNumber(p.jumlah)}</span>
-              </button>
+              </Tekan>
             );
           })}
         </div>
@@ -537,9 +538,9 @@ export function LogAktivitas({ username, clientId, grup, perPage = 30, saringan 
                       <>
                         {' · '}
                         {onPilihPengguna ? (
-                          <button type="button" className="u-audit-user" onClick={() => onPilihPengguna(r.username)}>
+                          <Button variant="link" size="sm" className="u-audit-user" onClick={() => onPilihPengguna(r.username)}>
                             {r.username}
-                          </button>
+                          </Button>
                         ) : (
                           <span className="u-audit-user">{r.username}</span>
                         )}

@@ -6,6 +6,9 @@ import { Check, ChevronsUpDown, Plus, Search, X } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { Spinner } from './actions';
 import type { ControlSize } from './forms';
+import { labelBuatPilihan, teksKosongPilihan, teksPengelolaPilihan, useBuatPilihan, type BuatPilihan } from './pilihan-kosong';
+
+export * from './pilihan-kosong';
 
 // ---------------------------------------------------------------- Select
 export interface SelectOption<V = string> {
@@ -36,12 +39,29 @@ export interface SelectProps<V> {
    * lencana status di sini, bukan di bawah isian, supaya isian satu baris saringan tetap sejajar.
    */
   lencana?: React.ReactNode;
+  /**
+   * Pola pilihan kosong: bila datanya belum ada, yang berhak (`boleh`) mendapat tombol buat di akhir daftar (menonjol
+   * saat kosong) yang membuka panel samping; data baru langsung terpilih. Yang tidak berhak melihat unit pengelolanya.
+   * `selesai()` menerima opsi baru (`{ value, label }`, tampil walau daftar belum dimuat ulang) atau nilainya saja.
+   */
+  buat?: BuatPilihan<SelectOption<V> | V>;
+  /** Daftar sedang dimuat: tampil "Memuat…", bukan keadaan kosong. */
+  memuat?: boolean;
+  /** Daftar gagal dimuat (true = pesan bawaan): bukan keadaan kosong. */
+  galat?: React.ReactNode;
 }
 
 const KOSONG = '\u0000kosong';
+/** Nilai butir "buat baru" di dalam daftar (pola pilihan kosong). Tidak pernah menjadi nilai terpilih. */
+const BUAT = '\u0000buat';
+
+const adalahOpsi = <V,>(x: unknown): x is SelectOption<V> => typeof x === 'object' && x !== null && 'value' in x && 'label' in x;
 
 /** Pilihan tunggal dari daftar pendek yang sudah diketahui (≤ ±30 butir). Untuk daftar panjang/berasal dari API, pakai Combobox. */
-export function Select<V = string>({ options, placeholder = 'Pilih…', size, className, value, defaultValue, onValueChange, lencana, ...props }: SelectProps<V>) {
+export function Select<V = string>({ options: opsiLuar, placeholder, size, className, value, defaultValue, onValueChange, lencana, buat, memuat, galat, ...props }: SelectProps<V>) {
+  // Data yang baru dibuat lewat `buat` tampil walau daftar dari server belum diperbarui.
+  const [tambahan, setTambahan] = React.useState<SelectOption<V>[]>([]);
+  const options = React.useMemo(() => [...opsiLuar, ...tambahan.filter((t) => !opsiLuar.some((o) => o.value === t.value))], [opsiLuar, tambahan]);
   const groups = React.useMemo(() => {
     const map = new Map<string, SelectOption<V>[]>();
     for (const o of options) {
@@ -58,56 +78,93 @@ export function Select<V = string>({ options, placeholder = 'Pilih…', size, cl
   const adaKosong = options.some((o) => o.value === ('' as unknown as V));
   const enc = (v: V | null | undefined) => (v === ('' as unknown as V) ? (adaKosong ? (KOSONG as unknown as V) : null) : v);
   const dec = (v: V | null) => (v === (KOSONG as unknown as V) ? ('' as unknown as V) : v);
-  // Input tersembunyi Base UI akan mengirim penanda internal; bila ada opsi '', nilai formulir dikirim sendiri.
-  const [nilaiAwal, setNilaiForm] = React.useState<V | null | undefined>(defaultValue);
-  const nilaiForm = value !== undefined ? value : nilaiAwal;
+  // Nilai dipegang sendiri (juga saat tidak dikendalikan) supaya butir "buat baru" tidak pernah menjadi nilai terpilih.
+  const [dalam, setDalam] = React.useState<V | null | undefined>(defaultValue);
+  const nilai = value !== undefined ? value : dalam;
+  const pemicu = React.useRef<HTMLButtonElement>(null);
+  const pilih = (v: V | null) => {
+    setDalam(v);
+    onValueChange?.(v);
+  };
+  const b = useBuatPilihan<SelectOption<V> | V>(buat, {
+    fokusKe: props.id ?? pemicu,
+    onDibuat: (baru) => {
+      if (adalahOpsi<V>(baru)) {
+        setTambahan((t) => [...t.filter((x) => x.value !== baru.value), baru]);
+        pilih(baru.value);
+      } else pilih(baru as V);
+    },
+  });
+  const kosong = !memuat && !galat && !opsiLuar.length && !tambahan.length;
+  const tampilBuat = Boolean(buat?.boleh) && !memuat && !galat && (!buat?.hanyaKosong || kosong);
+  const pengelola = kosong ? teksPengelolaPilihan(buat) : null;
+  const placeholderAkhir = placeholder ?? (memuat ? 'Memuat…' : kosong && buat ? String(teksKosongPilihan(buat, 'Pilih…')).replace(/\.$/, '') : 'Pilih…');
   return (
-    <BaseSelect.Root<V>
-      items={options.map((o) => ({ value: enc(o.value) as V, label: o.label }))}
-      value={value === undefined ? undefined : (enc(value) ?? null)}
-      defaultValue={defaultValue === undefined ? undefined : (enc(defaultValue) ?? null)}
-      onValueChange={(v) => {
-        const d = dec(v as V | null);
-        setNilaiForm(d);
-        onValueChange?.(d);
-      }}
-      disabled={props.disabled}
-      name={adaKosong ? undefined : props.name}
-      required={props.required}
-    >
-      <BaseSelect.Trigger className={cn('u-select-trigger', className)} data-size={size} id={props.id} aria-label={props['aria-label']}>
-        <BaseSelect.Value className="u-select-value" placeholder={placeholder} />
-        {lencana ? <span className="u-select-lencana">{lencana}</span> : null}
-        <BaseSelect.Icon className="u-select-icon">
-          <ChevronsUpDown />
-        </BaseSelect.Icon>
-      </BaseSelect.Trigger>
-      <BaseSelect.Portal>
-        <BaseSelect.Positioner className="u-popup-positioner" sideOffset={6} alignItemWithTrigger={false} collisionPadding={8}>
-          <BaseSelect.Popup className="u-listbox">
-            {groups.map(([g, items], gi) => (
-              <BaseSelect.Group key={g || gi}>
-                {gi > 0 && <BaseSelect.Separator className="u-listbox-separator" />}
-                {g && <BaseSelect.GroupLabel className="u-listbox-group-label">{g}</BaseSelect.GroupLabel>}
-                {items.map((o) => (
-                  <BaseSelect.Item key={String(o.value)} value={enc(o.value)} disabled={o.disabled} className="u-listbox-item">
-                    {o.icon}
-                    <span className="u-option-text">
-                      <BaseSelect.ItemText>{o.label}</BaseSelect.ItemText>
-                      {o.description && <span className="u-option-meta" title={typeof o.description === 'string' ? o.description : undefined}>{o.description}</span>}
-                    </span>
-                    <BaseSelect.ItemIndicator className="u-listbox-item-indicator">
-                      <Check />
-                    </BaseSelect.ItemIndicator>
-                  </BaseSelect.Item>
-                ))}
-              </BaseSelect.Group>
-            ))}
-          </BaseSelect.Popup>
-        </BaseSelect.Positioner>
-      </BaseSelect.Portal>
-      {adaKosong && props.name && <input type="hidden" name={props.name} value={nilaiForm == null ? '' : String(nilaiForm)} disabled={props.disabled} />}
-    </BaseSelect.Root>
+    <>
+      <BaseSelect.Root<V>
+        items={options.map((o) => ({ value: enc(o.value) as V, label: o.label }))}
+        value={enc(nilai) ?? null}
+        onValueChange={(v) => {
+          if (v === (BUAT as unknown as V)) return void b.mulai('');
+          pilih(dec(v as V | null));
+        }}
+        disabled={props.disabled}
+        name={adaKosong ? undefined : props.name}
+        required={props.required}
+      >
+        <BaseSelect.Trigger ref={pemicu} className={cn('u-select-trigger', className)} data-size={size} id={props.id} aria-label={props['aria-label']} aria-busy={memuat || undefined}>
+          <BaseSelect.Value className="u-select-value" placeholder={placeholderAkhir} />
+          {lencana ? <span className="u-select-lencana">{lencana}</span> : null}
+          <BaseSelect.Icon className="u-select-icon">{memuat ? <Spinner size="sm" /> : <ChevronsUpDown />}</BaseSelect.Icon>
+        </BaseSelect.Trigger>
+        <BaseSelect.Portal>
+          <BaseSelect.Positioner className="u-popup-positioner" sideOffset={6} alignItemWithTrigger={false} collisionPadding={8}>
+            <BaseSelect.Popup className="u-listbox">
+              {memuat ? (
+                <div className="u-listbox-status" role="status">
+                  <Spinner size="sm" /> Memuat…
+                </div>
+              ) : galat ? (
+                <div className="u-listbox-status" role="alert">
+                  {galat === true ? 'Data tidak bisa dimuat. Coba lagi.' : (galat as React.ReactNode)}
+                </div>
+              ) : kosong ? (
+                <div className="u-listbox-empty" role="status">
+                  {buat ? teksKosongPilihan(buat) : 'Belum ada pilihan.'}
+                  {pengelola && <span className="u-listbox-pengelola">{pengelola}</span>}
+                </div>
+              ) : null}
+              {groups.map(([g, items], gi) => (
+                <BaseSelect.Group key={g || gi}>
+                  {gi > 0 && <BaseSelect.Separator className="u-listbox-separator" />}
+                  {g && <BaseSelect.GroupLabel className="u-listbox-group-label">{g}</BaseSelect.GroupLabel>}
+                  {items.map((o) => (
+                    <BaseSelect.Item key={String(o.value)} value={enc(o.value)} disabled={o.disabled} className="u-listbox-item">
+                      {o.icon}
+                      <span className="u-option-text">
+                        <BaseSelect.ItemText>{o.label}</BaseSelect.ItemText>
+                        {o.description && <span className="u-option-meta" title={typeof o.description === 'string' ? o.description : undefined}>{o.description}</span>}
+                      </span>
+                      <BaseSelect.ItemIndicator className="u-listbox-item-indicator">
+                        <Check />
+                      </BaseSelect.ItemIndicator>
+                    </BaseSelect.Item>
+                  ))}
+                </BaseSelect.Group>
+              ))}
+              {tampilBuat && buat && (
+                <BaseSelect.Item value={BUAT as unknown as V} className="u-listbox-tambah" data-menonjol={kosong ? '' : undefined} data-buat="">
+                  <Plus aria-hidden />
+                  <span>{labelBuatPilihan(buat, '')}</span>
+                </BaseSelect.Item>
+              )}
+            </BaseSelect.Popup>
+          </BaseSelect.Positioner>
+        </BaseSelect.Portal>
+        {adaKosong && props.name && <input type="hidden" name={props.name} value={nilai == null ? '' : String(nilai)} disabled={props.disabled} />}
+      </BaseSelect.Root>
+      {b.elemen}
+    </>
   );
 }
 
@@ -148,15 +205,38 @@ export interface ComboboxProps<T> {
   /** Pesan galat pemuatan, mis. "Tidak bisa memuat data". */
   errorText?: string;
   /**
-   * Tambah data baru bila yang dicari tidak ada. Tombol "Tambah …" muncul di kaki daftar (selalu, atau hanya saat
-   * hasil kosong bila `hanyaKosong`). Kembalikan butir baru (boleh Promise) agar langsung terpilih.
+   * Pola pilihan kosong (lihat {@link BuatPilihan}): tombol buat di akhir daftar (atau hanya saat hasil kosong bila
+   * `hanyaKosong`) bagi yang berhak, membuka panel samping (`panel`) atau langsung menyimpan (`onBuat`); data baru
+   * langsung terpilih dan fokus kembali ke isian. Yang tidak berhak melihat unit pengelola saat daftar kosong.
    */
-  tambah?: {
-    onTambah: (kata: string) => T | null | void | Promise<T | null | void>;
-    label?: (kata: string) => React.ReactNode;
-    hanyaKosong?: boolean;
+  buat?: BuatPilihan<T>;
+  /**
+   * @deprecated Pakai `buat` (`{ boleh: true, onBuat, label, hanyaKosong }`). Tetap berfungsi: diubah ke `buat`.
+   */
+  tambah?: TambahCombobox<T>;
+}
+
+/** Bentuk lama `Combobox.tambah`; sama dengan `buat` berhak dengan `onBuat`. */
+export interface TambahCombobox<T> {
+  onTambah: (kata: string) => T | null | void | Promise<T | null | void>;
+  label?: (kata: string) => React.ReactNode;
+  hanyaKosong?: boolean;
+}
+
+/** Ubah `tambah` (bentuk lama) ke `buat`. */
+export function buatDariTambah<T>(tambah: TambahCombobox<T> | undefined): BuatPilihan<T> | undefined {
+  if (!tambah) return undefined;
+  return {
+    boleh: true,
+    onBuat: tambah.onTambah,
+    hanyaKosong: tambah.hanyaKosong,
+    label: (k: string) => (tambah.label ? tambah.label(k) : k ? <>Tambah “{k}”</> : 'Tambah data baru'),
   };
 }
+
+/** Butir penanda "buat baru" di daftar Combobox (bukan data). */
+const BUTIR_BUAT = { __buat: true } as const;
+const KUNCI_BUAT = '\u0000buat';
 
 function useDebounced<T>(value: T, ms: number): T {
   const [v, setV] = React.useState(value);
@@ -193,10 +273,12 @@ export function Combobox<T>({
   id,
   errorText = 'Data tidak bisa dimuat. Coba lagi.',
   tambah,
+  buat: buatProp,
   itemGroup,
   lencana,
   ...rest
 }: ComboboxProps<T>) {
+  const buat = buatProp ?? buatDariTambah(tambah);
   const initial = value !== undefined ? value : (defaultValue ?? null);
   const [query, setQuery] = React.useState(() => (initial ? itemToString(initial) : ''));
   const [open, setOpen] = React.useState(false);
@@ -236,6 +318,29 @@ export function Combobox<T>({
 
   const list = loadItems ? (tooShort ? [] : remote) : (items ?? []);
   const listWithSelected = selected && loadItems && !list.some((i) => itemKey(i) === itemKey(selected)) ? [selected, ...list] : list;
+
+  // ---- pola pilihan kosong: butir "buat baru" ikut daftar (bisa dipilih dengan keyboard), panel samping bersama.
+  const isian = React.useRef<HTMLInputElement>(null);
+  const saring = BaseCombobox.useFilter({ value: selected });
+  // Kata yang benar-benar dicari (bukan label butir terpilih).
+  const kata = selected && query === itemToString(selected) ? '' : query.trim();
+  const adaHasil = loadItems ? listWithSelected.length > 0 : list.some((i) => !kata || saring.contains(i, kata, itemToString));
+  const kosongTotal = !loading && !failed && !tooShort && !adaHasil && !kata;
+  const tampilBuat = Boolean(buat?.boleh) && !tooShort && !failed && (!buat?.hanyaKosong || (!loading && !adaHasil));
+  const abaikanInput = React.useRef(false);
+  const b = useBuatPilihan<T>(buat, {
+    fokusKe: isian,
+    onDibuat: (baru) => {
+      setInner(baru);
+      setQuery(itemToString(baru));
+      if (loadItems) setRemote((r) => [baru, ...r.filter((x) => itemKey(x) !== itemKey(baru))]);
+      onValueChange?.(baru);
+    },
+  });
+  const butirBuat = BUTIR_BUAT as unknown as T;
+  const keyOf = (i: T) => (i === butirBuat ? KUNCI_BUAT : itemKey(i));
+  const labelOf = (i: T) => (i === butirBuat ? '' : itemToString(i));
+
   const grouped = React.useMemo(() => {
     if (!itemGroup || loadItems) return null;
     const map = new Map<string, T[]>();
@@ -245,29 +350,52 @@ export function Combobox<T>({
     }
     return [...map].map(([value, items]) => ({ value, items }));
   }, [itemGroup, loadItems, listWithSelected]);
-  const renderEl = (item: T) => (
-    <BaseCombobox.Item key={itemKey(item)} value={item} className="u-listbox-item">
-      {renderItem ? renderItem(item) : itemToString(item)}
-      <BaseCombobox.ItemIndicator className="u-listbox-item-indicator">
-        <Check />
-      </BaseCombobox.ItemIndicator>
-    </BaseCombobox.Item>
-  );
+  const daftarAkhir = tampilBuat
+    ? grouped
+      ? [...grouped, { value: KUNCI_BUAT, items: [butirBuat] }]
+      : [...listWithSelected, butirBuat]
+    : (grouped ?? listWithSelected);
+  const renderEl = (item: T) =>
+    item === butirBuat && buat ? (
+      <BaseCombobox.Item key={KUNCI_BUAT} value={item} className="u-listbox-tambah" data-menonjol={kosongTotal ? '' : undefined} data-buat="">
+        <Plus aria-hidden />
+        <span>{labelBuatPilihan(buat, kata)}</span>
+      </BaseCombobox.Item>
+    ) : (
+      <BaseCombobox.Item key={itemKey(item)} value={item} className="u-listbox-item">
+        {renderItem ? renderItem(item) : itemToString(item)}
+        <BaseCombobox.ItemIndicator className="u-listbox-item-indicator">
+          <Check />
+        </BaseCombobox.ItemIndicator>
+      </BaseCombobox.Item>
+    );
+  const pengelola = !adaHasil && !loading && !failed && !tooShort ? teksPengelolaPilihan(buat) : null;
 
   return (
+    <>
     <BaseCombobox.Root<T>
-      items={(grouped ?? listWithSelected) as T[]}
-      filter={loadItems ? null : undefined}
-      itemToStringLabel={itemToString}
-      itemToStringValue={itemKey}
-      isItemEqualToValue={(a, b) => itemKey(a) === itemKey(b)}
+      items={daftarAkhir as T[]}
+      filter={loadItems ? null : buat ? (i: T, q: string, f?: (i: T) => string) => i === butirBuat || saring.contains(i, q, f) : undefined}
+      itemToStringLabel={labelOf}
+      itemToStringValue={keyOf}
+      isItemEqualToValue={(a, c) => keyOf(a) === keyOf(c)}
       value={selected}
       onValueChange={(v) => {
+        if (v === butirBuat) {
+          // Butir "buat baru" tidak pernah menjadi nilai: kembalikan teks isian, buka panel.
+          abaikanInput.current = true;
+          setTimeout(() => (abaikanInput.current = false), 0);
+          setQuery(selectedLabel);
+          void b.mulai(kata);
+          return;
+        }
         setInner(v as T | null);
         onValueChange?.(v as T | null);
       }}
       inputValue={query}
-      onInputValueChange={setQuery}
+      onInputValueChange={(v) => {
+        if (!abaikanInput.current) setQuery(v);
+      }}
       open={open}
       onOpenChange={setOpen}
       disabled={disabled}
@@ -277,7 +405,7 @@ export function Combobox<T>({
         <span className="u-input-addon" data-align="start">
           {icon}
         </span>
-        <BaseCombobox.Input placeholder={placeholder} id={id} aria-label={rest['aria-label']} />
+        <BaseCombobox.Input ref={isian} placeholder={placeholder} id={id} aria-label={rest['aria-label']} />
         {selected && lencana && !open ? (() => {
           const l = lencana(selected);
           return l == null || l === false ? null : <span className="u-input-addon" data-align="end" data-lencana="">{l}</span>;
@@ -310,41 +438,32 @@ export function Combobox<T>({
                 </>
               ) : null}
             </BaseCombobox.Status>
-            {!loading && !failed && !tooShort && <BaseCombobox.Empty className="u-listbox-empty">{emptyText}</BaseCombobox.Empty>}
+            {buat ? (
+              !loading && !failed && !tooShort && !adaHasil ? (
+                <div className="u-listbox-empty" role="status">
+                  {kata ? emptyText : teksKosongPilihan(buat, emptyText)}
+                  {pengelola && <span className="u-listbox-pengelola">{pengelola}</span>}
+                </div>
+              ) : null
+            ) : (
+              !loading && !failed && !tooShort && <BaseCombobox.Empty className="u-listbox-empty">{emptyText}</BaseCombobox.Empty>
+            )}
             <BaseCombobox.List>
               {grouped
                 ? (g: { value: string; items: T[] }) => (
                     <BaseCombobox.Group key={g.value} items={g.items} className="u-listbox-group">
-                      {g.value && <BaseCombobox.GroupLabel className="u-listbox-group-label">{g.value}</BaseCombobox.GroupLabel>}
+                      {g.value && g.value !== KUNCI_BUAT && <BaseCombobox.GroupLabel className="u-listbox-group-label">{g.value}</BaseCombobox.GroupLabel>}
                       <BaseCombobox.Collection>{(item: T) => renderEl(item)}</BaseCombobox.Collection>
                     </BaseCombobox.Group>
                   )
                 : (item: T) => renderEl(item)}
             </BaseCombobox.List>
-            {tambah && !tooShort && (!tambah.hanyaKosong || (!loading && !listWithSelected.length)) && (
-              <button
-                type="button"
-                className="u-listbox-tambah"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={async () => {
-                  const kata = selected && query === itemToString(selected) ? '' : query.trim();
-                  setOpen(false);
-                  const baru = await tambah.onTambah(kata);
-                  if (baru) {
-                    setInner(baru);
-                    setRemote((r) => [baru, ...r]);
-                    onValueChange?.(baru);
-                  }
-                }}
-              >
-                <Plus aria-hidden />
-                <span>{tambah.label ? tambah.label(query.trim()) : query.trim() && !(selected && query === itemToString(selected)) ? <>Tambah “{query.trim()}”</> : 'Tambah data baru'}</span>
-              </button>
-            )}
           </BaseCombobox.Popup>
         </BaseCombobox.Positioner>
       </BaseCombobox.Portal>
     </BaseCombobox.Root>
+    {b.elemen}
+    </>
   );
 }
 

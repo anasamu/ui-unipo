@@ -4,9 +4,12 @@ import { AlertTriangle, ArrowRight, CalendarCheck2, CalendarClock, CheckCircle2,
 import { cn } from '../lib/cn';
 import { Badge, Button, Skeleton, type BadgeVariant } from '../components/actions';
 import { Alert, Empty, Tabs } from '../components/display';
-import { Checkbox, CheckboxGroup, Field, Input, SegmentedControl } from '../components/forms';
+import { Checkbox, CheckboxGroup, Field, SegmentedControl } from '../components/forms';
 import { Select } from '../components/select';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { IsianAngka, IsianJam } from '../components/isian-angka';
+import { keAngka } from '../lib/angka';
+import { Tekan } from '../components/tekan';
 
 /*
  * Cek bentrok dan jadwal otomatis (API SIAKAD /v1/akademik/jadwal/... atau /v1/fakultas/{kode}/jadwal/...).
@@ -264,9 +267,9 @@ export function KartuTemuanJadwal({ temuan: t, prodi, onPilih, className }: { te
   const Bagian = ({ s }: { s: SesiJadwalRingkas }) => {
     const klik = pilih(s);
     return klik ? (
-      <button type="button" className="u-jb-sesi-tombol" onClick={klik} title="Buka jadwal ini">
+      <Tekan className="u-jb-sesi-tombol" onClick={klik} title="Buka jadwal ini">
         <SesiTemuan s={s} prodi={prodi} />
-      </button>
+      </Tekan>
     ) : (
       <SesiTemuan s={s} prodi={prodi} />
     );
@@ -701,13 +704,13 @@ export function PenyusunJadwalOtomatis({ sumber, periode = [], kelas = [], awal,
       )}
       <div className="u-jb-grid">
         <Field label="Jeda pindah kampus" description="Menit minimal dosen berpindah kampus 1 dan 2.">
-          <Input type="number" min={0} max={240} value={String(opsi.jeda_kampus ?? 30)} onChange={(e) => set('jeda_kampus', Number(e.target.value))} />
+          <IsianAngka value={keAngka(opsi.jeda_kampus ?? 30)} min={0} max={240} onValueChange={(n) => set('jeda_kampus', n ?? 0)} />
         </Field>
         <Field label="Menit per SKS" description="Untuk memilih slot jam yang sesuai.">
-          <Input type="number" min={30} max={60} value={String(opsi.menit_per_sks ?? 50)} onChange={(e) => set('menit_per_sks', Number(e.target.value))} />
+          <IsianAngka value={keAngka(opsi.menit_per_sks ?? 50)} min={30} max={60} onValueChange={(n) => set('menit_per_sks', n ?? 0)} />
         </Field>
         <Field label="Kelas sore mulai" description="Kelas PAGI sebelum jam ini, SORE/MALAM sesudahnya.">
-          <Input type="time" value={opsi.batas_sore ?? '15:00'} onChange={(e) => set('batas_sore', e.target.value)} />
+          <IsianJam value={opsi.batas_sore ?? '15:00'} onValueChange={(v) => set('batas_sore', v ?? '')} />
         </Field>
       </div>
       <Alert variant="info" icon={<MapPin />}>

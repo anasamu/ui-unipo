@@ -5,6 +5,7 @@ import { Field } from '../components/forms';
 import { Select } from '../components/select';
 import { Sheet } from '../components/overlays';
 import { useSiakad, useSiakadQuery } from './provider';
+import { Tekan } from '../components/tekan';
 
 /*
  * Komponen bersama aturan BERVERSI (SIAKAD Sdm\Services\AturanVersi, tabel sdm_aturan_versi; dipakai Aturan BKD dan
@@ -98,7 +99,7 @@ export function DaftarVersiAturan({ versi, value, onValueChange, satuanPemakai =
   return (
     <aside className="u-bkd-aturan-daftar" aria-label={label}>
       {versi.map((a) => (
-        <button key={a.id} type="button" aria-current={a.id === value ? 'true' : undefined} onClick={() => onValueChange(a.id)}>
+        <Tekan key={a.id} aria-current={a.id === value ? 'true' : undefined} onClick={() => onValueChange(a.id)}>
           <span className="u-bkd-aturan-nama">
             {a.nama}
             <LencanaStatusVersi status={a.status} menunggu={a.menunggu_validasi} />
@@ -108,7 +109,7 @@ export function DaftarVersiAturan({ versi, value, onValueChange, satuanPemakai =
             {a.berlaku_mulai ? ` · berlaku mulai ${a.berlaku_mulai_nama ?? a.berlaku_mulai}` : ''} · {a.jumlah_periode ?? 0} {satuanPemakai}
           </small>
           {a.sk ? <small>SK {a.sk.nomor}</small> : null}
-        </button>
+        </Tekan>
       ))}
     </aside>
   );

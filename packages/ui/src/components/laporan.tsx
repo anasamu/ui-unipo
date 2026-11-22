@@ -7,6 +7,7 @@ import { Button, Skeleton } from './actions';
 import { Input } from './forms';
 import { Select } from './select';
 import { StatCard, StatGrid, type StatCardProps } from './charts';
+import { propsKlikWadah } from './tekan';
 
 /*
  * Laporan bersama untuk semua aplikasi UNIPO: kerangka laporan siap cetak/PDF dan CSV, kepala surat cetak,
@@ -306,7 +307,7 @@ export function TabelLaporan({ kolom, baris, labelKolom = 'Uraian', denganKode, 
           {baris.map((b, i) => {
             const jenis = b.jenis ?? 'item';
             return (
-              <tr key={i} data-jenis={jenis} data-klik={b.onClick ? '' : undefined} onClick={b.onClick} tabIndex={b.onClick ? 0 : undefined} onKeyDown={b.onClick ? (e) => (e.key === 'Enter' ? b.onClick?.() : undefined) : undefined}>
+              <tr key={i} data-jenis={jenis} data-klik={b.onClick ? '' : undefined} {...propsKlikWadah(b.onClick)}>
                 {denganKode && <td className="u-tl-kode">{b.kode}</td>}
                 <td className="u-tl-label" style={{ paddingInlineStart: `calc(0.75rem + ${(b.tingkat ?? 0) * 1.25}rem)` }} colSpan={jenis === 'grup' || jenis === 'catatan' ? kolom.length + 1 : undefined}>
                   {b.label}
@@ -519,7 +520,7 @@ export function TabelRekap<T>({ kolom, baris, kunci, onPilih, total = true, koso
             </tr>
           )}
           {baris.map((b) => (
-            <tr key={kunci(b)} data-klik={onPilih ? '' : undefined} onClick={onPilih ? () => onPilih(b) : undefined} tabIndex={onPilih ? 0 : undefined} onKeyDown={onPilih ? (e) => (e.key === 'Enter' ? onPilih(b) : undefined) : undefined}>
+            <tr key={kunci(b)} data-klik={onPilih ? '' : undefined} {...propsKlikWadah(onPilih && (() => onPilih(b)))}>
               {kolom.map((k, i) => {
                 const v = k.nilai(b);
                 const angka = i > 0 && k.format !== 'teks';

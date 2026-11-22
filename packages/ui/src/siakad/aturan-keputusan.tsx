@@ -25,8 +25,10 @@ import { PilihTahunAkademik } from './cari';
 import { CariAtauUnggahDokumen } from './cari-dokumen';
 import { GalatApi } from './galat';
 import { IsianSK, type NilaiSK } from './isian-sk';
+import { CatatanDiaturPustikom } from './aturan-sk';
 import { PilihEntitas } from './pilih';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { Tekan } from '../components/tekan';
 
 /*
  * Keputusan pemilik atas aturan dinamis: pejabat penyetuju per kategori (bisa beberapa jabatan), jalur darurat
@@ -88,11 +90,11 @@ export function PilihSifatAturan({
     <div className="u-aturan-sifat-pilih">
       <div className="u-aturan-mode-kisi" role="radiogroup" aria-label="Sifat aturan">
         {(['ketat', 'boleh_pengecualian'] as SifatAturan[]).map((s) => (
-          <button key={s} type="button" role="radio" aria-checked={value === s} className="u-aturan-mode-opsi" data-sifat={s} data-pilih={value === s || undefined} onClick={() => onValueChange(s)}>
+          <Tekan key={s} role="radio" terpilih={value === s} className="u-aturan-mode-opsi" data-sifat={s} data-pilih={value === s || undefined} onClick={() => onValueChange(s)}>
             <span aria-hidden>{s === 'ketat' ? <Lock /> : <Unlock />}</span>
             <strong>{LABEL_SIFAT_ATURAN[s].label}</strong>
             <span>{LABEL_SIFAT_ATURAN[s].keterangan}</span>
-          </button>
+          </Tekan>
         ))}
       </div>
       {value === 'boleh_pengecualian' && (
@@ -186,9 +188,15 @@ const bisaSetujui = (o: OrangPejabat) => Boolean(o.username);
 export function PejabatPenyetujuAturan({
   tautanPejabat,
   className,
+  hanyaBaca = false,
+  kategori,
 }: {
   /** Halaman pengisian pejabat, mis. https://pustikom.unipo.ac.id/induk/pejabat. */ tautanPejabat?: string;
   className?: string;
+  /** Aplikasi unit: hanya melihat (tanpa tombol Ubah) dengan baris "Diatur di Pustikom". Bawaan false (Pustikom). */
+  hanyaBaca?: boolean;
+  /** Saring ke kategori aturan milik aplikasi. Kosong = semua kategori. */
+  kategori?: KategoriAturan[];
 }) {
   const q = useSiakadQuery<PenyetujuKategoriAturan[]>(['aturan', 'penyetuju'], (s, signal) => s.request<PenyetujuKategoriAturan[]>({ method: 'GET', path: '/v1/aturan/penyetuju' }, { signal }));
   const saya = useAturanSaya();
@@ -196,16 +204,18 @@ export function PejabatPenyetujuAturan({
   if (q.error && belumAda(q.error)) return <Alert className={className}>Server SIAKAD ini belum mendukung pengaturan pejabat penyetuju.</Alert>;
   if (q.error) return <GalatApi error={q.error} onRetry={q.refetch} className={className} />;
   if (!q.data) return <Skeleton height={240} className={className} />;
+  const data = kategori?.length ? q.data.filter((r) => kategori.includes(r.kategori)) : q.data;
   const tautan = (r: PenyetujuKategoriAturan) => r.tautan_pejabat ?? tautanPejabat;
   const siap = (r: PenyetujuKategoriAturan) => r.penyetuju?.siap ?? pejabatPer(r).some((p) => p.orang.some(bisaSetujui));
-  const kosong = q.data.filter((r) => !siap(r));
-  const isiDi = q.data.find((r) => r.penyetuju?.isi_di?.length)?.penyetuju?.isi_di ?? [];
+  const kosong = data.filter((r) => !siap(r));
+  const isiDi = data.find((r) => r.penyetuju?.isi_di?.length)?.penyetuju?.isi_di ?? [];
   const rektor = (r: PenyetujuKategoriAturan) => {
     const rk = r.penyetuju?.jabatan_rinci?.find((k) => k.kode === 'REKTOR')?.pejabat.filter(bisaSetujui) ?? [];
     return rk.length ? rk : (r.penyetuju?.orang ?? []);
   };
   return (
     <div className={cn('u-aturan-penyetuju', className)}>
+      {hanyaBaca && <CatatanDiaturPustikom bagian="penyetuju" />}
       <p className="u-aturan-sub">Aturan baru dan perubahan aturan berlaku setelah disetujui salah satu pejabat di bawah. Bila belum ada pejabat yang bisa menyetujui, persetujuan jatuh ke Rektor.</p>
       {kosong.length > 0 && (
         <Alert
@@ -243,7 +253,7 @@ export function PejabatPenyetujuAturan({
           <span role="columnheader">Pejabat saat ini</span>
           <span role="columnheader" aria-label="Aksi" />
         </div>
-        {q.data.map((r) => {
+        {data.map((r) => {
           const per = pejabatPer(r);
           const ok = siap(r);
           const rk = rektor(r);
@@ -289,7 +299,7 @@ export function PejabatPenyetujuAturan({
                 )}
               </span>
               <span role="cell">
-                {saya.data?.admin && (
+                {saya.data?.admin && !hanyaBaca && (
                   <Button variant="ghost" size="sm" onClick={() => setUbah(r)}>
                     <Pencil /> Ubah
                   </Button>

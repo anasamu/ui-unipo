@@ -42,6 +42,7 @@ import { PilihNomorSK } from './isian-sk';
 import { PilihBerkas } from './pilih-berkas';
 import { PilihUnit } from './pilih-unit';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { CariPegawai, type PegawaiOption } from './cari';
 
 /*
  * Aturan biaya dan pembagiannya (/v1/biaya): biaya yang ditagih ke mahasiswa/PMB (UKT, uang gedung, biaya ujian,
@@ -563,49 +564,25 @@ function dariAturan(a?: AturanBiaya | null): IsiAturan {
 }
 const keKomponen = (k: IsiKomponen) => ({ nama: k.nama, penerima: k.penerima, cara: k.cara, nilai: k.cara === 'sisa' ? 0 : Number(k.nilai) || 0 });
 
-/** Cari pegawai untuk komponen honor pegawai tertentu (GET /v1/biaya/pegawai). */
-function PilihPegawaiBiaya({ value, nama, onValueChange, invalid }: { value: string; nama: string; onValueChange: (id: string, nama: string) => void; invalid?: boolean }) {
-  const [q, setQ] = React.useState('');
-  const [buka, setBuka] = React.useState(false);
-  const cari = useSiakadQuery<Array<{ id: number; nama: string; nip: string | null; nidn: string | null; jenis: string | null }>>(
-    ['biaya', 'pegawai', q],
-    (s, signal) => s.request({ method: 'GET', path: '/v1/biaya/pegawai', query: { q } }, { signal }),
-    { enabled: buka && q.trim().length >= 2 },
+/** Cari pegawai untuk komponen honor pegawai tertentu (GET /v1/biaya/pegawai, lingkup hak biaya). */
+function PilihPegawaiBiaya({ value, nama, onValueChange }: { value: string; nama: string; onValueChange: (id: string, nama: string) => void }) {
+  const siakad = useSiakad();
+  const muat = React.useCallback(
+    async (q: string, signal: AbortSignal) =>
+      (await siakad.request<Array<{ id: number; nama: string; nip: string | null; nidn: string | null; jenis: string | null }>>({ method: 'GET', path: '/v1/biaya/pegawai', query: { q } }, { signal })).data.map(
+        (p): PegawaiOption => ({ id: p.id, nama: p.nama, nip: p.nip, nidn: p.nidn, jenis: p.jenis === 'dosen' || p.jenis === 'tendik' ? p.jenis : undefined }),
+      ),
+    [siakad],
   );
-  if (value && !buka)
-    return (
-      <div className="u-biaya-pegawai-terpilih">
-        <span>{nama || `Pegawai #${value}`}</span>
-        <Button variant="ghost" size="xs" onClick={() => setBuka(true)}>
-          Ganti
-        </Button>
-      </div>
-    );
   return (
-    <div className="u-biaya-pegawai">
-      <Input value={q} onChange={(e) => setQ(e.target.value)} onFocus={() => setBuka(true)} placeholder="Ketik nama, NIP, atau NIDN" aria-invalid={invalid || undefined} />
-      {buka && q.trim().length >= 2 && (
-        <ul className="u-biaya-pegawai-hasil">
-          {cari.loading && <li className="u-biaya-pegawai-info">Mencari…</li>}
-          {!cari.loading && !cari.data?.length && <li className="u-biaya-pegawai-info">Tidak ada pegawai yang cocok.</li>}
-          {cari.data?.map((p) => (
-            <li key={p.id}>
-              <button
-                type="button"
-                onClick={() => {
-                  onValueChange(String(p.id), p.nama);
-                  setBuka(false);
-                  setQ('');
-                }}
-              >
-                <strong>{p.nama}</strong>
-                <span>{[p.nip && `NIP ${p.nip}`, p.nidn && `NIDN ${p.nidn}`, p.jenis].filter(Boolean).join(' · ')}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <CariPegawai
+      load={muat}
+      minQueryLength={2}
+      hintText="Ketik minimal 2 huruf nama, NIP, atau NIDN."
+      value={value ? { id: Number(value), nama: nama || 'Pegawai terpilih' } : null}
+      onValueChange={(p) => onValueChange(p ? String(p.id) : '', p ? p.nama_lengkap || p.nama : '')}
+      aria-label="Pegawai penerima"
+    />
   );
 }
 
@@ -1376,36 +1353,43 @@ export function DetailAturanBiayaIsi({ id, onPilih, onTertutup }: { id: string; 
               {a.periksa.pesan.join(' ')}
             </Alert>
           )}
-          <table className="u-biaya-tabel">
-            <thead>
-              <tr>
-                <th>Komponen</th>
-                <th>Penerima</th>
-                <th className="u-angka">Nilai</th>
-                {contoh && <th className="u-angka">{perJuta ? 'Per Rp1 juta' : 'Dari tarif'}</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {a.komponen.map((k, i) => (
-                <tr key={k.id ?? i}>
-                  <td>
-                    <i className="u-biaya-warna" style={{ background: `var(--u-chart-${(i % 8) + 1})` }} aria-hidden /> {k.nama}
-                  </td>
-                  <td>{labelPenerimaBiaya(k)}</td>
-                  <td className="u-angka">{nilaiKomponenBiaya(k)}</td>
-                  {contoh && <td className="u-angka">{formatRupiah(contoh.baris[i]?.jumlah ?? 0)}</td>}
-                </tr>
-              ))}
-            </tbody>
-            {contoh && (
-              <tfoot>
-                <tr>
-                  <td colSpan={3}>Total</td>
-                  <td className="u-angka">{formatRupiah(contoh.total)}</td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
+          <DataTable<KomponenBiaya & { __i: number }>
+            className="u-biaya-tabel"
+            columns={[
+              {
+                key: 'nama',
+                header: 'Komponen',
+                mobile: 'title',
+                cell: (k) => (
+                  <>
+                    <i className="u-biaya-warna" style={{ background: `var(--u-chart-${(k.__i % 8) + 1})` }} aria-hidden /> {k.nama}
+                  </>
+                ),
+              },
+              { key: 'penerima', header: 'Penerima', value: (k) => labelPenerimaBiaya(k), cell: (k) => labelPenerimaBiaya(k) },
+              { key: 'nilai', header: 'Nilai', align: 'end', value: (k) => k.nilai, cell: (k) => nilaiKomponenBiaya(k) },
+              ...(contoh
+                ? [
+                    {
+                      key: 'jumlah',
+                      header: perJuta ? 'Per Rp1 juta' : 'Dari tarif',
+                      align: 'end' as const,
+                      value: (k: KomponenBiaya & { __i: number }) => contoh.baris[k.__i]?.jumlah ?? 0,
+                      cell: (k: KomponenBiaya & { __i: number }) => formatRupiah(contoh.baris[k.__i]?.jumlah ?? 0),
+                    },
+                  ]
+                : []),
+            ]}
+            rows={a.komponen.map((k, i) => ({ ...k, __i: i }))}
+            rowKey={(k) => String(k.id ?? `i${k.__i}`)}
+            pagination={false}
+            columnToggle={false}
+            densityToggle={false}
+            defaultDensity="compact"
+            exportCsv={`pembagian-biaya-${a.id}`}
+            ringkasan={contoh ? { jumlah: formatRupiah(contoh.total) } : undefined}
+            empty={{ title: 'Belum ada komponen pembagian' }}
+          />
           <BatangKomponenBiaya hasil={contoh} />
         </div>
       )}
@@ -1451,7 +1435,9 @@ export interface KelolaAturanBiayaProps {
   /** Batasi ke aturan yang menyangkut unit ini (cakupan, induk/turunan, atau penerima bagian). */
   unitId?: number | null;
   /** Judul halaman. */
+  /** Judul bagian. `null` = tidak dirender (kepala halaman/tab aplikasi sudah memuatnya); tombol aksi tetap tampil. */
   judul?: React.ReactNode;
+  /** Keterangan bagian. `null` = tidak dirender. */
   deskripsi?: React.ReactNode;
   /** Batasi ke sumber tagihan, mis. "pmb" untuk aplikasi PMB. */
   sumber?: SumberBiaya;
@@ -1496,11 +1482,14 @@ export function KelolaAturanBiaya({ unitId, sumber, judul = 'Aturan biaya', desk
   ];
   return (
     <div className={cn('u-biaya-kelola', className)}>
-      <div className="u-biaya-kelola-kepala">
-        <div>
-          <h2>{judul}</h2>
-          <p>{deskripsi ?? 'Aturan biaya yang ditagih ke mahasiswa dan pendaftar, beserta pembagiannya ke yayasan, rektorat, fakultas, prodi, dan unit lain. Setiap aturan berdasar SK.'}</p>
-        </div>
+      {/* judul={null}: kepala halaman/tab aplikasi sudah memuat judul & keterangan; hanya tombol yang tampil (rata kanan). */}
+      {(judul !== null || b?.susun) && <div className="u-biaya-kelola-kepala" data-tanpa-judul={judul === null ? '' : undefined}>
+        {judul !== null && (
+          <div>
+            <h2>{judul}</h2>
+            {deskripsi !== null && <p>{deskripsi ?? 'Aturan biaya yang ditagih ke mahasiswa dan pendaftar, beserta pembagiannya ke yayasan, rektorat, fakultas, prodi, dan unit lain. Setiap aturan berdasar SK.'}</p>}
+          </div>
+        )}
         {b?.susun && (
           <FormAturanBiaya
             unitBawaan={unitId}
@@ -1512,7 +1501,7 @@ export function KelolaAturanBiaya({ unitId, sumber, judul = 'Aturan biaya', desk
             }
           />
         )}
-      </div>
+      </div>}
       {b?.setujui && (menunggu.meta?.total ?? 0) > 0 && tab !== 'diajukan' && (
         <Alert
           variant="warning"

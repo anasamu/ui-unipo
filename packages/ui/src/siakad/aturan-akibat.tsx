@@ -6,6 +6,7 @@ import { Badge, Button, Skeleton } from '../components/actions';
 import { Alert, Card, Empty } from '../components/display';
 import { Field, Input, SegmentedControl, Switch, Textarea } from '../components/forms';
 import { Dialog, useToast } from '../components/overlays';
+import { DataTable } from '../components/data-table';
 import { GalatApi } from './galat';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
 
@@ -215,68 +216,43 @@ export function KetentuanAkibat({ parameter, className }: { parameter: unknown; 
     <div className={cn('u-akb-ketentuan', className)}>
       <p className="u-akb-kalimat">{kalimatAkibat(p)}</p>
       {p.bentuk === 'konversi_huruf' && (
-        <table className="u-akb-tabel">
-          <thead>
-            <tr>
-              <th>Huruf</th>
-              <th>Nilai paling sedikit</th>
-              <th>Bobot</th>
-              <th>Lulus</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(p.skala ?? []).map((s) => (
-              <tr key={s.huruf}>
-                <td>
-                  <strong>{s.huruf}</strong>
-                </td>
-                <td>{angkaId(s.min)}</td>
-                <td>{angkaId(s.bobot)}</td>
-                <td>{s.lulus === false ? 'Tidak' : 'Ya'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          className="u-akb-tabel"
+          columns={[
+            { key: 'huruf', header: 'Huruf', mobile: 'title', cell: (x) => <strong>{x.huruf}</strong> },
+            { key: 'min', header: 'Nilai paling sedikit', align: 'end', value: (x) => x.min, cell: (x) => angkaId(x.min) },
+            { key: 'bobot', header: 'Bobot', align: 'end', value: (x) => x.bobot, cell: (x) => angkaId(x.bobot) },
+            { key: 'lulus', header: 'Lulus', mobile: 'badge', value: (x) => (x.lulus === false ? 'Tidak' : 'Ya'), cell: (x) => (x.lulus === false ? <Badge variant="danger">Tidak</Badge> : <Badge variant="success">Ya</Badge>) },
+          ]}
+          rows={p.skala ?? []}
+          rowKey={(x) => x.huruf}
+          pagination={false} columnToggle={false} densityToggle={false} defaultDensity="compact"
+        />
       )}
       {p.bentuk === 'predikat_lulus' && (
-        <table className="u-akb-tabel">
-          <thead>
-            <tr>
-              <th>Predikat</th>
-              <th>IPK paling sedikit</th>
-              <th>Masa studi paling lama</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(p.tingkat ?? []).map((t) => (
-              <tr key={t.predikat}>
-                <td>
-                  <strong>{t.predikat}</strong>
-                </td>
-                <td>{angkaId(t.ipk_min)}</td>
-                <td>{t.maks_semester ? `${t.maks_semester} semester` : 'Tidak dibatasi'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          className="u-akb-tabel"
+          columns={[
+            { key: 'predikat', header: 'Predikat', mobile: 'title', cell: (t) => <strong>{t.predikat}</strong> },
+            { key: 'ipk_min', header: 'IPK paling sedikit', align: 'end', value: (t) => t.ipk_min, cell: (t) => angkaId(t.ipk_min) },
+            { key: 'maks_semester', header: 'Masa studi paling lama', value: (t) => t.maks_semester ?? null, cell: (t) => (t.maks_semester ? `${t.maks_semester} semester` : 'Tidak dibatasi') },
+          ]}
+          rows={p.tingkat ?? []}
+          rowKey={(t) => t.predikat}
+          pagination={false} columnToggle={false} densityToggle={false} defaultDensity="compact"
+        />
       )}
       {p.bentuk === 'tarif' && (
-        <table className="u-akb-tabel">
-          <thead>
-            <tr>
-              <th>Jenis biaya</th>
-              <th>Tarif per semester</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(p.tarif ?? []).map((t) => (
-              <tr key={t.kode_biaya}>
-                <td>{t.kode_biaya}</td>
-                <td>{rupiah(t.rupiah)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          className="u-akb-tabel"
+          columns={[
+            { key: 'kode_biaya', header: 'Jenis biaya', mobile: 'title' },
+            { key: 'rupiah', header: 'Tarif per semester', format: 'rupiah' },
+          ]}
+          rows={p.tarif ?? []}
+          rowKey={(t) => t.kode_biaya}
+          pagination={false} columnToggle={false} densityToggle={false} defaultDensity="compact"
+        />
       )}
     </div>
   );
@@ -338,32 +314,29 @@ const teksAlasan = (a: string[] | string) => (Array.isArray(a) ? a.join(' ') : a
 export function RincianUbahTagihan({ ubah }: { ubah: UbahTagihanAkibat[] }) {
   if (!ubah.length) return null;
   return (
-    <table className="u-akb-tabel u-akb-tabel-rinci">
-      <thead>
-        <tr>
-          <th>Periode</th>
-          <th>Jenis biaya</th>
-          <th>Tagihan sebelum</th>
-          <th>Tagihan sesudah</th>
-          <th>Sudah dibayar</th>
-          <th>Keterangan</th>
-        </tr>
-      </thead>
-      <tbody>
-        {ubah.map((u, i) => (
-          <tr key={i} data-dibalik={u.dibalik_at ? '' : undefined}>
-            <td>{namaPeriodeAkibat(u.tahun_id)}</td>
-            <td>{u.nama_biaya ?? u.kode_biaya}</td>
-            <td>{rupiah(u.sebelum)}</td>
-            <td>
-              <strong>{rupiah(u.sesudah)}</strong>
-            </td>
-            <td>{rupiah(u.dibayar)}</td>
-            <td>{u.keterangan}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <DataTable
+      className="u-akb-tabel u-akb-tabel-rinci"
+      columns={[
+        { key: 'tahun_id', header: 'Periode', mobile: 'title', value: (u) => u.tahun_id ?? '', cell: (u) => namaPeriodeAkibat(u.tahun_id) },
+        { key: 'kode_biaya', header: 'Jenis biaya', mobile: 'subtitle', value: (u) => u.nama_biaya ?? u.kode_biaya, cell: (u) => u.nama_biaya ?? u.kode_biaya },
+        { key: 'sebelum', header: 'Tagihan sebelum', align: 'end', value: (u) => u.sebelum, cell: (u) => rupiah(u.sebelum) },
+        { key: 'sesudah', header: 'Tagihan sesudah', align: 'end', value: (u) => u.sesudah, cell: (u) => <strong>{rupiah(u.sesudah)}</strong> },
+        { key: 'dibayar', header: 'Sudah dibayar', align: 'end', value: (u) => u.dibayar, cell: (u) => rupiah(u.dibayar) },
+        {
+          key: 'keterangan',
+          header: 'Keterangan',
+          value: (u) => `${u.dibalik_at ? 'Dibatalkan. ' : ''}${u.keterangan ?? ''}`,
+          cell: (u) => (
+            <>
+              {u.dibalik_at ? <Badge variant="neutral">Dibatalkan</Badge> : null} {u.keterangan}
+            </>
+          ),
+        },
+      ]}
+      rows={ubah.map((u, i) => ({ ...u, __i: i }))}
+      rowKey={(u) => String(u.__i)}
+      pagination={false} columnToggle={false} densityToggle={false} defaultDensity="compact"
+    />
   );
 }
 

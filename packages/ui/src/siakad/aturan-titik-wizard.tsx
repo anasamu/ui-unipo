@@ -33,6 +33,7 @@ import type { KonteksTitikAturan, TipeKonteksTitik, TitikKelolaAturan } from './
 import { GalatApi } from './galat';
 import { PilihUnit, type UnitOrganisasi } from './pilih-unit';
 import { invalidateSiakad, pesanGalat, useSiakad, useSiakadQuery } from './provider';
+import { Tekan } from '../components/tekan';
 
 /*
  * Satu pintu "Tambah titik pemeriksaan" (panel samping PanelLangkah): langkah pertama memilih SUMBER
@@ -149,7 +150,7 @@ function usePeran(aktif: boolean) {
 /** Kartu pilihan berikon (radio atau centang). */
 function KartuPilih({ pilih, onPilih, ikon, judul, ket, peran = 'radio', disabled }: { pilih: boolean; onPilih: () => void; ikon: React.ReactNode; judul: string; ket: string; peran?: 'radio' | 'checkbox'; disabled?: boolean }) {
   return (
-    <button type="button" role={peran} aria-checked={pilih} className="u-wtp-kartu" data-pilih={pilih || undefined} disabled={disabled} onClick={onPilih}>
+    <Tekan role={peran} terpilih={pilih} className="u-wtp-kartu" data-pilih={pilih || undefined} disabled={disabled} onClick={onPilih}>
       <span className="u-wtp-kartu-ikon" aria-hidden>
         {ikon}
       </span>
@@ -158,7 +159,7 @@ function KartuPilih({ pilih, onPilih, ikon, judul, ket, peran = 'radio', disable
         <span>{ket}</span>
       </span>
       {pilih && <CircleCheck className="u-wtp-kartu-centang" aria-hidden />}
-    </button>
+    </Tekan>
   );
 }
 
@@ -308,14 +309,14 @@ export function WizardTitikPenerapan({
       subjek_sumber: x.subjek_sumber.length ? x.subjek_sumber : r.saran.mahasiswa[0] ? [r.saran.mahasiswa[0].sumber] : [],
     }));
   const kartuRute = (r: RuteKatalog & { modul?: string }) => (
-    <button key={r.kunci} type="button" role="radio" aria-checked={isi.rute?.kunci === r.kunci} className="u-arute-opsi" data-pilih={isi.rute?.kunci === r.kunci || undefined} onClick={() => pilihRute(r)}>
+    <Tekan key={r.kunci} role="radio" terpilih={isi.rute?.kunci === r.kunci} className="u-arute-opsi" data-pilih={isi.rute?.kunci === r.kunci || undefined} onClick={() => pilihRute(r)}>
       <strong>{r.nama}</strong>
       <span className="u-arute-opsi-sub">
         {r.modul ? `${r.modul} · ` : ''}
         {r.tag.includes(':') ? r.tag.split(':').slice(1).join(':').trim() : r.tag}
         {r.titik.length ? ` · sudah ada titik: ${r.titik.map((t) => t.judul).join(', ')}` : ''}
       </span>
-    </button>
+    </Tekan>
   );
   const saranSubjek = rute && isi.rute && isi.subjek && isi.subjek !== 'umum' ? isi.rute.saran[isi.subjek] : [];
   const ringkasan = isi.sumber ? (
@@ -396,10 +397,10 @@ export function WizardTitikPenerapan({
                 <ul className="u-arute-modul" aria-label="Bagian aplikasi">
                   {kat.data.kelompok.map((g) => (
                     <li key={g.modul}>
-                      <button type="button" onClick={() => setModul(g.modul)}>
+                      <Tekan onClick={() => setModul(g.modul)}>
                         <strong>{g.modul}</strong>
                         <span>{g.jumlah} aksi</span>
-                      </button>
+                      </Tekan>
                     </li>
                   ))}
                 </ul>
@@ -450,9 +451,9 @@ export function WizardTitikPenerapan({
           <Field label={`Dari mana ${SUBJEK.find((s) => s.v === isi.subjek)?.judul.toLowerCase()} diambil?`} description="Disarankan dari aksi yang dipilih. Data diambil dari SIAKAD.">
             <div className="u-arute-saran" role="radiogroup" aria-label="Saran sumber">
               {saranSubjek.map((s) => (
-                <button key={s.sumber} type="button" role="radio" aria-checked={isi.subjek_sumber[0] === s.sumber} className="u-arute-opsi" data-pilih={isi.subjek_sumber[0] === s.sumber || undefined} onClick={() => set('subjek_sumber', [s.sumber])}>
+                <Tekan key={s.sumber} role="radio" terpilih={isi.subjek_sumber[0] === s.sumber} className="u-arute-opsi" data-pilih={isi.subjek_sumber[0] === s.sumber || undefined} onClick={() => set('subjek_sumber', [s.sumber])}>
                   <strong>{s.label}</strong>
-                </button>
+                </Tekan>
               ))}
             </div>
             <details className="u-aturan-lanjutan" open={!saranSubjek.length || undefined}>
@@ -548,7 +549,7 @@ export function WizardTitikPenerapan({
             {isi.konteks.length < 20 && (
               <div className="u-wtp-kisi" data-kolom="4" aria-label="Tambah data">
                 {TIPE_DATA.map((t) => (
-                  <button key={t.v} type="button" className="u-wtp-tambah" onClick={() => set('konteks', [...isi.konteks, { kode: '', judul: '', tipe: t.v, ...(t.v === 'pilihan' ? { opsi: [{ nilai: '', label: '' }] } : {}) }])}>
+                  <Tekan key={t.v} className="u-wtp-tambah" onClick={() => set('konteks', [...isi.konteks, { kode: '', judul: '', tipe: t.v, ...(t.v === 'pilihan' ? { opsi: [{ nilai: '', label: '' }] } : {}) }])}>
                     <span className="u-wtp-kartu-ikon" aria-hidden>
                       {t.ikon}
                     </span>
@@ -558,7 +559,7 @@ export function WizardTitikPenerapan({
                       </strong>
                       <small>{t.contoh}</small>
                     </span>
-                  </button>
+                  </Tekan>
                 ))}
               </div>
             )}

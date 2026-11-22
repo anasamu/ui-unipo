@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { formatRibuan, gabungTanggalWaktu, geserJam, periksaBatasAngka, pisahTanggalWaktu, rapikanKetikan, uraiAngka, uraiJam } from '../src/lib/angka';
+import { formatRibuan, keAngka, teksAngka, gabungTanggalWaktu, geserJam, periksaBatasAngka, pisahTanggalWaktu, rapikanKetikan, uraiAngka, uraiJam } from '../src/lib/angka';
 import { periksaIsianTanya } from '../src/components/aksi';
+import { saringBerkasLokal } from '../src/components/pilih-berkas-lokal';
 import { saringIkon, IKON_PILIHAN, warnaToken } from '../src/components/pilih-tampilan';
 import { urutkanAksi } from '../src/components/aksi';
 
@@ -98,5 +99,37 @@ describe('aksi, ikon, warna', () => {
     expect(saringIkon(IKON_PILIHAN, '').length).toBe(Object.keys(IKON_PILIHAN).length);
     expect(saringIkon(IKON_PILIHAN, 'zzz')).toEqual([]);
     expect(warnaToken('success')).toBe('var(--u-success)');
+  });
+});
+
+describe('isian tanpa titik ribuan & keAngka', () => {
+  it('ribuan=false untuk tahun', () => {
+    expect(formatRibuan(2026, 0, false)).toBe('2026');
+    expect(rapikanKetikan('2026', 4, { ribuan: false })).toEqual({ teks: '2026', kursor: 4 });
+    expect(rapikanKetikan('2026', 4).teks).toBe('2.026');
+  });
+  it('keAngka/teksAngka menjembatani state teks formulir', () => {
+    expect(keAngka('')).toBeNull();
+    expect(keAngka(null)).toBeNull();
+    expect(keAngka(undefined)).toBeNull();
+    expect(keAngka('12')).toBe(12);
+    expect(keAngka('3,25')).toBe(3.25);
+    expect(keAngka(7)).toBe(7);
+    expect(keAngka('abc')).toBeNull();
+    expect(teksAngka(null)).toBe('');
+    expect(teksAngka(2.5)).toBe('2.5');
+  });
+});
+
+describe('saringBerkasLokal', () => {
+  const berkas = (nama: string, ukuran: number, tipe = '') => new File([new Uint8Array(ukuran)], nama, { type: tipe });
+  it('menyaring jenis dan ukuran dengan pesan awam', () => {
+    const r = saringBerkasLokal([berkas('a.pdf', 10, 'application/pdf'), berkas('b.exe', 10), berkas('c.PDF', 5000)], { accept: '.pdf', maxSize: 1000 });
+    expect(r.lolos.map((f) => f.name)).toEqual(['a.pdf']);
+    expect(r.pesan).toContain('b.exe: jenis berkas tidak diterima');
+    expect(r.pesan).toContain('c.PDF: melebihi batas');
+  });
+  it('menerima pola mime image/*', () => {
+    expect(saringBerkasLokal([berkas('x.png', 1, 'image/png')], { accept: 'image/*' }).lolos).toHaveLength(1);
   });
 });

@@ -7,6 +7,7 @@ import { Badge, Button, Skeleton, type BadgeVariant } from '../components/action
 import { Avatar, DescriptionList, Empty, Tabs } from '../components/display';
 import { LineChart, SegmentBar } from '../components/charts';
 import { Sheet } from '../components/overlays';
+import { DataTable, type DataColumn } from '../components/data-table';
 import { pesanGalat, useSiakadQuery, type QueryState } from './provider';
 import { KodeLaporan } from '../components/galat';
 import { LabelProdi } from './prodi';
@@ -123,6 +124,7 @@ const STATUS_MHS: Record<string, { label: string; variant: BadgeVariant }> = {
 };
 const KELAS: Record<string, string> = { R: 'Reguler', K: 'Karyawan', D: 'Daring' };
 const HARI: Record<string, string> = { '1': 'Senin', '2': 'Selasa', '3': 'Rabu', '4': 'Kamis', '5': 'Jumat', '6': 'Sabtu', '7': 'Minggu' };
+const jadwalKrs = (m: Row): string => (m.hari ? `${HARI[m.hari] ?? m.hari}${m.jam_mulai ? `, ${String(m.jam_mulai).slice(0, 5)}` : m.jam_ke ? `, jam ke-${m.jam_ke}` : ''}${m.ruang ? ` · ${m.ruang}` : ''}` : '');
 
 /** Lencana nilai huruf dengan warna mengikuti mutu (A hijau → E merah). */
 export function NilaiHuruf({ nilai, className }: { nilai?: string | null; className?: string }) {
@@ -336,48 +338,44 @@ export function RiwayatStudi({ nim, className }: { nim: string; className?: stri
 }
 
 // ================================================================ Tabel nilai bersama
-function TabelNilai({ rows, tampilTahun, kosong }: { rows: MataKuliahNilai[]; tampilTahun?: boolean; kosong?: string }) {
-  if (!rows.length) return <Empty icon={<BookOpen />} title={kosong ?? 'Belum ada mata kuliah'} />;
+type BarisNilai = MataKuliahNilai & { __k: string };
+const angka2 = (v: unknown) => (v != null && v !== '' ? Number(v).toFixed(2) : '–');
+
+function TabelNilai({ rows, tampilTahun, kosong, ekspor }: { rows: MataKuliahNilai[]; tampilTahun?: boolean; kosong?: string; ekspor?: string }) {
+  const baris = React.useMemo<BarisNilai[]>(() => rows.map((r, i) => ({ ...r, __k: `${r.kode_mk}-${r.tahun_id ?? ''}-${i}` })), [rows]);
+  const kolom: DataColumn<BarisNilai>[] = [
+    { key: 'kode_mk', header: 'Kode', cell: (r) => <Mono>{r.kode_mk}</Mono>, sortable: true, width: '6.5rem', mobile: 'subtitle' },
+    { key: 'nama_mk', header: 'Mata kuliah', sortable: true, mobile: 'title' },
+    ...(tampilTahun
+      ? [{ key: 'tahun_id', header: 'Periode', cell: (r: BarisNilai) => <span className="u-muted">{labelTahunAkademik(r.tahun_id, true)}</span>, value: (r: BarisNilai) => r.tahun_id ?? '', sortable: true, width: '8rem' } satisfies DataColumn<BarisNilai>]
+      : []),
+    { key: 'sks', header: 'SKS', align: 'end', sortable: true, width: '4rem', value: (r) => (r.sks != null ? Number(r.sks) : null), cell: (r) => r.sks ?? '–' },
+    {
+      key: 'nilai_huruf',
+      header: 'Nilai',
+      align: 'center',
+      sortable: true,
+      width: '6rem',
+      mobile: 'badge',
+      value: (r) => (r.nilai_ditampilkan === false ? '' : (r.nilai_huruf ?? '')),
+      cell: (r) => (r.nilai_ditampilkan === false ? <span className="u-muted">Belum dirilis</span> : <NilaiHuruf nilai={r.nilai_huruf} />),
+    },
+    { key: 'bobot', header: 'Bobot', align: 'end', sortable: true, width: '5rem', value: (r) => (r.bobot != null ? Number(r.bobot) : null), cell: (r) => angka2(r.bobot) },
+    { key: 'mutu', header: 'Mutu', align: 'end', sortable: true, width: '5rem', value: (r) => (r.mutu != null ? Number(r.mutu) : null), cell: (r) => angka2(r.mutu) },
+  ];
   return (
-    <div className="u-tabel-nilai-wrap">
-      <table className="u-tabel-nilai" data-tetap="">
-        <colgroup>
-          <col style={{ width: '6.5rem' }} />
-          <col />
-          {tampilTahun && <col style={{ width: '8rem' }} />}
-          <col style={{ width: '4rem' }} />
-          <col style={{ width: '6rem' }} />
-          <col style={{ width: '5rem' }} />
-          <col style={{ width: '5rem' }} />
-        </colgroup>
-        <thead>
-          <tr>
-            <th>Kode</th>
-            <th>Mata kuliah</th>
-            {tampilTahun && <th>Periode</th>}
-            <th data-angka>SKS</th>
-            <th data-tengah>Nilai</th>
-            <th data-angka>Bobot</th>
-            <th data-angka>Mutu</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={`${r.kode_mk}-${r.tahun_id ?? ''}-${i}`}>
-              <td>
-                <Mono>{r.kode_mk}</Mono>
-              </td>
-              <td>{r.nama_mk}</td>
-              {tampilTahun && <td className="u-muted">{labelTahunAkademik(r.tahun_id, true)}</td>}
-              <td data-angka>{r.sks ?? '–'}</td>
-              <td data-tengah>{r.nilai_ditampilkan === false ? <span className="u-muted">Belum dirilis</span> : <NilaiHuruf nilai={r.nilai_huruf} />}</td>
-              <td data-angka>{r.bobot != null ? Number(r.bobot).toFixed(2) : '–'}</td>
-              <td data-angka>{r.mutu != null ? Number(r.mutu).toFixed(2) : '–'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      className="u-tabel-nilai-dt"
+      columns={kolom}
+      rows={baris}
+      rowKey={(r) => r.__k}
+      pagination={false}
+      columnToggle={false}
+      densityToggle={false}
+      defaultDensity="compact"
+      exportCsv={ekspor ?? false}
+      empty={{ icon: <BookOpen />, title: kosong ?? 'Belum ada mata kuliah' }}
+    />
   );
 }
 
@@ -395,9 +393,9 @@ export function KhsMahasiswa({ nim, tahunId, className }: { nim: string; tahunId
     <div className={cn('u-khs', className)}>
       <div className="u-khs-periode" role="tablist" aria-label="Periode">
         {periode.map((p) => (
-          <button key={p.tahun_id} type="button" role="tab" aria-selected={p.tahun_id === aktif.tahun_id} onClick={() => setPilih(p.tahun_id!)}>
+          <Button key={p.tahun_id} size="xs" variant={p.tahun_id === aktif.tahun_id ? 'primary' : 'outline'} role="tab" aria-selected={p.tahun_id === aktif.tahun_id} onClick={() => setPilih(p.tahun_id!)}>
             {labelTahunAkademik(p.tahun_id, true)}
-          </button>
+          </Button>
         ))}
       </div>
       <div className="u-khs-ringkas">
@@ -418,7 +416,7 @@ export function KhsMahasiswa({ nim, tahunId, className }: { nim: string; tahunId
           <b>{aktif.ipk?.sks ?? '–'}</b>
         </div>
       </div>
-      <TabelNilai rows={aktif.mata_kuliah ?? []} />
+      <TabelNilai rows={aktif.mata_kuliah ?? []} ekspor={`khs-${nim}-${aktif.tahun_id}`} />
     </div>
   );
 }
@@ -477,7 +475,7 @@ export function TranskripMahasiswa({ nim, kelompok = 'semester', className }: { 
             </section>
           ))
       ) : (
-        <TabelNilai rows={mk} tampilTahun />
+        <TabelNilai rows={mk} tampilTahun ekspor={`transkrip-${nim}`} />
       )}
     </div>
   );
@@ -503,36 +501,36 @@ export function KrsMahasiswa({ nim, tahunId, className }: { nim: string; tahunId
           {setuju === mk.length ? 'Disetujui PA' : `${mk.length - setuju} menunggu persetujuan`}
         </Badge>
       </div>
-      <div className="u-tabel-nilai-wrap">
-        <table className="u-tabel-nilai">
-          <thead>
-            <tr>
-              <th>Kode</th>
-              <th>Mata kuliah</th>
-              <th data-angka>SKS</th>
-              <th>Kelas</th>
-              <th>Jadwal</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {mk.map((m) => (
-              <tr key={m.idkrs ?? m.kode_mk}>
-                <td>
-                  <Mono>{m.kode_mk}</Mono>
-                </td>
-                <td>{m.nama_mk}</td>
-                <td data-angka>{m.sks}</td>
-                <td>{m.kelas ?? '–'}</td>
-                <td className="u-muted">
-                  {m.hari ? `${HARI[m.hari] ?? m.hari}${m.jam_mulai ? `, ${String(m.jam_mulai).slice(0, 5)}` : m.jam_ke ? `, jam ke-${m.jam_ke}` : ''}${m.ruang ? ` · ${m.ruang}` : ''}` : '–'}
-                </td>
-                <td>{m.disetujui ? <Badge variant="success">Disetujui</Badge> : <Badge variant="warning">Menunggu</Badge>}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable<Row>
+        className="u-tabel-nilai-dt"
+        columns={[
+          { key: 'kode_mk', header: 'Kode', cell: (m) => <Mono>{m.kode_mk}</Mono>, sortable: true, width: '6.5rem', mobile: 'subtitle' },
+          { key: 'nama_mk', header: 'Mata kuliah', sortable: true, mobile: 'title' },
+          { key: 'sks', header: 'SKS', align: 'end', sortable: true, width: '4rem', value: (m) => (m.sks != null ? Number(m.sks) : null) },
+          { key: 'kelas', header: 'Kelas', cell: (m) => m.kelas ?? '–', width: '5rem' },
+          {
+            key: 'jadwal',
+            header: 'Jadwal',
+            value: (m) => jadwalKrs(m),
+            cell: (m) => <span className="u-muted">{jadwalKrs(m) || '–'}</span>,
+          },
+          {
+            key: 'disetujui',
+            header: 'Status',
+            mobile: 'badge',
+            sortable: true,
+            value: (m) => (m.disetujui ? 'Disetujui' : 'Menunggu'),
+            cell: (m) => (m.disetujui ? <Badge variant="success">Disetujui</Badge> : <Badge variant="warning">Menunggu</Badge>),
+          },
+        ]}
+        rows={mk}
+        rowKey={(m) => String(m.idkrs ?? m.kode_mk)}
+        pagination={false}
+        columnToggle={false}
+        densityToggle={false}
+        defaultDensity="compact"
+        exportCsv={`krs-${nim}-${k.tahun_id ?? ''}`}
+      />
     </div>
   );
 }

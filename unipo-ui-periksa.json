@@ -1,0 +1,16 @@
+{
+  "pengecualian": [
+    {"berkas": "packages/ui/src/siakad/ai.tsx", "aturan": "tabel-bawaan", "jumlah": 1, "alasan": "tabel di dalam jawaban AI (markdown yang dirender), bukan tabel data", "disetujui": "Anas 2026-11-22"},
+    {"berkas": "packages/ui/src/siakad/bkd-alur.tsx", "aturan": "tabel-bawaan", "jumlah": 3, "alasan": "HTML cetak laporan BKD di jendela cetak (templat string), bukan tabel data di halaman", "disetujui": "Anas 2026-11-22"},
+    {"berkas": "packages/ui/src/siakad/kasir-unit.tsx", "aturan": "tabel-bawaan", "jumlah": 1, "alasan": "pratinjau kertas laporan kasir sesuai cetakan", "disetujui": "Anas 2026-11-22"},
+    {"berkas": "packages/ui/src/siakad/kurikulum-aturan.tsx", "aturan": "tabel-bawaan", "jumlah": 1, "alasan": "kisi isian skala nilai (sel = isian), bukan tabel data", "disetujui": "Anas 2026-11-22"},
+    {"berkas": "packages/ui/src/siakad/kurikulum-kelola.tsx", "aturan": "tabel-bawaan", "jumlah": 7, "alasan": "tata letak dokumen buku kurikulum (cetak/PDF), bukan tabel data", "disetujui": "Anas 2026-11-22"},
+    {"berkas": "packages/ui/src/siakad/kurikulum-kelola.tsx", "aturan": "tabel-primitif", "jumlah": 2, "alasan": "kisi isian (sel = isian angka/teks), bukan tabel data", "disetujui": "Anas 2026-11-22"},
+    {"berkas": "packages/ui/src/siakad/kurikulum.tsx", "aturan": "tabel-bawaan", "jumlah": 1, "alasan": "matriks pemetaan dua sisi (CPL × MK) dengan sel centang, bukan tabel data", "disetujui": "Anas 2026-11-22"},
+    {"berkas": "packages/ui/src/siakad/pedoman-ruang.tsx", "aturan": "tabel-bawaan", "jumlah": 1, "alasan": "kisi isian parameter berbentuk tabel (sel = Input), bukan tabel data", "disetujui": "Anas 2026-11-22"},
+    {"berkas": "packages/ui/src/siakad/persuratan.tsx", "aturan": "tabel-bawaan", "jumlah": 1, "alasan": "kepala surat resmi (tata letak naskah dinas)", "disetujui": "Anas 2026-11-22"},
+    {"berkas": "packages/ui/src/siakad/pmb-maba.tsx", "aturan": "tabel-primitif", "jumlah": 1, "alasan": "jadwal di kartu tes yang dicetak/diunduh peserta, tata letak kartu", "disetujui": "Anas 2026-11-22"},
+    {"berkas": "packages/ui/src/siakad/pmb.tsx", "aturan": "tabel-primitif", "jumlah": 1, "alasan": "kisi isian nilai rapor (sel = Input), bukan tabel data", "disetujui": "Anas 2026-11-22"},
+    {"berkas": "packages/ui/src/siakad/surat-galeri.tsx", "aturan": "tabel-bawaan", "jumlah": 2, "alasan": "isi templat naskah surat (HTML untuk editor dokumen), bukan tabel data di halaman", "disetujui": "Anas 2026-11-22"}
+  ]
+}

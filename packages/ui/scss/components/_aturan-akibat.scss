@@ -31,25 +31,7 @@
   line-height: 1.6;
 }
 .u-akb-tabel {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--u-text-sm);
   font-variant-numeric: tabular-nums;
-  th,
-  td {
-    padding: 0.4rem 0.6rem;
-    text-align: left;
-    border-bottom: 1px solid var(--u-border);
-    vertical-align: top;
-  }
-  th {
-    color: var(--u-muted-foreground);
-    font-weight: var(--u-weight-medium, 500);
-  }
-  tr[data-dibalik] td {
-    color: var(--u-muted-foreground);
-    text-decoration: line-through;
-  }
 }
 .u-akb-tabel-rinci {
   margin-top: 0.25rem;
@@ -190,9 +172,4 @@
   align-items: center;
   gap: 0.5rem;
 }
-@container (max-width: 520px) {
-  .u-akb-tabel-rinci {
-    display: block;
-    overflow-x: auto;
-  }
-}
+

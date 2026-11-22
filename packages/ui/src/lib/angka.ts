@@ -1,9 +1,9 @@
 // Logika isian angka, uang, dan jam (tanpa React) agar bisa diuji dan dipakai ulang.
 
 /** Format angka gaya Indonesia: titik pemisah ribuan, koma desimal. `desimal` = jumlah angka di belakang koma (maksimum). */
-export function formatRibuan(n: number | null | undefined, desimal = 0): string {
+export function formatRibuan(n: number | null | undefined, desimal = 0, ribuan = true): string {
   if (n === null || n === undefined || !Number.isFinite(n)) return '';
-  return new Intl.NumberFormat('id-ID', { maximumFractionDigits: desimal, minimumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat('id-ID', { maximumFractionDigits: desimal, minimumFractionDigits: 0, useGrouping: ribuan }).format(n);
 }
 
 export type HasilUraiAngka = { ok: true; nilai: number | null } | { ok: false; pesan: string };
@@ -33,14 +33,14 @@ export function uraiAngka(teks: string, opsi: { desimal?: number; negatif?: bool
  * Rapikan teks selagi diketik: tambahkan titik ribuan tanpa memindahkan kursor ke ujung. Mengembalikan teks baru dan
  * posisi kursor yang setara (dihitung dari jumlah digit di kiri kursor).
  */
-export function rapikanKetikan(teks: string, kursor: number, opsi: { desimal?: number; negatif?: boolean } = {}): { teks: string; kursor: number } {
-  const { desimal = 0, negatif = false } = opsi;
+export function rapikanKetikan(teks: string, kursor: number, opsi: { desimal?: number; negatif?: boolean; ribuan?: boolean } = {}): { teks: string; kursor: number } {
+  const { desimal = 0, negatif = false, ribuan = true } = opsi;
   const minus = negatif && teks.trimStart().startsWith('-');
   const koma = desimal > 0 ? teks.indexOf(',') : -1;
   const kiri = koma >= 0 ? teks.slice(0, koma) : teks;
   const kanan = koma >= 0 ? teks.slice(koma + 1).replace(/\D/g, '').slice(0, desimal) : '';
   const digit = kiri.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
-  const bulat = digit.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const bulat = ribuan ? digit.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : digit;
   const hasil = `${minus ? '-' : ''}${bulat}${koma >= 0 ? `,${kanan}` : ''}`;
   // Posisi kursor: hitung karakter bermakna (digit dan koma) di kiri kursor pada teks lama, lalu letakkan kursor
   // setelah jumlah yang sama di teks baru. Nol di depan yang dibuang ikut dikurangi.
@@ -106,4 +106,19 @@ export function gabungTanggalWaktu(tanggal: string | null, jam: string | null, f
   if (!tanggal) return null;
   const j = jam ?? '00:00';
   return format === 'sql' ? `${tanggal} ${j}:00` : `${tanggal}T${j}`;
+}
+
+/**
+ * Nilai formulir (teks dari API/state, angka, atau kosong) menjadi `number | null` untuk IsianAngka/IsianRupiah.
+ * Teks kosong, null, dan teks bukan angka menjadi null.
+ */
+export function keAngka(v: unknown): number | null {
+  if (v === null || v === undefined || v === '') return null;
+  const n = typeof v === 'number' ? v : Number(String(v).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Kebalikan `keAngka` untuk state formulir berbentuk teks: null menjadi '' (seperti isian bawaan yang dikosongkan). */
+export function teksAngka(n: number | null | undefined): string {
+  return n === null || n === undefined ? '' : String(n);
 }

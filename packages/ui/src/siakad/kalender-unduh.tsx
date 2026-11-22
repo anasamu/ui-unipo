@@ -5,6 +5,9 @@ import { cn } from '../lib/cn';
 import { matriksQr } from '../lib/qr';
 import { Button } from '../components/actions';
 import { UnipoMark } from '../components/identity';
+import { Checkbox } from '../components/forms';
+import { Select } from '../components/select';
+import { Tekan } from '../components/tekan';
 
 // ================================================================ Tipe
 
@@ -879,16 +882,10 @@ export function UnduhKalender({ tahapan, info, namaBerkas = 'kalender-akademik',
   }
 
   const pilih = <T extends string>(label: string, nilai: T, set: (v: T) => void, opsi: { value: T; label: string; disabled?: boolean }[]) => (
-    <label className="u-unduh-kal-pilih">
+    <div className="u-unduh-kal-pilih">
       <span>{label}</span>
-      <select value={nilai} onChange={(e) => set(e.target.value as T)}>
-        {opsi.map((o) => (
-          <option key={o.value} value={o.value} disabled={o.disabled}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
+      <Select<T> value={nilai} onValueChange={(v) => v && set(v)} options={opsi} aria-label={label} />
+    </div>
   );
 
   return (
@@ -896,10 +893,10 @@ export function UnduhKalender({ tahapan, info, namaBerkas = 'kalender-akademik',
       <div className="u-unduh-kal-alat">
         <div className="u-unduh-kal-varian" role="radiogroup" aria-label="Varian desain">
           {VARIAN_DESAIN_KALENDER.map((v) => (
-            <button key={v.value} type="button" role="radio" aria-checked={varian === v.value} disabled={u.gambar && v.value !== 'poster' && v.value !== 'linimasa'} onClick={() => setVarian(v.value)} title={v.keterangan}>
+            <Tekan key={v.value} role="radio" terpilih={varian === v.value} disabled={u.gambar && v.value !== 'poster' && v.value !== 'linimasa'} onClick={() => setVarian(v.value)} title={v.keterangan}>
               <strong>{v.label}</strong>
               <span>{v.keterangan}</span>
-            </button>
+            </Tekan>
           ))}
         </div>
         <div className="u-unduh-kal-baris">
@@ -910,10 +907,10 @@ export function UnduhKalender({ tahapan, info, namaBerkas = 'kalender-akademik',
           ])}
           {daftarSasaran.length ? pilih('Sasaran', sasaran, setSasaran, [{ value: '', label: 'Semua sasaran' }, ...daftarSasaran.map((s) => ({ value: s, label: s }))]) : null}
           <label className="u-unduh-kal-cek">
-            <input type="checkbox" checked={libur} onChange={(e) => setLibur(e.target.checked)} /> Libur
+            <Checkbox checked={libur} onCheckedChange={(c) => setLibur(c)} /> Libur
           </label>
           <label className="u-unduh-kal-cek">
-            <input type="checkbox" checked={kegiatan} onChange={(e) => setKegiatan(e.target.checked)} /> Kegiatan
+            <Checkbox checked={kegiatan} onCheckedChange={(c) => setKegiatan(c)} /> Kegiatan
           </label>
           {saringan}
         </div>

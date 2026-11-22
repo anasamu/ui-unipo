@@ -99,12 +99,14 @@ export function KebijakanUnit({ unit, fakultas, prodi, turunan = true, jenis, ju
   const daftar = pilih ? semua.filter((d) => d.jenis === pilih) : semua;
   return (
     <section className={cn('u-kebijakan', className)}>
-      <header className="u-laporan-kepala">
-        <div className="u-laporan-judul">
-          <h2>{judul}</h2>
-          {deskripsi && <p>{deskripsi}</p>}
-        </div>
-      </header>
+      {judul !== null && (
+        <header className="u-laporan-kepala">
+          <div className="u-laporan-judul">
+            <h2>{judul}</h2>
+            {deskripsi && <p>{deskripsi}</p>}
+          </div>
+        </header>
+      )}
       <div className="u-laporan-filter">
         <Input size="sm" type="search" aria-label="Cari dokumen" placeholder="Cari judul atau nomor" value={cari} onChange={(e) => setCari(e.target.value)} className="u-kebijakan-cari" />
         {adaJenis.length > 1 && (
