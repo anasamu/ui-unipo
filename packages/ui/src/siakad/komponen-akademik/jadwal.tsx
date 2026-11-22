@@ -7,6 +7,7 @@ import { Empty } from '../../components/display';
 import { SegmentedControl } from '../../components/forms';
 import { Tekan } from '../../components/tekan';
 import { KepalaAkademik, keadaanData, type KeadaanDataProps } from './bersama';
+import { MENIT_PER_SKS_BAWAAN, useBebanSks } from './hooks';
 import { angka, hariDari, jamPendek, menitDari, namaDosenSesi, namaHari, nomorHari, type SesiKuliah } from './tipe';
 
 /** Warna tetap per mata kuliah (1–6, token --u-chart-*), supaya MK yang sama berwarna sama di semua tampilan. */
@@ -31,7 +32,7 @@ export interface TataSesi {
  * dikembalikan di `tanpaJam`. Sesi tanpa jam selesai diperkirakan SKS × `menitPerSks` (hanya untuk tinggi kotak; jam
  * resmi tetap dari jadwal server).
  */
-export function tataJadwal(jadwal: ReadonlyArray<SesiKuliah>, menitPerSks = 50): { sesi: TataSesi[]; tanpaJam: SesiKuliah[]; awal: number; akhir: number } {
+export function tataJadwal(jadwal: ReadonlyArray<SesiKuliah>, menitPerSks = MENIT_PER_SKS_BAWAAN): { sesi: TataSesi[]; tanpaJam: SesiKuliah[]; awal: number; akhir: number } {
   const tanpaJam: SesiKuliah[] = [];
   const perHari = new Map<number, TataSesi[]>();
   for (const s of jadwal) {
@@ -87,8 +88,14 @@ export interface JadwalMingguanProps extends KeadaanDataProps {
   kini?: Date;
   /** Sembunyikan nama dosen (mis. jadwal mengajar dosen sendiri). */
   tanpaDosen?: boolean;
-  /** Perkiraan durasi per SKS untuk sesi yang tidak punya jam selesai (bawaan 50 menit; ikuti aturan beban SKS kampus). */
+  /**
+   * Durasi satu SKS (menit) untuk tinggi sesi yang tidak punya jam selesai. Tanpa nilai ini diambil dari aturan
+   * kurikulum ber-SK lewat GET /v1/referensi/beban-sks (prodi & periode jadwal); bawaan 50 menit bila aturan belum
+   * mengatur atau tidak ada SDK. Jam resmi tetap dari jadwal server.
+   */
   menitPerSks?: number;
+  /** Kode prodi untuk membaca aturan beban SKS (bawaan: kode_prodi sesi pertama). */
+  kodeProdi?: string | null;
   onPilih?: (s: SesiKuliah) => void;
   judul?: React.ReactNode | false;
   aksi?: React.ReactNode;
@@ -97,10 +104,12 @@ export interface JadwalMingguanProps extends KeadaanDataProps {
 }
 
 /** Jadwal kuliah mingguan: kisi hari × jam dengan sesi bertumpuk berdampingan, atau daftar kartu per hari di ponsel. */
-export function JadwalMingguan({ jadwal, hari, tampilan = 'otomatis', pilihTampilan = true, kini, tanpaDosen, menitPerSks = 50, onPilih, judul, aksi, kosong, className, ...k }: JadwalMingguanProps) {
+export function JadwalMingguan({ jadwal, hari, tampilan = 'otomatis', pilihTampilan = true, kini, tanpaDosen, menitPerSks: menitProp, kodeProdi, onPilih, judul, aksi, kosong, className, ...k }: JadwalMingguanProps) {
   const [mode, setMode] = React.useState(tampilan);
   React.useEffect(() => setMode(tampilan), [tampilan]);
   const data = React.useMemo(() => jadwal ?? [], [jadwal]);
+  const beban = useBebanSks({ prodi: kodeProdi ?? data[0]?.kode_prodi ?? null, tahunId: data[0]?.tahun_id ?? null, enabled: menitProp == null && data.length > 0 });
+  const menitPerSks = menitProp ?? beban.menitPerSks;
   const tata = React.useMemo(() => tataJadwal(data, menitPerSks), [data, menitPerSks]);
   const sekarang = kini ?? new Date();
   const hariIni = hariDari(sekarang);
@@ -253,13 +262,17 @@ export interface KuliahHariIniProps extends KeadaanDataProps {
   tanpaDosen?: boolean;
   /** Maksimal sesi yang ditampilkan. */
   batas?: number;
-  /** Perkiraan durasi per SKS bila jam selesai kosong (bawaan 50 menit). */
+  /** Durasi satu SKS (menit) bila jam selesai kosong; tanpa nilai ini dari aturan beban SKS (bawaan 50 menit). */
   menitPerSks?: number;
+  kodeProdi?: string | null;
   className?: string;
 }
 
 /** Sesi kuliah hari ini (yang sedang berlangsung ditandai), untuk kartu portal/beranda. */
-export function KuliahHariIni({ jadwal, kini, tanpaDosen, batas = 4, menitPerSks = 50, className, ...k }: KuliahHariIniProps) {
+export function KuliahHariIni({ jadwal, kini, tanpaDosen, batas = 4, menitPerSks: menitProp, kodeProdi, className, ...k }: KuliahHariIniProps) {
+  const pertama = jadwal?.[0];
+  const beban = useBebanSks({ prodi: kodeProdi ?? pertama?.kode_prodi ?? null, tahunId: pertama?.tahun_id ?? null, enabled: menitProp == null && !!pertama });
+  const menitPerSks = menitProp ?? beban.menitPerSks;
   const sekarang = kini ?? new Date();
   const keadaan = keadaanData(k, !!jadwal, 140, className);
   if (keadaan) return keadaan;

@@ -6,7 +6,7 @@ import { Empty } from '../../components/display';
 import { Select } from '../../components/select';
 import { labelTahunAkademik } from '../label-tahun';
 import { DeretAngka, KakiCetak, KepalaAkademik, KepalaCetak, LegendaSkalaNilai, TabelNilaiCetak, TabelNilaiMk, TombolCetakAkademik, keadaanData, type KeadaanDataProps } from './bersama';
-import { normalSkala, type SumberSkala } from './skala';
+import { penentuSkala, type SkalaPerPeriode, type SumberSkala } from './skala';
 import { adaAngka, angka, duaDesimal, type IdentitasAkademik, type PeriodeKhs } from './tipe';
 
 export interface LembarKhsProps extends KeadaanDataProps {
@@ -15,8 +15,13 @@ export interface LembarKhsProps extends KeadaanDataProps {
   /** Periode terpilih (terkendali). Bawaan periode terbaru. */
   tahunId?: string | null;
   onTahunIdChange?: (tahunId: string) => void;
-  /** Skala nilai server (useSkalaNilai) untuk warna nilai dan legenda. */
-  skala?: SumberSkala | null;
+  /**
+   * Skala nilai server untuk warna nilai dan legenda. Baris m_nilai mentah (`useSkalaNilai().baris`) atau fungsi
+   * periode → skala: KHS memakai versi skala yang berlaku di periode KHS yang ditampilkan.
+   */
+  skala?: SumberSkala | SkalaPerPeriode | null;
+  /** Kode prodi untuk memilih baris m_nilai prodi. */
+  prodi?: string | null;
   /** Identitas untuk versi cetak (nama, NIM, prodi, dosen PA). */
   identitas?: IdentitasAkademik | null;
   /** Kop surat/logo untuk versi cetak. */
@@ -37,17 +42,18 @@ const urutTerbaru = (p: ReadonlyArray<PeriodeKhs>) => [...p].filter((x) => x.tah
  * Kartu hasil studi satu periode: pemilih periode, IPS (naik/turun dari semester lalu), IPK, SKS semester dan
  * kumulatif, tabel nilai (DataTable, kartu di ponsel), legenda skala, dan versi cetak A4 berkop.
  */
-export function LembarKhs({ periode, tahunId, onTahunIdChange, skala, identitas, kop, judul, aksi, cetak = true, legenda, className, ...k }: LembarKhsProps) {
+export function LembarKhs({ periode, tahunId, onTahunIdChange, skala, prodi, identitas, kop, judul, aksi, cetak = true, legenda, className, ...k }: LembarKhsProps) {
   const ref = React.useRef<HTMLElement>(null);
   const semua = React.useMemo(() => (periode ? urutTerbaru(Array.isArray(periode) ? (periode as PeriodeKhs[]) : [periode as PeriodeKhs]) : []), [periode]);
   const [pilihSendiri, setPilih] = React.useState<string | null>(null);
-  const s = React.useMemo(() => normalSkala(skala), [skala]);
+  const skalaUntuk = React.useMemo(() => penentuSkala(skala, { prodi }), [skala, prodi]);
   const keadaan = keadaanData(k, !!periode, 320, className);
   if (keadaan) return keadaan;
   if (!semua.length) return <Empty icon={<BookOpen />} title="Belum ada KHS" description="KHS muncul setelah nilai semester diumumkan." className={className} />;
   const pilih = tahunId ?? pilihSendiri;
   const i = Math.max(0, semua.findIndex((p) => p.tahun_id === pilih));
   const aktif = semua[i]!;
+  const s = skalaUntuk(aktif.tahun_id);
   const lalu = semua[i + 1];
   const mk = aktif.mata_kuliah ?? [];
   const ips = adaAngka(aktif.ips?.nilai) ? Number(aktif.ips!.nilai) : null;

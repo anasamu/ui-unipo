@@ -1,7 +1,12 @@
 import * as React from 'react';
-import { FileCheck2 } from 'lucide-react';
+import { FileCheck2, Sparkles } from 'lucide-react';
 import { Button, Panel } from 'unipo-ui';
 import {
+  FormIsiKrs,
+  PanelIsiKrs,
+  PesanAturanKrs,
+  type PenawaranKrs,
+  type PilihanKrs,
   JadwalMingguan,
   KuliahHariIni,
   LegendaSkalaNilai,
@@ -26,7 +31,7 @@ import {
   useTranskrip,
   type SyaratBerkasAkademik,
 } from 'unipo-ui/siakad';
-import { NIM_AKADEMIK } from '../mock/komponen-akademik';
+import { KRS_ISI, NIM_AKADEMIK, PENAWARAN_KRS, SKALA_DUA_VERSI, TRANSKRIP_DUA_VERSI } from '../mock/komponen-akademik';
 import { DOSEN } from '../mock/siakad';
 import type { DemoMeta } from '../registry';
 
@@ -39,7 +44,7 @@ export const meta: DemoMeta = {
   description:
     'Satu set komponen untuk KRS, KHS, transkrip, jadwal mingguan, tahapan kalender akademik, kartu ringkas portal mahasiswa/dosen, dan unggah berkas akademik. Semua menerima respons API SIAKAD /v1 apa adanya lewat props, sehingga Fakultas, BAAK, Dashboard/portal, dan aplikasi lain memakai tampilan yang sama. Warna nilai, legenda, dan predikat mengikuti skala nilai (m_nilai) dan predikat kelulusan (m_predikat) dari server; KHS dan transkrip punya versi cetak A4.',
   importLine:
-    "import { TabelKrs, RingkasanKrs, LembarKhs, LembarTranskrip, JadwalMingguan, KuliahHariIni, TahapanAkademik, PortalAkademikMahasiswa, PortalMengajarDosen, UnggahBerkasAkademik, useSkalaNilai, usePredikatKelulusan, useJadwalMahasiswa, useTahapanPeriode } from 'unipo-ui/siakad';",
+    "import { TabelKrs, RingkasanKrs, LembarKhs, LembarTranskrip, JadwalMingguan, KuliahHariIni, TahapanAkademik, PortalAkademikMahasiswa, PortalMengajarDosen, UnggahBerkasAkademik, IsiKrsMahasiswa, PanelIsiKrs, FormIsiKrs, useSkalaNilai, useBebanSks, usePredikatKelulusan, useJadwalMahasiswa, useTahapanPeriode } from 'unipo-ui/siakad';",
   demos: {
     Krs: 'TabelKrs + RingkasanKrs (batas SKS dari penawaran)',
     Khs: 'LembarKhs (pemilih periode, cetak)',
@@ -51,6 +56,10 @@ export const meta: DemoMeta = {
     PortalDosen: 'PortalMengajarDosen',
     Unggah: 'UnggahBerkasAkademik',
     Skala: 'LencanaNilai + LegendaSkalaNilai',
+    IsiKrs: 'PanelIsiKrs: isi KRS bertahap (pilih MK & kelas, cek bentrok, ringkasan, ajukan ke dosen PA)',
+    PilihMk: 'FormIsiKrs: pilih mata kuliah dan kelas dengan tanda bentrok/penuh/prasyarat',
+    TranskripPerPeriode: 'LembarTranskrip: skala nilai mengikuti periode tiap mata kuliah',
+    JadwalBebanSks: 'JadwalMingguan: tinggi sesi tanpa jam selesai dari aturan menit per SKS',
   },
   props: [
     ['TabelKrs.krs', 'DataKrs', 'Respons GET /v1/mahasiswa/{nim}/krs.'],
@@ -64,6 +73,11 @@ export const meta: DemoMeta = {
     ['JadwalMingguan.tampilan', "'otomatis' | 'minggu' | 'daftar'", 'Otomatis: kisi mingguan, berubah jadi kartu per hari di wadah sempit (container query).'],
     ['TahapanAkademik.tahapan', 'KegiatanTerpadu[]', 'useTahapanPeriode({ tahunId, kodeProdi }).data (kalender terpadu sumber tahun & batas).'],
     ['UnggahBerkasAkademik.onUnggah', '(syarat, berkas) => Promise', 'Kirim ke endpoint modul (mis. POST /v1/kelulusan/syarat-mahasiswa/{id}/berkas); galat tampil di baris itu.'],
+    ['PanelIsiKrs.penawaran', 'PenawaranKrs', 'GET /v1/mahasiswa/{nim}/krs/penawaran: boleh_ambil, alasan, batas_sks, aturan (pelanggaran/peringatan ber-SK), mata_kuliah + kelas berjam.'],
+    ['PanelIsiKrs.onAjukan', '(body) => Promise<HasilAjukanKrs>', 'Bawaan POST /v1/mahasiswa/{nim}/krs lewat SDK (prop nim). Galat 409 aturan_dilanggar/422 tampil di kaki panel.'],
+    ['IsiKrsMahasiswa.nim', 'string', 'Terhubung penuh: ringkasan, alur persetujuan PA, tabel KRS dengan aksi Batalkan (POST /krs/batal) selama belum disetujui, tombol Isi KRS.'],
+    ['LembarTranskrip.skala', 'BarisSkalaNilai[] | (tahunId) => skala', 'useSkalaNilai().baris: tiap baris memakai versi m_nilai yang berlaku di periode MK; legenda per versi bila lebih dari satu.'],
+    ['JadwalMingguan.menitPerSks', 'number', 'Tanpa nilai ini dibaca dari GET /v1/referensi/beban-sks (aturan kurikulum ber-SK `menit_tatap_muka_sks`), bawaan 50.'],
     ['*.memuat / galat / onUlang', 'boolean / unknown / () => void', 'Keadaan standar: kerangka, GalatApi dengan kode laporan dan tombol coba lagi.'],
   ],
   notes: [
@@ -118,9 +132,10 @@ export function Khs() {
 
 export function Transkrip() {
   const t = useTranskrip(NIM_AKADEMIK);
-  const { skala } = useSkalaNilai({ prodi: '55201' });
+  // Baris m_nilai mentah: tiap mata kuliah memakai versi skala periode MK itu diambil.
+  const { baris } = useSkalaNilai({ prodi: '55201' });
   const predikat = usePredikatKelulusan();
-  return <LembarTranskrip data={t.data} memuat={t.loading} galat={t.error} onUlang={t.refetch} skala={skala} predikat={predikat.data} jenjang="C" sksLulus={144} identitas={useIdentitas(NIM_AKADEMIK)} kop={kop} />;
+  return <LembarTranskrip data={t.data} memuat={t.loading} galat={t.error} onUlang={t.refetch} skala={baris} predikat={predikat.data} jenjang="C" sksLulus={144} identitas={useIdentitas(NIM_AKADEMIK)} kop={kop} />;
 }
 
 export function Jadwal() {
@@ -208,4 +223,57 @@ export function Skala() {
       <LegendaSkalaNilai skala={skala} />
     </div>
   );
+}
+
+export function IsiKrs() {
+  const [buka, setBuka] = React.useState(false);
+  const [hasil, setHasil] = React.useState<string | null>(null);
+  return (
+    <div className="demo-stack">
+      <TabelKrs
+        krs={KRS_ISI}
+        aksi={
+          <Button size="sm" onClick={() => setBuka(true)}>
+            <Sparkles aria-hidden /> Tambah mata kuliah
+          </Button>
+        }
+        aksiBaris={(m) => (m.disetujui ? [] : [{ label: 'Batalkan mata kuliah', destructive: true, onSelect: () => undefined }])}
+      />
+      {hasil && <p className="u-muted">{hasil}</p>}
+      <PanelIsiKrs
+        open={buka}
+        onOpenChange={setBuka}
+        penawaran={PENAWARAN_KRS as unknown as PenawaranKrs}
+        krs={KRS_ISI}
+        onAjukan={async (body) => {
+          await new Promise((r) => setTimeout(r, 400));
+          setHasil(`Diajukan (contoh): ${body.mata_kuliah.length} mata kuliah.`);
+          return { tersimpan: body.mata_kuliah, bentrok: [], kelas_belum_terpilih_atau_penuh: [], melebihi_batas_sks: false };
+        }}
+      />
+    </div>
+  );
+}
+
+export function PilihMk() {
+  const [pilihan, setPilihan] = React.useState<PilihanKrs>({ 303: 41 });
+  const p = PENAWARAN_KRS as unknown as PenawaranKrs;
+  return (
+    <div className="demo-stack">
+      <PesanAturanKrs aturan={p.aturan} />
+      <FormIsiKrs penawaran={p} pilihan={pilihan} onPilihanChange={setPilihan} krsAda={KRS_ISI.mata_kuliah} />
+    </div>
+  );
+}
+
+export function TranskripPerPeriode() {
+  return <LembarTranskrip data={TRANSKRIP_DUA_VERSI} skala={SKALA_DUA_VERSI} tampilan="tabel" identitas={{ nim: NIM_AKADEMIK }} />;
+}
+
+export function JadwalBebanSks() {
+  const jadwal = [
+    { idj: 1, kode_prodi: '55201', tahun_id: '20261', hari: '1', jam_mulai: '07:30:00', kode_mk: 'INF301', nama_mk: 'Pemrograman Berorientasi Objek', sks: 3, kelas: 'A', nama_ruang: 'Lab Komputer 1' },
+    { idj: 2, kode_prodi: '55201', tahun_id: '20261', hari: '2', jam_mulai: '10:00:00', kode_mk: 'MKU301', nama_mk: 'Kewirausahaan', sks: 2, kelas: 'A', nama_ruang: 'R.204' },
+  ];
+  return <JadwalMingguan jadwal={jadwal} judul="Jadwal (durasi dari aturan menit per SKS)" />;
 }

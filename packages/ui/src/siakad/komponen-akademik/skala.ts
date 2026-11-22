@@ -1,3 +1,4 @@
+import * as React from 'react';
 import type { BadgeVariant } from '../../components/actions';
 import { useSiakadQuery } from '../provider';
 import type { SkalaNilai } from '../alur';
@@ -77,6 +78,45 @@ export function normalSkala(skala: SumberSkala | null | undefined): SkalaNilai[]
   );
 }
 
+/**
+ * Skala per periode: fungsi tahun_id → sumber skala (mis. skala versi aturan kurikulum yang berlaku di periode itu,
+ * dari server). Dipakai bila aplikasi sudah punya skala per periode sendiri.
+ */
+export type SkalaPerPeriode = (tahunId: string | null | undefined) => SumberSkala | null | undefined;
+
+/** Skala nilai yang sudah dinormalkan untuk satu periode. */
+export type PenentuSkala = (tahunId: string | null | undefined) => SkalaNilai[];
+
+/**
+ * Penentu skala per periode MATA KULIAH (keputusan Anas 2026-11-22 13:17: tiap baris transkrip memakai versi skala
+ * yang berlaku di periode MK itu diambil):
+ * - baris m_nilai mentah (GET /v1/referensi/skala-nilai, berversi `tahun_id`): versi terbaru yang tidak melewati
+ *   periode MK (skalaBerlaku), untuk prodi `prodi` bila diisi;
+ * - fungsi SkalaPerPeriode: hasilnya dinormalkan;
+ * - skala tunggal lain (sudah dinormalkan/SkalaNilaiKurikulum): sama untuk semua periode.
+ * Hasil di-cache per periode.
+ */
+export function penentuSkala(sumber: SumberSkala | SkalaPerPeriode | null | undefined, opsi: { prodi?: string | null } = {}): PenentuSkala {
+  const cache = new Map<string, SkalaNilai[]>();
+  const simpan = (k: string, f: () => SkalaNilai[]) => {
+    let v = cache.get(k);
+    if (!v) cache.set(k, (v = f()));
+    return v;
+  };
+  if (typeof sumber === 'function') return (t) => simpan(t ?? '', () => normalSkala(sumber(t)));
+  if (!sumber?.length) return () => [];
+  const pertama = sumber[0] as Record<string, unknown>;
+  if ('nilai' in pertama && !('huruf' in pertama)) {
+    const baris = sumber as ReadonlyArray<BarisSkalaNilai>;
+    return (t) => simpan(t ?? '', () => skalaBerlaku(baris, { prodi: opsi.prodi, tahunId: t ?? null }));
+  }
+  const tetap = normalSkala(sumber);
+  return () => tetap;
+}
+
+/** Kunci identitas isi skala (untuk mengelompokkan periode yang memakai versi skala yang sama). */
+export const kunciSkala = (s: ReadonlyArray<SkalaNilai>) => s.map((x) => `${x.huruf}:${x.bobot}:${x.min}:${x.max}:${x.lulus ? 1 : 0}`).join('|');
+
 const urutkanSkala = (s: SkalaNilai[]) => s.filter((x) => x.huruf).sort((a, b) => b.bobot - a.bobot || b.min - a.min);
 
 /** Cari baris skala untuk huruf nilai (tanpa beda besar-kecil huruf). */
@@ -117,15 +157,23 @@ export function predikatDariIpk(ipk: number | string | null | undefined, daftar:
   return cocok?.predikat ?? null;
 }
 
-/** Skala nilai yang berlaku untuk prodi (dan periode) dari GET /v1/referensi/skala-nilai. Scope referensi:read. */
+/**
+ * Skala nilai yang berlaku untuk prodi dari GET /v1/referensi/skala-nilai (semua versi `tahun_id`). Scope
+ * referensi:read.
+ * - `skala`: versi untuk `tahunId` (atau terbaru), untuk KHS satu periode;
+ * - `baris`: baris m_nilai mentah; teruskan ke LembarTranskrip/LembarKhs supaya tiap mata kuliah memakai versi skala
+ *   periode MK itu diambil;
+ * - `skalaUntuk(tahunId)`: penentu skala per periode.
+ */
 export function useSkalaNilai(opsi: { prodi?: string | null; tahunId?: string | null; enabled?: boolean } = {}) {
   const q = useSiakadQuery<BarisSkalaNilai[]>(
     ['referensi', 'skala-nilai', opsi.prodi ?? ''],
     (s, signal) => s.request<BarisSkalaNilai[]>({ method: 'GET', path: '/v1/referensi/skala-nilai', query: opsi.prodi ? { prodi: opsi.prodi } : undefined }, { signal }),
     { staleTime: 10 * 60_000, enabled: opsi.enabled !== false },
   );
-  const skala = q.data ? skalaBerlaku(q.data, { prodi: opsi.prodi, tahunId: opsi.tahunId }) : undefined;
-  return { ...q, skala };
+  const skalaUntuk = React.useMemo(() => penentuSkala(q.data, { prodi: opsi.prodi }), [q.data, opsi.prodi]);
+  const skala = q.data ? skalaUntuk(opsi.tahunId ?? null) : undefined;
+  return { ...q, skala, baris: q.data, skalaUntuk };
 }
 
 /** Daftar predikat kelulusan (m_predikat) dari GET /v1/kelulusan/predikat. Scope kelulusan:read. */
