@@ -56,7 +56,7 @@ export function Dialog({ open, defaultOpen, onOpenChange, trigger, title, descri
       </div>
       {children && (
         <div className="u-dialog-body">
-          <AkarTingkatTab>{children}</AkarTingkatTab>
+          <AkarTingkatTab panel={Boolean(side)}>{children}</AkarTingkatTab>
         </div>
       )}
       {footer && <div className="u-dialog-footer">{footer}</div>}
